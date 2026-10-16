@@ -26,6 +26,7 @@ void main() {
       'app.name',
       'app.description',
       'cli.noCommand',
+      'cli.usage',
       'error.unexpected',
     });
   });

@@ -2,7 +2,7 @@
 .flutter-plugins
 .flutter-plugins-dependencies
 .idea/
-.metadata
+/.metadata
 .packages
 .superpowers/
 .vscode/

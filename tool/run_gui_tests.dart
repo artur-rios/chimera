@@ -1,0 +1,32 @@
+import 'dart:io';
+
+Future<void> main() async {
+  final device =
+      Platform.environment['CHIMERA_GUI_DEVICE'] ??
+      (Platform.isWindows ? 'windows' : 'linux');
+  final flutter = Platform.isWindows ? 'flutter.bat' : 'flutter';
+
+  final widgetExitCode = await _run(flutter, const <String>['test', 'test']);
+  if (widgetExitCode != 0) {
+    exitCode = widgetExitCode;
+    return;
+  }
+
+  exitCode = await _run(flutter, <String>[
+    'test',
+    'integration_test',
+    '-d',
+    device,
+  ]);
+}
+
+Future<int> _run(String executable, List<String> arguments) async {
+  final process = await Process.start(
+    executable,
+    arguments,
+    workingDirectory: 'apps/chimera_gui',
+    mode: ProcessStartMode.inheritStdio,
+    runInShell: Platform.isWindows,
+  );
+  return process.exitCode;
+}

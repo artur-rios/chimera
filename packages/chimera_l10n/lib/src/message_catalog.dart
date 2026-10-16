@@ -6,12 +6,14 @@ const Map<String, Map<String, String>> _catalogs =
         'app.name': 'Chimera',
         'app.description': 'Developer toolbox',
         'cli.noCommand': 'No command provided.',
+        'cli.usage': 'Usage: chimera <command> [options]',
         'error.unexpected': 'An unexpected error occurred.',
       },
       'pt-BR': <String, String>{
         'app.name': 'Chimera',
         'app.description': 'Caixa de ferramentas para desenvolvedores',
         'cli.noCommand': 'Nenhum comando foi informado.',
+        'cli.usage': 'Uso: chimera <comando> [opções]',
         'error.unexpected': 'Ocorreu um erro inesperado.',
       },
     };

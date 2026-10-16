@@ -36,7 +36,7 @@ melos:
       run: dart run melos exec --scope=chimera_cli --dir-exists=test -- "dart test"
     test:gui:
       description: Run Flutter widget and integration tests.
-      run: dart run melos exec --scope=chimera_gui --dir-exists=test -- "flutter test"
+      run: dart run tool/run_gui_tests.dart
     test:web:
       description: Run repository web contract tests.
       run: dart test tests/web
