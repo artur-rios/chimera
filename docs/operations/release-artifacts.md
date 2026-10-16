@@ -50,7 +50,7 @@ keeps host variables and secrets outside the repository and container layers.
 | IR-09 | Container contract and live smoke require the exact public `/healthz` payload. |
 | IR-10 | Yggdrasil resolves Chimera through local, development, homologation, and production in promotion order. |
 | IR-11 | Release package jobs require the `Verify before packaging` job. |
-| IR-12 | Playwright runs Chromium, Firefox, and WebKit on Linux; WebDriver also runs the compiled shell in native Safari on macOS. |
+| IR-12 | The normative Playwright/WebDriver harness runs Chromium, Firefox, and WebKit on Linux plus the compiled shell in native Safari on macOS. |
 | IR-13 | CI integration-tests and builds Windows and Linux native targets. |
 | IR-14 | Windows/Linux scripts produce GUI/CLI portable and installer artifacts. |
 | IR-15 | `write_checksums.dart` emits a SHA-256 sidecar for every recognized native artifact. |

@@ -29,7 +29,6 @@ void main() {
       await _commit(repository, 'valid.txt', 'valid', 'valid');
 
       final valid = await Process.run(Platform.resolvedExecutable, <String>[
-        'run',
         checker.path,
         'main',
         'develop',
@@ -42,7 +41,6 @@ void main() {
       await _commit(repository, 'invalid.txt', 'invalid', 'invalid');
 
       final invalid = await Process.run(Platform.resolvedExecutable, <String>[
-        'run',
         checker.path,
         'main',
         'develop',

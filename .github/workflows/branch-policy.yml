@@ -41,7 +41,7 @@ jobs:
               [[ "$HEAD_REF" =~ ^(feature|fix)/[a-z0-9][a-z0-9._-]*$ || "$HEAD_REF" =~ ^dependabot/ ]] \
                 || fail "Pull requests into develop must come from feature/<name> or fix/<name>, not '$HEAD_REF'."
 
-              dart run tool/check_branch_origin.dart origin/main origin/develop "$HEAD_SHA" \
+              dart tool/check_branch_origin.dart origin/main origin/develop "$HEAD_SHA" \
                 || fail "'$HEAD_REF' was branched from main. Recreate it from develop."
               ;;
             main)

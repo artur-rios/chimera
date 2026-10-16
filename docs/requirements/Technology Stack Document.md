@@ -144,7 +144,7 @@ Testing behavior, structure, and commands are defined in the
 | Dart unit tests | **test** | Latest stable at implementation time | Tests shared packages and CLI behavior. |
 | Flutter unit and widget tests | **flutter_test** | Flutter SDK | Tests presentation behavior and shared Flutter adapters. |
 | Full-application tests | **integration_test** | Flutter SDK | Exercises browser and desktop workflows through the built application. |
-| Cross-browser automation | **webdriver** | Latest stable at implementation time | Drives Chromium, Firefox, and Safari against the compiled web application. |
+| Cross-browser automation | **Playwright + webdriver** | Latest stable compatible releases, pinned in test configuration | Playwright drives Chromium, Firefox, and WebKit in its official Linux image; webdriver drives native Safari on macOS against the same compiled web application. |
 | Coverage | Flutter/Dart coverage tooling and **LCOV** | Latest stable compatible release | Produces and reports coverage while traceability governs completeness. |
 | Test doubles | Hand-written fakes and in-memory adapters | Project-owned | Replaces update transport, file access, clipboard access, and local preferences. |
 | Test data | Version-controlled fixtures and builders | Project-owned | Covers valid, invalid, boundary, localized, and standard-derived examples. |
@@ -197,5 +197,5 @@ locally built container or the explicitly selected deployment environment.
 | Testing | test | Latest stable at implementation time |
 | Testing | flutter_test | Flutter SDK |
 | Testing | integration_test | Flutter SDK |
-| Testing | webdriver | Latest stable at implementation time |
+| Testing | Playwright + webdriver | Latest stable compatible releases pinned by the repository |
 | Coverage | LCOV | Latest stable compatible release |

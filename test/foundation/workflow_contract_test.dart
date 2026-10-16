@@ -21,7 +21,17 @@ void main() {
     expect(branchPolicy, contains(r'^(feature|fix)/'));
     expect(branchPolicy, contains(r'^release/[0-9]+\.[0-9]+\.[0-9]+$'));
     expect(branchPolicy, contains('git merge-base --is-ancestor'));
-    expect(branchPolicy, contains('tool/check_branch_origin.dart'));
+    expect(
+      branchPolicy,
+      contains(
+        'dart tool/check_branch_origin.dart origin/main origin/develop '
+        '"\$HEAD_SHA"',
+      ),
+    );
+    expect(
+      branchPolicy,
+      isNot(contains('dart run tool/check_branch_origin.dart')),
+    );
     expect(branchPolicy, contains('name: branch-policy'));
   });
 
