@@ -5,15 +5,18 @@ import 'package:go_router/go_router.dart';
 
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'json_table_page.dart';
 
 GoRouter buildRouter({
   required MessageCatalog catalog,
   required String localeTag,
   required CronService cronService,
   required DateService dateService,
+  required JsonTableService jsonTableService,
   required DateTime Function() currentTime,
   required CronFilePicker cronFilePicker,
   required DateFilePicker dateFilePicker,
+  required JsonTableFilePicker jsonTableFilePicker,
   String initialLocation = '/',
 }) {
   return GoRouter(
@@ -43,6 +46,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/cron/parse'),
                         child: Text(
                           catalog.lookup(localeTag, 'cron.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-json-table'),
+                        onPressed: () => context.go('/json/array-to-table'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jsonTable.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -78,6 +89,15 @@ GoRouter buildRouter({
           localeTag: localeTag,
           service: dateService,
           filePicker: dateFilePicker,
+        ),
+      ),
+      GoRoute(
+        path: '/json/array-to-table',
+        builder: (context, state) => JsonTablePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jsonTableService,
+          filePicker: jsonTableFilePicker,
         ),
       ),
     ],

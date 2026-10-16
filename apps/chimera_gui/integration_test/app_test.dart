@@ -66,4 +66,26 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('GivenJsonTableRoute_WhenConversionRuns_ThenTableIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/array-to-table',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-table-input')),
+      '[{"name":"Ada","languages":["Dart","C"]}]',
+    );
+    await tester.tap(find.byKey(const Key('json-table-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ada'), findsOneWidget);
+    expect(find.text('["Dart","C"]'), findsOneWidget);
+  });
 }

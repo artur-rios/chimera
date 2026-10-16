@@ -16,3 +16,5 @@ Versioning and use tags in the form `vX.Y.Z`.
   occurrences, localized GUI flow, and human or JSON CLI output.
 - Strict ISO 8601, Unix epoch, custom-pattern, and IANA-zone date conversion
   with localized GUI flow and human or JSON CLI output.
+- Deterministic JSON-object array table rendering with nested JSON cells,
+  optional row numbers, localized GUI flow, and human or JSON CLI output.

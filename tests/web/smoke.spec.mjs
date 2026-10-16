@@ -96,3 +96,31 @@ test('date flow converts locally without external requests', async ({ page }) =>
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('JSON array flow renders locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page
+    .getByRole('button', { name: 'Convert a JSON array to a table' })
+    .click();
+  await expect(page.getByText('Convert JSON array to table').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'JSON array' }),
+    '[{"name":"Ada","meta":{"x":1}}]',
+  );
+  await page.getByRole('button', { name: 'Create table' }).click();
+
+  await expect(page.getByText('Ada').last()).toBeVisible();
+  await expect(page.getByText('{"x":1}').last()).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
