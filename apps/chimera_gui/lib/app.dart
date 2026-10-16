@@ -5,22 +5,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'cron_page.dart';
+import 'date_page.dart';
 import 'router.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
     this.localeTag = 'en',
     this.cronService = const CronService(),
+    this.dateService = const DateService(),
     this.currentTime,
     this.cronFilePicker,
+    this.dateFilePicker,
     this.initialLocation = '/',
     super.key,
   });
 
   final String localeTag;
   final CronService cronService;
+  final DateService dateService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
+  final DateFilePicker? dateFilePicker;
   final String initialLocation;
 
   @override
@@ -29,8 +34,10 @@ final class ChimeraApp extends StatelessWidget {
       child: _RoutedChimeraApp(
         localeTag: localeTag,
         cronService: cronService,
+        dateService: dateService,
         currentTime: currentTime,
         cronFilePicker: cronFilePicker,
+        dateFilePicker: dateFilePicker,
         initialLocation: initialLocation,
       ),
     );
@@ -41,15 +48,19 @@ final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
     required this.localeTag,
     required this.cronService,
+    required this.dateService,
     required this.currentTime,
     required this.cronFilePicker,
+    required this.dateFilePicker,
     required this.initialLocation,
   });
 
   final String localeTag;
   final CronService cronService;
+  final DateService dateService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
+  final DateFilePicker? dateFilePicker;
   final String initialLocation;
 
   @override
@@ -67,8 +78,10 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       catalog: _catalog,
       localeTag: widget.localeTag,
       cronService: widget.cronService,
+      dateService: widget.dateService,
       currentTime: widget.currentTime ?? DateTime.now,
       cronFilePicker: widget.cronFilePicker ?? pickCronExpressionFile,
+      dateFilePicker: widget.dateFilePicker ?? pickDateValueFile,
       initialLocation: widget.initialLocation,
     );
   }

@@ -54,24 +54,64 @@ Future<void> main() async {
       () => _pageContains(driver, 'Next: 2026-01-06T09:00:00.000+00:00'),
       'Cron next occurrence was incorrect',
     );
+    await _assertNoExternalRequests(driver, flow: 'cron');
 
-    final resourceUrls = await driver.execute(
-      "return performance.getEntriesByType('resource').map(entry => entry.name);",
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(() async {
+      final flutterRoot = await driver.execute(
+        "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+        const <Object?>[],
+      );
+      return flutterRoot == true;
+    }, 'Chimera did not reload for date flow');
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
       const <Object?>[],
     );
-    final externalUrls = resourceUrls is List
-        ? resourceUrls
-              .map((entry) => entry.toString())
-              .where((url) => Uri.parse(url).host != '127.0.0.1')
-              .toList()
-        : <String>[];
-    if (externalUrls.isNotEmpty) {
-      throw StateError('Safari made external requests: $externalUrls');
-    }
+    await _waitUntil(
+      () => _pageContains(driver, 'Convert a date'),
+      'Home page did not return for date flow',
+    );
+    await _clickButton(driver, 'Convert a date');
+    await _waitUntil(
+      () => _pageContains(driver, 'Date value'),
+      'Date page did not open',
+    );
+    await _fillTextBox(driver, 'Date value', '2026-01-15T12:30:45Z');
+    await _fillTextBox(driver, 'Target time zone', 'America/Sao_Paulo');
+    await _clickButton(driver, 'Convert date');
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Converted value: 2026-01-15T09:30:45.000-03:00',
+      ),
+      'Date result did not render',
+    );
 
-    stdout.writeln('Safari cron smoke: OK');
+    await _assertNoExternalRequests(driver, flow: 'date');
+
+    stdout.writeln('Safari cron and date smoke: OK');
   } finally {
     await driver.quit();
+  }
+}
+
+Future<void> _assertNoExternalRequests(
+  WebDriver driver, {
+  required String flow,
+}) async {
+  final resourceUrls = await driver.execute(
+    "return performance.getEntriesByType('resource').map(entry => entry.name);",
+    const <Object?>[],
+  );
+  final externalUrls = resourceUrls is List
+      ? resourceUrls
+            .map((entry) => entry.toString())
+            .where((url) => Uri.parse(url).host != '127.0.0.1')
+            .toList()
+      : <String>[];
+  if (externalUrls.isNotEmpty) {
+    throw StateError('Safari $flow flow made external requests: $externalUrls');
   }
 }
 

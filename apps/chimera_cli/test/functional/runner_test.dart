@@ -362,4 +362,145 @@ void main() {
       );
     },
   );
+
+  test(
+    'GivenDateArguments_WhenConvertRuns_ThenLocalizedHumanResultIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'date',
+          'convert',
+          '--value=2026-01-15T12:30:45Z',
+          '--from=iso8601',
+          '--to=custom',
+          '--target-timezone=America/Sao_Paulo',
+          '--target-pattern=dd/MM/yyyy HH:mm:ss',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 0);
+      expect(err.toString(), isEmpty);
+      expect(out.toString(), contains('Converted value: 15/01/2026 09:30:45'));
+      expect(out.toString(), contains('UTC instant: 2026-01-15T12:30:45.000Z'));
+    },
+  );
+
+  test('GivenDateStandardInputAndJson_WhenConvertRuns_ThenStableMachineResultIsWritten', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'date',
+        'convert',
+        '--from=unix-seconds',
+        '--to=iso8601',
+        '--target-timezone=UTC',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+      readStandardInput: () async => '0',
+    );
+
+    expect(exitCode, 0);
+    expect(err.toString(), isEmpty);
+    expect(
+      jsonDecode(out.toString()),
+      containsPair('value', '1970-01-01T00:00:00.000+00:00'),
+    );
+  });
+
+  test('GivenLocalDateFile_WhenConvertRuns_ThenFileContentIsUsed', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-date-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}${Platform.pathSeparator}date.txt');
+    await file.writeAsString('2026-01-15T09:30:45');
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>[
+        'date',
+        'convert',
+        '--file=${file.path}',
+        '--from=iso8601',
+        '--to=unix-seconds',
+        '--source-timezone=America/Sao_Paulo',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 0);
+    expect(jsonDecode(out.toString()), containsPair('value', '1768480245'));
+  });
+
+  test(
+    'GivenInvalidDate_WhenConvertRunsInPortuguese_ThenInputIsRedacted',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'date',
+          'convert',
+          '--value=segredo inválido',
+          '--from=iso8601',
+          '--to=iso8601',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'A solicitação de data é inválida.\n');
+      expect(err.toString(), isNot(contains('segredo')));
+    },
+  );
+
+  test(
+    'GivenOutOfRangeDate_WhenConvertRuns_ThenTypedRangeExitIsReturned',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'date',
+          'convert',
+          '--value=999999999999999999999',
+          '--from=unix-milliseconds',
+          '--to=iso8601',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 70);
+      expect(jsonDecode(err.toString()), <String, Object?>{
+        'error': <String, Object?>{
+          'kind': 'range',
+          'code': 'date.out-of-range',
+          'message': 'The date is outside the supported range.',
+        },
+      });
+    },
+  );
 }
