@@ -20,4 +20,31 @@ dev_dependencies:
   test: ^1.26.0
   yaml: ^3.1.3
 
+melos:
+  command:
+    bootstrap:
+      runPubGetInParallel: false
+  scripts:
+    analyze:
+      description: Analyze every application, package, and repository test.
+      run: dart run melos exec -- "dart analyze --fatal-infos"
+    test:unit:
+      description: Run Dart package and CLI unit tests.
+      run: dart run melos exec --no-flutter --dir-exists=test -- "dart test"
+    test:cli:
+      description: Run CLI functional tests.
+      run: dart run melos exec --scope=chimera_cli --dir-exists=test -- "dart test"
+    test:gui:
+      description: Run Flutter widget and integration tests.
+      run: dart run melos exec --scope=chimera_gui --dir-exists=test -- "flutter test"
+    test:web:
+      description: Run repository web contract tests.
+      run: dart test tests/web
+    test:deployment:
+      description: Run deployment and update contract tests.
+      run: dart test tests/deployment tests/update
+    test:all:
+      description: Run every Chimera test suite.
+      run: dart run melos run test:unit && dart run melos run test:cli && dart run melos run test:gui && dart run melos run test:web && dart run melos run test:deployment
+
 

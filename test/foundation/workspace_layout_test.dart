@@ -25,10 +25,10 @@ void main() {
       );
     }
 
-    final melosFile = File('melos.yaml');
-    expect(melosFile.existsSync(), isTrue);
+    final workspaceManifest = File('pubspec.yaml');
+    expect(workspaceManifest.existsSync(), isTrue);
 
-    final melosSource = melosFile.readAsStringSync();
+    final melosSource = workspaceManifest.readAsStringSync();
     for (final script in <String>[
       'analyze',
       'test:unit',

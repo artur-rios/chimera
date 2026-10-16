@@ -111,7 +111,6 @@ docs/
 CHANGELOG.md
 CONTRIBUTING.md
 Jenkinsfile
-melos.yaml
 pubspec.yaml
 ```
 
