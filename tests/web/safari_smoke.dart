@@ -12,25 +12,156 @@ Future<void> main() async {
 
   try {
     await driver.get('http://127.0.0.1:4173');
-    final deadline = DateTime.now().add(const Duration(seconds: 30));
-
-    while (DateTime.now().isBefore(deadline)) {
-      final title = await driver.title;
+    await _waitUntil(() async {
       final flutterRoot = await driver.execute(
         "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
         const <Object?>[],
       );
-      if (title == 'Chimera' && flutterRoot == true) {
-        stdout.writeln('Safari smoke: OK');
-        return;
-      }
-      await Future<void>.delayed(const Duration(milliseconds: 250));
+      return await driver.title == 'Chimera' && flutterRoot == true;
+    }, 'Chimera did not finish loading');
+
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') === null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Flutter semantics did not become available',
+    );
+
+    await _clickButton(driver, 'Parse a cron expression');
+    await _waitUntil(
+      () => _pageContains(driver, 'Parse cron expression'),
+      'Cron page did not open',
+    );
+
+    await _fillTextBox(driver, 'Cron expression', '0 9 * * MON-FRI');
+    await _fillTextBox(driver, 'Time zone', 'UTC');
+    await _fillTextBox(driver, 'Occurrence count', '1');
+    await _fillTextBox(driver, 'Reference instant', '2026-01-05T12:00:00Z');
+    await _clickButton(driver, 'Calculate occurrences');
+
+    await _waitUntil(
+      () => _pageContains(driver, 'Cron schedule: 0 9 * * 1-5'),
+      'Cron result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Next: 2026-01-06T09:00:00.000+00:00'),
+      'Cron next occurrence was incorrect',
+    );
+
+    final resourceUrls = await driver.execute(
+      "return performance.getEntriesByType('resource').map(entry => entry.name);",
+      const <Object?>[],
+    );
+    final externalUrls = resourceUrls is List
+        ? resourceUrls
+              .map((entry) => entry.toString())
+              .where((url) => Uri.parse(url).host != '127.0.0.1')
+              .toList()
+        : <String>[];
+    if (externalUrls.isNotEmpty) {
+      throw StateError('Safari made external requests: $externalUrls');
     }
 
-    throw StateError(
-      'Chimera did not finish loading in Safari within 30 seconds.',
-    );
+    stdout.writeln('Safari cron smoke: OK');
   } finally {
     await driver.quit();
   }
+}
+
+Future<void> _clickButton(WebDriver driver, String text) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+          const expected = arguments[0];
+          const button = [...document.querySelectorAll('[role="button"]')]
+            .find(element => element.textContent.trim() === expected);
+          if (!button) return false;
+          button.click();
+          return true;
+        ''',
+      <Object?>[text],
+    );
+    return result == true;
+  }, 'Button did not become available: $text');
+}
+
+Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+          const label = arguments[0];
+          const input = [...document.querySelectorAll('input[aria-label]')]
+            .find(element => element.getAttribute('aria-label') === label);
+          if (!input) return false;
+          input.focus();
+          input.select();
+          return document.activeElement === input;
+        ''',
+      <Object?>[label],
+    );
+    return result == true;
+  }, 'Text box did not become active: $label');
+
+  var entered = '';
+  for (final character in value.split('')) {
+    await driver.keyboard.sendKeys(character);
+    entered += character;
+    await _waitUntil(
+      () => _inputHasValue(driver, label, entered),
+      'Text box did not accept its value: $label',
+    );
+  }
+  await driver.keyboard.sendKeys(Keyboard.tab);
+}
+
+Future<bool> _inputHasValue(
+  WebDriver driver,
+  String label,
+  String expected,
+) async {
+  final result = await driver.execute(
+    '''
+      const label = arguments[0];
+      const expected = arguments[1];
+      const input = [...document.querySelectorAll('input[aria-label]')]
+        .find(element => element.getAttribute('aria-label') === label);
+      return input?.value === expected;
+    ''',
+    <Object?>[label, expected],
+  );
+  return result == true;
+}
+
+Future<bool> _pageContains(WebDriver driver, String expected) async {
+  final result = await driver.execute(
+    '''
+      const expected = arguments[0];
+      if (document.body.innerText.includes(expected)) return true;
+      return [...document.querySelectorAll('[aria-label]')]
+        .some(element => element.getAttribute('aria-label').includes(expected));
+    ''',
+    <Object?>[expected],
+  );
+  return result == true;
+}
+
+Future<void> _waitUntil(
+  Future<bool> Function() predicate,
+  String failureMessage,
+) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 30));
+  while (DateTime.now().isBefore(deadline)) {
+    if (await predicate()) {
+      return;
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+  }
+  throw StateError('$failureMessage within 30 seconds.');
 }

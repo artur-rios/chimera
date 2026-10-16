@@ -9,11 +9,11 @@ void main() {
   late String releaseArtifacts;
 
   setUpAll(() {
-    branchPolicy = File('.github/workflows/branch-policy.yml')
-        .readAsStringSync();
-    continuousIntegration = File('.github/workflows/ci.yml').readAsStringSync();
-    releaseArtifacts = File('.github/workflows/release-artifacts.yml')
-        .readAsStringSync();
+    branchPolicy = _readNormalized('.github/workflows/branch-policy.yml');
+    continuousIntegration = _readNormalized('.github/workflows/ci.yml');
+    releaseArtifacts = _readNormalized(
+      '.github/workflows/release-artifacts.yml',
+    );
   });
 
   test('GivenPullRequest_WhenBranchPolicyRuns_ThenOnlyDocumentedBranchFlowsAreAccepted', () {
@@ -148,3 +148,6 @@ void main() {
     expect(() => loadYaml(releaseArtifacts), returnsNormally);
   });
 }
+
+String _readNormalized(String path) =>
+    File(path).readAsStringSync().replaceAll('\r\n', '\n');

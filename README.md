@@ -5,8 +5,8 @@ common conversion, encoding, formatting, comparison, analysis, and synthetic
 test-data utilities in one local-first application. It targets the browser,
 Windows and Linux desktops, and the command line.
 
-> **Status:** Foundation implemented; utility use cases are delivered through the
-> public backlog below.
+> **Status:** Foundation and cron-expression parsing are implemented; remaining
+> utility use cases are delivered through the public backlog below.
 
 Delivery is tracked in the public [Chimera GitHub Project](https://github.com/users/artur-rios/projects/17).
 
@@ -59,6 +59,26 @@ dart run melos bootstrap
 Run the GUI with `flutter run` from `apps/chimera_gui`. Run the CLI with
 `dart run apps/chimera_cli/bin/chimera.dart`. Both entry points consume shared
 packages rather than owning utility implementations.
+
+### Parse a cron expression
+
+`chimera cron parse` accepts five-field Unix syntax or six fields with seconds.
+It supports wildcards, lists, ranges, steps, English month/weekday names, IANA
+time zones, and 1–100 previous and next occurrences. Input can come from
+`--expression`, standard input, or a local `--file`.
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart cron parse \
+  --expression "0 9 * * MON-FRI" \
+  --timezone America/Sao_Paulo \
+  --count 3 \
+  --at 2026-01-05T12:00:00Z
+```
+
+Add `--json` for stable machine-readable output. CLI failures use exit code 64
+for validation, 70 for processing, 74 for file access, 75 for resource limits,
+and 69 for update failures. The GUI exposes the same shared behavior at
+`/cron/parse`; neither interface persists or transmits the request or result.
 
 ## Architecture
 
@@ -122,7 +142,7 @@ infrastructure-requirement evidence map.
 | Milestone | Delivers | Depends on | Issues | Status |
 | --- | --- | --- | ---: | --- |
 | [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
-| [M-02 — Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 0 / 8 closed |
+| [M-02 — Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 1 / 8 closed |
 | [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
 | [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 0 / 14 closed |
 | [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 0 / 8 closed |

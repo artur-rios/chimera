@@ -1,12 +1,20 @@
+import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'cron_page.dart';
+
 GoRouter buildRouter({
   required MessageCatalog catalog,
   required String localeTag,
+  required CronService cronService,
+  required DateTime Function() currentTime,
+  required CronFilePicker cronFilePicker,
+  String initialLocation = '/',
 }) {
   return GoRouter(
+    initialLocation: initialLocation,
     routes: <RouteBase>[
       GoRoute(
         path: '/',
@@ -25,11 +33,27 @@ GoRouter buildRouter({
                     ),
                     const SizedBox(height: 12),
                     Text(catalog.lookup(localeTag, 'app.description')),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      key: const Key('open-cron'),
+                      onPressed: () => context.go('/cron/parse'),
+                      child: Text(catalog.lookup(localeTag, 'cron.openAction')),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
+        ),
+      ),
+      GoRoute(
+        path: '/cron/parse',
+        builder: (context, state) => CronPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: cronService,
+          currentTime: currentTime,
+          filePicker: cronFilePicker,
         ),
       ),
     ],

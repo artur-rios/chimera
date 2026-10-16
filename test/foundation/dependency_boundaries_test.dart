@@ -44,7 +44,7 @@ void main() {
           'chimera_utilities',
         },
         'chimera_platform': <String>{'chimera_core'},
-        'chimera_core': <String>{},
+        'chimera_core': <String>{'chimera_utilities'},
         'chimera_l10n': <String>{},
         'chimera_utilities': <String>{},
       });

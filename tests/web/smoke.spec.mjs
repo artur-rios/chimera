@@ -1,5 +1,20 @@
 import { expect, test } from '@playwright/test';
 
+async function enableFlutterSemantics(page) {
+  const placeholder = page.locator('flt-semantics-placeholder');
+  if (await placeholder.count()) {
+    await placeholder.evaluate((element) => element.click());
+    await placeholder.waitFor({ state: 'detached' });
+  }
+}
+
+async function fillFlutterTextBox(textBox, value) {
+  await textBox.click();
+  await textBox.fill(value);
+  await expect(textBox).toHaveValue(value);
+  await textBox.press('Tab');
+}
+
 test('compiled Chimera shell loads without page errors', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -9,4 +24,44 @@ test('compiled Chimera shell loads without page errors', async ({ page }) => {
   expect(response?.ok()).toBe(true);
   await expect(page).toHaveTitle('Chimera');
   expect(pageErrors).toEqual([]);
+});
+
+test('cron flow calculates locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Parse a cron expression' }).click();
+  await expect(page.getByText('Parse cron expression')).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Cron expression' }),
+    '0 9 * * MON-FRI',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Time zone' }),
+    'UTC',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Occurrence count' }),
+    '1',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: /Reference instant/ }),
+    '2026-01-05T12:00:00Z',
+  );
+  await page.getByRole('button', { name: 'Calculate occurrences' }).click();
+
+  await expect(page.getByText('Cron schedule: 0 9 * * 1-5').last()).toBeVisible();
+  await expect(
+    page.getByText(/Next: 2026-01-06T09:00:00.000\+00:00/).last(),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
 });
