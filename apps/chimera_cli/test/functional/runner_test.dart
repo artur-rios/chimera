@@ -705,4 +705,193 @@ void main() {
       );
     },
   );
+
+  test('GivenJsonArray_WhenCsvRuns_ThenQuotedCsvIsWritten', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'json',
+        'array-to-csv',
+        '--input=[{"name":"Ada, A.","meta":{"x":1}}]',
+        '--delimiter=comma',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 0);
+    expect(err.toString(), isEmpty);
+    expect(out.toString(), 'name,meta\r\n"Ada, A.","{""x"":1}"');
+  });
+
+  test(
+    'GivenJsonStandardInput_WhenCsvRunsWithoutHeaders_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-csv',
+          '--delimiter=semicolon',
+          '--no-headers',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInput: () async => '[{"name":"Ada"}]',
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'csv': 'Ada',
+        'columns': <Object?>['name'],
+        'delimiter': 'semicolon',
+        'includeHeaders': false,
+        'rowCount': 1,
+      });
+    },
+  );
+
+  test('GivenInputAndOutputFiles_WhenCsvRuns_ThenExactBytesAreSaved', () async {
+    final directory = await Directory.systemTemp.createTemp('chimera-cli-csv-');
+    addTearDown(() => directory.delete(recursive: true));
+    final input = File('${directory.path}${Platform.pathSeparator}rows.json');
+    final output = File('${directory.path}${Platform.pathSeparator}rows.csv');
+    await input.writeAsString('[{"name":"Ada"},{"name":"Lin"}]');
+    await output.writeAsString('old output');
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>[
+        'json',
+        'array-to-csv',
+        '--file=${input.path}',
+        '--output=${output.path}',
+        '--delimiter=pipe',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'CSV saved.\n');
+    expect(await output.readAsBytes(), utf8.encode('name\r\nAda\r\nLin'));
+    expect(
+      directory.listSync().map(
+        (entity) => entity.path.split(Platform.pathSeparator).last,
+      ),
+      unorderedEquals(<String>['rows.json', 'rows.csv']),
+    );
+  });
+
+  test(
+    'GivenInvalidCsvDelimiter_WhenCsvRuns_ThenValidationExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-csv',
+          '--input=[]',
+          '--delimiter=colon',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair(
+          'error',
+          containsPair('code', 'json-csv.invalid-delimiter'),
+        ),
+      );
+    },
+  );
+
+  test(
+    'GivenMalformedJson_WhenCsvRuns_ThenOffsetFailureRedactsInput',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-csv',
+          '--input=[{"secret":}]',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+      expect(failure['error'], containsPair('code', 'json-csv.invalid-json'));
+      expect(failure['error'], containsPair('location', contains('offset')));
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenOutputWriteFailure_WhenCsvRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-csv',
+          '--input=[{"secret":"value"}]',
+          '--output=sensitive.csv',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (path, bytes) async =>
+            throw const FileSystemException('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o arquivo CSV.\n');
+      expect(err.toString(), isNot(contains('secret')));
+      expect(err.toString(), isNot(contains('sensitive.csv')));
+    },
+  );
+
+  test(
+    'GivenCsvCellBudgetExceeded_WhenCsvRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'array-to-csv', '--input=[{"a":1},{"a":2}]'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        jsonCsvService: const JsonCsvService(
+          converter: JsonCsvConverter(maxCells: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The CSV conversion exceeded its resource limit.\n',
+      );
+    },
+  );
 }

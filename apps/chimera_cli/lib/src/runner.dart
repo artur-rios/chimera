@@ -8,6 +8,7 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 
 typedef TextReader = Future<String> Function();
 typedef FileTextReader = Future<String> Function(String path);
+typedef FileBytesWriter = Future<void> Function(String path, List<int> bytes);
 
 Future<int> runChimera(
   List<String> args, {
@@ -16,8 +17,10 @@ Future<int> runChimera(
   required StringSink err,
   TextReader? readStandardInput,
   FileTextReader? readFile,
+  FileBytesWriter? writeOutputFile,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
+  JsonCsvService jsonCsvService = const JsonCsvService(),
   JsonTableService jsonTableService = const JsonTableService(),
   DateTime Function()? currentTime,
 }) async {
@@ -77,6 +80,21 @@ Future<int> runChimera(
         jsonTableService: jsonTableService,
       );
     }
+    if (parsed.command!.name == 'json' &&
+        parsed.command!.command?.name == 'array-to-csv') {
+      return await _runJsonArrayToCsv(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        jsonCsvService: jsonCsvService,
+      );
+    }
 
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
@@ -86,11 +104,15 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'date' && args[1] == 'convert';
     final isJsonTable =
         args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-table';
+    final isJsonCsv =
+        args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-csv';
     _writeFailure(
       err,
       catalog: catalog,
       localeTag: localeTag,
-      json: (isCron || isDate || isJsonTable) && args.contains('--json'),
+      json:
+          (isCron || isDate || isJsonTable || isJsonCsv) &&
+          args.contains('--json'),
       kind: 'validation',
       code: isCron
           ? 'cron.invalid-options'
@@ -98,6 +120,8 @@ Future<int> runChimera(
           ? 'date.invalid-options'
           : isJsonTable
           ? 'json-table.invalid-options'
+          : isJsonCsv
+          ? 'json-csv.invalid-options'
           : 'cli.invalid-options',
       messageKey: isCron
           ? 'error.cron.validation'
@@ -105,6 +129,8 @@ Future<int> runChimera(
           ? 'error.date.validation'
           : isJsonTable
           ? 'error.jsonTable.validation'
+          : isJsonCsv
+          ? 'error.jsonCsv.validation'
           : 'error.unexpected',
     );
     return 64;
@@ -136,12 +162,136 @@ ArgParser _buildParser() {
     ..addOption('file', abbr: 'f')
     ..addFlag('row-numbers', negatable: false)
     ..addFlag('json', negatable: false);
-  final json = ArgParser()..addCommand('array-to-table', jsonArrayToTable);
+  final jsonArrayToCsv = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('delimiter', defaultsTo: 'comma')
+    ..addFlag('headers', defaultsTo: true)
+    ..addFlag('json', negatable: false);
+  final json = ArgParser()
+    ..addCommand('array-to-table', jsonArrayToTable)
+    ..addCommand('array-to-csv', jsonArrayToCsv);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json);
+}
+
+Future<int> _runJsonArrayToCsv(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required JsonCsvService jsonCsvService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'json-csv.conflicting-inputs',
+      messageKey: 'error.jsonCsv.validation',
+    );
+    return 64;
+  }
+
+  late String source;
+  try {
+    source = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on IOException {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'json-csv.input-access'
+          : 'json-csv.file-access',
+      messageKey: fileOption == null
+          ? 'error.jsonCsv.inputAccess'
+          : 'error.jsonCsv.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await jsonCsvService.execute(
+    JsonCsvOperationRequest(
+      source: source,
+      delimiter: parsed.option('delimiter') ?? 'comma',
+      includeHeaders: parsed.flag('headers'),
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.csv));
+        } on IOException {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: parsed.flag('json'),
+            kind: 'access',
+            code: 'json-csv.output-access',
+            messageKey: 'error.jsonCsv.outputAccess',
+          );
+          return 74;
+        }
+        if (!parsed.flag('json')) {
+          out.writeln(catalog.lookup(localeTag, 'jsonCsv.savedResult'));
+          return 0;
+        }
+      }
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(value.toJson()));
+      } else {
+        out.write(value.csv);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<void> _writeFileExactly(String path, List<int> bytes) async {
+  final target = File(path);
+  try {
+    await target.writeAsBytes(bytes, flush: true);
+  } on Object {
+    try {
+      if (await target.exists()) await target.delete();
+    } on IOException {
+      // Preserve the original write failure as the actionable diagnostic.
+    }
+    rethrow;
+  }
 }
 
 Future<int> _runJsonArrayToTable(

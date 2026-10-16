@@ -125,7 +125,46 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'JSON table');
 
-    stdout.writeln('Safari cron, date, and JSON table smoke: OK');
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for JSON CSV flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Convert a JSON array to CSV'),
+      'Home page did not return for JSON CSV flow',
+    );
+    await _clickButton(driver, 'Convert a JSON array to CSV');
+    await _waitUntil(
+      () => _pageContains(driver, 'Create CSV'),
+      'JSON CSV page did not open',
+    );
+    await _fillTextBox(
+      driver,
+      'JSON array',
+      '[{"name":"Ada","meta":{"x":1}}]',
+    );
+    await _clickButton(driver, 'Create CSV');
+    await _waitUntil(
+      () => _pageContains(driver, 'CSV result name,meta'),
+      'JSON CSV headers did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Ada,"{""x"":1}"'),
+      'JSON CSV row did not render',
+    );
+    await _assertNoExternalRequests(driver, flow: 'JSON CSV');
+
+    stdout.writeln('Safari cron, date, JSON table, and JSON CSV smoke: OK');
   } finally {
     await driver.quit();
   }
