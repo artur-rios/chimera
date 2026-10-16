@@ -81,11 +81,11 @@ This is the first review gate.
 
 ## Step 3 — Branch and move the issue to In Progress
 
-After the plan is approved, create a branch from an up-to-date main branch using
+After the plan is approved, create a branch from an up-to-date `develop` branch using
 the pattern `feature/uc-##-short-name`:
 
 ```bash
-git switch main
+git switch develop
 git pull
 git switch -c feature/uc-03-example-use-case
 ```
@@ -120,20 +120,25 @@ Report the passing results, then stop and ask before opening a pull request.
 
 ## Step 7 — Open the pull request after approval
 
-Once approved, push the branch and open a pull request into the main branch,
-referencing its GitHub issue so the merge closes it. Hand the pull request to a
-human for review and merge. Do not merge it or delete the branch.
+Once approved, push the branch and open a pull request into `develop`, referencing
+its GitHub issue so the merge closes it. The Yggdrasil branch-policy check and all
+application CI checks must pass. Hand the pull request to a human for review and
+merge. Do not merge it or delete the branch.
 
 ## Step 8 — Close out after the human merges
 
 After the pull request is merged and the branch is deleted, ask before finishing.
 Then move the issue to **Done** and confirm it is closed.
 
+This completes the use case on `develop`; it does not publish a production
+release. Releases use Yggdrasil's separate `release/x.y.z` to `main` promotion
+flow documented in the formal Development Workflow and Operations documents.
+
 ---
 
 ## Definition of Done
 
-- [ ] Implemented on a `feature/uc-##-short-name` branch created from `main`.
+- [ ] Implemented on a `feature/uc-##-short-name` branch created from `develop`.
 - [ ] Main flow and every alternative flow implemented.
 - [ ] Unit and functional tests cover the use case per the Testing Specification.
 - [ ] The full test suite passes on every affected supported target.

@@ -59,9 +59,15 @@ an operation, provided the utility remains local and offline.
 ## Deployment
 
 The web build is deployed in Docker to a self-managed Ubuntu VPS and exposed
-through Traefik. It targets Chromium, Firefox, and Safari.
+through Traefik. Deployment is managed by
+[Yggdrasil](https://github.com/artur-rios/yggdrasil), using its application
+catalog, root `Jenkinsfile`, self-hosted Jenkins pipeline, environment-specific
+Docker Compose deployment, health checks, and rollback behavior. It targets
+Chromium, Firefox, and Safari.
 
 Windows and Linux desktop and CLI builds are published through GitHub Releases.
 Each is offered as a portable download or an installer. Installed desktop and
 CLI distributions check for updates, prompt the user, and apply an accepted
-update without requiring the user to download a package manually.
+update without requiring the user to download a package manually. GitHub Actions
+owns build and test checks; Yggdrasil owns environment deployment and the release
+promotion flow.
