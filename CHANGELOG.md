@@ -18,3 +18,5 @@ Versioning and use tags in the form `vX.Y.Z`.
   with localized GUI flow and human or JSON CLI output.
 - Deterministic JSON-object array table rendering with nested JSON cells,
   optional row numbers, localized GUI flow, and human or JSON CLI output.
+- Standards-compliant JSON-object array CSV serialization with selectable
+  delimiters and headers, localized preview/save flow, and exact CLI file output.

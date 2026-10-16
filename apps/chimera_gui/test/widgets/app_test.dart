@@ -526,4 +526,206 @@ void main() {
       expect(find.byKey(const Key('json-table-result')), findsNothing);
     },
   );
+
+  testWidgets('GivenJsonArray_WhenCsvSubmitted_ThenQuotedPreviewIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open-json-csv')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('json-csv-input')),
+      '[{"name":"Ada, A.","meta":{"x":1}}]',
+    );
+    await tester.tap(find.byKey(const Key('json-csv-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('name,meta\r\n"Ada, A.","{""x"":1}"'), findsOneWidget);
+    final semantics = tester.widget<Semantics>(
+      find.byKey(const Key('json-csv-result-semantics')),
+    );
+    expect(semantics.properties.value, 'name,meta\r\n"Ada, A.","{""x"":1}"');
+    expect(find.byKey(const Key('json-csv-save')), findsOneWidget);
+  });
+
+  testWidgets('GivenCsvOptions_WhenChanged_ThenDelimiterAndHeadersAreApplied', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/array-to-csv'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-csv-input')),
+      '[{"name":"Ada","active":true}]',
+    );
+    await tester.tap(find.byKey(const Key('json-csv-delimiter')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Semicolon').last);
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('json-csv-headers')));
+    await tester.tap(find.byKey(const Key('json-csv-headers')));
+    await tester.ensureVisible(find.byKey(const Key('json-csv-submit')));
+    await tester.tap(find.byKey(const Key('json-csv-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ada;true'), findsOneWidget);
+  });
+
+  testWidgets('GivenLocalJsonFile_WhenCsvSelected_ThenInputUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/array-to-csv',
+        jsonCsvFilePicker: () async => '[{"name":"Ada"}]',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('json-csv-file')));
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('json-csv-input')),
+    );
+    expect(input.controller!.text, '[{"name":"Ada"}]');
+  });
+
+  testWidgets('GivenCsvResult_WhenSaved_ThenExactBytesReachLocalAdapter', (
+    tester,
+  ) async {
+    String? savedName;
+    List<int>? savedBytes;
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/array-to-csv',
+        jsonCsvFileSaver: (name, bytes) async {
+          savedName = name;
+          savedBytes = bytes;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-csv-input')),
+      '[{"name":"Ada"}]',
+    );
+    await tester.tap(find.byKey(const Key('json-csv-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('json-csv-save')));
+    await tester.pumpAndSettle();
+
+    expect(savedName, 'chimera.csv');
+    expect(savedBytes, <int>[110, 97, 109, 101, 13, 10, 65, 100, 97]);
+    expect(find.text('CSV saved.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'GivenCsvSaveFailure_WhenSavedInPortuguese_ThenAccessErrorIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/json/array-to-csv',
+          jsonCsvFileSaver: (name, bytes) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-csv-input')),
+        '[{"name":"Ada"}]',
+      );
+      await tester.tap(find.byKey(const Key('json-csv-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('json-csv-save')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Não foi possível salvar o arquivo CSV.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('GivenInvalidJson_WhenCsvSubmitted_ThenLocationIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/array-to-csv'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byKey(const Key('json-csv-input')), '[false]');
+    await tester.tap(find.byKey(const Key('json-csv-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('The JSON or CSV options are invalid.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining(r'$[0]'), findsOneWidget);
+    expect(find.byKey(const Key('json-csv-result')), findsNothing);
+  });
+
+  testWidgets(
+    'GivenCsvResourceFailure_WhenSubmitted_ThenNoPartialResultAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-csv',
+          jsonCsvService: const JsonCsvService(
+            converter: JsonCsvConverter(maxCells: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-csv-input')),
+        '[{"a":1},{"a":2}]',
+      );
+      await tester.tap(find.byKey(const Key('json-csv-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The CSV conversion exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-csv-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowCsvViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-csv',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Convert JSON array to CSV'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

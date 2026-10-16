@@ -5,9 +5,9 @@ common conversion, encoding, formatting, comparison, analysis, and synthetic
 test-data utilities in one local-first application. It targets the browser,
 Windows and Linux desktops, and the command line.
 
-> **Status:** Foundation, cron-expression parsing, date conversion, and JSON
-> array table rendering are implemented; remaining utility use cases are
-> delivered through the public backlog below.
+> **Status:** Foundation, cron-expression parsing, date conversion, JSON array
+> table rendering, and JSON-to-CSV conversion are implemented; remaining
+> utility use cases are delivered through the public backlog below.
 
 Delivery is tracked in the public [Chimera GitHub Project](https://github.com/users/artur-rios/projects/17).
 
@@ -119,6 +119,25 @@ horizontally scrollable table. Validation failures identify the JSON offset or
 array path without echoing input data, and resource failures return no partial
 table.
 
+### Convert a JSON array to CSV
+
+`chimera json array-to-csv` validates an array of JSON objects and serializes
+the derived columns as RFC 4180-style CSV. Comma, semicolon, tab, and pipe
+delimiters are supported; headers are included by default and can be disabled.
+Input can come from `--input`, standard input, or a local `--file`; `--output`
+writes exact UTF-8 bytes to a local file and `--json` returns stable metadata.
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart json array-to-csv \
+  --input '[{"name":"Ada","skills":["Dart","C"]}]' \
+  --delimiter comma \
+  --output developers.csv
+```
+
+The GUI exposes the same local-only conversion and save flow at
+`/json/array-to-csv`. Nested values remain compact JSON and failed file writes
+return a typed access failure without reporting a successful result.
+
 ## Architecture
 
 | Project | Responsibility |
@@ -181,7 +200,7 @@ infrastructure-requirement evidence map.
 | Milestone | Delivers | Depends on | Issues | Status |
 | --- | --- | --- | ---: | --- |
 | [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
-| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 3 / 8 closed |
+| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 4 / 8 closed |
 | [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
 | [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 0 / 14 closed |
 | [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 0 / 8 closed |

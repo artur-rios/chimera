@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'json_csv_page.dart';
 import 'json_table_page.dart';
 
 GoRouter buildRouter({
@@ -12,10 +13,13 @@ GoRouter buildRouter({
   required String localeTag,
   required CronService cronService,
   required DateService dateService,
+  required JsonCsvService jsonCsvService,
   required JsonTableService jsonTableService,
   required DateTime Function() currentTime,
   required CronFilePicker cronFilePicker,
   required DateFilePicker dateFilePicker,
+  required JsonCsvFilePicker jsonCsvFilePicker,
+  required JsonCsvFileSaver jsonCsvFileSaver,
   required JsonTableFilePicker jsonTableFilePicker,
   String initialLocation = '/',
 }) {
@@ -54,6 +58,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/json/array-to-table'),
                         child: Text(
                           catalog.lookup(localeTag, 'jsonTable.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-json-csv'),
+                        onPressed: () => context.go('/json/array-to-csv'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jsonCsv.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -98,6 +110,16 @@ GoRouter buildRouter({
           localeTag: localeTag,
           service: jsonTableService,
           filePicker: jsonTableFilePicker,
+        ),
+      ),
+      GoRoute(
+        path: '/json/array-to-csv',
+        builder: (context, state) => JsonCsvPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jsonCsvService,
+          filePicker: jsonCsvFilePicker,
+          fileSaver: jsonCsvFileSaver,
         ),
       ),
     ],
