@@ -358,4 +358,172 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets(
+    'GivenJsonArrayForm_WhenSubmitted_ThenNestedValuesAppearInTable',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('open-json-table')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('json-table-input')),
+        '[{"name":"Ada","meta":{"x":1}},{"name":"Lin"}]',
+      );
+      await tester.tap(find.byKey(const Key('json-table-row-numbers')));
+      await tester.tap(find.byKey(const Key('json-table-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('name'), findsOneWidget);
+      expect(find.text('meta'), findsOneWidget);
+      expect(find.text('Ada'), findsOneWidget);
+      expect(find.text('{"x":1}'), findsOneWidget);
+      expect(find.text('2'), findsOneWidget);
+    },
+  );
+
+  testWidgets('GivenLocalJsonFile_WhenSelected_ThenInputUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/array-to-table',
+        jsonTableFilePicker: () async => '[{"name":"Ada"}]',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('json-table-file')));
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('json-table-input')),
+    );
+    expect(input.controller!.text, '[{"name":"Ada"}]');
+  });
+
+  testWidgets(
+    'GivenInvalidJsonMember_WhenSubmittedInPortuguese_ThenPathIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/json/array-to-table',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-table-input')),
+        '[false]',
+      );
+      await tester.tap(find.byKey(const Key('json-table-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('O array JSON é inválido.'), findsOneWidget);
+      expect(find.textContaining(r'$[0]'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenJsonTableResourceFailure_WhenSubmitted_ThenNoPartialTableAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-table',
+          jsonTableService: const JsonTableService(
+            converter: JsonTableConverter(maxCells: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-table-input')),
+        '[{"a":1},{"a":2}]',
+      );
+      await tester.tap(find.byKey(const Key('json-table-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The table exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-table-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowJsonTableViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-table',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Convert JSON array to table'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenOnlyEmptyObjects_WhenSubmitted_ThenZeroColumnCountIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-table',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('json-table-input')), '[{}]');
+      await tester.tap(find.byKey(const Key('json-table-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The array contains no columns. Row count: 1'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'GivenGuiCellBudgetExceeded_WhenSubmitted_ThenResourceFailureIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/array-to-table',
+        ),
+      );
+      await tester.pumpAndSettle();
+      final source = '[${List<String>.filled(10001, '{"a":1}').join(',')}]';
+
+      await tester.enterText(find.byKey(const Key('json-table-input')), source);
+      await tester.tap(find.byKey(const Key('json-table-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The table exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-table-result')), findsNothing);
+    },
+  );
 }

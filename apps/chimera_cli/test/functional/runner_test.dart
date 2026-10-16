@@ -503,4 +503,206 @@ void main() {
       });
     },
   );
+
+  test(
+    'GivenJsonArray_WhenTableRuns_ThenMarkdownWithRowNumbersIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-table',
+          '--input=[{"name":"Ada","meta":{"x":1}},{"name":"Lin"}]',
+          '--row-numbers',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 0);
+      expect(err.toString(), isEmpty);
+      expect(out.toString(), contains('| # | name | meta |'));
+      expect(out.toString(), contains('| 1 | Ada | {"x":1} |'));
+      expect(out.toString(), contains('| 2 | Lin |  |'));
+    },
+  );
+
+  test(
+    'GivenJsonStandardInput_WhenTableRunsWithJson_ThenStableResultIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'array-to-table', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        readStandardInput: () async => '[{"active":true}]',
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'columns': <Object?>['active'],
+        'rows': <Object?>[
+          <Object?>['true'],
+        ],
+        'includeRowNumbers': false,
+        'rowCount': 1,
+      });
+    },
+  );
+
+  test('GivenLocalJsonFile_WhenTableRuns_ThenFileContentIsUsed', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-json-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}${Platform.pathSeparator}rows.json');
+    await file.writeAsString('[{"name":"Ada"}]');
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>['json', 'array-to-table', '--file=${file.path}', '--json'],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(jsonDecode(out.toString()), containsPair('rowCount', 1));
+  });
+
+  test(
+    'GivenMalformedJson_WhenTableRuns_ThenOffsetFailureRedactsInput',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-table',
+          '--input=[{"secret":}]',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+      expect(failure['error'], containsPair('code', 'json-table.invalid-json'));
+      expect(failure['error'], containsPair('location', contains('offset')));
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenNonObjectMember_WhenTableRunsInPortuguese_ThenPathIsShown',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'array-to-table', '--input=[false]'],
+        localeTag: 'pt-BR',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(err.toString(), contains('O array JSON é inválido.'));
+      expect(err.toString(), contains(r'$[0]'));
+    },
+  );
+
+  test(
+    'GivenTableCellBudgetExceeded_WhenTableRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'array-to-table', '--input=[{"a":1},{"a":2}]'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        jsonTableService: const JsonTableService(
+          converter: JsonTableConverter(maxCells: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(err.toString(), 'The table exceeded its resource limit.\n');
+    },
+  );
+
+  test(
+    'GivenOnlyEmptyObjects_WhenTableRuns_ThenZeroColumnCountIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'array-to-table', '--input=[{}]'],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'The array contains no columns.\nRow count: 1\n');
+    },
+  );
+
+  test(
+    'GivenBackslashBeforePipe_WhenTableRuns_ThenMarkdownCellIsSafe',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-table',
+          r'--input=[{"value":"a\\|b"}]',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), contains(r'| a\\\|b |'));
+    },
+  );
+
+  test(
+    'GivenUnsupportedJsonNumber_WhenTableRuns_ThenTypedFailureIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'array-to-table',
+          '--input=[{"value":1e400}]',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair(
+          'error',
+          containsPair('code', 'json-table.unsupported-number'),
+        ),
+      );
+    },
+  );
 }

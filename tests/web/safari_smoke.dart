@@ -90,7 +90,42 @@ Future<void> main() async {
 
     await _assertNoExternalRequests(driver, flow: 'date');
 
-    stdout.writeln('Safari cron and date smoke: OK');
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for JSON table flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Convert a JSON array to a table'),
+      'Home page did not return for JSON table flow',
+    );
+    await _clickButton(driver, 'Convert a JSON array to a table');
+    await _waitUntil(
+      () => _pageContains(driver, 'JSON array'),
+      'JSON table page did not open',
+    );
+    await _fillTextBox(driver, 'JSON array', '[{"name":"Ada","meta":{"x":1}}]');
+    await _clickButton(driver, 'Create table');
+    await _waitUntil(
+      () => _pageContains(driver, 'Ada'),
+      'JSON table row did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, '{"x":1}'),
+      'Nested JSON table value did not render',
+    );
+    await _assertNoExternalRequests(driver, flow: 'JSON table');
+
+    stdout.writeln('Safari cron, date, and JSON table smoke: OK');
   } finally {
     await driver.quit();
   }
@@ -137,7 +172,7 @@ Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
     final result = await driver.execute(
       '''
           const label = arguments[0];
-          const input = [...document.querySelectorAll('input[aria-label]')]
+          const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
             .find(element => element.getAttribute('aria-label') === label);
           if (!input) return false;
           input.focus();
@@ -170,7 +205,7 @@ Future<bool> _inputHasValue(
     '''
       const label = arguments[0];
       const expected = arguments[1];
-      const input = [...document.querySelectorAll('input[aria-label]')]
+      const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
         .find(element => element.getAttribute('aria-label') === label);
       return input?.value === expected;
     ''',

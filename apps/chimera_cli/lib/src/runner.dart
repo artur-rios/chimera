@@ -18,6 +18,7 @@ Future<int> runChimera(
   FileTextReader? readFile,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
+  JsonTableService jsonTableService = const JsonTableService(),
   DateTime Function()? currentTime,
 }) async {
   const catalog = MessageCatalog();
@@ -62,6 +63,20 @@ Future<int> runChimera(
         dateService: dateService,
       );
     }
+    if (parsed.command!.name == 'json' &&
+        parsed.command!.command?.name == 'array-to-table') {
+      return await _runJsonArrayToTable(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        jsonTableService: jsonTableService,
+      );
+    }
 
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
@@ -69,21 +84,27 @@ Future<int> runChimera(
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
     final isDate =
         args.length >= 2 && args[0] == 'date' && args[1] == 'convert';
+    final isJsonTable =
+        args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-table';
     _writeFailure(
       err,
       catalog: catalog,
       localeTag: localeTag,
-      json: (isCron || isDate) && args.contains('--json'),
+      json: (isCron || isDate || isJsonTable) && args.contains('--json'),
       kind: 'validation',
       code: isCron
           ? 'cron.invalid-options'
           : isDate
           ? 'date.invalid-options'
+          : isJsonTable
+          ? 'json-table.invalid-options'
           : 'cli.invalid-options',
       messageKey: isCron
           ? 'error.cron.validation'
           : isDate
           ? 'error.date.validation'
+          : isJsonTable
+          ? 'error.jsonTable.validation'
           : 'error.unexpected',
     );
     return 64;
@@ -110,10 +131,100 @@ ArgParser _buildParser() {
     ..addOption('target-pattern')
     ..addFlag('json', negatable: false);
   final date = ArgParser()..addCommand('convert', dateConvert);
+  final jsonArrayToTable = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addFlag('row-numbers', negatable: false)
+    ..addFlag('json', negatable: false);
+  final json = ArgParser()..addCommand('array-to-table', jsonArrayToTable);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('cron', cron)
-    ..addCommand('date', date);
+    ..addCommand('date', date)
+    ..addCommand('json', json);
+}
+
+Future<int> _runJsonArrayToTable(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required JsonTableService jsonTableService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'json-table.conflicting-inputs',
+      messageKey: 'error.jsonTable.validation',
+    );
+    return 64;
+  }
+
+  late String source;
+  try {
+    source = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on IOException {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'json-table.input-access'
+          : 'json-table.file-access',
+      messageKey: fileOption == null
+          ? 'error.jsonTable.inputAccess'
+          : 'error.jsonTable.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await jsonTableService.execute(
+    JsonTableOperationRequest(
+      source: source,
+      includeRowNumbers: parsed.flag('row-numbers'),
+    ),
+  );
+  return result.fold(
+    onSuccess: (value) {
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(value.toJson()));
+      } else {
+        _writeHumanJsonTable(
+          value,
+          localeTag: localeTag,
+          catalog: catalog,
+          out: out,
+        );
+      }
+      return 0;
+    },
+    onFailure: (failure) {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
 }
 
 Future<int> _runDateConvert(
@@ -352,10 +463,17 @@ void _writeFailure(
   required String kind,
   required String code,
   required String messageKey,
+  Map<String, Object?> details = const <String, Object?>{},
 }) {
   final message = catalog.lookup(localeTag, messageKey);
   if (!json) {
     err.writeln(message);
+    if (details.isNotEmpty) {
+      final location = details['path'] ?? details['offset'];
+      err.writeln(
+        '${catalog.lookup(localeTag, 'jsonTable.locationLabel')}: $location',
+      );
+    }
     return;
   }
   err.writeln(
@@ -364,10 +482,54 @@ void _writeFailure(
         'kind': kind,
         'code': code,
         'message': message,
+        if (details.isNotEmpty) 'location': details,
       },
     }),
   );
 }
+
+void _writeHumanJsonTable(
+  JsonTableOutput output, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+}) {
+  final table = output.table;
+  if (table.rows.isEmpty) {
+    out.writeln(catalog.lookup(localeTag, 'jsonTable.emptyResult'));
+    return;
+  }
+  if (table.columns.isEmpty && !table.includeRowNumbers) {
+    out.writeln(catalog.lookup(localeTag, 'jsonTable.noColumnsResult'));
+    out.writeln(
+      '${catalog.lookup(localeTag, 'jsonTable.rowCountLabel')}: '
+      '${table.rows.length}',
+    );
+    return;
+  }
+
+  final headings = <String>[
+    if (table.includeRowNumbers)
+      catalog.lookup(localeTag, 'jsonTable.rowNumberLabel'),
+    ...table.columns,
+  ];
+  out.writeln('| ${headings.map(_escapeTableCell).join(' | ')} |');
+  out.writeln('| ${headings.map((_) => '---').join(' | ')} |');
+  for (var index = 0; index < table.rows.length; index++) {
+    final cells = <String>[
+      if (table.includeRowNumbers) '${index + 1}',
+      ...table.rows[index],
+    ];
+    out.writeln('| ${cells.map(_escapeTableCell).join(' | ')} |');
+  }
+}
+
+String _escapeTableCell(String value) => value
+    .replaceAll('\\', r'\\')
+    .replaceAll('|', r'\|')
+    .replaceAll('\r\n', '<br>')
+    .replaceAll('\r', '<br>')
+    .replaceAll('\n', '<br>');
 
 void _writeHumanCronResult(
   CronOutput output, {
