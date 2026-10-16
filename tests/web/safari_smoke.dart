@@ -34,33 +34,17 @@ Future<void> main() async {
       'Flutter semantics did not become available',
     );
 
-    await (await _findElement(
-      driver,
-      '[role="button"]',
-      text: 'Parse a cron expression',
-    )).click();
+    await _clickButton(driver, 'Parse a cron expression');
     await _waitUntil(
       () => _pageContains(driver, 'Parse cron expression'),
       'Cron page did not open',
     );
 
-    await _fillTextBox(
-      driver,
-      'input[aria-label="Cron expression"]',
-      '0 9 * * MON-FRI',
-    );
-    await _fillTextBox(driver, 'input[aria-label="Time zone"]', 'UTC');
-    await _fillTextBox(driver, 'input[aria-label="Occurrence count"]', '1');
-    await _fillTextBox(
-      driver,
-      'input[aria-label="Reference instant"]',
-      '2026-01-05T12:00:00Z',
-    );
-    await (await _findElement(
-      driver,
-      '[role="button"]',
-      text: 'Calculate occurrences',
-    )).click();
+    await _fillTextBox(driver, 'Cron expression', '0 9 * * MON-FRI');
+    await _fillTextBox(driver, 'Time zone', 'UTC');
+    await _fillTextBox(driver, 'Occurrence count', '1');
+    await _fillTextBox(driver, 'Reference instant', '2026-01-05T12:00:00Z');
+    await _clickButton(driver, 'Calculate occurrences');
 
     await _waitUntil(
       () => _pageContains(driver, 'Cron schedule: 0 9 * * 1-5'),
@@ -91,51 +75,68 @@ Future<void> main() async {
   }
 }
 
-Future<WebElement> _findElement(
-  WebDriver driver,
-  String selector, {
-  String? text,
-}) async {
-  WebElement? element;
-  await _waitUntil(
-    () async {
-      try {
-        final candidates = await driver
-            .findElements(By.cssSelector(selector))
-            .toList();
-        for (final candidate in candidates) {
-          if (text != null && (await candidate.text).trim() != text) {
-            continue;
-          }
-          if (await candidate.displayed) {
-            element = candidate;
-            return true;
-          }
-        }
-        return false;
-      } on WebDriverException {
-        return false;
-      }
-    },
-    'Element did not become available: $selector${text == null ? '' : ' ($text)'}',
-  );
-  return element!;
+Future<void> _clickButton(WebDriver driver, String text) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+          const expected = arguments[0];
+          const button = [...document.querySelectorAll('[role="button"]')]
+            .find(element => element.textContent.trim() === expected);
+          if (!button) return false;
+          button.click();
+          return true;
+        ''',
+      <Object?>[text],
+    );
+    return result == true;
+  }, 'Button did not become available: $text');
 }
 
-Future<void> _fillTextBox(
+Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+          const label = arguments[0];
+          const input = [...document.querySelectorAll('input[aria-label]')]
+            .find(element => element.getAttribute('aria-label') === label);
+          if (!input) return false;
+          input.focus();
+          input.select();
+          return document.activeElement === input;
+        ''',
+      <Object?>[label],
+    );
+    return result == true;
+  }, 'Text box did not become active: $label');
+
+  var entered = '';
+  for (final character in value.split('')) {
+    await driver.keyboard.sendKeys(character);
+    entered += character;
+    await _waitUntil(
+      () => _inputHasValue(driver, label, entered),
+      'Text box did not accept its value: $label',
+    );
+  }
+  await driver.keyboard.sendKeys(Keyboard.tab);
+}
+
+Future<bool> _inputHasValue(
   WebDriver driver,
-  String selector,
-  String value,
+  String label,
+  String expected,
 ) async {
-  final textBox = await _findElement(driver, selector);
-  await textBox.click();
-  await textBox.clear();
-  await textBox.sendKeys(value);
-  await _waitUntil(
-    () async => await textBox.properties['value'] == value,
-    'Text box did not accept its value: $selector',
+  final result = await driver.execute(
+    '''
+      const label = arguments[0];
+      const expected = arguments[1];
+      const input = [...document.querySelectorAll('input[aria-label]')]
+        .find(element => element.getAttribute('aria-label') === label);
+      return input?.value === expected;
+    ''',
+    <Object?>[label, expected],
   );
-  await textBox.sendKeys(Keyboard.tab);
+  return result == true;
 }
 
 Future<bool> _pageContains(WebDriver driver, String expected) async {
