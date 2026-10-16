@@ -19,7 +19,7 @@ final class BoundaryViolation {
 
 const Map<String, Set<String>> _allowedInternalDependencies =
     <String, Set<String>>{
-      'chimera_core': <String>{},
+      'chimera_core': <String>{'chimera_utilities'},
       'chimera_l10n': <String>{},
       'chimera_platform': <String>{'chimera_core'},
       'chimera_utilities': <String>{},
