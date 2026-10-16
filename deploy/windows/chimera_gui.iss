@@ -35,4 +35,3 @@ Name: "{autodesktop}\Chimera"; Filename: "{app}\chimera_gui.exe"; Tasks: desktop
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"
-

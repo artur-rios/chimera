@@ -233,4 +233,3 @@ jobs:
             evidence/performance-tests.txt
             apps/chimera_gui/coverage/lcov.info
           if-no-files-found: error
-

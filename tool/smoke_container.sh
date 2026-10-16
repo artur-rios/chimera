@@ -36,4 +36,3 @@ done
 
 printf '%s\n' "Container did not return the exact health contract at ${health_uri}." >&2
 exit 1
-

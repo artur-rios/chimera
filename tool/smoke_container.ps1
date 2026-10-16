@@ -35,4 +35,3 @@ try {
 } finally {
   docker rm --force $ContainerName 2>$null | Out-Null
 }
-

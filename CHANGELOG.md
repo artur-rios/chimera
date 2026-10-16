@@ -12,4 +12,3 @@ Versioning and use tags in the form `vX.Y.Z`.
 - Privacy, dependency-boundary, release-metadata, accessibility, performance,
   and deployment contracts.
 - Reproducible unprivileged web container and native release pipelines.
-

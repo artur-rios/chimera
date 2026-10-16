@@ -59,4 +59,3 @@ jobs:
           esac
 
           echo "'$HEAD_REF' -> '$BASE_REF' follows the branching model."
-

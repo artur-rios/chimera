@@ -70,4 +70,3 @@ $artifactNames | ForEach-Object {
   }
   Write-Output $artifactPath
 }
-

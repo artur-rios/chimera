@@ -54,5 +54,3 @@ melos:
     test:all:
       description: Run every Chimera test suite.
       run: dart run melos run test:unit && dart run melos run test:cli && dart run melos run test:gui && dart run melos run test:web && dart run melos run test:deployment && dart run melos run test:performance
-
-

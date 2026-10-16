@@ -17,4 +17,3 @@ linter:
     - directives_ordering
     - prefer_final_locals
     - unawaited_futures
-

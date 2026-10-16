@@ -42,4 +42,3 @@ begin
     ExistingPath := '';
   Result := Pos(';' + Uppercase(Path) + ';', ';' + Uppercase(ExistingPath) + ';') = 0;
 end;
-

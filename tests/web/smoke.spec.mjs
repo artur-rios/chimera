@@ -10,4 +10,3 @@ test('compiled Chimera shell loads without page errors', async ({ page }) => {
   await expect(page).toHaveTitle('Chimera');
   expect(pageErrors).toEqual([]);
 });
-
