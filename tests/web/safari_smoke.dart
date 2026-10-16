@@ -168,9 +168,10 @@ Future<void> _clickButton(WebDriver driver, String text) async {
 }
 
 Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
-  await _waitUntil(() async {
-    final result = await driver.execute(
-      '''
+  for (var attempt = 0; attempt < 3; attempt++) {
+    await _waitUntil(() async {
+      final result = await driver.execute(
+        '''
           const label = arguments[0];
           const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
             .find(element => element.getAttribute('aria-label') === label);
@@ -179,21 +180,35 @@ Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
           input.select();
           return document.activeElement === input;
         ''',
-      <Object?>[label],
-    );
-    return result == true;
-  }, 'Text box did not become active: $label');
+        <Object?>[label],
+      );
+      return result == true;
+    }, 'Text box did not become active: $label');
 
-  var entered = '';
-  for (final character in value.split('')) {
-    await driver.keyboard.sendKeys(character);
-    entered += character;
-    await _waitUntil(
-      () => _inputHasValue(driver, label, entered),
-      'Text box did not accept its value: $label',
-    );
+    var entered = '';
+    var attemptSucceeded = true;
+    for (final character in value.split('')) {
+      await driver.keyboard.sendKeys(character);
+      entered += character;
+      try {
+        await _waitUntil(
+          () => _inputHasValue(driver, label, entered),
+          'Text box did not accept its value: $label',
+          timeout: const Duration(seconds: 3),
+        );
+      } on StateError {
+        attemptSucceeded = false;
+        break;
+      }
+    }
+    if (attemptSucceeded) {
+      await driver.keyboard.sendKeys(Keyboard.tab);
+      return;
+    }
   }
-  await driver.keyboard.sendKeys(Keyboard.tab);
+  throw StateError(
+    'Text box did not accept its value after 3 attempts: $label',
+  );
 }
 
 Future<bool> _inputHasValue(
@@ -229,14 +244,15 @@ Future<bool> _pageContains(WebDriver driver, String expected) async {
 
 Future<void> _waitUntil(
   Future<bool> Function() predicate,
-  String failureMessage,
-) async {
-  final deadline = DateTime.now().add(const Duration(seconds: 30));
+  String failureMessage, {
+  Duration timeout = const Duration(seconds: 30),
+}) async {
+  final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
     if (await predicate()) {
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
-  throw StateError('$failureMessage within 30 seconds.');
+  throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
 }
