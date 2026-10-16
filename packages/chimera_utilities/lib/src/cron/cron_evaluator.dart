@@ -62,7 +62,7 @@ final class CronEvaluation {
 }
 
 final class CronEvaluator {
-  const CronEvaluator({this.maxSearchDays = 146097});
+  const CronEvaluator({this.maxSearchDays = 292194});
 
   final int maxSearchDays;
 
@@ -154,41 +154,37 @@ final class CronEvaluator {
       for (final hour in hours) {
         for (final minute in minutes) {
           for (final second in seconds) {
-            final local = time_zone.TZDateTime(
-              location,
-              date.year,
-              date.month,
-              date.day,
-              hour,
-              minute,
-              second,
+            final matchingWallClocks = _matchingWallClocks(
+              location: location,
+              year: date.year,
+              month: date.month,
+              day: date.day,
+              hour: hour,
+              minute: minute,
+              second: second,
             );
-            if (local.year != date.year ||
-                local.month != date.month ||
-                local.day != date.day ||
-                local.hour != hour ||
-                local.minute != minute ||
-                local.second != second) {
-              continue;
-            }
+            final orderedWallClocks = direction == _SearchDirection.next
+                ? matchingWallClocks
+                : matchingWallClocks.reversed;
+            for (final local in orderedWallClocks) {
+              final instant = local.toUtc();
+              final isOnRequestedSide = direction == _SearchDirection.next
+                  ? instant.isAfter(referenceUtc)
+                  : instant.isBefore(referenceUtc);
+              if (!isOnRequestedSide) {
+                continue;
+              }
 
-            final instant = local.toUtc();
-            final isOnRequestedSide = direction == _SearchDirection.next
-                ? instant.isAfter(referenceUtc)
-                : instant.isBefore(referenceUtc);
-            if (!isOnRequestedSide) {
-              continue;
-            }
-
-            occurrences.add(
-              CronOccurrence(
-                instantUtc: instant,
-                localIso8601: _formatLocal(local),
-                timeZoneAbbreviation: local.timeZoneName,
-              ),
-            );
-            if (occurrences.length == count) {
-              return occurrences;
+              occurrences.add(
+                CronOccurrence(
+                  instantUtc: instant,
+                  localIso8601: _formatLocal(local),
+                  timeZoneAbbreviation: local.timeZoneName,
+                ),
+              );
+              if (occurrences.length == count) {
+                return occurrences;
+              }
             }
           }
         }
@@ -200,6 +196,51 @@ final class CronEvaluator {
       code: 'cron.search-limit',
     );
   }
+}
+
+List<time_zone.TZDateTime> _matchingWallClocks({
+  required time_zone.Location location,
+  required int year,
+  required int month,
+  required int day,
+  required int hour,
+  required int minute,
+  required int second,
+}) {
+  final wallClockMilliseconds = DateTime.utc(
+    year,
+    month,
+    day,
+    hour,
+    minute,
+    second,
+  ).millisecondsSinceEpoch;
+  final offsets = <int>{
+    for (final zone in location.zones) zone.offset.inMilliseconds,
+    location.timeZone(wallClockMilliseconds).offset.inMilliseconds,
+  };
+  final matches = <time_zone.TZDateTime>[];
+  final seenInstants = <int>{};
+
+  for (final offset in offsets) {
+    final instantMilliseconds = wallClockMilliseconds - offset;
+    final local = time_zone.TZDateTime.fromMillisecondsSinceEpoch(
+      location,
+      instantMilliseconds,
+    );
+    if (local.year == year &&
+        local.month == month &&
+        local.day == day &&
+        local.hour == hour &&
+        local.minute == minute &&
+        local.second == second &&
+        seenInstants.add(instantMilliseconds)) {
+      matches.add(local);
+    }
+  }
+
+  matches.sort((left, right) => left.compareTo(right));
+  return matches;
 }
 
 enum _SearchDirection { previous, next }
@@ -315,13 +356,13 @@ final class _CronSchedule {
     final dayOfMonthMatches = daysOfMonth.values.contains(date.day);
     final cronWeekday = date.weekday == DateTime.sunday ? 0 : date.weekday;
     final dayOfWeekMatches = daysOfWeek.values.contains(cronWeekday);
-    if (daysOfMonth.isFullRange && daysOfWeek.isFullRange) {
+    if (daysOfMonth.startsWithWildcard && daysOfWeek.startsWithWildcard) {
       return true;
     }
-    if (daysOfMonth.isFullRange) {
+    if (daysOfMonth.startsWithWildcard) {
       return dayOfWeekMatches;
     }
-    if (daysOfWeek.isFullRange) {
+    if (daysOfWeek.startsWithWildcard) {
       return dayOfMonthMatches;
     }
     return dayOfMonthMatches || dayOfWeekMatches;
@@ -332,14 +373,14 @@ final class _CronField {
   _CronField({
     required this.values,
     required this.normalized,
-    required this.isFullRange,
+    required this.startsWithWildcard,
   });
 
   factory _CronField.single(int value, _CronFieldDefinition definition) =>
       _CronField(
         values: <int>{value},
         normalized: value.toString(),
-        isFullRange: definition.minimum == definition.maximum,
+        startsWithWildcard: false,
       );
 
   factory _CronField.parse(String source, _CronFieldDefinition definition) {
@@ -395,13 +436,10 @@ final class _CronField {
       if (values.isEmpty) {
         throw const FormatException();
       }
-      final rangeSize = definition == _CronFieldDefinition.daysOfWeek
-          ? 7
-          : definition.maximum - definition.minimum + 1;
       return _CronField(
         values: Set<int>.unmodifiable(values),
         normalized: normalizedSegments.join(','),
-        isFullRange: values.length == rangeSize,
+        startsWithWildcard: source.startsWith('*'),
       );
     } on FormatException {
       throw const CronEvaluationException(
@@ -413,7 +451,7 @@ final class _CronField {
 
   final Set<int> values;
   final String normalized;
-  final bool isFullRange;
+  final bool startsWithWildcard;
 }
 
 enum _CronFieldDefinition {

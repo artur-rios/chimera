@@ -31,6 +31,7 @@ void main() {
       'cron.everyValue',
       'cron.explanationLabel',
       'cron.expressionLabel',
+      'cron.fileAction',
       'cron.field.dayOfMonth',
       'cron.field.dayOfWeek',
       'cron.field.hour',

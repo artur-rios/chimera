@@ -1,6 +1,22 @@
+import 'dart:convert';
+
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+
+typedef CronFilePicker = Future<String?> Function();
+
+Future<String?> pickCronExpressionFile() async {
+  final file = await FilePicker.pickFile(
+    type: FileType.custom,
+    allowedExtensions: const <String>['cron', 'txt'],
+  );
+  if (file == null) {
+    return null;
+  }
+  return utf8.decode(await file.readAsBytes());
+}
 
 final class CronPage extends StatefulWidget {
   const CronPage({
@@ -8,6 +24,7 @@ final class CronPage extends StatefulWidget {
     required this.localeTag,
     required this.service,
     required this.currentTime,
+    required this.filePicker,
     super.key,
   });
 
@@ -15,6 +32,7 @@ final class CronPage extends StatefulWidget {
   final String localeTag;
   final CronService service;
   final DateTime Function() currentTime;
+  final CronFilePicker filePicker;
 
   @override
   State<CronPage> createState() => _CronPageState();
@@ -93,6 +111,34 @@ final class _CronPageState extends State<CronPage> {
     });
   }
 
+  Future<void> _loadFile() async {
+    setState(() {
+      _isRunning = true;
+      _output = null;
+      _error = null;
+    });
+    try {
+      final expression = await widget.filePicker();
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isRunning = false;
+        if (expression != null) {
+          _expressionController.text = expression;
+        }
+      });
+    } on Object {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _isRunning = false;
+        _error = _message('error.cron.fileAccess');
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -112,6 +158,13 @@ final class _CronPageState extends State<CronPage> {
                     decoration: InputDecoration(
                       labelText: _message('cron.expressionLabel'),
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  OutlinedButton.icon(
+                    key: const Key('cron-file'),
+                    onPressed: _isRunning ? null : _loadFile,
+                    icon: const Icon(Icons.file_open),
+                    label: Text(_message('cron.fileAction')),
                   ),
                   const SizedBox(height: 16),
                   TextField(

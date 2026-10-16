@@ -100,6 +100,49 @@ void main() {
   );
 
   testWidgets(
+    'GivenLocalCronFile_WhenSelected_ThenExpressionFieldUsesItsContent',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/cron/parse',
+          cronFilePicker: () async => '0 8 * * MON-FRI',
+          currentTime: () => DateTime.utc(2026, 1, 5, 12),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('cron-file')));
+      await tester.pumpAndSettle();
+
+      final expressionField = tester.widget<TextField>(
+        find.byKey(const Key('cron-expression')),
+      );
+      expect(expressionField.controller!.text, '0 8 * * MON-FRI');
+    },
+  );
+
+  testWidgets(
+    'GivenUnreadableLocalCronFile_WhenSelected_ThenLocalizedFailureIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/cron/parse',
+          cronFilePicker: () async => throw const FormatException('invalid'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('cron-file')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+      expect(find.textContaining('invalid'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'GivenInvalidCronForm_WhenSubmittedInPortuguese_ThenLocalizedFailureIsVisible',
     (tester) async {
       await tester.pumpWidget(

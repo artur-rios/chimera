@@ -20,7 +20,9 @@ The utility initializes the bundled IANA database from `package:timezone`, then
 resolves the requested zone explicitly. It searches strictly before and after an
 injected reference instant so tests remain deterministic. Calendar matching is
 performed in the selected zone, including offset changes. Day-of-month and
-day-of-week use Unix cron OR semantics when both are restricted.
+day-of-week use Unix cron OR semantics when both are syntactically restricted.
+Nonexistent wall-clock times are skipped, while both instants in a repeated
+fall-back wall-clock period are returned in chronological order.
 
 The request count is limited to 1 through 100. A bounded candidate-search budget
 prevents pathological schedules from consuming unbounded CPU. Syntax, zone, and
@@ -36,19 +38,23 @@ selected message catalog. Validation exits with 64, file access with 74,
 processing with 70, and resource exhaustion with 75; diagnostics never echo
 the supplied expression.
 
-The GUI exposes `/cron/parse` and uses the same utility. Its form contains
-expression, time zone, count, and reference-instant inputs. Results and failures
-are localized in English and Brazilian Portuguese, keyboard reachable,
-semantically labeled, and responsive without overflow.
+The GUI exposes `/cron/parse` and uses the same utility. Its form accepts a
+typed or pasted expression and can load one from a local text file through an
+injectable file-picker boundary. It also contains time zone, count, and
+reference-instant inputs. Results and failures are localized in English and
+Brazilian Portuguese, keyboard reachable, semantically labeled, and responsive
+without overflow.
 
 ## Verification
 
 - Unit tests cover five/six fields, aliases, ranges/lists/steps, previous/next
-  ordering, IANA offsets and DST, malformed values, invalid zones/counts, Unix
-  day matching, and bounded-resource failure.
-- CLI functional tests cover argument, stdin, and file input; human and JSON
-  output; exit codes; redaction; and identical utility semantics.
-- Widget and integration tests cover routing, localized main flow and AF-01,
-  accessibility, and narrow layouts.
+  ordering, IANA offsets, DST gaps and overlaps, malformed values, invalid
+  zones/counts, syntactic Unix day matching, maximum count, and
+  bounded-resource failure.
+- CLI functional tests cover argument, stdin, and real local-file input; human
+  and JSON output; exit codes; redaction; and identical utility semantics.
+- Widget and integration tests cover routing, localized main flow, file loading,
+  AF-01, accessibility, and narrow layouts. Browser tests exercise the cron flow
+  and verify that it makes no external requests, including the native Safari
+  smoke test.
 - The complete repository suite and required GitHub checks remain green.
-

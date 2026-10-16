@@ -156,38 +156,34 @@ void main() {
     expect(out.toString(), contains('Próxima:'));
   });
 
-  test(
-    'GivenLocalFileFlag_WhenCronParseRuns_ThenInjectedFileContentIsUsed',
-    () async {
-      final out = StringBuffer();
-      final err = StringBuffer();
+  test('GivenLocalFileFlag_WhenCronParseRuns_ThenFileContentIsUsed', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-cron-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}${Platform.pathSeparator}schedule.txt');
+    await file.writeAsString('0 9 * * *');
+    final out = StringBuffer();
+    final err = StringBuffer();
 
-      final exitCode = await runChimera(
-        const <String>[
-          'cron',
-          'parse',
-          '--file=schedule.txt',
-          '--timezone=UTC',
-          '--count=1',
-          '--at=2026-01-05T12:00:00Z',
-          '--json',
-        ],
-        localeTag: 'en',
-        out: out,
-        err: err,
-        readFile: (path) async {
-          expect(path, 'schedule.txt');
-          return '0 9 * * *';
-        },
-      );
+    final exitCode = await runChimera(
+      <String>[
+        'cron',
+        'parse',
+        '--file=${file.path}',
+        '--timezone=UTC',
+        '--count=1',
+        '--at=2026-01-05T12:00:00Z',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
 
-      expect(exitCode, 0);
-      expect(
-        jsonDecode(out.toString()),
-        containsPair('expression', '0 9 * * *'),
-      );
-    },
-  );
+    expect(exitCode, 0);
+    expect(jsonDecode(out.toString()), containsPair('expression', '0 9 * * *'));
+  });
 
   test(
     'GivenInvalidCronInput_WhenParseRuns_ThenValidationExitDoesNotEchoInput',
@@ -246,22 +242,51 @@ void main() {
   test(
     'GivenUnreadableCronFile_WhenParseRuns_ThenFileAccessExitIsReturned',
     () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-cli-cron-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final missingPath =
+          '${directory.path}${Platform.pathSeparator}sensitive-missing.txt';
       final out = StringBuffer();
       final err = StringBuffer();
 
       final exitCode = await runChimera(
-        const <String>['cron', 'parse', '--file=missing.txt'],
+        <String>['cron', 'parse', '--file=$missingPath'],
         localeTag: 'en',
         out: out,
         err: err,
-        readFile: (_) async => throw const FileSystemException('denied'),
       );
 
       expect(exitCode, 74);
       expect(out.toString(), isEmpty);
       expect(err.toString(), 'The input file could not be read.\n');
+      expect(err.toString(), isNot(contains('sensitive-missing')));
     },
   );
+
+  test('GivenInvalidCronFileContent_WhenParseRuns_ThenValidationDoesNotEchoContent', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-cron-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}${Platform.pathSeparator}invalid.txt');
+    await file.writeAsString('secret invalid input');
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>['cron', 'parse', '--file=${file.path}', '--timezone=UTC'],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    expect(out.toString(), isEmpty);
+    expect(err.toString(), 'The cron request is invalid.\n');
+    expect(err.toString(), isNot(contains('secret')));
+  });
 
   test(
     'GivenUnreadableStandardInput_WhenParseRuns_ThenInputAccessExitIsReturned',

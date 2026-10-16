@@ -16,7 +16,8 @@ adapters where applicable.
 - [x] AF-01: syntax, time-zone, reference, and count validation failures.
 - [x] AF-02: bounded-search resource failure with no partial occurrences.
 - [x] CLI arguments, stdin, and local-file inputs; documented exit codes.
-- [x] GUI route, form, localization, accessibility, and responsive behavior.
+- [x] GUI route, typed/pasted/local-file input, localization, accessibility, and
+  responsive behavior.
 - [x] No persistence, network call, or sensitive diagnostic content.
 
 ## Tasks
@@ -31,4 +32,3 @@ adapters where applicable.
 8. [x] Run formatting, analysis, focused suites, full suites, and local platform verification.
 9. [ ] Obtain independent review, resolve findings, merge, delete the branch, close
    the issue, and move its project item to Done.
-

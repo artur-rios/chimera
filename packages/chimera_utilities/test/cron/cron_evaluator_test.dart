@@ -122,6 +122,78 @@ void main() {
       expect(result.next.single.utcIso8601, '2026-01-19T09:00:00.000Z');
     });
 
+    test(
+      'GivenFullDomainDayOfMonthRange_WhenEvaluated_ThenFieldRemainsRestricted',
+      () {
+        final result = const CronEvaluator().evaluate(
+          CronEvaluationRequest(
+            expression: '0 0 1-31 * MON',
+            timeZone: 'UTC',
+            occurrenceCount: 1,
+            referenceUtc: DateTime.utc(2026, 1, 6, 12),
+          ),
+        );
+
+        expect(result.next.single.utcIso8601, '2026-01-07T00:00:00.000Z');
+      },
+    );
+
+    for (final dayOfWeek in <String>['0-6', '1-7', '0,1,2,3,4,5,6']) {
+      test('GivenFullDomainDayOfWeekSyntax$dayOfWeek'
+          '_WhenEvaluated_ThenFieldRemainsRestricted', () {
+        final result = const CronEvaluator().evaluate(
+          CronEvaluationRequest(
+            expression: '0 0 1 * $dayOfWeek',
+            timeZone: 'UTC',
+            occurrenceCount: 1,
+            referenceUtc: DateTime.utc(2026, 1, 6, 12),
+          ),
+        );
+
+        expect(result.next.single.utcIso8601, '2026-01-07T00:00:00.000Z');
+      });
+    }
+
+    test(
+      'GivenRepeatedDstWallClock_WhenEvaluated_ThenBothInstantsAreReturned',
+      () {
+        final result = const CronEvaluator().evaluate(
+          CronEvaluationRequest(
+            expression: '30 1 * * *',
+            timeZone: 'America/New_York',
+            occurrenceCount: 2,
+            referenceUtc: DateTime.utc(2026, 11, 1, 5),
+          ),
+        );
+
+        expect(result.next.map((occurrence) => occurrence.utcIso8601), <String>[
+          '2026-11-01T05:30:00.000Z',
+          '2026-11-01T06:30:00.000Z',
+        ]);
+        expect(
+          result.next.map((occurrence) => occurrence.localIso8601),
+          <String>[
+            '2026-11-01T01:30:00.000-04:00',
+            '2026-11-01T01:30:00.000-05:00',
+          ],
+        );
+      },
+    );
+
+    test('GivenMaximumCountForRareSchedule_WhenEvaluated_ThenAllOccurrencesAreReturned', () {
+      final result = const CronEvaluator().evaluate(
+        CronEvaluationRequest(
+          expression: '0 0 29 2 *',
+          timeZone: 'UTC',
+          occurrenceCount: 100,
+          referenceUtc: DateTime.utc(2026, 1, 1),
+        ),
+      );
+
+      expect(result.previous, hasLength(100));
+      expect(result.next, hasLength(100));
+    });
+
     for (final invalidCase
         in <({String name, CronEvaluationRequest request, String code})>[
           (

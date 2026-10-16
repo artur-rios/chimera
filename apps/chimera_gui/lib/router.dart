@@ -10,6 +10,7 @@ GoRouter buildRouter({
   required String localeTag,
   required CronService cronService,
   required DateTime Function() currentTime,
+  required CronFilePicker cronFilePicker,
   String initialLocation = '/',
 }) {
   return GoRouter(
@@ -52,6 +53,7 @@ GoRouter buildRouter({
           localeTag: localeTag,
           service: cronService,
           currentTime: currentTime,
+          filePicker: cronFilePicker,
         ),
       ),
     ],
