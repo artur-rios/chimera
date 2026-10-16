@@ -32,8 +32,8 @@ melos:
       description: Analyze every application, package, and repository test.
       run: dart run melos exec -- "dart analyze --fatal-infos"
     test:unit:
-      description: Run Dart package and CLI unit tests.
-      run: dart run melos exec --no-flutter --dir-exists=test -- "dart test"
+      description: Run repository, package, and CLI unit tests.
+      run: dart test test && dart run melos exec --no-flutter --dir-exists=test -- "dart test"
     test:cli:
       description: Run CLI functional tests.
       run: dart run melos exec --scope=chimera_cli --dir-exists=test -- "dart test"
@@ -42,7 +42,7 @@ melos:
       run: dart run tool/run_gui_tests.dart
     test:web:
       description: Run the compiled web application in every supported browser.
-      run: npm --prefix tests/web ci && npm --prefix tests/web test
+      run: dart run tool/run_web_tests.dart
     test:deployment:
       description: Run deployment and update contract tests.
       run: dart test tests/deployment tests/update

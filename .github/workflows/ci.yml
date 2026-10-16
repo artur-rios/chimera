@@ -100,10 +100,12 @@ jobs:
         run: flutter pub get
       - name: Test Windows integration
         if: runner.os == 'Windows'
-        run: flutter test apps/chimera_gui/integration_test -d windows
+        working-directory: apps/chimera_gui
+        run: flutter test integration_test -d windows
       - name: Test Linux integration
         if: runner.os == 'Linux'
-        run: xvfb-run -a flutter test apps/chimera_gui/integration_test -d linux
+        working-directory: apps/chimera_gui
+        run: xvfb-run -a flutter test integration_test -d linux
       - name: Build Windows GUI and CLI
         if: runner.os == 'Windows'
         shell: pwsh

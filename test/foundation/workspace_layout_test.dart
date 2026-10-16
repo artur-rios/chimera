@@ -44,5 +44,16 @@ void main() {
         reason: 'The required Melos script $script is missing.',
       );
     }
+
+    expect(melosSource, contains('dart run tool/run_web_tests.dart'));
+    expect(
+      melosSource,
+      contains(
+        'dart test test && dart run melos exec --no-flutter '
+        '--dir-exists=test -- "dart test"',
+      ),
+      reason: 'The aggregate unit suite must include repository-level tests.',
+    );
+    expect(File('tool/run_web_tests.dart').existsSync(), isTrue);
   });
 }

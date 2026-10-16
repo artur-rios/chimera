@@ -51,6 +51,19 @@ void main() {
     expect(continuousIntegration, contains('target: windows'));
     expect(continuousIntegration, contains('os: ubuntu-latest'));
     expect(continuousIntegration, contains('target: linux'));
+    expect(
+      continuousIntegration,
+      contains('working-directory: apps/chimera_gui'),
+      reason: 'Flutter integration tests must run from the GUI package.',
+    );
+    expect(
+      continuousIntegration,
+      contains('flutter test integration_test -d windows'),
+    );
+    expect(
+      continuousIntegration,
+      contains('flutter test integration_test -d linux'),
+    );
   });
 
   test(
