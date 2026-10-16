@@ -170,6 +170,7 @@ jobs:
           Push-Location apps/chimera_gui
           flutter build windows --release
           Pop-Location
+          New-Item -ItemType Directory -Force build/cli/windows | Out-Null
           dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe
       - name: Build Linux GUI and CLI
         if: runner.os == 'Linux'
@@ -177,6 +178,7 @@ jobs:
           cd apps/chimera_gui
           flutter build linux --release
           cd ../..
+          mkdir -p build/cli/linux
           dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/linux/chimera
 
   cross-platform:

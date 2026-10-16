@@ -79,6 +79,18 @@ void main() {
       continuousIntegration,
       contains('flutter test integration_test -d linux'),
     );
+    expect(
+      continuousIntegration,
+      contains(
+        'New-Item -ItemType Directory -Force build/cli/windows | Out-Null',
+      ),
+      reason: 'The Windows AOT compiler does not create parent directories.',
+    );
+    expect(
+      continuousIntegration,
+      contains('mkdir -p build/cli/linux'),
+      reason: 'The Linux AOT compiler does not create parent directories.',
+    );
   });
 
   test(
