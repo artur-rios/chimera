@@ -1,0 +1,142 @@
+name: Release Artifacts
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z release tag to package
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  verify:
+    name: Verify before packaging
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate release tag
+        run: echo "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Analyze and test release source
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed apps packages test tests tool
+          dart analyze --fatal-infos
+          dart run melos run test:unit
+          dart test test tests/deployment tests/update tests/performance
+
+  package-windows:
+    name: Package Windows
+    needs: verify
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build native applications
+        shell: pwsh
+        run: |
+          flutter pub get
+          Push-Location apps/chimera_gui
+          flutter build windows --release
+          Pop-Location
+          New-Item -ItemType Directory -Force build/cli/windows | Out-Null
+          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe
+      - name: Install installer compiler
+        run: choco install innosetup --no-progress --yes
+      - name: Package applications and write integrity sidecars
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          & ./tool/package_windows.ps1 `
+            -Version $version `
+            -GuiInputDirectory apps/chimera_gui/build/windows/x64/runner/Release `
+            -CliExecutable build/cli/windows/chimera.exe `
+            -OutputDirectory dist/windows
+          dart run tool/write_checksums.dart dist/windows --version $version --repository $env:GITHUB_REPOSITORY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: chimera-windows-packages
+          path: |
+            dist/windows/*
+            dist/windows/*.sha256
+            dist/windows/*.release.json
+          if-no-files-found: error
+
+  package-linux:
+    name: Package Linux
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - name: Install Linux packaging prerequisites
+        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev dpkg-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build native applications
+        run: |
+          flutter pub get
+          cd apps/chimera_gui
+          flutter build linux --release
+          cd ../..
+          mkdir -p build/cli/linux
+          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/linux/chimera
+      - name: Package applications and write integrity sidecars
+        run: |
+          version="${RELEASE_TAG#v}"
+          sh tool/package_linux.sh \
+            --version "$version" \
+            --gui-dir apps/chimera_gui/build/linux/x64/release/bundle \
+            --cli build/cli/linux/chimera \
+            --output dist/linux
+          dart run tool/write_checksums.dart dist/linux --version "$version" --repository "$GITHUB_REPOSITORY"
+      - uses: actions/upload-artifact@v6
+        with:
+          name: chimera-linux-packages
+          path: |
+            dist/linux/*
+            dist/linux/*.sha256
+            dist/linux/*.release.json
+          if-no-files-found: error
+
+  publish:
+    name: Attach native artifacts
+    if: github.event_name == 'release'
+    needs: [package-windows, package-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: chimera-*-packages
+          path: dist
+          merge-multiple: true
+      - name: Upload artifacts, checksums, and release metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" dist/* --clobber
+

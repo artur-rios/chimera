@@ -17,6 +17,7 @@ workspace:
 dev_dependencies:
   chimera_l10n:
     path: packages/chimera_l10n
+  crypto: ^3.0.7
   lints: ^6.0.0
   melos: ^8.9.0
   test: ^1.26.0
@@ -40,13 +41,16 @@ melos:
       description: Run Flutter widget and integration tests.
       run: dart run tool/run_gui_tests.dart
     test:web:
-      description: Run repository web contract tests.
-      run: dart test tests/web
+      description: Run the compiled web application in every supported browser.
+      run: npm --prefix tests/web ci && npm --prefix tests/web test
     test:deployment:
       description: Run deployment and update contract tests.
       run: dart test tests/deployment tests/update
+    test:performance:
+      description: Run committed performance acceptance contracts.
+      run: dart test tests/performance
     test:all:
       description: Run every Chimera test suite.
-      run: dart run melos run test:unit && dart run melos run test:cli && dart run melos run test:gui && dart run melos run test:web && dart run melos run test:deployment
+      run: dart run melos run test:unit && dart run melos run test:cli && dart run melos run test:gui && dart run melos run test:web && dart run melos run test:deployment && dart run melos run test:performance
 
 

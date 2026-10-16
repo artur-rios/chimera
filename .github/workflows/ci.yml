@@ -1,0 +1,168 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.7
+
+jobs:
+  analyze-and-test:
+    name: Analyze and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve workspace
+        run: flutter pub get
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed apps packages test tests tool
+      - name: Analyze
+        run: dart analyze --fatal-infos
+      - name: Verify boundaries
+        run: dart run tool/check_boundaries.dart
+      - name: Run Dart and contract tests
+        run: |
+          dart run melos run test:unit
+          dart test test
+          dart test tests/deployment tests/update tests/performance
+
+  browser-tests:
+    name: Browser (${{ matrix.browser }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: tests/web/package-lock.json
+      - name: Build web application
+        run: |
+          flutter pub get
+          cd apps/chimera_gui
+          flutter build web --release --no-web-resources-cdn
+      - name: Install browser harness
+        working-directory: tests/web
+        run: |
+          npm ci
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Run browser smoke
+        working-directory: tests/web
+        run: npx playwright test --project=${{ matrix.browser }}
+
+  native-tests:
+    name: Native (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows
+          - os: ubuntu-latest
+            target: linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Linux desktop prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve workspace
+        run: flutter pub get
+      - name: Test Windows integration
+        if: runner.os == 'Windows'
+        run: flutter test apps/chimera_gui/integration_test -d windows
+      - name: Test Linux integration
+        if: runner.os == 'Linux'
+        run: xvfb-run -a flutter test apps/chimera_gui/integration_test -d linux
+      - name: Build Windows GUI and CLI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Push-Location apps/chimera_gui
+          flutter build windows --release
+          Pop-Location
+          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe
+      - name: Build Linux GUI and CLI
+        if: runner.os == 'Linux'
+        run: |
+          cd apps/chimera_gui
+          flutter build linux --release
+          cd ../..
+          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/linux/chimera
+
+  cross-platform:
+    name: Cross-platform
+    needs: [browser-tests, native-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every browser and native target
+        env:
+          BROWSER_RESULT: ${{ needs.browser-tests.result }}
+          NATIVE_RESULT: ${{ needs.native-tests.result }}
+        run: test "$BROWSER_RESULT" = success && test "$NATIVE_RESULT" = success
+
+  container:
+    name: Container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build and smoke-test web container
+        run: sh tool/smoke_container.sh chimera-ci:${{ github.sha }} chimera-ci-${{ github.run_id }} 18080
+
+  accessibility-performance:
+    name: Accessibility and performance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve workspace
+        run: flutter pub get
+      - name: Run semantic widget checks
+        working-directory: apps/chimera_gui
+        run: flutter test test/widgets
+      - name: Run performance contracts
+        run: dart test tests/performance
+      - name: Preserve accessibility and performance evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: accessibility-and-performance-evidence
+          path: |
+            docs/operations/accessibility-review.md
+            tests/performance/acceptance_thresholds.json
+          if-no-files-found: error
+
