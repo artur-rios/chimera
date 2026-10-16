@@ -155,3 +155,32 @@ test('JSON CSV flow serializes locally without external requests', async ({ page
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('JSON YAML flow serializes locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Convert JSON to YAML' }).click();
+  await expect(page.getByText('Convert JSON to YAML').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'JSON value' }),
+    '{"name":"Ada","meta":{"x":1}}',
+  );
+  await page.getByRole('button', { name: 'Create YAML' }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: 'YAML result name: Ada meta: x: 1',
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});

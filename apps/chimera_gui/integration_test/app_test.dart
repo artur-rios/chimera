@@ -109,4 +109,22 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('GivenJsonYamlRoute_WhenConversionRuns_ThenYamlIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/to-yaml'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-yaml-input')),
+      '{"name":"Ada","languages":["Dart","C"]}',
+    );
+    await tester.tap(find.byKey(const Key('json-yaml-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('name: Ada\nlanguages:\n  - Dart\n  - C'), findsOneWidget);
+  });
 }

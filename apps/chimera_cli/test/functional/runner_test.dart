@@ -894,4 +894,170 @@ void main() {
       );
     },
   );
+
+  test('GivenJsonObject_WhenYamlRuns_ThenYamlIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['json', 'to-yaml', '--input={"name":"Ada","active":true}'],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'name: Ada\nactive: true');
+  });
+
+  test(
+    'GivenJsonStandardInput_WhenYamlRunsWithOptions_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'to-yaml',
+          '--indent=4',
+          '--quote-strings',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInput: () async => '{"outer":{"name":"Ada"}}',
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'yaml': 'outer:\n    name: "Ada"',
+        'indent': 4,
+        'quoteStrings': true,
+      });
+    },
+  );
+
+  test(
+    'GivenInputAndOutputFiles_WhenYamlRuns_ThenExactBytesAreSaved',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-cli-yaml-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final input = File(
+        '${directory.path}${Platform.pathSeparator}value.json',
+      );
+      final output = File(
+        '${directory.path}${Platform.pathSeparator}value.yaml',
+      );
+      await input.writeAsString('{"name":"Ada"}');
+
+      final out = StringBuffer();
+      final exitCode = await runChimera(
+        <String>[
+          'json',
+          'to-yaml',
+          '--file=${input.path}',
+          '--output=${output.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'YAML saved.\n');
+      expect(await output.readAsBytes(), utf8.encode('name: Ada'));
+    },
+  );
+
+  test(
+    'GivenInvalidYamlIndent_WhenYamlRuns_ThenValidationExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'to-yaml', '--input={}', '--indent=3', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair('error', containsPair('code', 'json-yaml.invalid-indent')),
+      );
+    },
+  );
+
+  test(
+    'GivenMalformedJson_WhenYamlRuns_ThenOffsetFailureRedactsInput',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'to-yaml', '--input={"secret":}', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+      expect(failure['error'], containsPair('code', 'json-yaml.invalid-json'));
+      expect(failure['error'], containsPair('location', contains('offset')));
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenOutputWriteFailure_WhenYamlRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'to-yaml',
+          '--input={"secret":"value"}',
+          '--output=sensitive.yaml',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (path, bytes) async =>
+            throw const FileSystemException('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o arquivo YAML.\n');
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenYamlNodeBudgetExceeded_WhenYamlRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'to-yaml', '--input=[1,2]'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        jsonYamlService: const JsonYamlService(
+          converter: JsonYamlConverter(maxNodes: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The YAML conversion exceeded its resource limit.\n',
+      );
+    },
+  );
 }

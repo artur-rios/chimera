@@ -11,7 +11,9 @@ dependencies:
   csv: 8.0.0
   intl: ^0.20.2
   timezone: ^0.11.2
+  yaml_writer: 2.1.0
 
 dev_dependencies:
   lints: ^6.0.0
   test: ^1.26.0
+  yaml: ^3.1.3
