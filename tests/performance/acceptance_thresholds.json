@@ -1,0 +1,16 @@
+{
+  "catalogLookup": {
+    "iterations": 10000,
+    "maxMilliseconds": 500
+  },
+  "cliStartup": {
+    "maxMilliseconds": 500
+  },
+  "guiStartup": {
+    "maxMilliseconds": 3000
+  },
+  "oneMegabyteOperation": {
+    "maxMilliseconds": 2000
+  }
+}
+
