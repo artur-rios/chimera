@@ -36,7 +36,8 @@ Future<void> main() async {
 
     await (await _findElement(
       driver,
-      '[role="button"][aria-label="Parse a cron expression"]',
+      '[role="button"]',
+      text: 'Parse a cron expression',
     )).click();
     await _waitUntil(
       () => _pageContains(driver, 'Parse cron expression'),
@@ -45,27 +46,20 @@ Future<void> main() async {
 
     await _fillTextBox(
       driver,
-      '[role="textbox"][aria-label="Cron expression"]',
+      'input[aria-label="Cron expression"]',
       '0 9 * * MON-FRI',
     );
+    await _fillTextBox(driver, 'input[aria-label="Time zone"]', 'UTC');
+    await _fillTextBox(driver, 'input[aria-label="Occurrence count"]', '1');
     await _fillTextBox(
       driver,
-      '[role="textbox"][aria-label="Time zone"]',
-      'UTC',
-    );
-    await _fillTextBox(
-      driver,
-      '[role="textbox"][aria-label="Occurrence count"]',
-      '1',
-    );
-    await _fillTextBox(
-      driver,
-      '[role="textbox"][aria-label^="Reference instant"]',
+      'input[aria-label="Reference instant"]',
       '2026-01-05T12:00:00Z',
     );
     await (await _findElement(
       driver,
-      '[role="button"][aria-label="Calculate occurrences"]',
+      '[role="button"]',
+      text: 'Calculate occurrences',
     )).click();
 
     await _waitUntil(
@@ -97,16 +91,34 @@ Future<void> main() async {
   }
 }
 
-Future<WebElement> _findElement(WebDriver driver, String selector) async {
+Future<WebElement> _findElement(
+  WebDriver driver,
+  String selector, {
+  String? text,
+}) async {
   WebElement? element;
-  await _waitUntil(() async {
-    try {
-      element = await driver.findElement(By.cssSelector(selector));
-      return await element!.displayed;
-    } on WebDriverException {
-      return false;
-    }
-  }, 'Element did not become available: $selector');
+  await _waitUntil(
+    () async {
+      try {
+        final candidates = await driver
+            .findElements(By.cssSelector(selector))
+            .toList();
+        for (final candidate in candidates) {
+          if (text != null && (await candidate.text).trim() != text) {
+            continue;
+          }
+          if (await candidate.displayed) {
+            element = candidate;
+            return true;
+          }
+        }
+        return false;
+      } on WebDriverException {
+        return false;
+      }
+    },
+    'Element did not become available: $selector${text == null ? '' : ' ($text)'}',
+  );
   return element!;
 }
 
