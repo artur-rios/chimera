@@ -1,0 +1,16 @@
+name: chimera_l10n
+description: English and Brazilian Portuguese message catalogs for Chimera.
+publish_to: none
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  intl: ^0.20.3
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.0
+
