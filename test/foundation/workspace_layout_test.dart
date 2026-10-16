@@ -46,6 +46,7 @@ void main() {
     }
 
     expect(melosSource, contains('dart run tool/run_web_tests.dart'));
+    expect(melosSource, contains('dart run tool/run_performance_tests.dart'));
     expect(
       melosSource,
       contains(
@@ -55,5 +56,10 @@ void main() {
       reason: 'The aggregate unit suite must include repository-level tests.',
     );
     expect(File('tool/run_web_tests.dart').existsSync(), isTrue);
+    expect(File('tool/run_performance_tests.dart').existsSync(), isTrue);
+
+    final webRunner = File('tool/run_web_tests.dart').readAsStringSync();
+    expect(webRunner, contains('mcr.microsoft.com/playwright:v1.64.1-noble'));
+    expect(webRunner, isNot(contains('if (Platform.isWindows)')));
   });
 }

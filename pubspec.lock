@@ -138,7 +138,7 @@ packages:
     source: hosted
     version: "3.1.2"
   coverage:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: coverage
       sha256: "956a3de0725ca232ad353565a8290d3357592bf4250f6f298a185e2d949c5d3d"
@@ -882,7 +882,7 @@ packages:
     source: hosted
     version: "3.0.3"
   webdriver:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: webdriver
       sha256: "28b82ec894fed45dd71c23ba62d1af973ed97dd59a4f5790a4d38b0b13e5657e"

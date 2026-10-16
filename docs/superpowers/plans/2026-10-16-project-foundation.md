@@ -158,9 +158,9 @@
 - Create: `CHANGELOG.md`, `CONTRIBUTING.md`, `Jenkinsfile`
 
 **Interfaces:**
-- Produces required PR checks `Analyze and test`, `Cross-platform`, `Container`, and `Accessibility and performance`; portable and installer artifacts for GUI/CLI on Windows/Linux; SHA-256 files; release metadata; and `yggdrasilPipeline(stack: 'chimera')`.
+- Produces required PR checks `Analyze and test`, `Cross-platform`, `Container`, and `Accessibility and performance`; Playwright engine coverage plus native Safari WebDriver coverage; portable and installer artifacts for GUI/CLI on Windows/Linux; SHA-256 files; release metadata; and `yggdrasilPipeline(stack: 'chimera')`.
 
-- [x] Write failing workflow contract tests for triggers, stable check names, browser matrix (`chromium`, `firefox`, `webkit`), Windows/Linux native matrix, analyze-before-package ordering, checksums, evidence uploads, and branch-policy rules.
+- [x] Write failing workflow contract tests for triggers, stable check names, browser matrix (`chromium`, `firefox`, `webkit`, and native Safari), Windows/Linux native matrix, analyze-before-package ordering, checksums, evidence uploads, and branch-policy rules.
 - [x] Run the workflow contract test and verify missing workflows fail.
 - [x] Add the branch-policy workflow, CI matrix, package scripts, release workflow, contributing rules, changelog, and Jenkins entrypoint.
 - [x] Run workflow contract tests plus PowerShell/Bash packaging dry runs against fixture directories; verify artifact names and checksums.

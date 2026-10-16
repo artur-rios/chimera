@@ -8,11 +8,6 @@ Future<void> main() async {
     '${repository.path}${Platform.pathSeparator}apps'
     '${Platform.pathSeparator}chimera_gui',
   );
-  final webTestsDirectory = Directory(
-    '${repository.path}${Platform.pathSeparator}tests'
-    '${Platform.pathSeparator}web',
-  );
-
   await _run('flutter', <String>[
     'build',
     'web',
@@ -20,30 +15,21 @@ Future<void> main() async {
     '--no-web-resources-cdn',
   ], workingDirectory: guiDirectory.path);
 
-  if (Platform.isWindows) {
-    await _run('docker', <String>[
-      'run',
-      '--rm',
-      '--ipc=host',
-      '--volume',
-      '${repository.path}:/work',
-      '--mount',
-      'type=volume,target=/work/tests/web/node_modules',
-      '--workdir',
-      '/work/tests/web',
-      _playwrightImage,
-      'bash',
-      '-lc',
-      'npm ci && npx playwright test',
-    ]);
-    return;
-  }
-
-  await _run('npm', <String>['ci'], workingDirectory: webTestsDirectory.path);
-  await _run('npx', <String>[
-    'playwright',
-    'test',
-  ], workingDirectory: webTestsDirectory.path);
+  await _run('docker', <String>[
+    'run',
+    '--rm',
+    '--ipc=host',
+    '--volume',
+    '${repository.path}:/work',
+    '--mount',
+    'type=volume,target=/work/tests/web/node_modules',
+    '--workdir',
+    '/work/tests/web',
+    _playwrightImage,
+    'bash',
+    '-lc',
+    'npm ci && npx playwright test',
+  ]);
 }
 
 Future<void> _run(

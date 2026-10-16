@@ -85,4 +85,18 @@ void main() {
       ]),
     );
   });
+
+  test('GivenLinuxGuiPackage_WhenControlFileIsBuilt_ThenRuntimeDependenciesAreDeclared', () {
+    final script = File('tool/package_linux.sh').readAsStringSync();
+    final releaseWorkflow = File('.github/workflows/release-artifacts.yml')
+        .readAsStringSync();
+
+    expect(
+      script,
+      contains('Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6'),
+    );
+    expect(releaseWorkflow, contains('Smoke-test installed Linux packages'));
+    expect(releaseWorkflow, contains('dpkg --install'));
+    expect(releaseWorkflow, contains('xvfb-run -a timeout 5s chimera-gui'));
+  });
 }

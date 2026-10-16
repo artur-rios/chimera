@@ -90,8 +90,9 @@ Individual suites are `analyze`, `test:unit`, `test:cli`, `test:gui`,
 `test:web`, `test:deployment`, and `test:performance`. The web suite builds the
 application and runs the pinned Playwright harness natively on Linux or in its
 official Linux container on Windows, where Docker must be available. CI covers
-unit, widget, CLI, native GUI, Chromium, Firefox, WebKit, deployment, update,
-accessibility, and performance behavior.
+unit, widget, CLI, native GUI, Chromium, Firefox, WebKit, native Safari,
+deployment, update, accessibility, and performance behavior. CI publishes LCOV,
+test logs, accessibility results, and performance results as build evidence.
 
 ## Web container
 

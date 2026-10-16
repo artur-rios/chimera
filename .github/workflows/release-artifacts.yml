@@ -11,7 +11,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 env:
   FLUTTER_VERSION: 3.47.7
@@ -92,7 +92,7 @@ jobs:
         with:
           ref: ${{ env.RELEASE_TAG }}
       - name: Install Linux packaging prerequisites
-        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev dpkg-dev
+        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev dpkg-dev xvfb
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -115,6 +115,16 @@ jobs:
             --cli build/cli/linux/chimera \
             --output dist/linux
           dart run tool/write_checksums.dart dist/linux --version "$version" --repository "$GITHUB_REPOSITORY"
+      - name: Smoke-test installed Linux packages
+        run: |
+          sudo dpkg --install dist/linux/chimera-cli-linux-*-installer.deb
+          sudo dpkg --install dist/linux/chimera-gui-linux-*-installer.deb
+          chimera --help
+          set +e
+          xvfb-run -a timeout 5s chimera-gui
+          status=$?
+          set -e
+          test "$status" -eq 124
       - uses: actions/upload-artifact@v6
         with:
           name: chimera-linux-packages
@@ -126,6 +136,8 @@ jobs:
 
   publish:
     name: Attach native artifacts
+    permissions:
+      contents: write
     if: github.event_name == 'release'
     needs: [package-windows, package-linux]
     runs-on: ubuntu-latest

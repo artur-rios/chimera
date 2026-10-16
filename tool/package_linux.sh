@@ -62,6 +62,7 @@ printf '%s\n' \
   'Section: utils' \
   'Priority: optional' \
   'Architecture: amd64' \
+  'Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6' \
   'Maintainer: Chimera maintainers' \
   'Description: Local-first developer toolbox desktop application' \
   >"$gui_package/DEBIAN/control"

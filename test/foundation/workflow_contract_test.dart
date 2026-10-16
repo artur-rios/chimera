@@ -21,6 +21,7 @@ void main() {
     expect(branchPolicy, contains(r'^(feature|fix)/'));
     expect(branchPolicy, contains(r'^release/[0-9]+\.[0-9]+\.[0-9]+$'));
     expect(branchPolicy, contains('git merge-base --is-ancestor'));
+    expect(branchPolicy, contains('tool/check_branch_origin.dart'));
     expect(branchPolicy, contains('name: branch-policy'));
   });
 
@@ -43,6 +44,10 @@ void main() {
         contains('browser: [chromium, firefox, webkit]'),
       );
       expect(continuousIntegration, contains('tests/web'));
+      expect(continuousIntegration, contains('name: Safari'));
+      expect(continuousIntegration, contains('runs-on: macos-latest'));
+      expect(continuousIntegration, contains('safaridriver'));
+      expect(continuousIntegration, contains('tests/web/safari_smoke.dart'));
     },
   );
 
@@ -87,7 +92,27 @@ void main() {
     expect(continuousIntegration, contains('accessibility-review'));
     expect(continuousIntegration, contains('acceptance_thresholds.json'));
     expect(continuousIntegration, contains('actions/upload-artifact@'));
+    expect(continuousIntegration, contains('dart test --coverage='));
+    expect(continuousIntegration, contains('flutter test --coverage'));
+    expect(continuousIntegration, contains('test-and-coverage-evidence'));
+    expect(
+      continuousIntegration,
+      contains('accessibility-and-performance-evidence'),
+    );
   });
+
+  test(
+    'GivenReleaseWorkflow_WhenPermissionsAreScoped_ThenOnlyPublisherCanWrite',
+    () {
+      expect(releaseArtifacts, contains('permissions:\n  contents: read'));
+      expect(
+        releaseArtifacts,
+        contains(
+          'publish:\n    name: Attach native artifacts\n    permissions:\n      contents: write',
+        ),
+      );
+    },
+  );
 
   test('GivenJenkinsEntryPoint_WhenLoaded_ThenChimeraStackIsSelected', () {
     final jenkinsfile = File('Jenkinsfile').readAsStringSync();

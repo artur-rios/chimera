@@ -50,7 +50,7 @@ keeps host variables and secrets outside the repository and container layers.
 | IR-09 | Container contract and live smoke require the exact public `/healthz` payload. |
 | IR-10 | Yggdrasil resolves Chimera through local, development, homologation, and production in promotion order. |
 | IR-11 | Release package jobs require the `Verify before packaging` job. |
-| IR-12 | Playwright runs the compiled web shell in Chromium, Firefox, and WebKit. |
+| IR-12 | Playwright runs Chromium, Firefox, and WebKit on Linux; WebDriver also runs the compiled shell in native Safari on macOS. |
 | IR-13 | CI integration-tests and builds Windows and Linux native targets. |
 | IR-14 | Windows/Linux scripts produce GUI/CLI portable and installer artifacts. |
 | IR-15 | `write_checksums.dart` emits a SHA-256 sidecar for every recognized native artifact. |
@@ -59,8 +59,8 @@ keeps host variables and secrets outside the repository and container layers.
 | IR-18 | Compose contains only public build arguments; secrets remain in Yggdrasil's variable store. |
 | IR-19 | Yggdrasil's tested deployment pipeline retains or restores the prior healthy image. |
 | IR-20 | Typed validator and per-artifact JSON sidecars enforce all six metadata fields. |
-| IR-21 | Semantic widget tests run in CI and the manual accessibility review is uploaded as evidence. |
-| IR-22 | Representative foundation workloads and acceptance thresholds are version controlled and run in CI. |
+| IR-21 | Flutter accessibility guidelines and responsive widget checks run in CI; their logs, LCOV, and the completed foundation review are uploaded as evidence. |
+| IR-22 | Catalog lookup, CLI startup, GUI startup, and one-megabyte hashing workloads enforce committed thresholds and publish CI output. |
 | IR-23 | `availability.md` defines a 99.5% monthly objective measured by Yggdrasil probes. |
 | IR-24 | Flutter, Dart, Melos, application packages, Playwright, NGINX, and action majors are pinned to stable releases. |
 | IR-25 | Branch Policy enforces feature/fix-to-develop and release-to-main ancestry rules. |

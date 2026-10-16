@@ -38,9 +38,31 @@ jobs:
         run: dart run tool/check_boundaries.dart
       - name: Run Dart and contract tests
         run: |
-          dart run melos run test:unit
-          dart test test
-          dart test tests/deployment tests/update tests/performance
+          mkdir -p evidence
+          set -o pipefail
+          dart run melos run test:unit 2>&1 | tee evidence/unit-tests.txt
+          dart run melos run test:deployment 2>&1 | tee evidence/deployment-tests.txt
+      - name: Generate Dart coverage evidence
+        run: |
+          dart test --coverage=coverage/dart \
+            packages/chimera_core/test \
+            packages/chimera_l10n/test \
+            packages/chimera_platform/test \
+            apps/chimera_cli/test
+          dart run coverage:format_coverage \
+            --packages=.dart_tool/package_config.json \
+            --report-on=packages \
+            --in=coverage/dart \
+            --lcov \
+            --out=coverage/dart/lcov.info
+      - name: Preserve test and coverage evidence
+        uses: actions/upload-artifact@v6
+        with:
+          name: test-and-coverage-evidence
+          path: |
+            evidence/*.txt
+            coverage/dart/lcov.info
+          if-no-files-found: error
 
   browser-tests:
     name: Browser (${{ matrix.browser }})
@@ -74,6 +96,41 @@ jobs:
       - name: Run browser smoke
         working-directory: tests/web
         run: npx playwright test --project=${{ matrix.browser }}
+
+  safari-tests:
+    name: Safari
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build web application
+        run: |
+          flutter pub get
+          cd apps/chimera_gui
+          flutter build web --release --no-web-resources-cdn
+      - name: Run Safari WebDriver smoke
+        run: |
+          sudo safaridriver --enable
+          safaridriver -p 4444 > safari-driver.log 2>&1 &
+          python3 -m http.server 4173 --directory apps/chimera_gui/build/web > safari-server.log 2>&1 &
+          for _ in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4173 >/dev/null && break
+            sleep 1
+          done
+          dart run tests/web/safari_smoke.dart
+      - name: Preserve Safari diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: safari-diagnostics
+          path: |
+            safari-driver.log
+            safari-server.log
+          if-no-files-found: error
 
   native-tests:
     name: Native (${{ matrix.target }})
@@ -124,15 +181,16 @@ jobs:
 
   cross-platform:
     name: Cross-platform
-    needs: [browser-tests, native-tests]
+    needs: [browser-tests, safari-tests, native-tests]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: Require every browser and native target
         env:
           BROWSER_RESULT: ${{ needs.browser-tests.result }}
+          SAFARI_RESULT: ${{ needs.safari-tests.result }}
           NATIVE_RESULT: ${{ needs.native-tests.result }}
-        run: test "$BROWSER_RESULT" = success && test "$NATIVE_RESULT" = success
+        run: test "$BROWSER_RESULT" = success && test "$SAFARI_RESULT" = success && test "$NATIVE_RESULT" = success
 
   container:
     name: Container
@@ -156,9 +214,14 @@ jobs:
         run: flutter pub get
       - name: Run semantic widget checks
         working-directory: apps/chimera_gui
-        run: flutter test test/widgets
+        run: |
+          mkdir -p ../../evidence
+          set -o pipefail
+          flutter test --coverage test/widgets 2>&1 | tee ../../evidence/accessibility-tests.txt
       - name: Run performance contracts
-        run: dart test tests/performance
+        run: |
+          set -o pipefail
+          dart run melos run test:performance 2>&1 | tee evidence/performance-tests.txt
       - name: Preserve accessibility and performance evidence
         uses: actions/upload-artifact@v6
         with:
@@ -166,5 +229,8 @@ jobs:
           path: |
             docs/operations/accessibility-review.md
             tests/performance/acceptance_thresholds.json
+            evidence/accessibility-tests.txt
+            evidence/performance-tests.txt
+            apps/chimera_gui/coverage/lcov.info
           if-no-files-found: error
 
