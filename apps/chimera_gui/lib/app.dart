@@ -9,6 +9,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
 import 'json_table_page.dart';
+import 'json_yaml_page.dart';
 import 'router.dart';
 
 final class ChimeraApp extends StatelessWidget {
@@ -22,12 +23,17 @@ final class ChimeraApp extends StatelessWidget {
     this.jsonTableService = const JsonTableService(
       converter: JsonTableConverter(maxCells: 10000),
     ),
+    this.jsonYamlService = const JsonYamlService(
+      converter: JsonYamlConverter(maxNodes: 10000),
+    ),
     this.currentTime,
     this.cronFilePicker,
     this.dateFilePicker,
     this.jsonCsvFilePicker,
     this.jsonCsvFileSaver,
     this.jsonTableFilePicker,
+    this.jsonYamlFilePicker,
+    this.jsonYamlFileSaver,
     this.initialLocation = '/',
     super.key,
   });
@@ -37,12 +43,15 @@ final class ChimeraApp extends StatelessWidget {
   final DateService dateService;
   final JsonCsvService jsonCsvService;
   final JsonTableService jsonTableService;
+  final JsonYamlService jsonYamlService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
   final JsonCsvFilePicker? jsonCsvFilePicker;
   final JsonCsvFileSaver? jsonCsvFileSaver;
   final JsonTableFilePicker? jsonTableFilePicker;
+  final JsonYamlFilePicker? jsonYamlFilePicker;
+  final JsonYamlFileSaver? jsonYamlFileSaver;
   final String initialLocation;
 
   @override
@@ -54,12 +63,15 @@ final class ChimeraApp extends StatelessWidget {
         dateService: dateService,
         jsonCsvService: jsonCsvService,
         jsonTableService: jsonTableService,
+        jsonYamlService: jsonYamlService,
         currentTime: currentTime,
         cronFilePicker: cronFilePicker,
         dateFilePicker: dateFilePicker,
         jsonCsvFilePicker: jsonCsvFilePicker,
         jsonCsvFileSaver: jsonCsvFileSaver,
         jsonTableFilePicker: jsonTableFilePicker,
+        jsonYamlFilePicker: jsonYamlFilePicker,
+        jsonYamlFileSaver: jsonYamlFileSaver,
         initialLocation: initialLocation,
       ),
     );
@@ -73,12 +85,15 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.dateService,
     required this.jsonCsvService,
     required this.jsonTableService,
+    required this.jsonYamlService,
     required this.currentTime,
     required this.cronFilePicker,
     required this.dateFilePicker,
     required this.jsonCsvFilePicker,
     required this.jsonCsvFileSaver,
     required this.jsonTableFilePicker,
+    required this.jsonYamlFilePicker,
+    required this.jsonYamlFileSaver,
     required this.initialLocation,
   });
 
@@ -87,12 +102,15 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final DateService dateService;
   final JsonCsvService jsonCsvService;
   final JsonTableService jsonTableService;
+  final JsonYamlService jsonYamlService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
   final JsonCsvFilePicker? jsonCsvFilePicker;
   final JsonCsvFileSaver? jsonCsvFileSaver;
   final JsonTableFilePicker? jsonTableFilePicker;
+  final JsonYamlFilePicker? jsonYamlFilePicker;
+  final JsonYamlFileSaver? jsonYamlFileSaver;
   final String initialLocation;
 
   @override
@@ -113,12 +131,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       dateService: widget.dateService,
       jsonCsvService: widget.jsonCsvService,
       jsonTableService: widget.jsonTableService,
+      jsonYamlService: widget.jsonYamlService,
       currentTime: widget.currentTime ?? DateTime.now,
       cronFilePicker: widget.cronFilePicker ?? pickCronExpressionFile,
       dateFilePicker: widget.dateFilePicker ?? pickDateValueFile,
       jsonCsvFilePicker: widget.jsonCsvFilePicker ?? pickJsonCsvFile,
       jsonCsvFileSaver: widget.jsonCsvFileSaver ?? saveJsonCsvFile,
       jsonTableFilePicker: widget.jsonTableFilePicker ?? pickJsonTableFile,
+      jsonYamlFilePicker: widget.jsonYamlFilePicker ?? pickJsonYamlFile,
+      jsonYamlFileSaver: widget.jsonYamlFileSaver ?? saveJsonYamlFile,
       initialLocation: widget.initialLocation,
     );
   }

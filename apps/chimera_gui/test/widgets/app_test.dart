@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
@@ -524,6 +526,198 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('json-table-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenJsonValue_WhenYamlSubmitted_ThenAccessiblePreviewIsVisible',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('open-json-yaml')));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('json-yaml-input')),
+        '{"name":"Ada","active":true}',
+      );
+      await tester.tap(find.byKey(const Key('json-yaml-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('name: Ada\nactive: true'), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('json-yaml-result-semantics')),
+      );
+      expect(semantics.properties.value, 'name: Ada\nactive: true');
+      expect(find.byKey(const Key('json-yaml-save')), findsOneWidget);
+    },
+  );
+
+  testWidgets('GivenYamlOptions_WhenChanged_ThenIndentAndQuotesAreApplied', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/to-yaml'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-yaml-input')),
+      '{"outer":{"name":"Ada"}}',
+    );
+    await tester.tap(find.byKey(const Key('json-yaml-indent')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4 spaces').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('json-yaml-quote-strings')));
+    await tester.tap(find.byKey(const Key('json-yaml-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('outer:\n    name: "Ada"'), findsOneWidget);
+  });
+
+  testWidgets('GivenLocalJsonFile_WhenYamlSelected_ThenInputUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/to-yaml',
+        jsonYamlFilePicker: () async => '{"name":"Ada"}',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('json-yaml-file')));
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('json-yaml-input')),
+    );
+    expect(input.controller!.text, '{"name":"Ada"}');
+  });
+
+  testWidgets('GivenYamlResult_WhenSaved_ThenExactBytesReachLocalAdapter', (
+    tester,
+  ) async {
+    String? savedName;
+    List<int>? savedBytes;
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/to-yaml',
+        jsonYamlFileSaver: (name, bytes) async {
+          savedName = name;
+          savedBytes = bytes;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-yaml-input')),
+      '{"name":"Ada"}',
+    );
+    await tester.tap(find.byKey(const Key('json-yaml-submit')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('json-yaml-save')));
+    await tester.pumpAndSettle();
+
+    expect(savedName, 'chimera.yaml');
+    expect(utf8.decode(savedBytes!), 'name: Ada');
+    expect(find.text('YAML saved.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'GivenYamlSaveFailure_WhenSavedInPortuguese_ThenAccessErrorIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/json/to-yaml',
+          jsonYamlFileSaver: (name, bytes) async => throw StateError('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('json-yaml-input')), '{}');
+      await tester.tap(find.byKey(const Key('json-yaml-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('json-yaml-save')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Não foi possível salvar o arquivo YAML.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('GivenInvalidJson_WhenYamlSubmitted_ThenLocationIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/to-yaml'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-yaml-input')),
+      '{"secret":}',
+    );
+    await tester.tap(find.byKey(const Key('json-yaml-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Location:'), findsOneWidget);
+    final error = tester.widget<Text>(find.byKey(const Key('json-yaml-error')));
+    expect(error.data, isNot(contains('secret')));
+  });
+
+  testWidgets(
+    'GivenYamlResourceFailure_WhenSubmitted_ThenNoPartialResultAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/to-yaml',
+          jsonYamlService: JsonYamlService(
+            converter: JsonYamlConverter(maxNodes: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('json-yaml-input')), '[1,2]');
+      await tester.tap(find.byKey(const Key('json-yaml-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The YAML conversion exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-yaml-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowYamlViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: ChimeraApp(localeTag: 'en', initialLocation: '/json/to-yaml'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('json-yaml-input')), findsOneWidget);
     },
   );
 

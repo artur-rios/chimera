@@ -7,6 +7,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
 import 'json_table_page.dart';
+import 'json_yaml_page.dart';
 
 GoRouter buildRouter({
   required MessageCatalog catalog,
@@ -15,12 +16,15 @@ GoRouter buildRouter({
   required DateService dateService,
   required JsonCsvService jsonCsvService,
   required JsonTableService jsonTableService,
+  required JsonYamlService jsonYamlService,
   required DateTime Function() currentTime,
   required CronFilePicker cronFilePicker,
   required DateFilePicker dateFilePicker,
   required JsonCsvFilePicker jsonCsvFilePicker,
   required JsonCsvFileSaver jsonCsvFileSaver,
   required JsonTableFilePicker jsonTableFilePicker,
+  required JsonYamlFilePicker jsonYamlFilePicker,
+  required JsonYamlFileSaver jsonYamlFileSaver,
   String initialLocation = '/',
 }) {
   return GoRouter(
@@ -66,6 +70,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/json/array-to-csv'),
                         child: Text(
                           catalog.lookup(localeTag, 'jsonCsv.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-json-yaml'),
+                        onPressed: () => context.go('/json/to-yaml'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jsonYaml.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -120,6 +132,16 @@ GoRouter buildRouter({
           service: jsonCsvService,
           filePicker: jsonCsvFilePicker,
           fileSaver: jsonCsvFileSaver,
+        ),
+      ),
+      GoRoute(
+        path: '/json/to-yaml',
+        builder: (context, state) => JsonYamlPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jsonYamlService,
+          filePicker: jsonYamlFilePicker,
+          fileSaver: jsonYamlFileSaver,
         ),
       ),
     ],

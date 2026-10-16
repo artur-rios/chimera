@@ -160,7 +160,40 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'JSON CSV');
 
-    stdout.writeln('Safari cron, date, JSON table, and JSON CSV smoke: OK');
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for JSON YAML flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Convert JSON to YAML'),
+      'Home page did not return for JSON YAML flow',
+    );
+    await _clickButton(driver, 'Convert JSON to YAML');
+    await _waitUntil(
+      () => _pageContains(driver, 'Create YAML'),
+      'JSON YAML page did not open',
+    );
+    await _fillTextBox(driver, 'JSON value', '{"name":"Ada","meta":{"x":1}}');
+    await _clickButton(driver, 'Create YAML');
+    await _waitUntil(
+      () => _pageContains(driver, 'YAML result name: Ada'),
+      'JSON YAML result did not render',
+    );
+    await _assertNoExternalRequests(driver, flow: 'JSON YAML');
+
+    stdout.writeln(
+      'Safari cron, date, JSON table, JSON CSV, and JSON YAML smoke: OK',
+    );
   } finally {
     await driver.quit();
   }

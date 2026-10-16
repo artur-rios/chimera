@@ -20,3 +20,5 @@ Versioning and use tags in the form `vX.Y.Z`.
   optional row numbers, localized GUI flow, and human or JSON CLI output.
 - Standards-compliant JSON-object array CSV serialization with selectable
   delimiters and headers, localized preview/save flow, and exact CLI file output.
+- Deterministic JSON-to-YAML serialization with indentation and quoting options,
+  typed resource limits, localized preview/save flow, and exact CLI file output.
