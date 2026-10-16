@@ -5,7 +5,8 @@ common conversion, encoding, formatting, comparison, analysis, and synthetic
 test-data utilities in one local-first application. It targets the browser,
 Windows and Linux desktops, and the command line.
 
-> **Status:** Specification complete; implementation not started.
+> **Status:** Foundation implemented; utility use cases are delivered through the
+> public backlog below.
 
 Delivery is tracked in the public [Chimera GitHub Project](https://github.com/users/artur-rios/projects/17).
 
@@ -44,34 +45,83 @@ normative implementation source.
 
 ## Installation
 
-The repository currently contains specifications. The foundation milestone will
-add the Flutter and Dart monorepo. Its intended bootstrap command is:
+Install Flutter 3.47.7 (which includes Dart 3.13.5), Node.js 24, and Docker.
+Windows desktop builds additionally need Visual Studio's Desktop development
+with C++ workload; Linux desktop builds need the Flutter Linux prerequisites.
+
+From a clean clone, resolve the workspace with:
 
 ```bash
-melos bootstrap
+flutter pub get
+dart run melos bootstrap
 ```
 
-Use the latest stable Flutter and Melos releases at implementation time; Dart is
-the version bundled with Flutter.
+Run the GUI with `flutter run` from `apps/chimera_gui`. Run the CLI with
+`dart run apps/chimera_cli/bin/chimera.dart`. Both entry points consume shared
+packages rather than owning utility implementations.
+
+## Architecture
+
+| Project | Responsibility |
+| --- | --- |
+| `apps/chimera_gui` | Flutter browser, Windows, and Linux presentation shell. |
+| `apps/chimera_cli` | Dart command-line presentation shell. |
+| `packages/chimera_core` | Typed results, operation services, and redacted diagnostics. |
+| `packages/chimera_utilities` | Platform-independent utility implementations. |
+| `packages/chimera_platform` | Injectable file, clipboard, preference, and update boundaries. |
+| `packages/chimera_l10n` | Complete English and Brazilian Portuguese message catalogs. |
+
+The applications may depend inward on shared packages. Core and utilities may
+not depend on Flutter, an application, or a platform implementation. The
+repository's boundary test enforces that direction and rejects database or
+analytics dependencies.
 
 ## Testing
 
 The complete suite defined in the
 [Testing Specification](docs/requirements/Testing%20Specification%20Document.md)
-will run with:
+runs with:
 
 ```bash
-melos run test:all
+dart run melos run test:all
 ```
 
-The suite covers unit, widget, CLI functional, GUI integration, cross-browser,
-deployment, update, accessibility, and performance behavior.
+Individual suites are `analyze`, `test:unit`, `test:cli`, `test:gui`,
+`test:web`, `test:deployment`, and `test:performance`. The web suite builds the
+application and runs the pinned Playwright harness natively on Linux or in its
+official Linux container on Windows, where Docker must be available. CI covers
+unit, widget, CLI, native GUI, Chromium, Firefox, WebKit, native Safari,
+deployment, update, accessibility, and performance behavior. CI publishes LCOV,
+test logs, accessibility results, and performance results as build evidence.
+
+## Web container
+
+Build and verify the unprivileged NGINX image on Windows with:
+
+```powershell
+./tool/smoke_container.ps1
+```
+
+On Linux use `sh tool/smoke_container.sh`. The container listens on port 8080;
+`/healthz` returns exactly `{"status":"ok"}`. Yggdrasil owns environment
+promotion, Traefik routing, rollback, secrets, logs, and platform metrics. No
+utility input or output is sent to those operational surfaces.
+
+## Releases
+
+Release preparation happens on `develop`; an unchanged `release/X.Y.Z` snapshot
+targets `main`. After Yggdrasil completes its environment gates and creates
+`vX.Y.Z`, GitHub Actions publishes Windows and Linux GUI/CLI portable packages
+and installers. Every native artifact has a SHA-256 sidecar and six-field
+release-metadata sidecar. See
+[Release artifacts](docs/operations/release-artifacts.md) for formats and the
+infrastructure-requirement evidence map.
 
 ## Roadmap
 
 | Milestone | Delivers | Depends on | Issues | Status |
 | --- | --- | --- | ---: | --- |
-| [M-01 — Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | — | 1 | 0 / 1 closed |
+| [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
 | [M-02 — Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 0 / 8 closed |
 | [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
 | [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 0 / 14 closed |

@@ -1,0 +1,61 @@
+name: Branch Policy
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, edited]
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-policy-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  branch-policy:
+    name: branch-policy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - uses: dart-lang/setup-dart@v1
+
+      - name: Check the branch against the branching model
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          fail() { echo "::error::$*"; exit 1; }
+
+          git fetch --no-tags --quiet origin develop main
+
+          case "$BASE_REF" in
+            develop)
+              [[ "$HEAD_REF" =~ ^(feature|fix)/[a-z0-9][a-z0-9._-]*$ || "$HEAD_REF" =~ ^dependabot/ ]] \
+                || fail "Pull requests into develop must come from feature/<name> or fix/<name>, not '$HEAD_REF'."
+
+              dart tool/check_branch_origin.dart origin/main origin/develop "$HEAD_SHA" \
+                || fail "'$HEAD_REF' was branched from main. Recreate it from develop."
+              ;;
+            main)
+              [[ "$HEAD_REF" =~ ^release/[0-9]+\.[0-9]+\.[0-9]+$ ]] \
+                || fail "Pull requests into main must come from release/<major>.<minor>.<patch>, not '$HEAD_REF'."
+
+              git merge-base --is-ancestor "$HEAD_SHA" origin/develop \
+                || fail "A release branch must be an unchanged snapshot of develop."
+
+              version="${HEAD_REF#release/}"
+              if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
+                fail "Version $version was already released."
+              fi
+              ;;
+          esac
+
+          echo "'$HEAD_REF' -> '$BASE_REF' follows the branching model."

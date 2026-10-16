@@ -1,0 +1,8 @@
+{
+  "releaseVersion": "1.2.3",
+  "platform": "windows",
+  "application": "desktop",
+  "packageType": "installer",
+  "downloadUrl": "https://github.com/artur-rios/chimera/releases/download/v1.2.3/chimera-windows-desktop-installer.zip",
+  "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+}
