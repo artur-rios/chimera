@@ -41,4 +41,29 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('GivenDateRoute_WhenConversionRuns_ThenSharedResultIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/date/convert'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('date-value')),
+      '2026-01-15T12:30:45Z',
+    );
+    await tester.enterText(
+      find.byKey(const Key('date-target-time-zone')),
+      'America/Sao_Paulo',
+    );
+    await tester.tap(find.byKey(const Key('date-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Converted value: 2026-01-15T09:30:45.000-03:00'),
+      findsOneWidget,
+    );
+  });
 }

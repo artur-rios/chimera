@@ -226,4 +226,136 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets(
+    'GivenDateForm_WhenValidValuesAreSubmitted_ThenConvertedValueIsVisible',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('open-date')));
+      await tester.pumpAndSettle();
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Convert date'),
+        ),
+        findsOneWidget,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('date-value')),
+        '2026-01-15T12:30:45Z',
+      );
+      await tester.enterText(
+        find.byKey(const Key('date-target-time-zone')),
+        'America/Sao_Paulo',
+      );
+      await tester.tap(find.byKey(const Key('date-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Converted value: 2026-01-15T09:30:45.000-03:00'),
+        findsOneWidget,
+      );
+      expect(
+        find.text('UTC instant: 2026-01-15T12:30:45.000Z'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets('GivenLocalDateFile_WhenSelected_ThenValueFieldUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/date/convert',
+        dateFilePicker: () async => '2026-01-15T12:30:45Z',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('date-file')));
+    await tester.pumpAndSettle();
+
+    final valueField = tester.widget<TextField>(
+      find.byKey(const Key('date-value')),
+    );
+    expect(valueField.controller!.text, '2026-01-15T12:30:45Z');
+  });
+
+  testWidgets(
+    'GivenInvalidDateForm_WhenSubmittedInPortuguese_ThenLocalizedFailureIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/date/convert'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('date-value')),
+        'segredo inválido',
+      );
+      await tester.tap(find.byKey(const Key('date-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('A solicitação de data é inválida.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenDateOutsideTargetCalendarRange_WhenSubmitted_ThenRangeFailureIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/date/convert'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('date-value')),
+        '9999-12-31T23:59:59.999Z',
+      );
+      await tester.enterText(
+        find.byKey(const Key('date-target-time-zone')),
+        'Pacific/Kiritimati',
+      );
+      await tester.tap(find.byKey(const Key('date-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The date is outside the supported range.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('date-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowDateViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/date/convert'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Convert date'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

@@ -1,5 +1,6 @@
 enum FailureKind {
   validation,
+  range,
   processing,
   resource,
   access,

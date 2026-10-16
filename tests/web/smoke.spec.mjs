@@ -65,3 +65,34 @@ test('cron flow calculates locally without external requests', async ({ page }) 
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('date flow converts locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Convert a date' }).click();
+  await expect(page.getByText('Convert date').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Date value' }),
+    '2026-01-15T12:30:45Z',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Target time zone' }),
+    'America/Sao_Paulo',
+  );
+  await page.getByRole('button', { name: 'Convert date' }).click();
+
+  await expect(
+    page.getByText('Converted value: 2026-01-15T09:30:45.000-03:00').last(),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
