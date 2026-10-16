@@ -137,9 +137,6 @@ final class CronEvaluator {
       referenceLocal.day,
     );
     final occurrences = <CronOccurrence>[];
-    final hours = _ordered(schedule.hours.values, direction);
-    final minutes = _ordered(schedule.minutes.values, direction);
-    final seconds = _ordered(schedule.seconds.values, direction);
 
     for (var dayOffset = 0; dayOffset < maxSearchDays; dayOffset++) {
       final date = startDate.add(
@@ -151,42 +148,46 @@ final class CronEvaluator {
         continue;
       }
 
-      for (final hour in hours) {
-        for (final minute in minutes) {
-          for (final second in seconds) {
-            final matchingWallClocks = _matchingWallClocks(
-              location: location,
-              year: date.year,
-              month: date.month,
-              day: date.day,
-              hour: hour,
-              minute: minute,
-              second: second,
+      final matchingDayInstants = <time_zone.TZDateTime>[];
+      for (final hour in schedule.hours.values) {
+        for (final minute in schedule.minutes.values) {
+          for (final second in schedule.seconds.values) {
+            matchingDayInstants.addAll(
+              _matchingWallClocks(
+                location: location,
+                year: date.year,
+                month: date.month,
+                day: date.day,
+                hour: hour,
+                minute: minute,
+                second: second,
+              ),
             );
-            final orderedWallClocks = direction == _SearchDirection.next
-                ? matchingWallClocks
-                : matchingWallClocks.reversed;
-            for (final local in orderedWallClocks) {
-              final instant = local.toUtc();
-              final isOnRequestedSide = direction == _SearchDirection.next
-                  ? instant.isAfter(referenceUtc)
-                  : instant.isBefore(referenceUtc);
-              if (!isOnRequestedSide) {
-                continue;
-              }
-
-              occurrences.add(
-                CronOccurrence(
-                  instantUtc: instant,
-                  localIso8601: _formatLocal(local),
-                  timeZoneAbbreviation: local.timeZoneName,
-                ),
-              );
-              if (occurrences.length == count) {
-                return occurrences;
-              }
-            }
           }
+        }
+      }
+      matchingDayInstants.sort((left, right) => left.compareTo(right));
+      final orderedDayInstants = direction == _SearchDirection.next
+          ? matchingDayInstants
+          : matchingDayInstants.reversed;
+      for (final local in orderedDayInstants) {
+        final instant = local.toUtc();
+        final isOnRequestedSide = direction == _SearchDirection.next
+            ? instant.isAfter(referenceUtc)
+            : instant.isBefore(referenceUtc);
+        if (!isOnRequestedSide) {
+          continue;
+        }
+
+        occurrences.add(
+          CronOccurrence(
+            instantUtc: instant,
+            localIso8601: _formatLocal(local),
+            timeZoneAbbreviation: local.timeZoneName,
+          ),
+        );
+        if (occurrences.length == count) {
+          return occurrences;
         }
       }
     }
@@ -244,11 +245,6 @@ List<time_zone.TZDateTime> _matchingWallClocks({
 }
 
 enum _SearchDirection { previous, next }
-
-Iterable<int> _ordered(Set<int> values, _SearchDirection direction) {
-  final sorted = values.toList()..sort();
-  return direction == _SearchDirection.next ? sorted : sorted.reversed;
-}
 
 String _formatLocal(time_zone.TZDateTime value) {
   String two(int part) => part.toString().padLeft(2, '0');

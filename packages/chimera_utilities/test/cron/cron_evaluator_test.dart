@@ -180,6 +180,42 @@ void main() {
       },
     );
 
+    test('GivenMultipleRepeatedDstTimes_WhenEvaluated_ThenOccurrencesAreChronological', () {
+      final evaluator = const CronEvaluator();
+      final next = evaluator.evaluate(
+        CronEvaluationRequest(
+          expression: '0,30 1 * * *',
+          timeZone: 'America/New_York',
+          occurrenceCount: 4,
+          referenceUtc: DateTime.utc(2026, 11, 1, 4),
+        ),
+      );
+      final previous = evaluator.evaluate(
+        CronEvaluationRequest(
+          expression: '0,30 1 * * *',
+          timeZone: 'America/New_York',
+          occurrenceCount: 4,
+          referenceUtc: DateTime.utc(2026, 11, 1, 7),
+        ),
+      );
+
+      expect(next.next.map((occurrence) => occurrence.utcIso8601), <String>[
+        '2026-11-01T05:00:00.000Z',
+        '2026-11-01T05:30:00.000Z',
+        '2026-11-01T06:00:00.000Z',
+        '2026-11-01T06:30:00.000Z',
+      ]);
+      expect(
+        previous.previous.map((occurrence) => occurrence.utcIso8601),
+        <String>[
+          '2026-11-01T06:30:00.000Z',
+          '2026-11-01T06:00:00.000Z',
+          '2026-11-01T05:30:00.000Z',
+          '2026-11-01T05:00:00.000Z',
+        ],
+      );
+    });
+
     test('GivenMaximumCountForRareSchedule_WhenEvaluated_ThenAllOccurrencesAreReturned', () {
       final result = const CronEvaluator().evaluate(
         CronEvaluationRequest(
