@@ -148,11 +148,7 @@ Future<void> main() async {
       () => _pageContains(driver, 'Create CSV'),
       'JSON CSV page did not open',
     );
-    await _fillTextBox(
-      driver,
-      'JSON array',
-      '[{"name":"Ada","meta":{"x":1}}]',
-    );
+    await _fillTextBox(driver, 'JSON array', '[{"name":"Ada","meta":{"x":1}}]');
     await _clickButton(driver, 'Create CSV');
     await _waitUntil(
       () => _pageContains(driver, 'CSV result name,meta'),
