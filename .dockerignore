@@ -1,0 +1,11 @@
+.dart_tool
+.git
+.idea
+.superpowers
+.vscode
+**/build
+**/.dart_tool
+**/.flutter-plugins*
+apps/chimera_gui/linux
+apps/chimera_gui/windows
+coverage
