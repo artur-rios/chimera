@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
+import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
@@ -28,6 +29,11 @@ import 'xml_format_page.dart';
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
     this.localeTag = 'en',
+    this.certificateConvertService = const CertificateConvertService(),
+    this.certificateConvertFilePicker,
+    this.certificateConvertFileSaver,
+    this.certificateConvertClipboardReader,
+    this.certificateConvertClipboardWriter,
     this.certificateInspectService = const CertificateInspectService(),
     this.certificateInspectFilePicker,
     this.certificateInspectClipboardReader,
@@ -122,6 +128,11 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final CertificateConvertOperationService certificateConvertService;
+  final CertificateConvertFilePicker? certificateConvertFilePicker;
+  final CertificateConvertFileSaver? certificateConvertFileSaver;
+  final CertificateConvertClipboardReader? certificateConvertClipboardReader;
+  final CertificateConvertClipboardWriter? certificateConvertClipboardWriter;
   final CertificateInspectOperationService certificateInspectService;
   final CertificateInspectFilePicker? certificateInspectFilePicker;
   final CertificateInspectClipboardReader? certificateInspectClipboardReader;
@@ -212,6 +223,11 @@ final class ChimeraApp extends StatelessWidget {
     return ProviderScope(
       child: _RoutedChimeraApp(
         localeTag: localeTag,
+        certificateConvertService: certificateConvertService,
+        certificateConvertFilePicker: certificateConvertFilePicker,
+        certificateConvertFileSaver: certificateConvertFileSaver,
+        certificateConvertClipboardReader: certificateConvertClipboardReader,
+        certificateConvertClipboardWriter: certificateConvertClipboardWriter,
         certificateInspectService: certificateInspectService,
         certificateInspectFilePicker: certificateInspectFilePicker,
         certificateInspectClipboardReader: certificateInspectClipboardReader,
@@ -303,6 +319,11 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.certificateConvertService,
+    required this.certificateConvertFilePicker,
+    required this.certificateConvertFileSaver,
+    required this.certificateConvertClipboardReader,
+    required this.certificateConvertClipboardWriter,
     required this.certificateInspectService,
     required this.certificateInspectFilePicker,
     required this.certificateInspectClipboardReader,
@@ -392,6 +413,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
 
   final String localeTag;
   final Base64DecodeService base64DecodeService;
+  final CertificateConvertOperationService certificateConvertService;
+  final CertificateConvertFilePicker? certificateConvertFilePicker;
+  final CertificateConvertFileSaver? certificateConvertFileSaver;
+  final CertificateConvertClipboardReader? certificateConvertClipboardReader;
+  final CertificateConvertClipboardWriter? certificateConvertClipboardWriter;
   final CertificateInspectOperationService certificateInspectService;
   final CertificateInspectFilePicker? certificateInspectFilePicker;
   final CertificateInspectClipboardReader? certificateInspectClipboardReader;
@@ -488,6 +514,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      certificateConvertService: widget.certificateConvertService,
+      certificateConvertFilePicker:
+          widget.certificateConvertFilePicker ?? pickCertificateConvertFile,
+      certificateConvertFileSaver:
+          widget.certificateConvertFileSaver ?? saveCertificateConvertFile,
+      certificateConvertClipboardReader:
+          widget.certificateConvertClipboardReader ??
+          readCertificateConvertClipboard,
+      certificateConvertClipboardWriter:
+          widget.certificateConvertClipboardWriter ??
+          writeCertificateConvertClipboard,
       certificateInspectService: widget.certificateInspectService,
       certificateInspectFilePicker:
           widget.certificateInspectFilePicker ?? pickCertificateInspectFile,

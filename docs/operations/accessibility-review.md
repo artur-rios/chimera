@@ -149,3 +149,54 @@ Strict Flutter analysis passes with no issues. These are automated widget
 findings; native screen-reader and real-browser platform evidence is recorded
 separately by the cross-platform acceptance work. No automated UC-18
 accessibility findings remain open.
+
+## UC-19 Convert Certificate
+
+- Release version: UC-19 candidate for issue #20
+- Branch: `feature/uc-19-convert-certificate`
+- Reviewer: Chimera UC-19 GUI implementation self-review
+- Date: 2026-10-17
+- Target: shared Flutter web, Windows, and Linux certificate conversion surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Keyboard traversal follows certificate input, file, clipboard paste,
+  Auto/PEM/DER/Base64 source, PEM/DER/Base64 target, convert, result, copy for
+  text targets, and save. Keyboard activation works; success focuses the result.
+- [x] Selector semantics include localized source/target context, making the
+  repeated PEM/DER/Base64 choices distinguishable without sight.
+- [x] PEM/Base64 output is exact selectable text in a bounded 320 logical-pixel
+  viewport. DER shows source/target representations and byte counts, with save
+  available and no certificate text or copy action.
+- [x] The live result region announces only safe source/target representations
+  and input/DER/output byte counts; certificate data is excluded from semantics.
+- [x] Errors and copy/save notices use localized live regions. Failed load,
+  conversion, copy, and save clear source/result/notices and result actions.
+  Allocation exhaustion, including deferred text materialization, is localized.
+- [x] File-picker and save cancellation preserve completed output. Generation
+  guards ignore stale success/failure after source/selector changes or disposal;
+  every source, selector, conversion, copy, and save control disables while busy.
+- [x] All source/selector/convert controls measure at least 48 by 48 logical
+  pixels. Flutter Android tap-target, labeled-target, and text-contrast guidelines
+  pass before and after conversion in both locales.
+- [x] Both locales render at 320 logical pixels and 200% text scale without
+  overflow; selectable output and copy/save remain reachable by scrolling.
+
+### Evidence and Findings
+
+The focused conversion widget file passes 94 tests. The full GUI widget suite
+passes 284 tests, including localized conversion home navigation. The complete
+localization suite passes 15 tests with exact catalog key parity. Tests cover
+real public certificate fixtures, all file source/target pairs, exclusive text,
+file and clipboard input, exact copy text, immutable save-byte identity and one
+handoff, DER presentation, malformed/multiple/mismatched input, typed injected
+target validation, boundary and allocation failures, neutral cancellation,
+source/result cleanup, deferred text resource failure, 30 stale/disposal paths,
+keyboard order, safe semantics, control sizes, contrast, and narrow large text.
+
+The GUI save guarantee is exact byte handoff to the injected/platform adapter;
+platform file-picker implementations own their save transaction. No GUI path-level
+staging or rollback claim is made. These are automated widget findings; native
+screen-reader and compiled browser/platform evidence belongs to cross-platform
+acceptance. No automated UC-19 accessibility findings remain open.
