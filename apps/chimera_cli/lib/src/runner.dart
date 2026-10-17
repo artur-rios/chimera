@@ -26,6 +26,7 @@ Future<int> runChimera(
   JsonYamlService jsonYamlService = const JsonYamlService(),
   NumberBaseService numberBaseService = const NumberBaseService(),
   TextEscapeService textEscapeService = const TextEscapeService(),
+  TextUnescapeService textUnescapeService = const TextUnescapeService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
   DateTime Function()? currentTime,
@@ -100,6 +101,21 @@ Future<int> runChimera(
         readFile: readFile ?? (path) => File(path).readAsString(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         textEscapeService: textEscapeService,
+      );
+    }
+    if (parsed.command!.name == 'text' &&
+        parsed.command!.command?.name == 'unescape') {
+      return await _runTextUnescape(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        textUnescapeService: textUnescapeService,
       );
     }
     if (parsed.command!.name == 'json' &&
@@ -202,6 +218,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'number' && args[1] == 'convert-base';
     final isTextEscape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'escape';
+    final isTextUnescape =
+        args.length >= 2 && args[0] == 'text' && args[1] == 'unescape';
     final isJsonTable =
         args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-table';
     final isJsonCsv =
@@ -223,6 +241,7 @@ Future<int> runChimera(
               isDate ||
               isNumberBase ||
               isTextEscape ||
+              isTextUnescape ||
               isJsonTable ||
               isJsonCsv ||
               isJsonYaml ||
@@ -239,6 +258,8 @@ Future<int> runChimera(
           ? 'number-base.invalid-options'
           : isTextEscape
           ? 'text-escape.invalid-options'
+          : isTextUnescape
+          ? 'text-unescape.invalid-options'
           : isJsonTable
           ? 'json-table.invalid-options'
           : isJsonCsv
@@ -260,6 +281,8 @@ Future<int> runChimera(
           ? 'error.numberBase.validation'
           : isTextEscape
           ? 'error.textEscape.validation'
+          : isTextUnescape
+          ? 'error.textUnescape.validation'
           : isJsonTable
           ? 'error.jsonTable.validation'
           : isJsonCsv
@@ -312,7 +335,15 @@ ArgParser _buildParser() {
     ..addOption('output', abbr: 'o')
     ..addOption('mode')
     ..addFlag('json', negatable: false);
-  final text = ArgParser()..addCommand('escape', textEscape);
+  final textUnescape = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('mode')
+    ..addFlag('json', negatable: false);
+  final text = ArgParser()
+    ..addCommand('escape', textEscape)
+    ..addCommand('unescape', textUnescape);
   final jsonArrayToTable = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addOption('file', abbr: 'f')
@@ -450,6 +481,109 @@ Future<int> _runTextEscape(
         out.writeln(
           '${catalog.lookup(localeTag, 'textEscape.resultLabel')}: '
           '${output.escaped}',
+        );
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runTextUnescape(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required TextUnescapeService textUnescapeService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'text-unescape.conflicting-inputs',
+      messageKey: 'error.textUnescape.validation',
+    );
+    return 64;
+  }
+
+  late String input;
+  try {
+    input = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'text-unescape.input-access'
+          : 'text-unescape.file-access',
+      messageKey: fileOption == null
+          ? 'error.textUnescape.inputAccess'
+          : 'error.textUnescape.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await textUnescapeService.execute(
+    TextUnescapeOperationRequest(
+      input: input,
+      mode: parsed.option('mode') ?? '',
+    ),
+  );
+  return await result.fold(
+    onSuccess: (output) async {
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(output.unescaped));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: parsed.flag('json'),
+            kind: 'access',
+            code: 'text-unescape.output-access',
+            messageKey: 'error.textUnescape.outputAccess',
+          );
+          return 74;
+        }
+        if (!parsed.flag('json')) {
+          out.writeln(catalog.lookup(localeTag, 'textUnescape.savedResult'));
+          return 0;
+        }
+      }
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(output.toJson()));
+      } else {
+        out.writeln(
+          '${catalog.lookup(localeTag, 'textUnescape.resultLabel')}: '
+          '${output.unescaped}',
         );
       }
       return 0;

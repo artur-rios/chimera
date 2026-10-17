@@ -12,6 +12,7 @@ import 'json_yaml_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
 import 'text_escape_page.dart';
+import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -25,6 +26,7 @@ GoRouter buildRouter({
   required JsonYamlService jsonYamlService,
   required NumberBaseService numberBaseService,
   required TextEscapeService textEscapeService,
+  required TextUnescapeService textUnescapeService,
   required SqlFormatService sqlFormatService,
   required XmlFormatService xmlFormatService,
   required DateTime Function() currentTime,
@@ -47,6 +49,10 @@ GoRouter buildRouter({
   required TextEscapeFileSaver textEscapeFileSaver,
   required TextEscapeClipboardReader textEscapeClipboardReader,
   required TextEscapeClipboardWriter textEscapeClipboardWriter,
+  required TextUnescapeFilePicker textUnescapeFilePicker,
+  required TextUnescapeFileSaver textUnescapeFileSaver,
+  required TextUnescapeClipboardReader textUnescapeClipboardReader,
+  required TextUnescapeClipboardWriter textUnescapeClipboardWriter,
   required SqlFormatFilePicker sqlFormatFilePicker,
   required SqlFormatFileSaver sqlFormatFileSaver,
   required SqlFormatClipboardReader sqlFormatClipboardReader,
@@ -158,6 +164,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag, 'textEscape.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-text-unescape'),
+                        onPressed: () => context.go('/text/unescape'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'textUnescape.openAction'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -248,6 +262,18 @@ GoRouter buildRouter({
           fileSaver: textEscapeFileSaver,
           clipboardReader: textEscapeClipboardReader,
           clipboardWriter: textEscapeClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/text/unescape',
+        builder: (context, state) => TextUnescapePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: textUnescapeService,
+          filePicker: textUnescapeFilePicker,
+          fileSaver: textUnescapeFileSaver,
+          clipboardReader: textUnescapeClipboardReader,
+          clipboardWriter: textUnescapeClipboardWriter,
         ),
       ),
       GoRoute(

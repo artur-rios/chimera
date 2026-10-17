@@ -36,6 +36,18 @@ void main() {
     );
   });
 
+  test('GivenTextUnescapeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'textUnescape.resultLabel'), 'Unescaped text');
+    expect(
+      catalog.lookup('pt-BR', 'textUnescape.resultLabel'),
+      'Texto não escapado',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.textUnescape.resource'),
+      'A remoção de escape de texto excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -115,6 +127,23 @@ void main() {
       'textEscape.saveAction',
       'textEscape.savedResult',
       'textEscape.submitAction',
+      'textUnescape.copiedResult',
+      'textUnescape.copyAction',
+      'textUnescape.fileAction',
+      'textUnescape.inputLabel',
+      'textUnescape.mode.c',
+      'textUnescape.mode.html',
+      'textUnescape.mode.json',
+      'textUnescape.mode.unicode',
+      'textUnescape.mode.url',
+      'textUnescape.modeLabel',
+      'textUnescape.openAction',
+      'textUnescape.pageTitle',
+      'textUnescape.pasteAction',
+      'textUnescape.resultLabel',
+      'textUnescape.saveAction',
+      'textUnescape.savedResult',
+      'textUnescape.submitAction',
       'jsonTable.emptyResult',
       'jsonTable.fileAction',
       'jsonTable.inputLabel',
@@ -254,6 +283,13 @@ void main() {
       'error.textEscape.outputAccess',
       'error.textEscape.resource',
       'error.textEscape.validation',
+      'error.textUnescape.clipboardRead',
+      'error.textUnescape.clipboardWrite',
+      'error.textUnescape.fileAccess',
+      'error.textUnescape.inputAccess',
+      'error.textUnescape.outputAccess',
+      'error.textUnescape.resource',
+      'error.textUnescape.validation',
       'error.cron.fileAccess',
       'error.cron.inputAccess',
       'error.cron.resource',

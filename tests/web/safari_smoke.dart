@@ -169,6 +169,42 @@ Future<void> main() async {
             const <Object?>[],
           ) ==
           true,
+      'Chimera did not reload for text unescape flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Unescape text'),
+      'Home page did not return for text unescape flow',
+    );
+    await _clickButton(driver, 'Unescape text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Escaped input text'),
+      'Text unescape page did not open',
+    );
+    // The built-in bounded sample avoids SafariDriver text synthesis quirks;
+    // custom Unicode/control input is covered by native and Playwright flows.
+    await _clickButton(driver, 'Unescape text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Unescaped text'),
+      'Text unescape result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Hello, "Chimera"!'),
+      'Text unescape result was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'text unescape');
+
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
       'Chimera did not reload for JSON table flow',
     );
     await driver.execute(
@@ -374,7 +410,7 @@ Future<void> main() async {
     await _assertNoExternalRequests(driver, flow: 'XML format');
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();

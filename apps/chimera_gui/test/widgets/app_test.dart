@@ -2195,4 +2195,311 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets(
+    'GivenTextUnescapeHomeAction_WhenOpened_ThenAllModesAndSemanticsWork',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-text-unescape')));
+      await tester.tap(find.byKey(const Key('open-text-unescape')));
+      await tester.pumpAndSettle();
+      expect(find.text('Unescape text'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('Hello, "Chimera"!'), findsOneWidget);
+
+      final selector = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('text-unescape-mode')),
+      );
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const Key('text-unescape-mode')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(dropdown.items!.map((item) => item.value), <String>[
+        'json',
+        'unicode',
+        'c',
+        'html',
+        'url',
+      ]);
+      selector.onChanged!('html');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-unescape-input')),
+        '&amp;&lt;',
+      );
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('&<'), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('text-unescape-result-semantics')),
+      );
+      expect(semantics.properties.value, '&<');
+    },
+  );
+
+  testWidgets(
+    'GivenMalformedUnescapeInput_WhenSubmitted_ThenLocalizedFailureHasNoResult',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/text/unescape'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-unescape-input')),
+        r'\q',
+      );
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('O texto escapado, o modo ou as opções são inválidos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextUnescapeAdapters_WhenLoadPasteCopyAndSave_ThenExactContentTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/unescape',
+          textUnescapeFilePicker: () async => '&amp;',
+          textUnescapeClipboardReader: () async => '&lt;',
+          textUnescapeClipboardWriter: (value) async => copied = value,
+          textUnescapeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-unescape-mode')),
+          )
+          .onChanged!('html');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-unescape-file')));
+      await tester.pumpAndSettle();
+      var input = tester.widget<TextField>(
+        find.byKey(const Key('text-unescape-input')),
+      );
+      expect(input.controller!.text, '&amp;');
+
+      await tester.tap(find.byKey(const Key('text-unescape-paste')));
+      await tester.pumpAndSettle();
+      input = tester.widget<TextField>(
+        find.byKey(const Key('text-unescape-input')),
+      );
+      expect(input.controller!.text, '&lt;');
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-unescape-copy')));
+      await tester.tap(find.byKey(const Key('text-unescape-copy')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-unescape-save')));
+      await tester.tap(find.byKey(const Key('text-unescape-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, '<');
+      expect(savedName, 'chimera-unescaped-text.txt');
+      expect(savedBytes, utf8.encode('<'));
+      expect(find.text('Unescaped text saved.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenIsolatedSurrogateFromAdapter_WhenSubmitted_ThenNoResultIsRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/unescape',
+          textUnescapeFilePicker: () async => r'\uD800',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-unescape-file')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The escaped text, mode, or options are invalid.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+      expect(find.byKey(const Key('text-unescape-save')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextUnescapeAccessFailures_WhenAdaptersRun_ThenResultIsNotRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/unescape',
+          textUnescapeFilePicker: () async => throw Exception('denied'),
+          textUnescapeClipboardReader: () async => throw Exception('denied'),
+          textUnescapeClipboardWriter: (_) async => throw Exception('denied'),
+          textUnescapeFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-unescape-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-unescape-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-unescape-copy')));
+      await tester.tap(find.byKey(const Key('text-unescape-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-unescape-save')));
+      await tester.tap(find.byKey(const Key('text-unescape-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The unescaped text could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenMultilineEscapes_WhenSubmitted_ThenNewlinesDecodeAccessibly',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/unescape'),
+      );
+      await tester.pumpAndSettle();
+
+      final input = tester.widget<TextField>(
+        find.byKey(const Key('text-unescape-input')),
+      );
+      expect(input.keyboardType, TextInputType.multiline);
+      expect(input.textInputAction, TextInputAction.newline);
+      expect(input.onSubmitted, isNull);
+      await tester.enterText(
+        find.byKey(const Key('text-unescape-input')),
+        r'line one\nline two',
+      );
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('line one\nline two'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenTextUnescapeResult_WhenInputModeOrPendingLoadChanges_ThenStaleClears',
+    (tester) async {
+      final loadedValue = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/unescape',
+          textUnescapeFilePicker: () => loadedValue.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-unescape-result')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('text-unescape-input')),
+        r'new\n',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-unescape-mode')),
+          )
+          .onChanged!('unicode');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-unescape-file')));
+      await tester.pump();
+      final pendingInput = tester.widget<TextField>(
+        find.byKey(const Key('text-unescape-input')),
+      );
+      expect(pendingInput.enabled, isFalse);
+      expect(find.byKey(const Key('text-unescape-submit')), findsOneWidget);
+
+      loadedValue.complete(r'\u0041');
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('text-unescape-input')))
+            .controller!
+            .text,
+        r'\u0041',
+      );
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowTextUnescapeViewport_WhenLargeText_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/text/unescape'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Remover escape de texto'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }
