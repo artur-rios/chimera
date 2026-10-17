@@ -47,6 +47,9 @@ Future<int> runChimera(
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
+  CertificateInspectService certificateInspectService =
+      const CertificateInspectService(),
+  JsonObjectEncoder? certificateInspectJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -76,6 +79,21 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'certificate' &&
+        parsed.command!.command?.name == 'inspect') {
+      return await _runCertificateInspect(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        service: certificateInspectService,
+        encodeJson: certificateInspectJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'base64' &&
         parsed.command!.command?.name == 'encode') {
@@ -344,6 +362,8 @@ Future<int> runChimera(
   } on FormatException {
     final isBase64Encode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
+    final isCertificateInspect =
+        args.length >= 2 && args[0] == 'certificate' && args[1] == 'inspect';
     final isBase64Decode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'decode';
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
@@ -381,6 +401,7 @@ Future<int> runChimera(
       localeTag: localeTag,
       json:
           (isBase64Encode ||
+              isCertificateInspect ||
               isBase64Decode ||
               isCron ||
               isDate ||
@@ -399,7 +420,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isBase64Encode
+      code: isCertificateInspect
+          ? 'certificate-inspect.invalid-options'
+          : isBase64Encode
           ? 'base64-encode.invalid-options'
           : isBase64Decode
           ? 'base64-decode.invalid-options'
@@ -434,7 +457,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isBase64Encode
+      messageKey: isCertificateInspect
+          ? 'error.certificateInspect.validation'
+          : isBase64Encode
           ? 'error.base64Encode.validation'
           : isBase64Decode
           ? 'error.base64Decode.validation'
@@ -475,6 +500,13 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final certificateInspect = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('format', defaultsTo: 'auto')
+    ..addFlag('json', negatable: false);
+  final certificate = ArgParser()..addCommand('inspect', certificateInspect);
   final base64Encode = ArgParser()
     ..addOption('text')
     ..addFlag('stdin', negatable: false)
@@ -619,6 +651,7 @@ ArgParser _buildParser() {
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('base64', base64)
+    ..addCommand('certificate', certificate)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json)
@@ -627,6 +660,185 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runCertificateInspect(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required CertificateInspectService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final representation = switch (parsed.option('format')) {
+    'auto' => CertificateInputRepresentation.auto,
+    'pem' => CertificateInputRepresentation.pem,
+    'der' => CertificateInputRepresentation.der,
+    'base64' => CertificateInputRepresentation.base64,
+    _ => null,
+  };
+
+  String? invalidCode;
+  if (parsed.rest.isNotEmpty) {
+    invalidCode = 'invalid-options';
+  } else if (sourceCount != 1) {
+    invalidCode = sourceCount == 0 ? 'missing-source' : 'conflicting-sources';
+  } else if (representation == null) {
+    invalidCode = 'invalid-format';
+  }
+  if (invalidCode != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'certificate-inspect.$invalidCode',
+      messageKey: 'error.certificateInspect.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'certificate-inspect.resource-limit',
+    messageKey: 'error.certificateInspect.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  late CertificateInspectOperationRequest request;
+  if (text != null) {
+    request = CertificateInspectOperationRequest.fromText(
+      text,
+      representation: representation!,
+    );
+  } else {
+    try {
+      final bytes = useStandardInput
+          ? await readStandardInputBytes()
+          : await readFileBytes(file!);
+      request = CertificateInspectOperationRequest.fromBytes(
+        bytes,
+        representation: representation!,
+      );
+    } on OutOfMemoryError {
+      resourceFailure('input');
+      return 75;
+    } on Object {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'access',
+        code:
+            'certificate-inspect.${useStandardInput ? 'input' : 'file'}-access',
+        messageKey: useStandardInput
+            ? 'error.certificateInspect.inputAccess'
+            : 'error.certificateInspect.fileAccess',
+      );
+      return 74;
+    }
+  }
+
+  final result = await service.execute(request);
+  return result.fold(
+    onSuccess: (value) {
+      try {
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : _renderCertificateInspect(
+                value,
+                catalog: catalog,
+                localeTag: localeTag,
+              );
+        out.write(payload);
+      } on OutOfMemoryError {
+        resourceFailure('output');
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+String _renderCertificateInspect(
+  CertificateInspectOutput output, {
+  required MessageCatalog catalog,
+  required String localeTag,
+}) {
+  final buffer = StringBuffer();
+  String label(String key) =>
+      catalog.lookup(localeTag, 'certificateInspect.$key');
+  void field(String key, Object value) =>
+      buffer.writeln('${label(key)}: $value');
+  String identifier(String oid, String? name) =>
+      name == null ? oid : '$name ($oid)';
+  void attributes(String key, List<CertificateAttribute> values) {
+    buffer.writeln('${label(key)}:');
+    for (final attribute in values) {
+      buffer.writeln(
+        '  ${identifier(attribute.oid, attribute.name)}: ${jsonEncode(attribute.value)}',
+      );
+    }
+  }
+
+  final metadata = output.toJson();
+  field(
+    'representationLabel',
+    label('representation.${output.representation.name}'),
+  );
+  field('versionLabel', output.version);
+  field('serialNumberHexLabel', output.serialNumberHex);
+  attributes('subjectLabel', output.subject);
+  attributes('issuerLabel', output.issuer);
+  field('notBeforeLabel', metadata['notBefore']!);
+  field('notAfterLabel', metadata['notAfter']!);
+  field(
+    'signatureAlgorithmLabel',
+    identifier(output.signatureAlgorithm.oid, output.signatureAlgorithm.name),
+  );
+  field(
+    'publicKeyAlgorithmLabel',
+    identifier(output.publicKeyAlgorithm.oid, output.publicKeyAlgorithm.name),
+  );
+  buffer.writeln('${label('extensionsLabel')}:');
+  for (final extension in output.extensions) {
+    buffer.writeln(
+      '  ${identifier(extension.oid, extension.name)}, ${label('criticalLabel')}: ${label(extension.critical ? 'yes' : 'no')}',
+    );
+  }
+  field('inputByteCountLabel', output.inputByteCount);
+  field('derByteCountLabel', output.derByteCount);
+  return buffer.toString();
 }
 
 Future<int> _runBase64Encode(
@@ -1763,6 +1975,7 @@ List<String> _normalizeMultilineListOptions(List<String> args) {
   final normalized = <String>[];
   for (final argument in args) {
     final isLiteral =
+        argument.startsWith('--text=') ||
         argument.startsWith('--input=') ||
         argument.startsWith('--left=') ||
         argument.startsWith('--right=');

@@ -4,6 +4,74 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test(
+    'GivenCertificateInspectMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final key in [
+          'pageTitle',
+          'openAction',
+          'inputLabel',
+          'fileAction',
+          'pasteAction',
+          'submitAction',
+          'copyAction',
+          'copiedResult',
+          'outputLabel',
+          'resultSuccess',
+          'subjectCountLabel',
+          'issuerCountLabel',
+          'extensionCountLabel',
+          'representation.auto',
+          'representationLabel',
+          'versionLabel',
+          'serialNumberHexLabel',
+          'subjectLabel',
+          'issuerLabel',
+          'notBeforeLabel',
+          'notAfterLabel',
+          'signatureAlgorithmLabel',
+          'publicKeyAlgorithmLabel',
+          'extensionsLabel',
+          'criticalLabel',
+          'yes',
+          'no',
+          'inputByteCountLabel',
+          'derByteCountLabel',
+          'representation.pem',
+          'representation.der',
+          'representation.base64',
+        ]) {
+          expect(
+            catalog.lookup(locale, 'certificateInspect.$key'),
+            isNot('certificateInspect.$key'),
+          );
+        }
+        for (final key in [
+          'validation',
+          'fileAccess',
+          'clipboardRead',
+          'clipboardWrite',
+          'inputAccess',
+          'resource',
+        ]) {
+          expect(
+            catalog.lookup(locale, 'error.certificateInspect.$key'),
+            isNot('error.certificateInspect.$key'),
+          );
+        }
+      }
+      expect(
+        catalog.lookup('en', 'certificateInspect.subjectLabel'),
+        'Subject',
+      );
+      expect(
+        catalog.lookup('pt-BR', 'certificateInspect.subjectLabel'),
+        'Titular',
+      );
+    },
+  );
+
   test('GivenEnglishLocale_WhenMessageLookedUp_ThenEnglishTextIsReturned', () {
     expect(catalog.lookup('en', 'app.description'), 'Developer toolbox');
   });
@@ -158,6 +226,44 @@ void main() {
     expect(catalog.keysFor('en'), <String>{
       'app.name',
       'app.description',
+      'certificateInspect.representationLabel',
+      'certificateInspect.pageTitle',
+      'certificateInspect.openAction',
+      'certificateInspect.inputLabel',
+      'certificateInspect.fileAction',
+      'certificateInspect.pasteAction',
+      'certificateInspect.submitAction',
+      'certificateInspect.copyAction',
+      'certificateInspect.copiedResult',
+      'certificateInspect.outputLabel',
+      'certificateInspect.resultSuccess',
+      'certificateInspect.subjectCountLabel',
+      'certificateInspect.issuerCountLabel',
+      'certificateInspect.extensionCountLabel',
+      'certificateInspect.representation.auto',
+      'error.certificateInspect.clipboardRead',
+      'error.certificateInspect.clipboardWrite',
+      'certificateInspect.versionLabel',
+      'certificateInspect.serialNumberHexLabel',
+      'certificateInspect.subjectLabel',
+      'certificateInspect.issuerLabel',
+      'certificateInspect.notBeforeLabel',
+      'certificateInspect.notAfterLabel',
+      'certificateInspect.signatureAlgorithmLabel',
+      'certificateInspect.publicKeyAlgorithmLabel',
+      'certificateInspect.extensionsLabel',
+      'certificateInspect.criticalLabel',
+      'certificateInspect.yes',
+      'certificateInspect.no',
+      'certificateInspect.inputByteCountLabel',
+      'certificateInspect.derByteCountLabel',
+      'certificateInspect.representation.pem',
+      'certificateInspect.representation.der',
+      'certificateInspect.representation.base64',
+      'error.certificateInspect.validation',
+      'error.certificateInspect.fileAccess',
+      'error.certificateInspect.inputAccess',
+      'error.certificateInspect.resource',
       'cli.noCommand',
       'cli.usage',
       'cron.countLabel',

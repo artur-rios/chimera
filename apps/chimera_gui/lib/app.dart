@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
+import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
@@ -27,6 +28,10 @@ import 'xml_format_page.dart';
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
     this.localeTag = 'en',
+    this.certificateInspectService = const CertificateInspectService(),
+    this.certificateInspectFilePicker,
+    this.certificateInspectClipboardReader,
+    this.certificateInspectClipboardWriter,
     this.base64DecodeService = const Base64DecodeService(),
     this.base64EncodeService = const Base64EncodeService(),
     this.cronService = const CronService(),
@@ -117,6 +122,10 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final CertificateInspectOperationService certificateInspectService;
+  final CertificateInspectFilePicker? certificateInspectFilePicker;
+  final CertificateInspectClipboardReader? certificateInspectClipboardReader;
+  final CertificateInspectClipboardWriter? certificateInspectClipboardWriter;
   final Base64DecodeService base64DecodeService;
   final Base64EncodeService base64EncodeService;
   final CronService cronService;
@@ -203,6 +212,10 @@ final class ChimeraApp extends StatelessWidget {
     return ProviderScope(
       child: _RoutedChimeraApp(
         localeTag: localeTag,
+        certificateInspectService: certificateInspectService,
+        certificateInspectFilePicker: certificateInspectFilePicker,
+        certificateInspectClipboardReader: certificateInspectClipboardReader,
+        certificateInspectClipboardWriter: certificateInspectClipboardWriter,
         base64DecodeService: base64DecodeService,
         base64EncodeService: base64EncodeService,
         cronService: cronService,
@@ -290,6 +303,10 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.certificateInspectService,
+    required this.certificateInspectFilePicker,
+    required this.certificateInspectClipboardReader,
+    required this.certificateInspectClipboardWriter,
     required this.localeTag,
     required this.base64DecodeService,
     required this.base64EncodeService,
@@ -375,6 +392,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
 
   final String localeTag;
   final Base64DecodeService base64DecodeService;
+  final CertificateInspectOperationService certificateInspectService;
+  final CertificateInspectFilePicker? certificateInspectFilePicker;
+  final CertificateInspectClipboardReader? certificateInspectClipboardReader;
+  final CertificateInspectClipboardWriter? certificateInspectClipboardWriter;
   final Base64EncodeService base64EncodeService;
   final CronService cronService;
   final DateService dateService;
@@ -467,6 +488,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      certificateInspectService: widget.certificateInspectService,
+      certificateInspectFilePicker:
+          widget.certificateInspectFilePicker ?? pickCertificateInspectFile,
+      certificateInspectClipboardReader:
+          widget.certificateInspectClipboardReader ??
+          readCertificateInspectClipboard,
+      certificateInspectClipboardWriter:
+          widget.certificateInspectClipboardWriter ??
+          writeCertificateInspectClipboard,
       catalog: _catalog,
       localeTag: widget.localeTag,
       base64DecodeService: widget.base64DecodeService,

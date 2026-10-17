@@ -12,6 +12,24 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets(
+    'GivenCertificateHomeAction_WhenActivated_ThenInspectionRouteOpens',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp());
+      await tester.pumpAndSettle();
+      final action = find.byKey(const Key('open-certificate-inspect'));
+      expect(action, findsOneWidget);
+      await tester.ensureVisible(action);
+      await tester.tap(action);
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('certificate-inspect-input')),
+        findsOneWidget,
+      );
+      expect(find.text('Inspect certificate'), findsOneWidget);
+    },
+  );
+
   testWidgets('GivenEnglishLocale_WhenAppStarts_ThenEnglishShellIsAccessible', (
     tester,
   ) async {

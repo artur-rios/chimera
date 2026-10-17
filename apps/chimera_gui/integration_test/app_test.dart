@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -510,7 +512,181 @@ void main() {
       expect(savedBytes, base64.decode(_validPngBase64));
     },
   );
+  for (final (id, oid) in [
+    ('ed25519', '1.3.101.112'),
+    ('unknown-key', '2.999.5'),
+  ]) {
+    testWidgets(
+      'GivenAlgorithmCertificate${id}_WhenInspectedAndCopied_ThenOriginalMetadataReturns',
+      (tester) async {
+        String? copied;
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: 'en',
+            initialLocation: '/certificate/inspect',
+            certificateInspectFilePicker: () async =>
+                base64.decode(certificateAlgorithmFixtures[id]!),
+            certificateInspectClipboardWriter: (value) async => copied = value,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('certificate-inspect-file')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-submit')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-submit')));
+        await tester.pumpAndSettle();
+        final metadata = tester
+            .widget<SelectableText>(
+              find.byKey(const Key('certificate-inspect-result')),
+            )
+            .data!;
+        expect(metadata, contains('Public key algorithm: $oid\n'));
+        expect(
+          metadata,
+          contains('Not before (UTC): 1950-01-01T00:00:00.000Z'),
+        );
+        expect(metadata, contains('Not after (UTC): 2049-12-31T23:59:59.000Z'));
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-copy')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-copy')));
+        await tester.pumpAndSettle();
+        final result = jsonDecode(copied!) as Map<String, Object?>;
+        expect(result['publicKeyAlgorithm'], {'oid': oid, 'name': null});
+        expect(result['signatureAlgorithm'], {
+          'oid': '1.3.101.112',
+          'name': null,
+        });
+        expect(result['notBefore'], '1950-01-01T00:00:00.000Z');
+        expect(result['notAfter'], '2049-12-31T23:59:59.000Z');
+        expect(result['serialNumberHex'], '01AB');
+        expect(result['inputByteCount'], 335);
+        expect(result['derByteCount'], 335);
+        expect(find.text('Certificate JSON copied.'), findsOneWidget);
+      },
+    );
+  }
+  for (final source in ['pem text', 'der file', 'base64 clipboard']) {
+    testWidgets(
+      'GivenCertificate${source}_WhenInspectedAndCopied_ThenExactMetadataTransfers',
+      (tester) async {
+        String? copied;
+        final base64Text = _certificatePem
+            .split('\n')
+            .where((line) => !line.startsWith('-----') && line.isNotEmpty)
+            .join();
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: 'en',
+            initialLocation: '/certificate/inspect',
+            certificateInspectFilePicker: () async => base64.decode(base64Text),
+            certificateInspectClipboardReader: () async => '$base64Text\n',
+            certificateInspectClipboardWriter: (value) async => copied = value,
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (source == 'pem text') {
+          await tester.enterText(
+            find.byKey(const Key('certificate-inspect-input')),
+            _certificatePem,
+          );
+        } else {
+          await tester.tap(
+            find.byKey(
+              Key(
+                source == 'der file'
+                    ? 'certificate-inspect-file'
+                    : 'certificate-inspect-paste',
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+        }
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-submit')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-submit')));
+        await tester.pumpAndSettle();
+        final representation = source.split(' ').first;
+        final count = source == 'pem text'
+            ? 778
+            : source == 'der file'
+            ? 534
+            : 713;
+        final metadata = tester
+            .widget<SelectableText>(
+              find.byKey(const Key('certificate-inspect-result')),
+            )
+            .data!;
+        for (final value in [
+          'Representation: ${representation == 'base64' ? 'Base64' : representation.toUpperCase()}',
+          'Version: 3',
+          'Serial number (hex): 01AB',
+          'commonName (2.5.4.3): example.test',
+          'commonName (2.5.4.3): Example CA',
+          '1.2.3.4 (1.2.3.4): Unknown attribute',
+          'Not before (UTC): 2024-01-01T00:00:00.000Z',
+          'Not after (UTC): 2034-01-01T00:00:00.000Z',
+          'sha256WithRSAEncryption (1.2.840.113549.1.1.11)',
+          'rsaEncryption (1.2.840.113549.1.1.1)',
+          'basicConstraints (2.5.29.19), critical: yes',
+          '1.2.3.5 (1.2.3.5), critical: no',
+          'Input bytes: $count',
+          'DER bytes: 534',
+        ]) {
+          expect(metadata, contains(value));
+        }
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-copy')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-copy')));
+        await tester.pumpAndSettle();
+        expect(
+          copied,
+          '{"representation":"$representation",'
+          '$_certificateJsonFields'
+          '"inputByteCount":$count,"derByteCount":534}',
+        );
+        expect(find.text('Certificate JSON copied.'), findsOneWidget);
+      },
+    );
+  }
 }
+
+// Public fixture pinned by tests/fixtures/certificates/manifest.json.
+// Embedded so native runner working directories cannot alter the input.
+const _certificatePem = '''-----BEGIN CERTIFICATE-----
+MIICEjCCAXugAwIBAgICAaswDQYJKoZIhvcNAQELBQAwMDETMBEGA1UEAwwKRXhh
+bXBsZSBDQTEZMBcGA1UECgwQQ2hpbWVyYSBmaXh0dXJlczAeFw0yNDAxMDEwMDAw
+MDBaFw0zNDAxMDEwMDAwMDBaME4xFTATBgNVBAMMDGV4YW1wbGUudGVzdDEZMBcG
+A1UECgwQQ2hpbWVyYSBmaXh0dXJlczEaMBgGAyoDBAwRVW5rbm93biBhdHRyaWJ1
+dGUwgZ4wDQYJKoZIhvcNAQEBBQADgYwAMIGIAoGAAIAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAoMCAwEAAaMeMBwwDwYDVR0TAQH/BAUwAwEB/zAJBgMqAwUE
+AgUAMA0GCSqGSIb3DQEBCwUAA4GBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAA
+-----END CERTIFICATE-----
+''';
+// Literal public metadata, independent of the parser and serializer under test.
+const _certificateJsonFields =
+    '"version":3,"serialNumberHex":"01AB",'
+    '"subject":[{"oid":"2.5.4.3","name":"commonName","value":"example.test"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"},'
+    '{"oid":"1.2.3.4","name":null,"value":"Unknown attribute"}],'
+    '"issuer":[{"oid":"2.5.4.3","name":"commonName","value":"Example CA"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"}],'
+    '"notBefore":"2024-01-01T00:00:00.000Z",'
+    '"notAfter":"2034-01-01T00:00:00.000Z",'
+    '"signatureAlgorithm":{"oid":"1.2.840.113549.1.1.11",'
+    '"name":"sha256WithRSAEncryption"},'
+    '"publicKeyAlgorithm":{"oid":"1.2.840.113549.1.1.1","name":"rsaEncryption"},'
+    '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},'
+    '{"oid":"1.2.3.5","name":null,"critical":false}],';
 
 const _validPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

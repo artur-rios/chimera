@@ -1,5 +1,6 @@
 export 'src/base64_decode_service.dart';
 export 'src/base64_encode_service.dart';
+export 'src/certificate_inspect_service.dart';
 export 'src/cron_service.dart';
 export 'src/date_service.dart';
 export 'src/diagnostics.dart';
