@@ -8,6 +8,7 @@ environment:
   sdk: ^3.13.0
 
 dependencies:
+  archive: 4.5.2
   asn1lib: 1.6.5
   characters: 1.4.1
   csv: 8.0.0
