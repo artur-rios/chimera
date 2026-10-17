@@ -156,4 +156,31 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('GivenSqlFormatRoute_WhenFormattingRuns_ThenSqlIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/sql/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      'select name,language from developers where active=true',
+    );
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'SELECT\n'
+        '  name,\n'
+        '  language\n'
+        'FROM developers\n'
+        'WHERE active = TRUE',
+      ),
+      findsOneWidget,
+    );
+  });
 }

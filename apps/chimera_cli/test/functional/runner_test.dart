@@ -1275,4 +1275,187 @@ void main() {
       );
     },
   );
+
+  test('GivenSqlArguments_WhenFormatRuns_ThenFormattedSqlIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'sql',
+        'format',
+        '--input=select id,name from users where active=true',
+        '--dialect=postgresql',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(
+      out.toString(),
+      'SELECT\n  id,\n  name\nFROM users\nWHERE active = TRUE',
+    );
+  });
+
+  test('GivenSqlStdinAndJson_WhenFormatRuns_ThenStableJsonIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'sql',
+        'format',
+        '--dialect=mysql',
+        '--indent=4',
+        '--keyword-case=lower',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+      readStandardInput: () async => 'SELECT `user`,? FROM accounts',
+    );
+
+    expect(exitCode, 0);
+    expect(jsonDecode(out.toString()), <String, Object?>{
+      'formatted': 'select\n    `user`,\n    ?\nfrom accounts',
+      'dialect': 'mysql',
+      'indent': 4,
+      'keywordCase': 'lower',
+    });
+  });
+
+  test('GivenSqlFiles_WhenFormatRuns_ThenExactBytesAreSaved', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-sql-format-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final input = File('${directory.path}${Platform.pathSeparator}source.sql');
+    final output = File(
+      '${directory.path}${Platform.pathSeparator}formatted.sql',
+    );
+    await input.writeAsString(
+      'select top 1 [user],@id from accounts where id=@id;',
+    );
+
+    final out = StringBuffer();
+    final exitCode = await runChimera(
+      <String>[
+        'sql',
+        'format',
+        '--file=${input.path}',
+        '--output=${output.path}',
+        '--dialect=sqlserver',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Formatted SQL saved.\n');
+    expect(
+      utf8.decode(await output.readAsBytes()),
+      'SELECT\n  TOP 1 [user],\n  @id\nFROM accounts\nWHERE id = @id;',
+    );
+  });
+
+  test(
+    'GivenInvalidSqlDialect_WhenFormatRuns_ThenValidationExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'sql',
+          'format',
+          '--input=select 1',
+          '--dialect=oracle',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair(
+          'error',
+          containsPair('code', 'sql-format.invalid-dialect'),
+        ),
+      );
+    },
+  );
+
+  test('GivenMalformedSql_WhenFormatRuns_ThenLocationRedactsInput', () async {
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['sql', 'format', "--input=select 'secret", '--json'],
+      localeTag: 'en',
+      out: StringBuffer(),
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+    expect(failure['error'], containsPair('code', 'sql-format.invalid-sql'));
+    expect(failure['error'], containsPair('location', contains('offset')));
+    expect(failure['error'], containsPair('location', contains('reason')));
+    expect(err.toString(), isNot(contains('secret')));
+  });
+
+  test(
+    'GivenSqlOutputFailure_WhenFormatRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'sql',
+          'format',
+          '--input=select secret from sample',
+          '--output=sensitive.sql',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (path, bytes) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(
+        err.toString(),
+        'Não foi possível salvar o arquivo SQL formatado.\n',
+      );
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenSqlTokenBudgetExceeded_WhenFormatRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['sql', 'format', '--input=select value from sample'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        sqlFormatService: const SqlFormatService(
+          formatter: SqlFormatter(maxTokens: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The SQL formatting exceeded its resource limit.\n',
+      );
+    },
+  );
 }

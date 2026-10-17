@@ -226,8 +226,47 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'JSON format');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for SQL format flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Format SQL'),
+      'Home page did not return for SQL format flow',
+    );
+    await _clickButton(driver, 'Format SQL');
+    await _waitUntil(
+      () => _pageContains(driver, 'SQL statement'),
+      'SQL format page did not open',
+    );
+    await _fillTextBox(
+      driver,
+      'SQL statement',
+      'select id,name from users where active=true',
+    );
+    await _clickButton(driver, 'Format SQL');
+    await _waitUntil(
+      () => _pageContains(driver, 'Formatted SQL result'),
+      'Formatted SQL result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'WHERE active = TRUE'),
+      'Formatted SQL content was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'SQL format');
+
     stdout.writeln(
-      'Safari cron, date, JSON table, JSON CSV, JSON YAML, and JSON format smoke: OK',
+      'Safari cron, date, JSON table, JSON CSV, JSON YAML, JSON format, and SQL format smoke: OK',
     );
   } finally {
     await driver.quit();

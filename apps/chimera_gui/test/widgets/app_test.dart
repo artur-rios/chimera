@@ -1191,4 +1191,261 @@ void main() {
       expect(find.byKey(const Key('json-format-input')), findsOneWidget);
     },
   );
+
+  testWidgets('GivenSql_WhenFormatSubmitted_ThenPreviewIsAccessible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open-sql-format')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      'select id,name from users where active=true',
+    );
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+
+    const formatted = 'SELECT\n  id,\n  name\nFROM users\nWHERE active = TRUE';
+    expect(find.text(formatted), findsOneWidget);
+    final semantics = tester.widget<Semantics>(
+      find.byKey(const Key('sql-format-result-semantics')),
+    );
+    expect(semantics.properties.value, formatted);
+    expect(find.byKey(const Key('sql-format-copy')), findsOneWidget);
+    expect(find.byKey(const Key('sql-format-save')), findsOneWidget);
+  });
+
+  testWidgets('GivenSqlOptions_WhenChanged_ThenDialectAndStyleApply', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/sql/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      'SELECT [user],@id FROM accounts WHERE id=@id',
+    );
+    await tester.tap(find.byKey(const Key('sql-format-dialect')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SQL Server').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sql-format-indent')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4 spaces').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sql-format-keyword-case')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Lowercase').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('\n    [user],'), findsOneWidget);
+    expect(find.textContaining('\nfrom accounts'), findsOneWidget);
+  });
+
+  testWidgets('GivenSqlFileAndClipboard_WhenLoaded_ThenInputUsesContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/sql/format',
+        sqlFormatFilePicker: () async => 'select file_value from sample',
+        sqlFormatClipboardReader: () async =>
+            'select clipboard_value from sample',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('sql-format-file')));
+    await tester.pumpAndSettle();
+    var input = tester.widget<TextField>(
+      find.byKey(const Key('sql-format-input')),
+    );
+    expect(input.controller!.text, 'select file_value from sample');
+
+    await tester.tap(find.byKey(const Key('sql-format-paste')));
+    await tester.pumpAndSettle();
+    input = tester.widget<TextField>(find.byKey(const Key('sql-format-input')));
+    expect(input.controller!.text, 'select clipboard_value from sample');
+  });
+
+  testWidgets('GivenSqlResult_WhenCopiedAndSaved_ThenAdaptersReceiveIt', (
+    tester,
+  ) async {
+    String? copied;
+    String? savedName;
+    List<int>? savedBytes;
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/sql/format',
+        sqlFormatClipboardWriter: (value) async => copied = value,
+        sqlFormatFileSaver: (name, bytes) async {
+          savedName = name;
+          savedBytes = bytes;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      'select name from users',
+    );
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('sql-format-copy')));
+    await tester.tap(find.byKey(const Key('sql-format-copy')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('sql-format-save')));
+    await tester.tap(find.byKey(const Key('sql-format-save')));
+    await tester.pumpAndSettle();
+
+    const formatted = 'SELECT\n  name\nFROM users';
+    expect(copied, formatted);
+    expect(savedName, 'chimera-formatted.sql');
+    expect(savedBytes, utf8.encode(formatted));
+    expect(find.text('Formatted SQL saved.'), findsOneWidget);
+  });
+
+  testWidgets('GivenInvalidSql_WhenSubmitted_ThenLocalizedReasonIsSafe', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/sql/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      "select 'secret",
+    );
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Local:'), findsOneWidget);
+    expect(
+      find.textContaining('Motivo: Literal não terminado'),
+      findsOneWidget,
+    );
+    final error = tester.widget<Text>(
+      find.byKey(const Key('sql-format-error')),
+    );
+    expect(error.data, isNot(contains('secret')));
+  });
+
+  testWidgets('GivenSqlClipboardFailure_WhenCopyRuns_ThenResultIsRemoved', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/sql/format',
+        sqlFormatClipboardWriter: (value) async => throw Exception('denied'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('sql-format-input')),
+      'select value from sample',
+    );
+    await tester.tap(find.byKey(const Key('sql-format-submit')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('sql-format-copy')));
+    await tester.tap(find.byKey(const Key('sql-format-copy')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('The clipboard could not be written.'), findsOneWidget);
+    expect(find.byKey(const Key('sql-format-result')), findsNothing);
+  });
+
+  testWidgets(
+    'GivenSqlFileFailures_WhenLoadOrSaveRuns_ThenNoResultIsRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/sql/format',
+          sqlFormatFilePicker: () async => throw Exception('denied'),
+          sqlFormatFileSaver: (name, bytes) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sql-format-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+      expect(find.byKey(const Key('sql-format-result')), findsNothing);
+
+      await tester.enterText(
+        find.byKey(const Key('sql-format-input')),
+        'select value from sample',
+      );
+      await tester.tap(find.byKey(const Key('sql-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('sql-format-save')));
+      await tester.tap(find.byKey(const Key('sql-format-save')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The formatted SQL file could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('sql-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenSqlResourceFailure_WhenSubmitted_ThenNoPartialResultAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/sql/format',
+          sqlFormatService: SqlFormatService(
+            formatter: SqlFormatter(maxOutputChars: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('sql-format-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The SQL formatting exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('sql-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowSqlViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 760);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: ChimeraApp(localeTag: 'en', initialLocation: '/sql/format'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('sql-format-input')), findsOneWidget);
+    },
+  );
 }
