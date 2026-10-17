@@ -13,6 +13,7 @@ import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
+import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
@@ -30,6 +31,7 @@ final class ChimeraApp extends StatelessWidget {
       converter: JsonYamlConverter(maxNodes: 10000),
     ),
     this.sqlFormatService = const SqlFormatService(),
+    this.xmlFormatService = const XmlFormatService(),
     this.currentTime,
     this.cronFilePicker,
     this.dateFilePicker,
@@ -46,6 +48,10 @@ final class ChimeraApp extends StatelessWidget {
     this.sqlFormatFileSaver,
     this.sqlFormatClipboardReader,
     this.sqlFormatClipboardWriter,
+    this.xmlFormatFilePicker,
+    this.xmlFormatFileSaver,
+    this.xmlFormatClipboardReader,
+    this.xmlFormatClipboardWriter,
     this.initialLocation = '/',
     super.key,
   });
@@ -58,6 +64,7 @@ final class ChimeraApp extends StatelessWidget {
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
   final SqlFormatService sqlFormatService;
+  final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
@@ -74,6 +81,10 @@ final class ChimeraApp extends StatelessWidget {
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
   final SqlFormatClipboardWriter? sqlFormatClipboardWriter;
+  final XmlFormatFilePicker? xmlFormatFilePicker;
+  final XmlFormatFileSaver? xmlFormatFileSaver;
+  final XmlFormatClipboardReader? xmlFormatClipboardReader;
+  final XmlFormatClipboardWriter? xmlFormatClipboardWriter;
   final String initialLocation;
 
   @override
@@ -88,6 +99,7 @@ final class ChimeraApp extends StatelessWidget {
         jsonTableService: jsonTableService,
         jsonYamlService: jsonYamlService,
         sqlFormatService: sqlFormatService,
+        xmlFormatService: xmlFormatService,
         currentTime: currentTime,
         cronFilePicker: cronFilePicker,
         dateFilePicker: dateFilePicker,
@@ -104,6 +116,10 @@ final class ChimeraApp extends StatelessWidget {
         sqlFormatFileSaver: sqlFormatFileSaver,
         sqlFormatClipboardReader: sqlFormatClipboardReader,
         sqlFormatClipboardWriter: sqlFormatClipboardWriter,
+        xmlFormatFilePicker: xmlFormatFilePicker,
+        xmlFormatFileSaver: xmlFormatFileSaver,
+        xmlFormatClipboardReader: xmlFormatClipboardReader,
+        xmlFormatClipboardWriter: xmlFormatClipboardWriter,
         initialLocation: initialLocation,
       ),
     );
@@ -120,6 +136,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonTableService,
     required this.jsonYamlService,
     required this.sqlFormatService,
+    required this.xmlFormatService,
     required this.currentTime,
     required this.cronFilePicker,
     required this.dateFilePicker,
@@ -136,6 +153,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.sqlFormatFileSaver,
     required this.sqlFormatClipboardReader,
     required this.sqlFormatClipboardWriter,
+    required this.xmlFormatFilePicker,
+    required this.xmlFormatFileSaver,
+    required this.xmlFormatClipboardReader,
+    required this.xmlFormatClipboardWriter,
     required this.initialLocation,
   });
 
@@ -147,6 +168,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
   final SqlFormatService sqlFormatService;
+  final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
@@ -163,6 +185,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
   final SqlFormatClipboardWriter? sqlFormatClipboardWriter;
+  final XmlFormatFilePicker? xmlFormatFilePicker;
+  final XmlFormatFileSaver? xmlFormatFileSaver;
+  final XmlFormatClipboardReader? xmlFormatClipboardReader;
+  final XmlFormatClipboardWriter? xmlFormatClipboardWriter;
   final String initialLocation;
 
   @override
@@ -186,6 +212,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonTableService: widget.jsonTableService,
       jsonYamlService: widget.jsonYamlService,
       sqlFormatService: widget.sqlFormatService,
+      xmlFormatService: widget.xmlFormatService,
       currentTime: widget.currentTime ?? DateTime.now,
       cronFilePicker: widget.cronFilePicker ?? pickCronExpressionFile,
       dateFilePicker: widget.dateFilePicker ?? pickDateValueFile,
@@ -206,6 +233,12 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.sqlFormatClipboardReader ?? readSqlFormatClipboard,
       sqlFormatClipboardWriter:
           widget.sqlFormatClipboardWriter ?? writeSqlFormatClipboard,
+      xmlFormatFilePicker: widget.xmlFormatFilePicker ?? pickXmlFormatFile,
+      xmlFormatFileSaver: widget.xmlFormatFileSaver ?? saveXmlFormatFile,
+      xmlFormatClipboardReader:
+          widget.xmlFormatClipboardReader ?? readXmlFormatClipboard,
+      xmlFormatClipboardWriter:
+          widget.xmlFormatClipboardWriter ?? writeXmlFormatClipboard,
       initialLocation: widget.initialLocation,
     );
   }

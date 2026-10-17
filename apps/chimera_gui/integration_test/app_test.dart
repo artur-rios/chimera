@@ -183,4 +183,29 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('GivenXmlFormatRoute_WhenFormattingRuns_ThenXmlIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/xml/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('xml-format-input')),
+      '<developers><developer name="Ada"/></developers>',
+    );
+    await tester.tap(find.byKey(const Key('xml-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        '<developers>\n'
+        '  <developer name="Ada"/>\n'
+        '</developers>',
+      ),
+      findsOneWidget,
+    );
+  });
 }
