@@ -189,6 +189,7 @@ final class CertificateInspector {
     if (sequence.elements.length != 3) _invalid('malformed-certificate');
     final tbsSequence = sequence.elements.first as ASN1Sequence;
     final serialIndex = tbsSequence.elements.first.tag == 0xA0 ? 1 : 0;
+    _validateTbs(tbsSequence, serialIndex);
     final serial = (tbsSequence.elements[serialIndex] as ASN1Integer)
         .valueBytes();
     if (serial.isEmpty || serial.first >= 128) {
@@ -215,20 +216,20 @@ final class CertificateInspector {
       representation: representation,
       version: version,
       serialNumberHex: serialHex,
-      subject: _attributes(tbs.subject!),
-      issuer: _attributes(tbs.issuer!),
+      subject: _attributes(
+        tbsSequence.elements[serialIndex + 4] as ASN1Sequence,
+      ),
+      issuer: _attributes(
+        tbsSequence.elements[serialIndex + 2] as ASN1Sequence,
+      ),
       notBefore: tbs.validity!.notBefore,
       notAfter: tbs.validity!.notAfter,
-      signatureAlgorithm: _algorithm(certificate.signatureAlgorithm),
-      publicKeyAlgorithm: _algorithm(tbs.subjectPublicKeyInfo!.algorithm),
-      extensions: [
-        for (final extension in tbs.extensions ?? <x509.Extension>[])
-          CertificateExtensionMetadata(
-            oid: extension.extnId.nodes.join('.'),
-            name: _name(extension.extnId),
-            critical: extension.isCritical,
-          ),
-      ],
+      signatureAlgorithm: _algorithm(sequence.elements[1] as ASN1Sequence),
+      publicKeyAlgorithm: _algorithm(
+        (tbsSequence.elements[serialIndex + 5] as ASN1Sequence).elements.first
+            as ASN1Sequence,
+      ),
+      extensions: _extensions(tbsSequence, serialIndex),
       inputByteCount: count,
       derByteCount: der.length,
     );
@@ -288,25 +289,147 @@ final class CertificateInspector {
     }
   }
 
-  List<CertificateAttribute> _attributes(x509.Name name) => [
-    for (final rdn in name.names)
-      for (final entry in rdn.entries)
-        CertificateAttribute(
-          oid: entry.key!.nodes.join('.'),
-          name: _name(entry.key!),
-          value: '${entry.value as Object?}',
-        ),
-  ];
+  void _validateTbs(ASN1Sequence tbs, int offset) {
+    final fields = tbs.elements;
+    if (fields.length < offset + 6) _invalid('malformed-certificate');
+    var version = 1;
+    if (offset == 1) {
+      final parser = ASN1Parser(fields.first.valueBytes());
+      final encodedVersion = parser.nextObject() as ASN1Integer;
+      if (parser.hasNext() ||
+          encodedVersion.valueAsBigInteger < BigInt.zero ||
+          encodedVersion.valueAsBigInteger > BigInt.two) {
+        _invalid('malformed-certificate');
+      }
+      version = encodedVersion.intValue + 1;
+    }
+    const tags = [2, 48, 48, 48, 48, 48];
+    for (var i = 0; i < tags.length; i++) {
+      if (fields[offset + i].tag != tags[i]) _invalid('malformed-certificate');
+    }
+    var lastOptional = 0;
+    for (final field in fields.skip(offset + 6)) {
+      final order = switch (field.tag) {
+        0x81 => 1,
+        0x82 => 2,
+        0xA3 => 3,
+        _ => 0,
+      };
+      if (order <= lastOptional ||
+          version == 1 ||
+          (order == 3 && version != 3)) {
+        _invalid('malformed-certificate');
+      }
+      lastOptional = order;
+      if (order == 3) {
+        final parser = ASN1Parser(field.valueBytes());
+        if (parser.nextObject() is! ASN1Sequence || parser.hasNext()) {
+          _invalid('malformed-certificate');
+        }
+      } else if (field.valueBytes().isEmpty || field.valueBytes().first > 7) {
+        _invalid('malformed-certificate');
+      }
+    }
+  }
 
-  CertificateAlgorithm _algorithm(x509.AlgorithmIdentifier algorithm) =>
-      CertificateAlgorithm(
-        oid: algorithm.algorithm.nodes.join('.'),
-        name: _name(algorithm.algorithm),
-      );
+  List<CertificateAttribute> _attributes(ASN1Sequence name) {
+    final attributes = <CertificateAttribute>[];
+    for (final rdn in name.elements) {
+      final set = rdn as ASN1Set;
+      if (set.elements.isEmpty) _invalid('malformed-certificate');
+      for (final field in set.elements) {
+        final pair = field as ASN1Sequence;
+        if (pair.elements.length != 2) _invalid('malformed-certificate');
+        final oid = _oid(pair.elements.first);
+        // Convert one original attribute at a time through x509's public
+        // model, so its value conversion cannot collapse repeated OIDs.
+        final single = ASN1Sequence()..add(ASN1Set()..add(pair));
+        final value =
+            x509.Name.fromAsn1(single).names.single.values.single as Object?;
+        attributes.add(
+          CertificateAttribute(oid: oid, name: _name(oid), value: '$value'),
+        );
+      }
+    }
+    return attributes;
+  }
 
-  String? _name(x509.ObjectIdentifier oid) {
+  CertificateAlgorithm _algorithm(ASN1Sequence algorithm) {
+    if (algorithm.elements.isEmpty || algorithm.elements.length > 2) {
+      _invalid('malformed-certificate');
+    }
+    final oid = _oid(algorithm.elements.first);
+    return CertificateAlgorithm(oid: oid, name: _name(oid));
+  }
+
+  List<CertificateExtensionMetadata> _extensions(ASN1Sequence tbs, int offset) {
+    final extensions = <CertificateExtensionMetadata>[];
+    for (final field in tbs.elements.skip(offset + 6)) {
+      if (field.tag != 0xA3) continue;
+      final sequence =
+          ASN1Parser(field.valueBytes()).nextObject() as ASN1Sequence;
+      if (sequence.elements.isEmpty) _invalid('malformed-certificate');
+      for (final item in sequence.elements) {
+        final extension = item as ASN1Sequence;
+        final fields = extension.elements;
+        if (fields.length != 2 && fields.length != 3) {
+          _invalid('malformed-certificate');
+        }
+        final oid = _oid(fields.first);
+        final critical = fields.length == 3
+            ? (fields[1] as ASN1Boolean).booleanValue
+            : false;
+        if (fields.last is! ASN1OctetString) _invalid('malformed-certificate');
+        extensions.add(
+          CertificateExtensionMetadata(
+            oid: oid,
+            name: _name(oid),
+            critical: critical,
+          ),
+        );
+      }
+    }
+    return extensions;
+  }
+
+  // X.690 combines the first two arcs into a single base-128 subidentifier.
+  // Both x509's one-byte split and int accumulation lose valid OID values.
+  String _oid(ASN1Object object) {
+    if (object is! ASN1ObjectIdentifier) _invalid('malformed-certificate');
+    final bytes = object.valueBytes();
+    if (bytes.isEmpty) _invalid('malformed-certificate');
+    final values = <BigInt>[];
+    var value = BigInt.zero;
+    var start = true;
+    for (final byte in bytes) {
+      if (start && byte == 128) _invalid('malformed-certificate');
+      value = (value << 7) | BigInt.from(byte & 127);
+      start = byte < 128;
+      if (start) {
+        values.add(value);
+        value = BigInt.zero;
+      }
+    }
+    if (!start) _invalid('malformed-certificate');
+    final first = values.first;
+    final firstArc = first < BigInt.from(40)
+        ? 0
+        : first < BigInt.from(80)
+        ? 1
+        : 2;
+    return [
+      BigInt.from(firstArc),
+      first - BigInt.from(firstArc * 40),
+      ...values.skip(1),
+    ].join('.');
+  }
+
+  String? _name(String oid) {
+    final nodes = oid.split('.').map(BigInt.parse).toList();
+    if (nodes.any((node) => node > BigInt.from(0x7FFFFFFF))) return null;
     try {
-      return oid.name;
+      return x509.ObjectIdentifier(nodes.map((node) => node.toInt()).toList())
+          .name;
     } on x509.UnknownOIDNameError {
       return null;
     }

@@ -1,7 +1,9 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:asn1lib/asn1lib.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
@@ -17,6 +19,92 @@ void main() {
   const inspector = CertificateInspector();
 
   group('CertificateInspector', () {
+    test(
+      'GivenCustomTypedDnValue_WhenCopied_ThenX509StringConversionIsPreserved',
+      () {
+        final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+        final fields = (certificate.elements.first as ASN1Sequence).elements;
+        final subject = fields[5] as ASN1Sequence;
+        final name = _tlv(48, [
+          for (final rdn in subject.elements.take(2)) ...rdn.encodedBytes,
+          ..._tlv(49, _tlv(48, [6, 3, 0x2A, 3, 4, 2, 1, 7])),
+        ]);
+        final bytes = _withTbs(der, [
+          for (var i = 0; i < fields.length; i++)
+            ...(i == 5 ? name : fields[i].encodedBytes),
+        ]);
+        expect(inspector.inspectBytes(bytes).subject.last.value, '7');
+      },
+    );
+    test('GivenLargeSecondOidArc_WhenInspected_ThenOriginalOidIsReported', () {
+      // 2.999.5 has combined first subidentifier 1079 = 0x88 0x37.
+      final bytes = _replaceBytes(
+        der,
+        [6, 3, 0x2A, 3, 4],
+        [6, 3, 0x88, 0x37, 5],
+      );
+      final withExtension = _replaceBytes(
+        Uint8List.fromList(bytes),
+        [6, 3, 0x2A, 3, 5],
+        [6, 3, 0x88, 0x37, 5],
+      );
+      final withCommonNames = _replaceBytes(
+        Uint8List.fromList(withExtension),
+        [6, 3, 0x55, 4, 3],
+        [6, 3, 0x88, 0x37, 5],
+      );
+      final certificate =
+          ASN1Parser(Uint8List.fromList(withCommonNames)).nextObject()
+              as ASN1Sequence;
+      final withSignature = _tlv(48, [
+        ...certificate.elements.first.encodedBytes,
+        ..._tlv(48, [6, 3, 0x88, 0x37, 5, 5, 0]),
+        ...certificate.elements.last.encodedBytes,
+      ]);
+      final result = inspector.inspectBytes(withSignature);
+      expect(result.subject.last.oid, '2.999.5');
+      expect(result.subject.last.name, isNull);
+      expect(result.issuer.first.oid, '2.999.5');
+      expect(result.issuer.first.name, isNull);
+      expect(result.extensions.last.oid, '2.999.5');
+      expect(result.extensions.last.name, isNull);
+      expect(result.signatureAlgorithm.oid, '2.999.5');
+      expect(result.signatureAlgorithm.name, isNull);
+    });
+
+    test(
+      'GivenRepeatedCnInOneRdn_WhenInspected_ThenBothValuesKeepSourceOrder',
+      () {
+        final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+        final fields = (certificate.elements.first as ASN1Sequence).elements;
+        final name = _tlv(
+          48,
+          _tlv(49, [
+            ..._tlv(48, [6, 3, 0x55, 4, 3, ..._tlv(12, utf8.encode('first'))]),
+            ..._tlv(48, [6, 3, 0x55, 4, 3, ..._tlv(12, utf8.encode('other'))]),
+          ]),
+        );
+        final bytes = _withTbs(der, [
+          for (var i = 0; i < fields.length; i++)
+            ...((i == 3 || i == 5) ? name : fields[i].encodedBytes),
+        ]);
+        final result = inspector.inspectBytes(bytes);
+        for (final attributes in [result.subject, result.issuer]) {
+          expect(attributes.map((a) => a.value), ['first', 'other']);
+          expect(attributes.map((a) => a.oid), ['2.5.4.3', '2.5.4.3']);
+          expect(attributes.map((a) => a.name), ['commonName', 'commonName']);
+        }
+      },
+    );
+    test('GivenTrailingTbsNull_WhenInspected_ThenStructureIsRejected', () {
+      final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+      final tbs = certificate.elements.first as ASN1Sequence;
+      final invalid = _withTbs(der, [...tbs.valueBytes(), 5, 0]);
+      expect(
+        () => inspector.inspectBytes(invalid),
+        _invalid('malformed-certificate'),
+      );
+    });
     test(
       'GivenExtraCertificateField_WhenInspected_ThenStructureIsRejected',
       () {
@@ -366,6 +454,40 @@ void main() {
       );
     });
   });
+}
+
+List<int> _tlv(int tag, List<int> content) => [
+  tag,
+  if (content.length < 128)
+    content.length
+  else if (content.length < 256) ...[
+    129,
+    content.length,
+  ] else ...[
+    130,
+    content.length >> 8,
+    content.length & 255,
+  ],
+  ...content,
+];
+
+List<int> _replaceBytes(Uint8List input, List<int> from, List<int> to) {
+  final bytes = List<int>.of(input);
+  for (var i = 0; i <= bytes.length - from.length; i++) {
+    if (List.generate(from.length, (j) => bytes[i + j]).join(',') ==
+        from.join(',')) {
+      bytes.replaceRange(i, i + from.length, to);
+    }
+  }
+  return bytes;
+}
+
+List<int> _withTbs(Uint8List der, List<int> content) {
+  final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+  return _tlv(48, [
+    ..._tlv(48, content),
+    for (final field in certificate.elements.skip(1)) ...field.encodedBytes,
+  ]);
 }
 
 // Fixture offsets: outer SEQUENCE header 0..3, TBS header 4..7,
