@@ -1060,4 +1060,219 @@ void main() {
       );
     },
   );
+
+  test('GivenJsonObject_WhenFormatRuns_ThenIndentedJsonIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['json', 'format', '--input={"name":"Ada"}'],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), '{\n  "name": "Ada"\n}');
+  });
+
+  test(
+    'GivenJsonStandardInput_WhenFormatRunsWithOptions_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'format', '--indent=4', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInput: () async => '{"outer":{"value":1}}',
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'formatted': '{\n    "outer": {\n        "value": 1\n    }\n}',
+        'indent': 4,
+      });
+    },
+  );
+
+  test(
+    'GivenInputAndOutputFiles_WhenFormatRuns_ThenExactBytesAreSaved',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-cli-json-format-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final input = File(
+        '${directory.path}${Platform.pathSeparator}source.json',
+      );
+      final output = File(
+        '${directory.path}${Platform.pathSeparator}formatted.json',
+      );
+      await input.writeAsString('{"name":"Ada"}');
+
+      final out = StringBuffer();
+      final exitCode = await runChimera(
+        <String>[
+          'json',
+          'format',
+          '--file=${input.path}',
+          '--output=${output.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'Formatted JSON saved.\n');
+      expect(await output.readAsBytes(), utf8.encode('{\n  "name": "Ada"\n}'));
+    },
+  );
+
+  test(
+    'GivenInvalidFormatIndent_WhenFormatRuns_ThenValidationExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'format', '--input={}', '--indent=3', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair(
+          'error',
+          containsPair('code', 'json-format.invalid-indent'),
+        ),
+      );
+    },
+  );
+
+  test(
+    'GivenMalformedJson_WhenFormatRuns_ThenReasonAndOffsetRedactInput',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'format', '--input={"secret":}', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+      expect(
+        failure['error'],
+        containsPair('code', 'json-format.invalid-json'),
+      );
+      expect(failure['error'], containsPair('location', contains('offset')));
+      expect(failure['error'], containsPair('location', contains('reason')));
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenOutputWriteFailure_WhenFormatRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'json',
+          'format',
+          '--input={"secret":"value"}',
+          '--output=sensitive.json',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (path, bytes) async =>
+            throw const FileSystemException('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(
+        err.toString(),
+        'Não foi possível salvar o arquivo JSON formatado.\n',
+      );
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenFormatOutputBudgetExceeded_WhenFormatRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['json', 'format', '--input={"a":1}'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        jsonFormatService: const JsonFormatService(
+          formatter: JsonFormatter(maxOutputChars: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The JSON formatting exceeded its resource limit.\n',
+      );
+    },
+  );
+
+  test('GivenInvalidUtf8StandardInput_WhenFormatRuns_ThenInputAccessExitIsReturned', () async {
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['json', 'format', '--json'],
+      localeTag: 'en',
+      out: StringBuffer(),
+      err: err,
+      readStandardInput: () async => throw const FormatException('bad utf8'),
+    );
+
+    expect(exitCode, 74);
+    expect(
+      jsonDecode(err.toString()),
+      containsPair('error', containsPair('code', 'json-format.input-access')),
+    );
+  });
+
+  test(
+    'GivenInvalidUtf8File_WhenFormatRuns_ThenFileAccessExitIsReturned',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-cli-invalid-utf8-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final input = File(
+        '${directory.path}${Platform.pathSeparator}invalid.json',
+      );
+      await input.writeAsBytes(const <int>[0xff]);
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>['json', 'format', '--file=${input.path}', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 74);
+      expect(
+        jsonDecode(err.toString()),
+        containsPair('error', containsPair('code', 'json-format.file-access')),
+      );
+    },
+  );
 }

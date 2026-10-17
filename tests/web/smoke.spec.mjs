@@ -184,3 +184,32 @@ test('JSON YAML flow serializes locally without external requests', async ({ pag
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('JSON format flow formats locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Format JSON' }).click();
+  await expect(page.getByText('Format JSON').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'JSON value' }),
+    '{"name":"Ada","meta":{"x":1},"large":9007199254740993,"underflow":1e-400}',
+  );
+  await page.getByRole('button', { name: 'Format JSON' }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: /Formatted JSON result.*"name": "Ada".*"x": 1.*"large": 9007199254740993.*"underflow": 1e-400/,
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});

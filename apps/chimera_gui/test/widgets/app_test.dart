@@ -922,4 +922,273 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets('GivenJsonValue_WhenFormatSubmitted_ThenPreviewIsAccessible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('open-json-format')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const Key('json-format-input')),
+      '{"name":"Ada","meta":{"x":1}}',
+    );
+    await tester.tap(find.byKey(const Key('json-format-submit')));
+    await tester.pumpAndSettle();
+
+    const formatted = '{\n  "name": "Ada",\n  "meta": {\n    "x": 1\n  }\n}';
+    expect(find.text(formatted), findsOneWidget);
+    final semantics = tester.widget<Semantics>(
+      find.byKey(const Key('json-format-result-semantics')),
+    );
+    expect(semantics.properties.value, formatted);
+    expect(find.byKey(const Key('json-format-copy')), findsOneWidget);
+    expect(find.byKey(const Key('json-format-save')), findsOneWidget);
+  });
+
+  testWidgets('GivenFourSpaceOption_WhenFormatted_ThenIndentIsApplied', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-format-input')),
+      '{"outer":{"value":1}}',
+    );
+    await tester.tap(find.byKey(const Key('json-format-indent')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('4 spaces').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('json-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('\n        "value": 1'), findsOneWidget);
+  });
+
+  testWidgets('GivenLocalJsonFile_WhenFormatSelected_ThenInputUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/format',
+        jsonFormatFilePicker: () async => '{"name":"Ada"}',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('json-format-file')));
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('json-format-input')),
+    );
+    expect(input.controller!.text, '{"name":"Ada"}');
+  });
+
+  testWidgets('GivenClipboardJson_WhenPasted_ThenInputUsesItsContent', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/format',
+        jsonFormatClipboardReader: () async => '{"pasted":true}',
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('json-format-paste')));
+    await tester.pumpAndSettle();
+
+    final input = tester.widget<TextField>(
+      find.byKey(const Key('json-format-input')),
+    );
+    expect(input.controller!.text, '{"pasted":true}');
+  });
+
+  testWidgets('GivenFormatResult_WhenCopiedAndSaved_ThenAdaptersReceiveIt', (
+    tester,
+  ) async {
+    String? copied;
+    String? savedName;
+    List<int>? savedBytes;
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/json/format',
+        jsonFormatClipboardWriter: (value) async => copied = value,
+        jsonFormatFileSaver: (name, bytes) async {
+          savedName = name;
+          savedBytes = bytes;
+          return true;
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-format-input')),
+      '{"name":"Ada"}',
+    );
+    await tester.tap(find.byKey(const Key('json-format-submit')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('json-format-copy')));
+    await tester.tap(find.byKey(const Key('json-format-copy')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('json-format-save')));
+    await tester.tap(find.byKey(const Key('json-format-save')));
+    await tester.pumpAndSettle();
+
+    const formatted = '{\n  "name": "Ada"\n}';
+    expect(copied, formatted);
+    expect(savedName, 'chimera-formatted.json');
+    expect(savedBytes, utf8.encode(formatted));
+    expect(find.text('Formatted JSON saved.'), findsOneWidget);
+  });
+
+  testWidgets(
+    'GivenClipboardFailures_WhenReadOrWriteRuns_ThenLocalizedErrorIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/json/format',
+          jsonFormatClipboardReader: () async => throw Exception('denied'),
+          jsonFormatClipboardWriter: (value) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('json-format-paste')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Não foi possível ler a área de transferência.'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('json-format-input')),
+        '{"value":1}',
+      );
+      await tester.tap(find.byKey(const Key('json-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('json-format-copy')));
+      await tester.tap(find.byKey(const Key('json-format-copy')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Não foi possível escrever na área de transferência.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenSaveFailure_WhenFormattedResultIsSaved_ThenResultIsRemoved',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/format',
+          jsonFormatFileSaver: (name, bytes) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-format-input')),
+        '{"value":1}',
+      );
+      await tester.tap(find.byKey(const Key('json-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('json-format-save')));
+      await tester.tap(find.byKey(const Key('json-format-save')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The formatted JSON file could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets('GivenInvalidJson_WhenFormatSubmitted_ThenReasonIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-format-input')),
+      '{"secret":}',
+    );
+    await tester.tap(find.byKey(const Key('json-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Location:'), findsOneWidget);
+    expect(find.textContaining('Reason: Unexpected character'), findsOneWidget);
+    final error = tester.widget<Text>(
+      find.byKey(const Key('json-format-error')),
+    );
+    expect(error.data, isNot(contains('secret')));
+  });
+
+  testWidgets(
+    'GivenFormatResourceFailure_WhenSubmitted_ThenNoPartialResultAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/json/format',
+          jsonFormatService: JsonFormatService(
+            formatter: JsonFormatter(maxOutputChars: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('json-format-input')),
+        '{"a":1}',
+      );
+      await tester.tap(find.byKey(const Key('json-format-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The JSON formatting exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('json-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowFormatViewportAndLargeText_WhenRendered_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        const MediaQuery(
+          data: MediaQueryData(textScaler: TextScaler.linear(2)),
+          child: ChimeraApp(localeTag: 'en', initialLocation: '/json/format'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(const Key('json-format-input')), findsOneWidget);
+    },
+  );
 }
