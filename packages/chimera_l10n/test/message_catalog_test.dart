@@ -96,6 +96,29 @@ void main() {
     );
   });
 
+  test('GivenBase64EncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(
+      catalog.lookup('en', 'base64Encode.resultSuccess'),
+      'Base64 encoding succeeded.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'base64Encode.resultSuccess'),
+      'Codificação Base64 concluída.',
+    );
+    expect(
+      catalog.lookup('en', 'base64Encode.inputByteCountLabel'),
+      'Input bytes',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'base64Encode.outputCharacterCountLabel'),
+      'Caracteres de saída',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.base64Encode.resource'),
+      'A codificação Base64 excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -145,6 +168,20 @@ void main() {
       'date.targetRepresentationLabel',
       'date.targetTimeZoneLabel',
       'date.valueLabel',
+      'base64Encode.copiedResult',
+      'base64Encode.copyAction',
+      'base64Encode.fileAction',
+      'base64Encode.inputByteCountLabel',
+      'base64Encode.inputLabel',
+      'base64Encode.openAction',
+      'base64Encode.outputCharacterCountLabel',
+      'base64Encode.outputLabel',
+      'base64Encode.pageTitle',
+      'base64Encode.pasteAction',
+      'base64Encode.resultSuccess',
+      'base64Encode.saveAction',
+      'base64Encode.savedResult',
+      'base64Encode.submitAction',
       'numberBase.copiedResult',
       'numberBase.copyAction',
       'numberBase.fileAction',
@@ -401,6 +438,13 @@ void main() {
       'error.date.inputAccess',
       'error.date.range',
       'error.date.validation',
+      'error.base64Encode.clipboardRead',
+      'error.base64Encode.clipboardWrite',
+      'error.base64Encode.fileAccess',
+      'error.base64Encode.inputAccess',
+      'error.base64Encode.outputAccess',
+      'error.base64Encode.resource',
+      'error.base64Encode.validation',
       'error.numberBase.clipboardRead',
       'error.numberBase.clipboardWrite',
       'error.numberBase.fileAccess',

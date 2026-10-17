@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'base64_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
@@ -25,6 +26,7 @@ import 'xml_format_page.dart';
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
     this.localeTag = 'en',
+    this.base64EncodeService = const Base64EncodeService(),
     this.cronService = const CronService(),
     this.dateService = const DateService(),
     this.jsonCsvService = const JsonCsvService(
@@ -47,6 +49,11 @@ final class ChimeraApp extends StatelessWidget {
     this.sqlFormatService = const SqlFormatService(),
     this.xmlFormatService = const XmlFormatService(),
     this.currentTime,
+    this.base64EncodeFilePicker,
+    this.base64EncodeFileSaver,
+    this.base64EncodeClipboardReader,
+    this.base64EncodeClipboardWriter,
+    this.base64EncodeOutputEncoder,
     this.cronFilePicker,
     this.dateFilePicker,
     this.jsonCsvFilePicker,
@@ -103,6 +110,7 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final Base64EncodeService base64EncodeService;
   final CronService cronService;
   final DateService dateService;
   final JsonCsvService jsonCsvService;
@@ -119,6 +127,11 @@ final class ChimeraApp extends StatelessWidget {
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
+  final Base64EncodeFilePicker? base64EncodeFilePicker;
+  final Base64EncodeFileSaver? base64EncodeFileSaver;
+  final Base64EncodeClipboardReader? base64EncodeClipboardReader;
+  final Base64EncodeClipboardWriter? base64EncodeClipboardWriter;
+  final Base64EncodeOutputEncoder? base64EncodeOutputEncoder;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
   final JsonCsvFilePicker? jsonCsvFilePicker;
@@ -177,6 +190,7 @@ final class ChimeraApp extends StatelessWidget {
     return ProviderScope(
       child: _RoutedChimeraApp(
         localeTag: localeTag,
+        base64EncodeService: base64EncodeService,
         cronService: cronService,
         dateService: dateService,
         jsonCsvService: jsonCsvService,
@@ -193,6 +207,11 @@ final class ChimeraApp extends StatelessWidget {
         sqlFormatService: sqlFormatService,
         xmlFormatService: xmlFormatService,
         currentTime: currentTime,
+        base64EncodeFilePicker: base64EncodeFilePicker,
+        base64EncodeFileSaver: base64EncodeFileSaver,
+        base64EncodeClipboardReader: base64EncodeClipboardReader,
+        base64EncodeClipboardWriter: base64EncodeClipboardWriter,
+        base64EncodeOutputEncoder: base64EncodeOutputEncoder,
         cronFilePicker: cronFilePicker,
         dateFilePicker: dateFilePicker,
         jsonCsvFilePicker: jsonCsvFilePicker,
@@ -253,6 +272,7 @@ final class ChimeraApp extends StatelessWidget {
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
     required this.localeTag,
+    required this.base64EncodeService,
     required this.cronService,
     required this.dateService,
     required this.jsonCsvService,
@@ -269,6 +289,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.sqlFormatService,
     required this.xmlFormatService,
     required this.currentTime,
+    required this.base64EncodeFilePicker,
+    required this.base64EncodeFileSaver,
+    required this.base64EncodeClipboardReader,
+    required this.base64EncodeClipboardWriter,
+    required this.base64EncodeOutputEncoder,
     required this.cronFilePicker,
     required this.dateFilePicker,
     required this.jsonCsvFilePicker,
@@ -324,6 +349,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   });
 
   final String localeTag;
+  final Base64EncodeService base64EncodeService;
   final CronService cronService;
   final DateService dateService;
   final JsonCsvService jsonCsvService;
@@ -340,6 +366,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
+  final Base64EncodeFilePicker? base64EncodeFilePicker;
+  final Base64EncodeFileSaver? base64EncodeFileSaver;
+  final Base64EncodeClipboardReader? base64EncodeClipboardReader;
+  final Base64EncodeClipboardWriter? base64EncodeClipboardWriter;
+  final Base64EncodeOutputEncoder? base64EncodeOutputEncoder;
   final CronFilePicker? cronFilePicker;
   final DateFilePicker? dateFilePicker;
   final JsonCsvFilePicker? jsonCsvFilePicker;
@@ -407,6 +438,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
     _router = buildRouter(
       catalog: _catalog,
       localeTag: widget.localeTag,
+      base64EncodeService: widget.base64EncodeService,
       cronService: widget.cronService,
       dateService: widget.dateService,
       jsonCsvService: widget.jsonCsvService,
@@ -423,6 +455,16 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       sqlFormatService: widget.sqlFormatService,
       xmlFormatService: widget.xmlFormatService,
       currentTime: widget.currentTime ?? DateTime.now,
+      base64EncodeFilePicker:
+          widget.base64EncodeFilePicker ?? pickBase64EncodeFile,
+      base64EncodeFileSaver:
+          widget.base64EncodeFileSaver ?? saveBase64EncodeFile,
+      base64EncodeClipboardReader:
+          widget.base64EncodeClipboardReader ?? readBase64EncodeClipboard,
+      base64EncodeClipboardWriter:
+          widget.base64EncodeClipboardWriter ?? writeBase64EncodeClipboard,
+      base64EncodeOutputEncoder:
+          widget.base64EncodeOutputEncoder ?? encodeBase64Output,
       cronFilePicker: widget.cronFilePicker ?? pickCronExpressionFile,
       dateFilePicker: widget.dateFilePicker ?? pickDateValueFile,
       jsonCsvFilePicker: widget.jsonCsvFilePicker ?? pickJsonCsvFile,

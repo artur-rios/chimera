@@ -373,4 +373,63 @@ void main() {
       expect(find.text('Unchanged: 3'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenBase64Route_WhenUtf8TextEncodes_ThenCanonicalResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/base64/encode'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('base64-encode-input')),
+        'Olá 👋',
+      );
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('T2zDoSDwn5GL'), findsOneWidget);
+      expect(find.text('Input bytes: 9'), findsOneWidget);
+      expect(find.text('Output characters: 12'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenBase64BinaryFile_WhenEncodedCopiedAndSaved_ThenExactPayloadTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeFilePicker: () async => <int>[0x00, 0xff],
+          base64EncodeClipboardWriter: (value) async => copied = value,
+          base64EncodeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = List<int>.of(bytes);
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-encode-file')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AP8='), findsOneWidget);
+      await tester.tap(find.byKey(const Key('base64-encode-copy')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-encode-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, 'AP8=');
+      expect(savedName, 'chimera-base64.txt');
+      expect(savedBytes, <int>[0x41, 0x50, 0x38, 0x3d]);
+    },
+  );
 }

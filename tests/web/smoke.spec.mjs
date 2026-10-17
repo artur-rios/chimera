@@ -2,10 +2,9 @@ import { expect, test } from '@playwright/test';
 
 async function enableFlutterSemantics(page) {
   const placeholder = page.locator('flt-semantics-placeholder');
-  if (await placeholder.count()) {
-    await placeholder.evaluate((element) => element.click());
-    await placeholder.waitFor({ state: 'detached' });
-  }
+  await placeholder.waitFor({ state: 'attached' });
+  await placeholder.evaluate((element) => element.click());
+  await placeholder.waitFor({ state: 'detached' });
 }
 
 async function fillFlutterTextBox(textBox, value) {
@@ -25,6 +24,21 @@ test('compiled Chimera shell loads without page errors', async ({ page }) => {
 
   expect(response?.ok()).toBe(true);
   await expect(page).toHaveTitle('Chimera');
+  await expect(page.locator('meta[name="description"]')).toHaveAttribute(
+    'content',
+    'Developer toolbox',
+  );
+  await expect(
+    page.locator('meta[name="apple-mobile-web-app-title"]'),
+  ).toHaveAttribute('content', 'Chimera');
+  const manifest = await page.evaluate(async () =>
+    (await fetch('/manifest.json')).json(),
+  );
+  expect(manifest).toMatchObject({
+    name: 'Chimera',
+    short_name: 'Chimera',
+    description: 'Developer toolbox',
+  });
   expect(pageErrors).toEqual([]);
 });
 
@@ -489,5 +503,71 @@ test('XML format flow formats locally without external requests', async ({ page 
       name: /Formatted XML result.*root.*developer name="Ada"/,
     }),
   ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
+test('Base64 binary file flow transfers exact output locally without external requests', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const externalRequests = [];
+  const interactionRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.addInitScript(() => {
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async (value) => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  });
+
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Encode Base64' }).click();
+  await expect(page.getByText('Base64 encode').first()).toBeVisible();
+  page.on('request', (request) => interactionRequests.push(request.url()));
+
+  const fileChooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load bytes from file' }).click();
+  const fileChooser = await fileChooserPromise;
+  await fileChooser.setFiles({
+    name: 'bytes.bin',
+    mimeType: 'application/octet-stream',
+    buffer: Buffer.from([0x00, 0xff]),
+  });
+  await expect(page.getByText('Input bytes: 2').last()).toBeVisible();
+
+  await page.getByRole('button', { name: 'Encode', exact: true }).click();
+  await expect(
+    page.getByRole('region', {
+      name: /Base64 encoding succeeded\. Input bytes: 2 Output characters: 4/,
+    }),
+  ).toBeVisible();
+
+  await page.getByRole('button', { name: 'Copy Base64' }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.__chimeraCopiedText))
+    .toBe('AP8=');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save Base64' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('chimera-base64.txt');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  expect(Buffer.concat(chunks).toString('utf8')).toBe('AP8=');
+  expect(interactionRequests).toEqual([]);
   expect(externalRequests).toEqual([]);
 });

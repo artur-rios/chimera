@@ -4,13 +4,13 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 Future<void> main() async {
-  final driver = await createDriver(
-    uri: Uri.parse('http://127.0.0.1:4444/'),
-    desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
-    spec: WebDriverSpec.W3c,
-  );
-
+  WebDriver? createdDriver;
   try {
+    final driver = createdDriver = await createDriver(
+      uri: Uri.parse('http://127.0.0.1:4444/'),
+      desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
+      spec: WebDriverSpec.W3c,
+    );
     await driver.get('http://127.0.0.1:4173');
     await _waitUntil(() async {
       final flutterRoot = await driver.execute(
@@ -546,11 +546,123 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'text comparison');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for Base64 encoding flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Encode Base64'),
+      'Home page did not return for Base64 encoding flow',
+    );
+    await _clickButton(driver, 'Encode Base64');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text to encode'),
+      'Base64 encoding page did not open',
+    );
+    await driver.execute('''
+        window.__chimeraCopiedText = null;
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async value => {
+              window.__chimeraCopiedText = value;
+            },
+          },
+        });
+        window.__chimeraOriginalFileInputClick = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function() {
+          if (this.type === 'file') {
+            window.__chimeraFileInput = this;
+            return;
+          }
+          return window.__chimeraOriginalFileInputClick.call(this);
+        };
+      ''', const <Object?>[]);
+    await driver.execute(
+      'performance.clearResourceTimings();',
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Load bytes from file');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('input[type=\"file\"]') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Base64 file input did not become available',
+    );
+    final binaryFileDispatched = await driver.execute('''
+        const input = document.querySelector('input[type="file"]');
+        if (input === null) return false;
+        const bytes = new Uint8Array([0x00, 0xff]);
+        const transfer = new DataTransfer();
+        transfer.items.add(
+          new File([bytes], 'bytes.bin', {type: 'application/octet-stream'}),
+        );
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+        return input.files.length === 1 && input.files[0].size === 2;
+      ''', const <Object?>[]);
+    if (binaryFileDispatched != true) {
+      throw StateError('Base64 binary file could not be dispatched');
+    }
+    await _waitUntil(
+      () => _pageContains(driver, 'Input bytes: 2'),
+      'Base64 binary fixture was not loaded',
+    );
+    await _clickButton(driver, 'Encode');
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Base64 encoding succeeded. Input bytes: 2 Output characters: 4',
+      ),
+      'Base64 binary result summary was incorrect',
+    );
+    await _clickButton(driver, 'Copy Base64');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            'return window.__chimeraCopiedText === "AP8=";',
+            const <Object?>[],
+          ) ==
+          true,
+      'Base64 binary result copy was not exact',
+    );
+    await _assertNoResourceRequests(driver, flow: 'Base64 interaction');
+    await _assertNoExternalRequests(driver, flow: 'Base64 encoding');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
-    await driver.quit();
+    await createdDriver?.quit();
+  }
+}
+
+Future<void> _assertNoResourceRequests(
+  WebDriver driver, {
+  required String flow,
+}) async {
+  final resourceUrls = await driver.execute(
+    "return performance.getEntriesByType('resource').map(entry => entry.name);",
+    const <Object?>[],
+  );
+  final urls = resourceUrls is List
+      ? resourceUrls.map((entry) => entry.toString()).toList()
+      : <String>[];
+  if (urls.isNotEmpty) {
+    throw StateError('Safari $flow made resource requests: $urls');
   }
 }
 

@@ -7,6 +7,7 @@ void main() {
   late String branchPolicy;
   late String continuousIntegration;
   late String releaseArtifacts;
+  late String safariSmoke;
 
   setUpAll(() {
     branchPolicy = _readNormalized('.github/workflows/branch-policy.yml');
@@ -14,6 +15,7 @@ void main() {
     releaseArtifacts = _readNormalized(
       '.github/workflows/release-artifacts.yml',
     );
+    safariSmoke = _readNormalized('tests/web/safari_smoke.dart');
   });
 
   test('GivenPullRequest_WhenBranchPolicyRuns_ThenOnlyDocumentedBranchFlowsAreAccepted', () {
@@ -60,6 +62,14 @@ void main() {
       expect(continuousIntegration, contains('tests/web/safari_smoke.dart'));
     },
   );
+
+  test('GivenSafariFileInput_WhenBinarySmokeRuns_ThenItIsBoundedAndDoesNotUseTheHangingUploadEndpoint', () {
+    expect(continuousIntegration, contains('timeout-minutes: 5'));
+    expect(safariSmoke, contains('new DataTransfer()'));
+    expect(safariSmoke, contains('new Uint8Array([0x00, 0xff])'));
+    expect(safariSmoke, contains("new File([bytes], 'bytes.bin'"));
+    expect(safariSmoke, isNot(contains('fileInput!.sendKeys')));
+  });
 
   test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {
     expect(continuousIntegration, contains('os: windows-latest'));

@@ -26,3 +26,39 @@ Automated guideline output, widget coverage, and performance output are attached
 to the `accessibility-and-performance-evidence` CI artifact. There are no open
 foundation-shell findings. Each later utility PR must add controls to the
 automated guideline checks and update this review when it changes the shell.
+
+## UC-16 Base64 Encode
+
+- Release version: UC-16 candidate for issue #17
+- Branch: `feature/uc-16-base64-encode`
+- Reviewer: Chimera UC-16 implementation review
+- Date: 2026-10-17
+- Target: web, Windows, and Linux Base64 encode surface
+- Locale: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Focus traversal follows text, file, paste, encode, bounded result,
+  copy, and save order; buttons support keyboard activation.
+- [x] The text field, binary-file summary, actions, result region, notices,
+  and live errors expose localized labels in both locales.
+- [x] Result semantics announce explicit localized success wording plus input
+  bytes and output characters without exposing an arbitrarily long Base64
+  value; the visible Base64 remains selectable and the labeled copy action
+  transfers it exactly.
+- [x] Flutter's automated Android tap-target, labeled-target, and text-contrast
+  guidelines pass with an encoded result present in both English and Brazilian
+  Portuguese.
+- [x] The page remains usable at a 320-pixel logical width and 200% text scale
+  in English and Brazilian Portuguese without overflow.
+- [x] Busy source acquisition disables competing actions and clears stale
+  output; localized access and resource errors use live-region semantics.
+
+### Evidence and Findings
+
+The GUI widget regression run covers 126 tests, including focused UC-16 text,
+empty text, binary file, clipboard, exact copy/save, exclusive input mode,
+clipboard-writer/file-saver/output-buffer allocation cleanup, stale/busy state,
+keyboard traversal, localized bounded semantics, automated guidelines in both
+locales, and narrow large-text cases. No UC-16 accessibility findings remain
+open.

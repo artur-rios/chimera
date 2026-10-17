@@ -6,6 +6,7 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -3680,6 +3681,535 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenBase64EncodeHomeAction_WhenOpened_ThenTextEncodesWithBoundedSemantics',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-base64-encode')));
+      await tester.tap(find.byKey(const Key('open-base64-encode')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Base64 encode'), findsWidgets);
+      await tester.enterText(
+        find.byKey(const Key('base64-encode-input')),
+        'Hello',
+      );
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('SGVsbG8='), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('base64-encode-result-semantics')),
+      );
+      expect(semantics.properties.role, SemanticsRole.region);
+      expect(
+        semantics.properties.value,
+        contains('Base64 encoding succeeded.'),
+      );
+      expect(semantics.properties.value, contains('Input bytes: 5'));
+      expect(semantics.properties.value, contains('Output characters: 8'));
+      expect(semantics.properties.value, isNot(contains('SGVsbG8=')));
+    },
+  );
+
+  testWidgets(
+    'GivenPortugueseBase64Result_WhenEncoded_ThenBoundedSemanticsAnnounceSuccess',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/base64/encode'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('base64-encode-input')),
+        'Olá',
+      );
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('base64-encode-result-semantics')),
+      );
+      expect(
+        semantics.properties.value,
+        contains('Codificação Base64 concluída.'),
+      );
+      expect(semantics.properties.value, contains('Bytes de entrada: 4'));
+      expect(semantics.properties.value, contains('Caracteres de saída: 8'));
+      expect(semantics.properties.value, isNot(contains('T2zDoQ==')));
+    },
+  );
+
+  testWidgets(
+    'GivenBinaryFileAndClipboard_WhenSourcesChange_ThenModesAreExclusiveAndTransfersAreExact',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeFilePicker: () async => <int>[0, 255],
+          base64EncodeClipboardReader: () async => 'Olá',
+          base64EncodeClipboardWriter: (value) async => copied = value,
+          base64EncodeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-encode-file')));
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('base64-encode-file-summary')),
+        findsOneWidget,
+      );
+      expect(find.text('Input bytes: 2'), findsOneWidget);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-encode-input')))
+            .controller!
+            .text,
+        isEmpty,
+      );
+
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('AP8='), findsOneWidget);
+      await tester.tap(find.byKey(const Key('base64-encode-copy')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-encode-save')));
+      await tester.pumpAndSettle();
+      expect(copied, 'AP8=');
+      expect(savedName, 'chimera-base64.txt');
+      expect(savedBytes, utf8.encode('AP8='));
+
+      await tester.tap(find.byKey(const Key('base64-encode-paste')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('base64-encode-file-summary')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-encode-input')))
+            .controller!
+            .text,
+        'Olá',
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('T2zDoQ=='), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('base64-encode-input')),
+        'text',
+      );
+      await tester.pump();
+      expect(find.byKey(const Key('base64-encode-file-summary')), findsNothing);
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenSelectedEmptyText_WhenEncoded_ThenEmptyBase64IsAValidResult',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/base64/encode'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byKey(const Key('base64-encode-input')), '');
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      final result = tester.widget<SelectableText>(
+        find.byKey(const Key('base64-encode-result')),
+      );
+      expect(result.data, '');
+      expect(find.text('Input bytes: 0'), findsOneWidget);
+      expect(find.text('Output characters: 0'), findsOneWidget);
+      expect(find.byKey(const Key('base64-encode-copy')), findsOneWidget);
+      expect(find.byKey(const Key('base64-encode-save')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenBase64AdapterAccessFailures_WhenActionsRun_ThenLocalizedErrorsClearResults',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeFilePicker: () async => throw Exception('private path'),
+          base64EncodeClipboardReader: () async => throw Exception('secret'),
+          base64EncodeClipboardWriter: (_) async => throw Exception('secret'),
+          base64EncodeFileSaver: (_, _) async => throw Exception('secret'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-encode-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+      expect(find.textContaining('private path'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('base64-encode-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+      expect(find.textContaining('secret'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-encode-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-encode-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The Base64 result could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenAllocationOrEncoderLimits_WhenActionsRun_ThenResourceErrorHasNoPartialResult',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/base64/encode',
+          base64EncodeService: const Base64EncodeService(
+            encoder: Base64ByteEncoder(maxInputBytes: 0),
+          ),
+          base64EncodeFilePicker: () async => throw OutOfMemoryError(),
+          base64EncodeClipboardReader: () async => throw OutOfMemoryError(),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-encode-file')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('A codificação Base64 excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      await tester.tap(find.byKey(const Key('base64-encode-paste')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('A codificação Base64 excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+
+      await tester.enterText(find.byKey(const Key('base64-encode-input')), 'a');
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('A codificação Base64 excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenClipboardWriterAllocationFailure_WhenCopied_ThenResourceErrorClearsResultAndBusyState',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeClipboardWriter: (_) async => throw OutOfMemoryError(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('base64-encode-input')), 'a');
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('base64-encode-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('base64-encode-copy')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Base64 encoding exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-encode-input')))
+            .enabled,
+        isTrue,
+      );
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('base64-encode-submit')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenFileSaverAllocationFailure_WhenSaved_ThenResourceErrorClearsResultAndBusyState',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/base64/encode',
+          base64EncodeFileSaver: (_, _) async => throw OutOfMemoryError(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('base64-encode-input')), 'a');
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('base64-encode-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('base64-encode-save')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('A codificação Base64 excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('base64-encode-submit')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenOutputBufferAllocationFailure_WhenSaved_ThenNoPartialFileOrResultRemains',
+    (tester) async {
+      var saverCalled = false;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeOutputEncoder: (_) => throw OutOfMemoryError(),
+          base64EncodeFileSaver: (_, _) async {
+            saverCalled = true;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('base64-encode-input')), 'a');
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-encode-save')));
+      await tester.pumpAndSettle();
+
+      expect(saverCalled, isFalse);
+      expect(
+        find.text('Base64 encoding exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('base64-encode-submit')),
+            )
+            .onPressed,
+        isNotNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenPendingBase64FileLoad_WhenResultExists_ThenStaleOutputClearsAndRacesDisable',
+    (tester) async {
+      final loaded = Completer<List<int>?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeFilePicker: () => loaded.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('base64-encode-input')),
+        'old',
+      );
+      await tester.tap(find.byKey(const Key('base64-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('base64-encode-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('base64-encode-file')));
+      await tester.pump();
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-encode-input')))
+            .enabled,
+        isFalse,
+      );
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('base64-encode-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<OutlinedButton>(
+              find.byKey(const Key('base64-encode-paste')),
+            )
+            .onPressed,
+        isNull,
+      );
+
+      loaded.complete(<int>[0, 255]);
+      await tester.pumpAndSettle();
+      expect(find.text('Input bytes: 2'), findsOneWidget);
+      expect(find.byKey(const Key('base64-encode-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenKeyboardTraversal_WhenBase64ControlsActivate_ThenOrderIsTextFilePasteEncode',
+    (tester) async {
+      var fileReads = 0;
+      var clipboardReads = 0;
+      String? copied;
+      String? saved;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/encode',
+          base64EncodeFilePicker: () async {
+            fileReads++;
+            return <int>[65];
+          },
+          base64EncodeClipboardReader: () async {
+            clipboardReads++;
+            return 'B';
+          },
+          base64EncodeClipboardWriter: (value) async => copied = value,
+          base64EncodeFileSaver: (name, bytes) async {
+            saved = '$name:${utf8.decode(bytes)}';
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(fileReads, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(clipboardReads, 1);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(find.text('Qg=='), findsOneWidget);
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(copied, 'Qg==');
+
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(saved, 'chimera-base64.txt:Qg==');
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowBase64Viewport_WhenBothLocalesUseLargeText_ThenContentDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      for (final locale in <String>['en', 'pt-BR']) {
+        await tester.pumpWidget(
+          ChimeraApp(
+            key: ValueKey<String>(locale),
+            localeTag: locale,
+            initialLocation: '/base64/encode',
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text(
+              locale == 'en' ? 'Base64 encode' : 'Codificar em Base64',
+            ),
+          ),
+          findsOneWidget,
+        );
+      }
+    },
+  );
+
+  testWidgets(
+    'GivenEncodedBase64Result_WhenBothLocalesRender_ThenAccessibilityGuidelinesPass',
+    (tester) async {
+      for (final locale in <String>['en', 'pt-BR']) {
+        await tester.pumpWidget(
+          ChimeraApp(
+            key: ValueKey<String>('guidelines-$locale'),
+            localeTag: locale,
+            initialLocation: '/base64/encode',
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('base64-encode-input')),
+          'Hello',
+        );
+        await tester.tap(find.byKey(const Key('base64-encode-submit')));
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('base64-encode-result')), findsOneWidget);
+        await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+        await expectLater(tester, meetsGuideline(textContrastGuideline));
+      }
     },
   );
 }
