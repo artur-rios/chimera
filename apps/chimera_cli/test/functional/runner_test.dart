@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
@@ -7,6 +8,374 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('certificate inspect', () {
+    final fixture = '../../tests/fixtures/certificates/certificate';
+    final pem = File('$fixture.pem').readAsStringSync();
+    final base64 = File('$fixture.base64').readAsStringSync();
+    final der = File('$fixture.der').readAsBytesSync();
+
+    for (final locale in ['en', 'pt-BR']) {
+      for (final representation in ['pem', 'der', 'base64']) {
+        for (final source in ['text', 'stdin', 'file']) {
+          if (source == 'text' && representation == 'der') continue;
+          for (final format in ['auto', representation]) {
+            test('Given${locale}_${source}_${representation}_$format'
+                '_WhenCertificateInspected_ThenExactJsonReturns', () async {
+              final input = representation == 'pem' ? pem : base64;
+              final bytes = representation == 'der' ? der : utf8.encode(input);
+              final out = StringBuffer();
+              final err = StringBuffer();
+              final exit = await runChimera(
+                [
+                  'certificate',
+                  'inspect',
+                  if (source == 'text') '--text=$input',
+                  if (source == 'stdin') '--stdin',
+                  if (source == 'file') '--file=$fixture.$representation',
+                  '--format=$format',
+                  '--json',
+                ],
+                localeTag: locale,
+                out: out,
+                err: err,
+                readStandardInputBytes: () async => bytes,
+              );
+              expect(exit, 0);
+              expect(err.toString(), isEmpty);
+              expect(
+                out.toString(),
+                '${_certificateJson.replaceFirst('"pem"', '"$representation"').replaceFirst('"inputByteCount":778', '"inputByteCount":${bytes.length}')}\n',
+              );
+            });
+          }
+        }
+      }
+      test(
+        'Given${locale}Pem_WhenCertificateInspected_ThenLocalizedReportReturns',
+        () async {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exit = await runChimera(
+            ['certificate', 'inspect', '--text=$pem'],
+            localeTag: locale,
+            out: out,
+            err: err,
+          );
+          expect(exit, 0);
+          expect(err.toString(), isEmpty);
+          final labels = locale == 'en'
+              ? [
+                  'Representation',
+                  'Version',
+                  'Serial number (hex)',
+                  'Subject',
+                  'Issuer',
+                  'Not before (UTC)',
+                  'Not after (UTC)',
+                  'Signature algorithm',
+                  'Public key algorithm',
+                  'Extensions',
+                  'critical',
+                  'yes',
+                  'no',
+                  'Input bytes',
+                  'DER bytes',
+                ]
+              : [
+                  'Representação',
+                  'Versão',
+                  'Número de série (hex)',
+                  'Titular',
+                  'Emissor',
+                  'Válido a partir de (UTC)',
+                  'Válido até (UTC)',
+                  'Algoritmo de assinatura',
+                  'Algoritmo de chave pública',
+                  'Extensões',
+                  'crítica',
+                  'sim',
+                  'não',
+                  'Bytes de entrada',
+                  'Bytes DER',
+                ];
+          expect(
+            out.toString(),
+            '${labels[0]}: PEM\n${labels[1]}: 3\n${labels[2]}: 01AB\n'
+            '${labels[3]}:\n'
+            '  commonName (2.5.4.3): "example.test"\n'
+            '  organizationName (2.5.4.10): "Chimera fixtures"\n'
+            '  1.2.3.4: "Unknown attribute"\n'
+            '${labels[4]}:\n'
+            '  commonName (2.5.4.3): "Example CA"\n'
+            '  organizationName (2.5.4.10): "Chimera fixtures"\n'
+            '${labels[5]}: 2024-01-01T00:00:00.000Z\n'
+            '${labels[6]}: 2034-01-01T00:00:00.000Z\n'
+            '${labels[7]}: sha256WithRSAEncryption (1.2.840.113549.1.1.11)\n'
+            '${labels[8]}: rsaEncryption (1.2.840.113549.1.1.1)\n'
+            '${labels[9]}:\n'
+            '  basicConstraints (2.5.29.19), ${labels[10]}: ${labels[11]}\n'
+            '  1.2.3.5, ${labels[10]}: ${labels[12]}\n'
+            '${labels[13]}: 778\n${labels[14]}: 534\n',
+          );
+        },
+      );
+    }
+
+    test('GivenInvalidStructure_WhenCertificateInspected_ThenValidationPrecedesReads', () async {
+      final cases = <(List<String>, String)>[
+        ([], 'missing-source'),
+        (['--stdin', '--text=secret'], 'conflicting-sources'),
+        (['--stdin', '--file=secret-path'], 'conflicting-sources'),
+        (['--text=', '--file=secret-path'], 'conflicting-sources'),
+        (
+          ['--text=secret', '--stdin', '--file=secret-path'],
+          'conflicting-sources',
+        ),
+        (['--stdin', '--format=secret'], 'invalid-format'),
+        (['--file=secret-path', '--format='], 'invalid-format'),
+        (['--stdin', '--unknown=secret'], 'invalid-options'),
+        (['--file=secret-path', 'secret-argument'], 'invalid-options'),
+      ];
+      var reads = 0;
+      for (final entry in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'inspect', ...entry.$1, '--json'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: () async {
+            reads++;
+            return der;
+          },
+          readFileBytes: (_) async {
+            reads++;
+            return der;
+          },
+        );
+        expect(exit, 64, reason: entry.$1.toString());
+        expect(out.toString(), isEmpty);
+        expect(jsonDecode(err.toString()), {
+          'error': {
+            'kind': 'validation',
+            'code': 'certificate-inspect.${entry.$2}',
+            'message': 'The certificate inspection request is invalid.',
+          },
+        });
+        expect(err.toString(), isNot(contains('secret')));
+      }
+      expect(reads, 0);
+    });
+
+    for (final (index, entry) in <(List<String>, String)>[
+      (['--text='], 'malformed-certificate'),
+      (['--text=secret-input'], 'malformed-certificate'),
+      (['--text=$pem', '--format=der'], 'unsupported-representation'),
+      (['--text=$pem\n$pem'], 'multiple-certificates'),
+      (
+        [
+          '--text=-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----',
+          '--format=pem',
+        ],
+        'unsupported-representation',
+      ),
+      (['--stdin', '--format=pem'], 'unsupported-representation'),
+    ].indexed) {
+      test(
+        'Given${entry.$2}_${index}_WhenCertificateInspected_ThenSafeValidationReturns',
+        () async {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exit = await runChimera(
+            ['certificate', 'inspect', ...entry.$1, '--json'],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: () async => der,
+          );
+          expect(exit, 64);
+          expect(out.toString(), isEmpty);
+          expect(jsonDecode(err.toString()), {
+            'error': {
+              'kind': 'validation',
+              'code': 'certificate-inspect.invalid-input',
+              'message': 'The certificate inspection request is invalid.',
+              'location': {'field': 'input', 'reason': entry.$2},
+            },
+          });
+        },
+      );
+    }
+
+    test('GivenReaderFailures_WhenCertificateInspected_ThenRedactedExitReturns', () async {
+      for (final source in ['stdin', 'file']) {
+        for (final allocation in [false, true]) {
+          for (final json in [false, true]) {
+            for (final locale in ['en', 'pt-BR']) {
+              final out = StringBuffer();
+              final err = StringBuffer();
+              Future<List<int>> failure() async => allocation
+                  ? throw OutOfMemoryError()
+                  : throw const FileSystemException(
+                      'private parser detail',
+                      'secret-path',
+                    );
+              final exit = await runChimera(
+                [
+                  'certificate',
+                  'inspect',
+                  if (source == 'stdin') '--stdin' else '--file=secret-path',
+                  if (json) '--json',
+                ],
+                localeTag: locale,
+                out: out,
+                err: err,
+                readStandardInputBytes: failure,
+                readFileBytes: (_) => failure(),
+              );
+              expect(exit, allocation ? 75 : 74);
+              expect(out.toString(), isEmpty);
+              final message = allocation
+                  ? (locale == 'en'
+                        ? 'Certificate inspection exceeded its resource limit.'
+                        : 'A inspeção do certificado excedeu o limite de recursos.')
+                  : (source == 'stdin'
+                        ? (locale == 'en'
+                              ? 'The standard input could not be read.'
+                              : 'Não foi possível ler a entrada padrão.')
+                        : (locale == 'en'
+                              ? 'The input file could not be read.'
+                              : 'Não foi possível ler o arquivo de entrada.'));
+              if (json) {
+                expect(jsonDecode(err.toString()), {
+                  'error': {
+                    'kind': allocation ? 'resource' : 'access',
+                    'code': allocation
+                        ? 'certificate-inspect.resource-limit'
+                        : 'certificate-inspect.${source == 'stdin' ? 'input' : 'file'}-access',
+                    'message': message,
+                    if (allocation)
+                      'location': {
+                        'field': 'input',
+                        'reason': 'allocation-limit',
+                      },
+                  },
+                });
+              } else {
+                expect(err.toString(), '$message\n');
+              }
+              expect(err.toString(), isNot(contains('secret')));
+              expect(err.toString(), isNot(contains('private')));
+              expect(err.toString(), isNot(contains('example.test')));
+            }
+          }
+        }
+      }
+    });
+
+    test('GivenInspectionResourceLimits_WhenCertificateInspected_ThenSafeResourceReturns', () async {
+      for (final entry in <(CertificateInspector, List<int>, String)>[
+        (const CertificateInspector(maxInputBytes: 0), der, 'input-limit'),
+        (const CertificateInspector(maxDecodedBytes: 0), der, 'decoded-limit'),
+        (
+          const CertificateInspector(),
+          _CertificateAllocationFailureBytes(),
+          'allocation-limit',
+        ),
+      ]) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'inspect', '--stdin', '--json'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: () async => entry.$2,
+          certificateInspectService: CertificateInspectService(
+            inspector: entry.$1,
+          ),
+        );
+        expect(exit, 75);
+        expect(out.toString(), isEmpty);
+        expect(jsonDecode(err.toString()), {
+          'error': {
+            'kind': 'resource',
+            'code': 'certificate-inspect.resource-limit',
+            'message': 'Certificate inspection exceeded its resource limit.',
+            'location': {'field': 'input', 'reason': entry.$3},
+          },
+        });
+      }
+    });
+
+    test('GivenJsonAllocationFailure_WhenCertificateInspected_ThenNoPartialOutputReturns', () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exit = await runChimera(
+        ['certificate', 'inspect', '--text=$pem', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        certificateInspectJsonEncoder: (_) => throw OutOfMemoryError(),
+      );
+      expect(exit, 75);
+      expect(out.toString(), isEmpty);
+      expect(jsonDecode(err.toString()), {
+        'error': {
+          'kind': 'resource',
+          'code': 'certificate-inspect.resource-limit',
+          'message': 'Certificate inspection exceeded its resource limit.',
+          'location': {'field': 'output', 'reason': 'allocation-limit'},
+        },
+      });
+    });
+
+    test('GivenStdoutAllocationFailure_WhenCertificateInspected_ThenNoPartialOutputReturns', () async {
+      for (final json in [false, true]) {
+        final out = _OutOfMemoryStringSink();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'inspect', '--text=$pem', if (json) '--json'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+        expect(exit, 75);
+        expect(out.emissionCalls, 1);
+        expect(out.contents, isEmpty);
+        if (json) {
+          expect(
+            (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+            containsPair('code', 'certificate-inspect.resource-limit'),
+          );
+        } else {
+          expect(
+            err.toString(),
+            'Certificate inspection exceeded its resource limit.\n',
+          );
+        }
+      }
+    });
+
+    test(
+      'GivenMissingLocalFile_WhenCertificateInspected_ThenAccessFailureReturns',
+      () async {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'inspect', '--file=$fixture.missing'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+        expect(exit, 74);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), 'The input file could not be read.\n');
+      },
+    );
+  });
+
   test(
     'GivenNoCommand_WhenCliRunsInPortuguese_ThenLocalizedFailureIsReturned',
     () async {
@@ -4427,6 +4796,19 @@ void main() {
   });
 }
 
+const _certificateJson =
+    '{"representation":"pem","version":3,"serialNumberHex":"01AB",'
+    '"subject":[{"oid":"2.5.4.3","name":"commonName","value":"example.test"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"},'
+    '{"oid":"1.2.3.4","name":null,"value":"Unknown attribute"}],'
+    '"issuer":[{"oid":"2.5.4.3","name":"commonName","value":"Example CA"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"}],'
+    '"notBefore":"2024-01-01T00:00:00.000Z","notAfter":"2034-01-01T00:00:00.000Z",'
+    '"signatureAlgorithm":{"oid":"1.2.840.113549.1.1.11","name":"sha256WithRSAEncryption"},'
+    '"publicKeyAlgorithm":{"oid":"1.2.840.113549.1.1.1","name":"rsaEncryption"},'
+    '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},'
+    '{"oid":"1.2.3.5","name":null,"critical":false}],"inputByteCount":778,"derByteCount":534}';
+
 Future<List<File>> _chimeraTransactionArtifacts(Directory directory) async =>
     directory
         .list()
@@ -4436,6 +4818,18 @@ Future<List<File>> _chimeraTransactionArtifacts(Directory directory) async =>
         })
         .map((entry) => File(entry.path))
         .toList();
+
+final class _CertificateAllocationFailureBytes extends ListBase<int> {
+  @override
+  int get length => throw OutOfMemoryError();
+  @override
+  set length(int value) => throw UnsupportedError('Read only');
+  @override
+  int operator [](int index) => throw OutOfMemoryError();
+  @override
+  void operator []=(int index, int value) =>
+      throw UnsupportedError('Read only');
+}
 
 final class _OutOfMemoryStringSink implements StringSink {
   var emissionCalls = 0;
