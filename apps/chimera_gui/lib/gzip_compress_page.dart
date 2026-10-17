@@ -130,6 +130,18 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
     });
   }
 
+  void _complete(int generation, GzipCompressOutput output) {
+    if (!_current(generation)) return;
+    setState(() {
+      // Discard source/editor history without invalidating this generation or
+      // clearing the authoritative immutable result needed by the save action.
+      _clearSource();
+      _output = output;
+      _busy = false;
+    });
+    _resultFocus.requestFocus();
+  }
+
   Future<void> _compress() async {
     if (_busy) return;
     final generation = _begin();
@@ -144,13 +156,7 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
       final result = await widget.service.execute(request);
       if (!_current(generation)) return;
       result.fold(
-        onSuccess: (output) {
-          setState(() {
-            _output = output;
-            _busy = false;
-          });
-          _resultFocus.requestFocus();
-        },
+        onSuccess: (output) => _complete(generation, output),
         onFailure: (failure) => _fail(generation, switch (failure.kind) {
           FailureKind.resource => 'resource',
           FailureKind.validation || FailureKind.range => 'validation',

@@ -219,6 +219,8 @@ acceptance. No automated UC-19 accessibility findings remain open.
   result labels, notices, and errors are localized in both locales.
 - [x] The result is a live region announcing success, level, input bytes, and
   output bytes. Binary content is never rendered, selected, or copied.
+- [x] Successful compression immediately discards text, file bytes, and editor
+  undo history while preserving the exact output for save and focusing result.
 - [x] File, clipboard, service, and save access/allocation failures publish only
   safe localized live errors and clear source, result, notices, and save actions.
 - [x] Busy actions disable input, file, paste, level, compress, and save.
@@ -234,8 +236,8 @@ acceptance. No automated UC-19 accessibility findings remain open.
 
 ### Evidence and Findings
 
-`flutter test --no-pub --reporter expanded test` passes all 390 GUI tests,
-including 103 focused GZIP tests, localized home navigation, the existing widget
+`flutter test --no-pub --reporter expanded test` passes all 396 GUI tests,
+including 109 focused GZIP tests, localized home navigation, the existing widget
 surfaces, catalog checks, and startup performance. The complete localization
 suite passes 17 tests with exact English/PT-BR key parity; reviewed CLI/shared
 GZIP messages remain unchanged. Strict GUI and localization analysis pass.
@@ -251,7 +253,8 @@ live regions, control sizes, contrast, and narrow large-text layouts.
 
 Review follow-up also verifies that source cleanup disposes the editor's undo
 history and pending snapshot timer. Ctrl+Z/Ctrl+Shift+Z cannot restore discarded
-text after file/clipboard replacement or access/resource failure. Ordinary
+text after successful compression, file/clipboard replacement, or access/resource
+failure. Both settled and pending success snapshots are covered. Ordinary
 editing undo/redo still works before and after a source reset; keyboard focus
 and page-owned controller listeners remain intact.
 

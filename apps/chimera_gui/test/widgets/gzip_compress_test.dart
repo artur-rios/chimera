@@ -82,6 +82,88 @@ void _noSuccess() {
 }
 
 void main() {
+  for (final source in ['text', 'clipboard', 'file']) {
+    for (final settled in [false, true]) {
+      testWidgets(
+        'GivenSuccessful$source${settled ? 'Settled' : 'Pending'}Source_WhenCompressionReturns_ThenSourceAndHistoryAreDiscardedAndExactOutputCanStillBeSaved',
+        (tester) async {
+          final service = _Service();
+          var saves = 0;
+          GzipCompressOutput? successfulOutput;
+          await tester.pumpWidget(
+            ChimeraApp(
+              initialLocation: '/gzip/compress',
+              gzipCompressService: service,
+              gzipCompressClipboardReader: () async => 'clipboard source',
+              gzipCompressFilePicker: () async => [0, 255, 128],
+              gzipCompressFileSaver: (name, bytes, mime) async {
+                saves++;
+                expect(identical(bytes, successfulOutput!.bytes), isTrue);
+                expect(name, 'chimera-compressed.gz');
+                expect(mime, 'application/gzip');
+                expect(
+                  gzip.decode(bytes),
+                  source == 'file'
+                      ? [0, 255, 128]
+                      : utf8.encode('$source source'),
+                );
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          if (source == 'text') {
+            await _settledText(tester, 'prior sensitive text');
+            await tester.enterText(_control('input'), 'text source');
+          } else {
+            await _tap(tester, source == 'file' ? 'file' : 'paste');
+            await tester.tap(_control('input'));
+          }
+          await tester.pump(Duration(milliseconds: settled ? 600 : 50));
+          final controller = tester
+              .widget<TextField>(_control('input'))
+              .controller!;
+          final oldHistory = tester.state<UndoHistoryState<TextEditingValue>>(
+            find.byType(UndoHistory<TextEditingValue>),
+          );
+          await _tap(tester, 'submit');
+          successfulOutput = service.output;
+          expect(controller.text, isEmpty);
+          expect(_control('file-summary'), findsNothing);
+          expect(oldHistory.mounted, isFalse);
+          expect(UndoManager.client, isNot(same(oldHistory)));
+          expect(_control('result'), findsOneWidget);
+          expect(
+            tester.widget<ButtonStyleButton>(_control('save')).onPressed,
+            isNotNull,
+          );
+          expect(
+            FocusManager.instance.primaryFocus!.debugLabel,
+            'GZIP compression result',
+          );
+          // Let any old pending 500ms snapshot expire before exercising shortcuts.
+          await tester.tap(_control('input'));
+          await tester.pump(const Duration(milliseconds: 600));
+          for (final redo in [false, true, false]) {
+            await _historyShortcut(tester, redo: redo);
+            expect(controller.text, isEmpty);
+            expect(_control('result'), findsOneWidget);
+            expect(_control('save'), findsOneWidget);
+          }
+          await _tap(tester, 'save');
+          expect(saves, 1);
+          expect(service.calls, 1);
+          expect(identical(service.output, successfulOutput), isTrue);
+          // A fresh compression must not consume a hidden retained file/text source.
+          await _tap(tester, 'submit');
+          expect(service.output!.inputByteCount, 0);
+          expect(gzip.decode(service.output!.bytes), isEmpty);
+          expect(service.calls, 2);
+        },
+      );
+    }
+  }
+
   for (final boundary in ['file', 'paste', 'save', 'service']) {
     for (final allocation in [false, true]) {
       testWidgets(
