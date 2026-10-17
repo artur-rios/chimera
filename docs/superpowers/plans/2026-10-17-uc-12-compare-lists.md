@@ -24,12 +24,12 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_utilities/lib/chimera_utilities.dart`
 - Create: `packages/chimera_utilities/test/list_compare/list_comparator_test.dart`
 
-- [ ] Add failing Given-When-Then tests for stable four-set output, line endings,
+- [x] Add failing Given-When-Then tests for stable four-set output, line endings,
   empty/blank/Unicode values, every option combination, invalid options, and
   budgets.
-- [ ] Implement the smallest deterministic comparator and typed failures.
-- [ ] Run the focused utility test and strict package analysis.
-- [ ] Commit the green shared behavior.
+- [x] Implement the smallest deterministic comparator and typed failures.
+- [x] Run the focused utility test and strict package analysis.
+- [x] Commit the green shared behavior.
 
 ### Task 2: Add the core operation service
 
