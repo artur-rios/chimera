@@ -4,13 +4,18 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 Future<void> main() async {
-  final driver = await createDriver(
-    uri: Uri.parse('http://127.0.0.1:4444/'),
-    desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
-    spec: WebDriverSpec.W3c,
-  );
-
+  Directory? fixtureDirectory;
+  WebDriver? createdDriver;
   try {
+    final activeFixtureDirectory = fixtureDirectory = await Directory.systemTemp
+        .createTemp('chimera-safari-base64-');
+    final binaryFixture = File('${activeFixtureDirectory.path}/bytes.bin');
+    await binaryFixture.writeAsBytes(const <int>[0x00, 0xff], flush: true);
+    final driver = createdDriver = await createDriver(
+      uri: Uri.parse('http://127.0.0.1:4444/'),
+      desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
+      spec: WebDriverSpec.W3c,
+    );
     await driver.get('http://127.0.0.1:4173');
     await _waitUntil(() async {
       final flutterRoot = await driver.execute(
@@ -546,11 +551,117 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'text comparison');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for Base64 encoding flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Encode Base64'),
+      'Home page did not return for Base64 encoding flow',
+    );
+    await _clickButton(driver, 'Encode Base64');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text to encode'),
+      'Base64 encoding page did not open',
+    );
+    await driver.execute('''
+        window.__chimeraCopiedText = null;
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            writeText: async value => {
+              window.__chimeraCopiedText = value;
+            },
+          },
+        });
+        window.__chimeraOriginalFileInputClick = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function() {
+          if (this.type === 'file') {
+            window.__chimeraFileInput = this;
+            return;
+          }
+          return window.__chimeraOriginalFileInputClick.call(this);
+        };
+      ''', const <Object?>[]);
+    await driver.execute(
+      'performance.clearResourceTimings();',
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Load bytes from file');
+    WebElement? fileInput;
+    await _waitUntil(() async {
+      final inputs = await driver
+          .findElements(const By.cssSelector('input[type="file"]'))
+          .toList();
+      if (inputs.isEmpty) return false;
+      fileInput = inputs.first;
+      return true;
+    }, 'Base64 file input did not become available');
+    await fileInput!.sendKeys(binaryFixture.path);
+    await _waitUntil(
+      () => _pageContains(driver, 'Input bytes: 2'),
+      'Base64 binary fixture was not loaded',
+    );
+    await _clickButton(driver, 'Encode');
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Base64 encoding succeeded. Input bytes: 2 Output characters: 4',
+      ),
+      'Base64 binary result summary was incorrect',
+    );
+    await _clickButton(driver, 'Copy Base64');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            'return window.__chimeraCopiedText === "AP8=";',
+            const <Object?>[],
+          ) ==
+          true,
+      'Base64 binary result copy was not exact',
+    );
+    await _assertNoResourceRequests(driver, flow: 'Base64 interaction');
+    await _assertNoExternalRequests(driver, flow: 'Base64 encoding');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
-    await driver.quit();
+    try {
+      await createdDriver?.quit();
+    } finally {
+      if (fixtureDirectory case final directory?) {
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+        }
+      }
+    }
+  }
+}
+
+Future<void> _assertNoResourceRequests(
+  WebDriver driver, {
+  required String flow,
+}) async {
+  final resourceUrls = await driver.execute(
+    "return performance.getEntriesByType('resource').map(entry => entry.name);",
+    const <Object?>[],
+  );
+  final urls = resourceUrls is List
+      ? resourceUrls.map((entry) => entry.toString()).toList()
+      : <String>[];
+  if (urls.isNotEmpty) {
+    throw StateError('Safari $flow made resource requests: $urls');
   }
 }
 
