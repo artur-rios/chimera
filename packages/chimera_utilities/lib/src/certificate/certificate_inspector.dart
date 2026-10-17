@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
+import 'package:meta/meta.dart';
 import 'package:x509/x509.dart' as x509;
 
 import '../base64/base64_byte_decoder.dart';
@@ -71,6 +72,7 @@ final class CertificateConverter {
        assert(maxOutputBytes == null || maxOutputBytes >= 0);
 
   /// Resource-boundary injection for deterministic allocation regression tests.
+  @visibleForTesting
   const CertificateConverter.forTesting({
     this.inspector = const CertificateInspector(),
     this.maxOutputBytes,
