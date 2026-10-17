@@ -440,7 +440,7 @@ Future<void> main() async {
       'List comparison intersection was incorrect',
     );
     await _waitUntil(
-      () => _pageContains(driver, 'Equal yes'),
+      () => _pageContains(driver, 'Equal: yes'),
       'List comparison equality was incorrect',
     );
     await _assertNoExternalRequests(driver, flow: 'list comparison');
