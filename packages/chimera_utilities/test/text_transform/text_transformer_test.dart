@@ -49,6 +49,20 @@ void main() {
     });
 
     test(
+      'GivenUnicodeSpecialCases_WhenCaseChanged_ThenFullMappingsAreStable',
+      () {
+        expect(
+          transformer.transform(input: 'և ŉ ΐ ᾀ', mode: 'uppercase').output,
+          'ԵՒ ʼN Ϊ́ ἈΙ',
+        );
+        expect(
+          transformer.transform(input: 'İ', mode: 'lowercase').output,
+          'i̇',
+        );
+      },
+    );
+
+    test(
       'GivenUnicodeWhitespace_WhenNormalized_ThenOnlyWhiteSpaceSetCollapses',
       () {
         const whiteSpace =
@@ -74,6 +88,18 @@ void main() {
         );
 
         expect(result.output, 'a\u200Bb\uFEFFc');
+      },
+    );
+
+    test(
+      'GivenExcludedFormatCharactersAtEdges_WhenNormalized_ThenTheyRemain',
+      () {
+        final result = transformer.transform(
+          input: '\uFEFFalpha\uFEFF',
+          mode: 'normalize-whitespace',
+        );
+
+        expect(result.output, '\uFEFFalpha\uFEFF');
       },
     );
 
@@ -127,6 +153,23 @@ void main() {
         ),
       );
     });
+
+    test(
+      'GivenInvalidModeAndOversizeInput_WhenTransformed_ThenValidationWins',
+      () {
+        expect(
+          () =>
+              const TextTransformer(maxInputCodeUnits: 0)
+                  .transform(input: 'sensitive', mode: 'title-case'),
+          _textTransformFailure(
+            kind: TextTransformFailureKind.validation,
+            code: 'text-transform.invalid-mode',
+            field: 'mode',
+            reason: 'unsupported-mode',
+          ),
+        );
+      },
+    );
 
     test('GivenInputBudget_WhenAtBoundary_ThenTransformationSucceeds', () {
       final result = const TextTransformer(maxInputCodeUnits: 2)

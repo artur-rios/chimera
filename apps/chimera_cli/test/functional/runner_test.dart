@@ -2829,6 +2829,7 @@ void main() {
   test(
     'GivenInvalidTransformInputs_WhenRun_ThenTypedRedactedFailuresReturn',
     () async {
+      var sourceReads = 0;
       Future<Map<String, dynamic>> failureFor(List<String> options) async {
         final err = StringBuffer();
         final exitCode = await runChimera(
@@ -2836,7 +2837,14 @@ void main() {
           localeTag: 'en',
           out: StringBuffer(),
           err: err,
-          readStandardInput: () async => 'sensitive-standard-input',
+          readStandardInput: () async {
+            sourceReads++;
+            return 'sensitive-standard-input';
+          },
+          readFile: (_) async {
+            sourceReads++;
+            return 'sensitive-file-input';
+          },
         );
         expect(exitCode, 64);
         expect(err.toString(), isNot(contains('sensitive')));
@@ -2845,8 +2853,8 @@ void main() {
       }
 
       for (final options in <List<String>>[
-        const <String>['--input=sensitive-input'],
-        const <String>['--input=sensitive-input', '--mode=title-case'],
+        const <String>[],
+        const <String>['--file=sensitive-file', '--mode=title-case'],
       ]) {
         expect(
           await failureFor(options),
@@ -2862,6 +2870,7 @@ void main() {
           ),
         );
       }
+      expect(sourceReads, 0);
 
       expect(
         await failureFor(const <String>[
@@ -2871,6 +2880,7 @@ void main() {
         ]),
         containsPair('code', 'text-transform.conflicting-inputs'),
       );
+      expect(sourceReads, 0);
     },
   );
 

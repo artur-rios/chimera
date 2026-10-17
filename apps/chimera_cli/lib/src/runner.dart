@@ -749,6 +749,26 @@ Future<int> _runTextTransform(
     return 64;
   }
 
+  final mode = parsed.option('mode') ?? '';
+  try {
+    parseTextTransformMode(mode);
+  } on TextTransformException catch (error) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: error.kind.name,
+      code: error.code,
+      messageKey: 'error.textTransform.validation',
+      details: <String, Object?>{
+        'field': ?error.field,
+        'reason': ?error.reason,
+      },
+    );
+    return 64;
+  }
+
   late String input;
   try {
     input = fileOption != null
@@ -772,10 +792,7 @@ Future<int> _runTextTransform(
   }
 
   final result = await textTransformService.execute(
-    TextTransformOperationRequest(
-      input: input,
-      mode: parsed.option('mode') ?? '',
-    ),
+    TextTransformOperationRequest(input: input, mode: mode),
   );
   return await result.fold(
     onSuccess: (output) async {
