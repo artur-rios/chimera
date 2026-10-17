@@ -55,10 +55,10 @@
 - Consumes: `NumberBaseConverter.convert(NumberBaseRequest)`.
 - Produces: `NumberBaseOperationRequest({required String value, required int sourceBase, required int targetBase})`; `NumberBaseOutput(NumberBaseResult result)` with `toJson() -> {'converted', 'sourceBase', 'targetBase'}`; and `NumberBaseService({NumberBaseConverter converter = const NumberBaseConverter()}).execute(NumberBaseOperationRequest) -> Future<ChimeraResult<NumberBaseOutput>>`.
 
-- [ ] Write failing service tests for success, surrounding-whitespace normalization, AF-01 details, and AF-02 resource mapping.
-- [ ] Run the focused core test and confirm the expected missing-API failure.
-- [ ] Implement the service and shared-result mapping without exposing source input in failure details.
-- [ ] Run the focused core test until all cases pass.
+- [x] Write failing service tests for success, surrounding-whitespace normalization, AF-01 details, and AF-02 resource mapping.
+- [x] Run the focused core test and confirm the expected missing-API failure.
+- [x] Implement the service and shared-result mapping without exposing source input in failure details.
+- [x] Run the focused core test until all cases pass.
 
 ### Task 3: CLI adapter
 
