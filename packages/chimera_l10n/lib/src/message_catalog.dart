@@ -3,6 +3,22 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'gzipCompress.pageTitle': 'Compress GZIP',
+    'gzipCompress.openAction': 'Compress to GZIP',
+    'gzipCompress.inputLabel': 'Text to compress',
+    'gzipCompress.fileAction': 'Load file bytes',
+    'gzipCompress.pasteAction': 'Paste text',
+    'gzipCompress.levelLabel': 'Compression level',
+    'gzipCompress.submitAction': 'Compress',
+    'gzipCompress.saveAction': 'Save GZIP file',
+    'gzipCompress.fileSaved': 'GZIP file saved.',
+    'gzipCompress.outputLabel': 'Compressed binary result',
+    'gzipCompress.resultSuccess': 'Compression succeeded.',
+    'gzipCompress.inputByteCountLabel': 'Input bytes',
+    'gzipCompress.outputByteCountLabel': 'Output bytes',
+    'error.gzipCompress.clipboardRead': 'The clipboard text could not be read.',
+    'error.gzipCompress.interactiveInputAccess':
+        'The input could not be processed.',
     'cli.gzipCompressUsage':
         'Usage: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
         '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
@@ -553,6 +569,23 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'gzipCompress.pageTitle': 'Comprimir GZIP',
+    'gzipCompress.openAction': 'Comprimir para GZIP',
+    'gzipCompress.inputLabel': 'Texto para comprimir',
+    'gzipCompress.fileAction': 'Carregar bytes de arquivo',
+    'gzipCompress.pasteAction': 'Colar texto',
+    'gzipCompress.levelLabel': 'Nível de compressão',
+    'gzipCompress.submitAction': 'Comprimir',
+    'gzipCompress.saveAction': 'Salvar arquivo GZIP',
+    'gzipCompress.fileSaved': 'Arquivo GZIP salvo.',
+    'gzipCompress.outputLabel': 'Resultado binário comprimido',
+    'gzipCompress.resultSuccess': 'Compressão concluída.',
+    'gzipCompress.inputByteCountLabel': 'Bytes de entrada',
+    'gzipCompress.outputByteCountLabel': 'Bytes de saída',
+    'error.gzipCompress.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.gzipCompress.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
     'cli.gzipCompressUsage':
         'Uso: chimera gzip compress (--text=<valor>|--stdin|--file=<caminho>) '
         '[--level=<0..9>] (--output=<caminho>|--json) [--json]\n'

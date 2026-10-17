@@ -4,6 +4,37 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test('GivenGzipInteractiveMessages_WhenLookedUp_ThenBothLocalesHaveCompleteLabels', () {
+    for (final locale in supportedLocaleTags) {
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'inputLabel',
+        'fileAction',
+        'pasteAction',
+        'levelLabel',
+        'submitAction',
+        'saveAction',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ]) {
+        final key = 'gzipCompress.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+      expect(
+        catalog.lookup(locale, 'error.gzipCompress.clipboardRead'),
+        isNot('error.gzipCompress.clipboardRead'),
+      );
+      expect(
+        catalog.lookup(locale, 'error.gzipCompress.interactiveInputAccess'),
+        isNot('error.gzipCompress.interactiveInputAccess'),
+      );
+    }
+  });
+
   test('GivenGzipCliMessages_WhenLookedUp_ThenBothLocalesHaveExactParity', () {
     final keys = <String>{
       'cli.gzipCompressUsage',
@@ -311,6 +342,24 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'inputLabel',
+        'fileAction',
+        'pasteAction',
+        'levelLabel',
+        'submitAction',
+        'saveAction',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ])
+        'gzipCompress.$name',
+      'error.gzipCompress.clipboardRead',
+      'error.gzipCompress.interactiveInputAccess',
       'cli.gzipCompressUsage',
       'gzipCompress.savedResult',
       'error.gzipCompress.validation',

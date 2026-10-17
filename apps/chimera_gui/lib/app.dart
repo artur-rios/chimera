@@ -11,6 +11,7 @@ import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'gzip_compress_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -28,6 +29,10 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.gzipCompressService = const GzipCompressService(),
+    this.gzipCompressFilePicker,
+    this.gzipCompressClipboardReader,
+    this.gzipCompressFileSaver,
     this.localeTag = 'en',
     this.certificateConvertService = const CertificateConvertService(),
     this.certificateConvertFilePicker,
@@ -128,6 +133,10 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final GzipCompressOperationService gzipCompressService;
+  final GzipCompressFilePicker? gzipCompressFilePicker;
+  final GzipCompressClipboardReader? gzipCompressClipboardReader;
+  final GzipCompressFileSaver? gzipCompressFileSaver;
   final CertificateConvertOperationService certificateConvertService;
   final CertificateConvertFilePicker? certificateConvertFilePicker;
   final CertificateConvertFileSaver? certificateConvertFileSaver;
@@ -222,6 +231,10 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        gzipCompressService: gzipCompressService,
+        gzipCompressFilePicker: gzipCompressFilePicker,
+        gzipCompressClipboardReader: gzipCompressClipboardReader,
+        gzipCompressFileSaver: gzipCompressFileSaver,
         localeTag: localeTag,
         certificateConvertService: certificateConvertService,
         certificateConvertFilePicker: certificateConvertFilePicker,
@@ -319,6 +332,10 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.gzipCompressService,
+    required this.gzipCompressFilePicker,
+    required this.gzipCompressClipboardReader,
+    required this.gzipCompressFileSaver,
     required this.certificateConvertService,
     required this.certificateConvertFilePicker,
     required this.certificateConvertFileSaver,
@@ -504,6 +521,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
 
   @override
   State<_RoutedChimeraApp> createState() => _RoutedChimeraAppState();
+
+  final GzipCompressOperationService gzipCompressService;
+  final GzipCompressFilePicker? gzipCompressFilePicker;
+  final GzipCompressClipboardReader? gzipCompressClipboardReader;
+  final GzipCompressFileSaver? gzipCompressFileSaver;
 }
 
 final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
@@ -514,6 +536,13 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      gzipCompressService: widget.gzipCompressService,
+      gzipCompressFilePicker:
+          widget.gzipCompressFilePicker ?? pickGzipCompressFile,
+      gzipCompressClipboardReader:
+          widget.gzipCompressClipboardReader ?? readGzipCompressClipboard,
+      gzipCompressFileSaver:
+          widget.gzipCompressFileSaver ?? saveGzipCompressFile,
       certificateConvertService: widget.certificateConvertService,
       certificateConvertFilePicker:
           widget.certificateConvertFilePicker ?? pickCertificateConvertFile,
