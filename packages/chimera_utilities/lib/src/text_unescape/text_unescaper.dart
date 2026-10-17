@@ -98,8 +98,7 @@ final class TextUnescaper {
         _throwMalformed(reason: 'unescaped-control', offset: offset);
       }
       if (unit != 0x5C) {
-        writer.writeCharCode(unit);
-        offset += 1;
+        offset = _writeLiteralAt(input, offset, writer);
         continue;
       }
 
@@ -125,10 +124,10 @@ final class TextUnescaper {
         case 0x74:
           writer.writeCharCode(0x09);
         case 0x75:
-          writer.writeCharCode(
-            _readHex(input, offset + 1, 4, sequenceOffset: start),
-          );
-          offset += 4;
+          final decoded = _readUnicodeEscape(input, start);
+          writer.writeRune(decoded.scalar);
+          offset = decoded.nextOffset;
+          continue;
         default:
           _throwMalformed(reason: 'unknown-escape', offset: start);
       }
@@ -140,8 +139,7 @@ final class TextUnescaper {
     var offset = 0;
     while (offset < input.length) {
       if (input.codeUnitAt(offset) != 0x5C) {
-        writer.writeCharCode(input.codeUnitAt(offset));
-        offset += 1;
+        offset = _writeLiteralAt(input, offset, writer);
         continue;
       }
 
@@ -151,10 +149,9 @@ final class TextUnescaper {
       }
       switch (input.codeUnitAt(offset)) {
         case 0x75:
-          writer.writeCharCode(
-            _readHex(input, offset + 1, 4, sequenceOffset: start),
-          );
-          offset += 5;
+          final decoded = _readUnicodeEscape(input, start);
+          writer.writeRune(decoded.scalar);
+          offset = decoded.nextOffset;
         case 0x55:
           final scalar = _readHex(input, offset + 1, 8, sequenceOffset: start);
           _validateScalar(scalar, start);
@@ -170,8 +167,7 @@ final class TextUnescaper {
     var offset = 0;
     while (offset < input.length) {
       if (input.codeUnitAt(offset) != 0x5C) {
-        writer.writeCharCode(input.codeUnitAt(offset));
-        offset += 1;
+        offset = _writeLiteralAt(input, offset, writer);
         continue;
       }
 
@@ -221,10 +217,9 @@ final class TextUnescaper {
           );
           offset += 3;
         case 0x75:
-          writer.writeCharCode(
-            _readHex(input, offset + 1, 4, sequenceOffset: start),
-          );
-          offset += 5;
+          final decoded = _readUnicodeEscape(input, start);
+          writer.writeRune(decoded.scalar);
+          offset = decoded.nextOffset;
         case 0x55:
           final scalar = _readHex(input, offset + 1, 8, sequenceOffset: start);
           _validateScalar(scalar, start);
@@ -240,8 +235,7 @@ final class TextUnescaper {
     var offset = 0;
     while (offset < input.length) {
       if (input.codeUnitAt(offset) != 0x26) {
-        writer.writeCharCode(input.codeUnitAt(offset));
-        offset += 1;
+        offset = _writeLiteralAt(input, offset, writer);
         continue;
       }
 
@@ -266,11 +260,15 @@ final class TextUnescaper {
             body.length > 1 &&
             (body.codeUnitAt(1) == 0x78 || body.codeUnitAt(1) == 0x58);
         final digits = body.substring(hexadecimal ? 2 : 1);
-        final scalar = digits.isEmpty
-            ? null
-            : int.tryParse(digits, radix: hexadecimal ? 16 : 10);
-        if (scalar == null) {
+        final validDigits =
+            digits.isNotEmpty &&
+            digits.codeUnits.every(hexadecimal ? _isHexDigit : _isDecimalDigit);
+        if (!validDigits) {
           _throwMalformed(reason: 'invalid-number', offset: start);
+        }
+        final scalar = int.tryParse(digits, radix: hexadecimal ? 16 : 10);
+        if (scalar == null) {
+          _throwMalformed(reason: 'out-of-range', offset: start);
         }
         _validateScalar(scalar, start);
         writer.writeRune(scalar);
@@ -298,14 +296,16 @@ final class TextUnescaper {
 
       final start = offset;
       final first = input.codeUnitAt(offset);
-      final width =
-          first >= 0xD800 &&
-              first <= 0xDBFF &&
-              offset + 1 < input.length &&
-              input.codeUnitAt(offset + 1) >= 0xDC00 &&
-              input.codeUnitAt(offset + 1) <= 0xDFFF
-          ? 2
-          : 1;
+      var width = 1;
+      if (_isHighSurrogate(first)) {
+        if (offset + 1 >= input.length ||
+            !_isLowSurrogate(input.codeUnitAt(offset + 1))) {
+          _throwMalformed(reason: 'surrogate-scalar', offset: start);
+        }
+        width = 2;
+      } else if (_isLowSurrogate(first)) {
+        _throwMalformed(reason: 'surrogate-scalar', offset: start);
+      }
       final encoded = utf8.encode(input.substring(offset, offset + width));
       bytes.addAll(encoded);
       offsets.addAll(List<int>.filled(encoded.length, start));
@@ -365,20 +365,86 @@ final class TextUnescaper {
     if (offset + length > input.length) {
       _throwMalformed(reason: 'incomplete-sequence', offset: sequenceOffset);
     }
-    final value = int.tryParse(
-      input.substring(offset, offset + length),
-      radix: 16,
-    );
-    if (value == null) {
+    final digits = input.substring(offset, offset + length);
+    if (!digits.codeUnits.every(_isHexDigit)) {
       _throwMalformed(reason: 'invalid-hex', offset: sequenceOffset);
     }
-    return value;
+    return int.parse(digits, radix: 16);
   }
+
+  ({int scalar, int nextOffset}) _readUnicodeEscape(
+    String input,
+    int sequenceOffset,
+  ) {
+    final first = _readHex(
+      input,
+      sequenceOffset + 2,
+      4,
+      sequenceOffset: sequenceOffset,
+    );
+    if (_isLowSurrogate(first)) {
+      _throwMalformed(reason: 'surrogate-scalar', offset: sequenceOffset);
+    }
+    if (!_isHighSurrogate(first)) {
+      return (scalar: first, nextOffset: sequenceOffset + 6);
+    }
+
+    final secondOffset = sequenceOffset + 6;
+    if (secondOffset + 6 > input.length ||
+        input.codeUnitAt(secondOffset) != 0x5C ||
+        input.codeUnitAt(secondOffset + 1) != 0x75) {
+      _throwMalformed(reason: 'surrogate-scalar', offset: sequenceOffset);
+    }
+    final second = _readHex(
+      input,
+      secondOffset + 2,
+      4,
+      sequenceOffset: secondOffset,
+    );
+    if (!_isLowSurrogate(second)) {
+      _throwMalformed(reason: 'surrogate-scalar', offset: sequenceOffset);
+    }
+    return (
+      scalar: 0x10000 + ((first - 0xD800) << 10) + second - 0xDC00,
+      nextOffset: secondOffset + 6,
+    );
+  }
+
+  int _writeLiteralAt(String input, int offset, _UnescapeWriter writer) {
+    final first = input.codeUnitAt(offset);
+    if (_isHighSurrogate(first)) {
+      if (offset + 1 >= input.length ||
+          !_isLowSurrogate(input.codeUnitAt(offset + 1))) {
+        _throwMalformed(reason: 'surrogate-scalar', offset: offset);
+      }
+      final second = input.codeUnitAt(offset + 1);
+      writer.writeRune(0x10000 + ((first - 0xD800) << 10) + second - 0xDC00);
+      return offset + 2;
+    }
+    if (_isLowSurrogate(first)) {
+      _throwMalformed(reason: 'surrogate-scalar', offset: offset);
+    }
+    writer.writeCharCode(first);
+    return offset + 1;
+  }
+
+  bool _isHexDigit(int codeUnit) =>
+      codeUnit >= 0x30 && codeUnit <= 0x39 ||
+      codeUnit >= 0x41 && codeUnit <= 0x46 ||
+      codeUnit >= 0x61 && codeUnit <= 0x66;
+
+  bool _isDecimalDigit(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x39;
+
+  bool _isHighSurrogate(int codeUnit) =>
+      codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
+
+  bool _isLowSurrogate(int codeUnit) =>
+      codeUnit >= 0xDC00 && codeUnit <= 0xDFFF;
 
   bool _isOctal(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x37;
 
   void _validateScalar(int scalar, int offset) {
-    if (scalar > 0x10FFFF) {
+    if (scalar < 0 || scalar > 0x10FFFF) {
       _throwMalformed(reason: 'out-of-range', offset: offset);
     }
     if (scalar >= 0xD800 && scalar <= 0xDFFF) {

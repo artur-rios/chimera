@@ -2173,6 +2173,38 @@ void main() {
     expect(exitCode, 0);
     expect(out.toString(), 'Unescaped text saved.\n');
     expect(await output.readAsBytes(), utf8.encode('&é'));
+
+    await input.writeAsString(r'\uD800');
+    final invalidOutput = File(
+      '${directory.path}${Platform.pathSeparator}invalid-unescaped.txt',
+    );
+    final invalidErr = StringBuffer();
+    final invalidExitCode = await runChimera(
+      <String>[
+        'text',
+        'unescape',
+        '--mode=json',
+        '--file=${input.path}',
+        '--output=${invalidOutput.path}',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: StringBuffer(),
+      err: invalidErr,
+    );
+
+    expect(invalidExitCode, 64);
+    expect(invalidOutput.existsSync(), isFalse);
+    final invalidError =
+        (jsonDecode(invalidErr.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+    expect(
+      invalidError['location'],
+      allOf(
+        containsPair('reason', 'surrogate-scalar'),
+        containsPair('offset', 0),
+      ),
+    );
   });
 
   test(

@@ -145,6 +145,10 @@ void main() {
         'x&bogus;': (reason: 'unknown-entity', offset: 1),
         'x&amp': (reason: 'unterminated-entity', offset: 1),
         '&#x110000;': (reason: 'out-of-range', offset: 0),
+        '&#999999999999999999999999999999;': (
+          reason: 'out-of-range',
+          offset: 0,
+        ),
         '&#55296;': (reason: 'surrogate-scalar', offset: 0),
       };
 
@@ -173,6 +177,66 @@ void main() {
           ),
           _validationFailure(entry.value.reason, entry.value.offset),
           reason: entry.key,
+        );
+      }
+    });
+
+    test('GivenSignedDigits_WhenUnescaped_ThenTypedFailuresReturn', () {
+      final cases = <({String input, String mode, String reason})>[
+        (input: r'\u+041', mode: 'json', reason: 'invalid-hex'),
+        (input: r'\u-001', mode: 'unicode', reason: 'invalid-hex'),
+        (input: r'\x+1', mode: 'c', reason: 'invalid-hex'),
+        (input: r'\x-1', mode: 'c', reason: 'invalid-hex'),
+        (input: '&#+65;', mode: 'html', reason: 'invalid-number'),
+        (input: '&#-1;', mode: 'html', reason: 'invalid-number'),
+        (input: '&#x+41;', mode: 'html', reason: 'invalid-number'),
+        (input: '&#x-1;', mode: 'html', reason: 'invalid-number'),
+        (input: '%+1', mode: 'url', reason: 'invalid-hex'),
+        (input: '%-1', mode: 'url', reason: 'invalid-hex'),
+      ];
+
+      for (final testCase in cases) {
+        expect(
+          () => unescaper.unescape(
+            TextUnescapeRequest(input: testCase.input, mode: testCase.mode),
+          ),
+          _validationFailure(testCase.reason, 0),
+          reason: '${testCase.mode}: ${testCase.input}',
+        );
+      }
+    });
+
+    test('GivenUnicodeSurrogatePairs_WhenUnescaped_ThenScalarReturns', () {
+      for (final mode in const <String>['json', 'unicode', 'c']) {
+        final result = unescaper.unescape(
+          TextUnescapeRequest(input: r'\uD83D\uDE00', mode: mode),
+        );
+
+        expect(result.unescaped, '\u{1F600}', reason: mode);
+      }
+    });
+
+    test('GivenIsolatedSurrogates_WhenUnescaped_ThenTypedFailuresReturn', () {
+      for (final mode in const <String>['json', 'unicode', 'c']) {
+        for (final input in const <String>[r'\uD800', r'\uDC00']) {
+          expect(
+            () => unescaper.unescape(
+              TextUnescapeRequest(input: input, mode: mode),
+            ),
+            _validationFailure('surrogate-scalar', 0),
+            reason: '$mode: $input',
+          );
+        }
+      }
+
+      final isolated = String.fromCharCode(0xD800);
+      for (final mode in TextUnescaper.supportedModes) {
+        expect(
+          () => unescaper.unescape(
+            TextUnescapeRequest(input: isolated, mode: mode),
+          ),
+          _validationFailure('surrogate-scalar', 0),
+          reason: 'literal $mode',
         );
       }
     });

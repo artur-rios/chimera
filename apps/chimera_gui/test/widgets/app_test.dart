@@ -2326,6 +2326,32 @@ void main() {
   );
 
   testWidgets(
+    'GivenIsolatedSurrogateFromAdapter_WhenSubmitted_ThenNoResultIsRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/unescape',
+          textUnescapeFilePicker: () async => r'\uD800',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-unescape-file')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The escaped text, mode, or options are invalid.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-unescape-result')), findsNothing);
+      expect(find.byKey(const Key('text-unescape-save')), findsNothing);
+    },
+  );
+
+  testWidgets(
     'GivenTextUnescapeAccessFailures_WhenAdaptersRun_ThenResultIsNotRetained',
     (tester) async {
       await tester.pumpWidget(
