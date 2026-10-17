@@ -2812,4 +2812,231 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'GivenTextAnalyzeHomeAction_WhenUnicodeSubmitted_ThenCountsAndSemanticsRender',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('open-text-analyze')));
+      await tester.tap(find.byKey(const Key('open-text-analyze')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-analyze-input')),
+        'Cafe\u0301 👩🏽‍💻\nOlá',
+      );
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Characters: 10'), findsOneWidget);
+      expect(find.text('Words: 2'), findsOneWidget);
+      expect(find.text('Lines: 2'), findsOneWidget);
+      expect(find.text('UTF-8 bytes: 27'), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('text-analyze-result-semantics')),
+      );
+      expect(semantics.properties.role, SemanticsRole.region);
+      expect(
+        semantics.properties.value,
+        'Characters: 10\nWords: 2\nLines: 2\nUTF-8 bytes: 27',
+      );
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenTextAnalyzeAdapters_WhenLoadedCopiedAndSaved_ThenExactPreviewTransfers',
+    (tester) async {
+      String? copied;
+      List<int>? saved;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/analyze',
+          textAnalyzeFilePicker: () async => 'arquivo',
+          textAnalyzeClipboardReader: () async => 'A\nB',
+          textAnalyzeClipboardWriter: (value) async => copied = value,
+          textAnalyzeFileSaver: (_, bytes) async {
+            saved = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-analyze-file')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('text-analyze-input')))
+            .controller!
+            .text,
+        'arquivo',
+      );
+      await tester.tap(find.byKey(const Key('text-analyze-paste')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+
+      const preview = 'Caracteres: 3\nPalavras: 2\nLinhas: 2\nBytes UTF-8: 3\n';
+      await tester.ensureVisible(find.byKey(const Key('text-analyze-copy')));
+      await tester.tap(find.byKey(const Key('text-analyze-copy')));
+      await tester.pumpAndSettle();
+      expect(copied, preview);
+      expect(find.text('Análise de texto copiada.'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('text-analyze-save')));
+      await tester.tap(find.byKey(const Key('text-analyze-save')));
+      await tester.pumpAndSettle();
+      expect(utf8.decode(saved!), preview);
+      expect(find.text('Análise de texto salva.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenTextAnalyzeFailures_WhenActionsFail_ThenNoPartialResultIsRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/analyze',
+          textAnalyzeFilePicker: () async => throw Exception('secret'),
+          textAnalyzeClipboardReader: () async => throw Exception('denied'),
+          textAnalyzeClipboardWriter: (_) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-analyze-copy')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('text-analyze-copy')));
+      await tester.tap(find.byKey(const Key('text-analyze-copy')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('text-analyze-file')));
+      await tester.tap(find.byKey(const Key('text-analyze-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-analyze-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+
+      await tester.pumpWidget(
+        ChimeraApp(
+          key: UniqueKey(),
+          localeTag: 'en',
+          initialLocation: '/text/analyze',
+          textAnalyzeService: const TextAnalyzeService(
+            analyzer: TextAnalyzer(maxInputCodeUnits: 0),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Text analysis exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextAnalyzeSaveFailure_WhenSaved_ThenResultClearsAndErrorAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/analyze',
+          textAnalyzeFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-analyze-save')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('text-analyze-save')));
+      await tester.tap(find.byKey(const Key('text-analyze-save')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-analyze-save')), findsNothing);
+      expect(
+        find.text('The text analysis could not be saved.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenPendingTextAnalyzeLoadOrChangedInput_WhenResultExists_ThenStaleClearsAndActionsDisable',
+    (tester) async {
+      final loaded = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/analyze',
+          textAnalyzeFilePicker: () => loaded.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-analyze-copy')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-analyze-file')));
+      await tester.pump();
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('text-analyze-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      loaded.complete('loaded');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-analyze-input')),
+        'changed',
+      );
+      expect(find.byKey(const Key('text-analyze-copy')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowTextAnalyzeViewport_WhenPortugueseFormRenders_ThenNoOverflowOccurs',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/text/analyze'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Analisar texto'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

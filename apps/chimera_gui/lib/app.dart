@@ -15,6 +15,7 @@ import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
+import 'text_analyze_page.dart';
 import 'text_escape_page.dart';
 import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
@@ -36,6 +37,7 @@ final class ChimeraApp extends StatelessWidget {
     ),
     this.listCompareService = const ListCompareService(),
     this.numberBaseService = const NumberBaseService(),
+    this.textAnalyzeService = const TextAnalyzeService(),
     this.textEscapeService = const TextEscapeService(),
     this.textUnescapeService = const TextUnescapeService(),
     this.sqlFormatService = const SqlFormatService(),
@@ -62,6 +64,10 @@ final class ChimeraApp extends StatelessWidget {
     this.numberBaseFileSaver,
     this.numberBaseClipboardReader,
     this.numberBaseClipboardWriter,
+    this.textAnalyzeFilePicker,
+    this.textAnalyzeFileSaver,
+    this.textAnalyzeClipboardReader,
+    this.textAnalyzeClipboardWriter,
     this.textEscapeFilePicker,
     this.textEscapeFileSaver,
     this.textEscapeClipboardReader,
@@ -91,6 +97,7 @@ final class ChimeraApp extends StatelessWidget {
   final JsonYamlService jsonYamlService;
   final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
+  final TextAnalyzeService textAnalyzeService;
   final TextEscapeService textEscapeService;
   final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
@@ -117,6 +124,10 @@ final class ChimeraApp extends StatelessWidget {
   final NumberBaseFileSaver? numberBaseFileSaver;
   final NumberBaseClipboardReader? numberBaseClipboardReader;
   final NumberBaseClipboardWriter? numberBaseClipboardWriter;
+  final TextAnalyzeFilePicker? textAnalyzeFilePicker;
+  final TextAnalyzeFileSaver? textAnalyzeFileSaver;
+  final TextAnalyzeClipboardReader? textAnalyzeClipboardReader;
+  final TextAnalyzeClipboardWriter? textAnalyzeClipboardWriter;
   final TextEscapeFilePicker? textEscapeFilePicker;
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
@@ -148,6 +159,7 @@ final class ChimeraApp extends StatelessWidget {
         jsonYamlService: jsonYamlService,
         listCompareService: listCompareService,
         numberBaseService: numberBaseService,
+        textAnalyzeService: textAnalyzeService,
         textEscapeService: textEscapeService,
         textUnescapeService: textUnescapeService,
         sqlFormatService: sqlFormatService,
@@ -174,6 +186,10 @@ final class ChimeraApp extends StatelessWidget {
         numberBaseFileSaver: numberBaseFileSaver,
         numberBaseClipboardReader: numberBaseClipboardReader,
         numberBaseClipboardWriter: numberBaseClipboardWriter,
+        textAnalyzeFilePicker: textAnalyzeFilePicker,
+        textAnalyzeFileSaver: textAnalyzeFileSaver,
+        textAnalyzeClipboardReader: textAnalyzeClipboardReader,
+        textAnalyzeClipboardWriter: textAnalyzeClipboardWriter,
         textEscapeFilePicker: textEscapeFilePicker,
         textEscapeFileSaver: textEscapeFileSaver,
         textEscapeClipboardReader: textEscapeClipboardReader,
@@ -207,6 +223,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonYamlService,
     required this.listCompareService,
     required this.numberBaseService,
+    required this.textAnalyzeService,
     required this.textEscapeService,
     required this.textUnescapeService,
     required this.sqlFormatService,
@@ -233,6 +250,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.numberBaseFileSaver,
     required this.numberBaseClipboardReader,
     required this.numberBaseClipboardWriter,
+    required this.textAnalyzeFilePicker,
+    required this.textAnalyzeFileSaver,
+    required this.textAnalyzeClipboardReader,
+    required this.textAnalyzeClipboardWriter,
     required this.textEscapeFilePicker,
     required this.textEscapeFileSaver,
     required this.textEscapeClipboardReader,
@@ -261,6 +282,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonYamlService jsonYamlService;
   final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
+  final TextAnalyzeService textAnalyzeService;
   final TextEscapeService textEscapeService;
   final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
@@ -287,6 +309,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final NumberBaseFileSaver? numberBaseFileSaver;
   final NumberBaseClipboardReader? numberBaseClipboardReader;
   final NumberBaseClipboardWriter? numberBaseClipboardWriter;
+  final TextAnalyzeFilePicker? textAnalyzeFilePicker;
+  final TextAnalyzeFileSaver? textAnalyzeFileSaver;
+  final TextAnalyzeClipboardReader? textAnalyzeClipboardReader;
+  final TextAnalyzeClipboardWriter? textAnalyzeClipboardWriter;
   final TextEscapeFilePicker? textEscapeFilePicker;
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
@@ -327,6 +353,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonYamlService: widget.jsonYamlService,
       listCompareService: widget.listCompareService,
       numberBaseService: widget.numberBaseService,
+      textAnalyzeService: widget.textAnalyzeService,
       textEscapeService: widget.textEscapeService,
       textUnescapeService: widget.textUnescapeService,
       sqlFormatService: widget.sqlFormatService,
@@ -362,6 +389,13 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.numberBaseClipboardReader ?? readNumberBaseClipboard,
       numberBaseClipboardWriter:
           widget.numberBaseClipboardWriter ?? writeNumberBaseClipboard,
+      textAnalyzeFilePicker:
+          widget.textAnalyzeFilePicker ?? pickTextAnalyzeFile,
+      textAnalyzeFileSaver: widget.textAnalyzeFileSaver ?? saveTextAnalyzeFile,
+      textAnalyzeClipboardReader:
+          widget.textAnalyzeClipboardReader ?? readTextAnalyzeClipboard,
+      textAnalyzeClipboardWriter:
+          widget.textAnalyzeClipboardWriter ?? writeTextAnalyzeClipboard,
       textEscapeFilePicker: widget.textEscapeFilePicker ?? pickTextEscapeFile,
       textEscapeFileSaver: widget.textEscapeFileSaver ?? saveTextEscapeFile,
       textEscapeClipboardReader:
