@@ -24,12 +24,12 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_utilities/pubspec.yaml`
 - Create: `packages/chimera_utilities/test/text_analyze/text_analyzer_test.dart`
 
-- [ ] Add failing Given-When-Then tests for ASCII, empty/Unicode boundaries,
+- [x] Add failing Given-When-Then tests for ASCII, empty/Unicode boundaries,
   grapheme clusters, multilingual words, punctuation/apostrophes, line endings,
   UTF-8 bytes, and budgets.
-- [ ] Implement the smallest deterministic analyzer and typed resource failure.
-- [ ] Run the focused utility test and strict package analysis.
-- [ ] Commit the green shared behavior.
+- [x] Implement the smallest deterministic analyzer and typed resource failure.
+- [x] Run the focused utility test and strict package analysis.
+- [x] Commit the green shared behavior.
 
 ### Task 2: Add the core operation service
 
