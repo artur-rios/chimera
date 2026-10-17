@@ -30,6 +30,54 @@ void main() {
     });
 
     test(
+      'GivenEverySupportedBase_WhenDigitsRoundTrip_ThenBoundariesAreEnforced',
+      () {
+        for (var base = 2; base <= 36; base++) {
+          final highestDigit = _digitFor(base - 1);
+          final decimal = converter.convert(
+            NumberBaseRequest(
+              value: highestDigit,
+              sourceBase: base,
+              targetBase: 10,
+            ),
+          );
+          expect(decimal.converted, '${base - 1}', reason: 'base $base');
+
+          final source = '${base * base + base - 1}';
+          final encoded = converter.convert(
+            NumberBaseRequest(value: source, sourceBase: 10, targetBase: base),
+          );
+          final roundTrip = converter.convert(
+            NumberBaseRequest(
+              value: encoded.converted,
+              sourceBase: base,
+              targetBase: 10,
+            ),
+          );
+          expect(roundTrip.converted, source, reason: 'base $base round trip');
+
+          final firstInvalid = base < 36 ? _digitFor(base) : '{';
+          expect(
+            () => converter.convert(
+              NumberBaseRequest(
+                value: firstInvalid,
+                sourceBase: base,
+                targetBase: 10,
+              ),
+            ),
+            _numberBaseFailure(
+              kind: NumberBaseFailureKind.validation,
+              code: 'number-base.invalid-value',
+              field: 'value',
+              reason: 'invalid-digit',
+            ),
+            reason: 'base $base first invalid digit',
+          );
+        }
+      },
+    );
+
+    test(
       'GivenSignsAndLeadingZeroes_WhenConverted_ThenRepresentationIsNormalized',
       () {
         final cases = <String, String>{
@@ -234,6 +282,9 @@ void main() {
     );
   });
 }
+
+String _digitFor(int value) =>
+    String.fromCharCode(value < 10 ? 0x30 + value : 0x61 + value - 10);
 
 Matcher _numberBaseFailure({
   required NumberBaseFailureKind kind,

@@ -61,24 +61,24 @@ final class NumberBaseConverter {
       _throwResourceLimit(field: 'value', reason: 'input-limit');
     }
 
-    final value = request.value.trim();
-    if (value.isEmpty ||
-        value == '+' ||
-        value == '-' ||
-        value.length == 1 && _isSign(value.codeUnitAt(0))) {
-      _throwInvalidValue('missing-value');
-    }
-
-    var digitStart = 0;
-    if (_isSign(value.codeUnitAt(0))) digitStart = 1;
-    for (var index = digitStart; index < value.length; index++) {
-      final digit = _digitValue(value.codeUnitAt(index));
-      if (digit < 0 || digit >= request.sourceBase) {
-        _throwInvalidValue('invalid-digit');
-      }
-    }
-
     try {
+      final value = request.value.trim();
+      if (value.isEmpty ||
+          value == '+' ||
+          value == '-' ||
+          value.length == 1 && _isSign(value.codeUnitAt(0))) {
+        _throwInvalidValue('missing-value');
+      }
+
+      var digitStart = 0;
+      if (_isSign(value.codeUnitAt(0))) digitStart = 1;
+      for (var index = digitStart; index < value.length; index++) {
+        final digit = _digitValue(value.codeUnitAt(index));
+        if (digit < 0 || digit >= request.sourceBase) {
+          _throwInvalidValue('invalid-digit');
+        }
+      }
+
       final parsed = BigInt.parse(value, radix: request.sourceBase);
       final converted = maxOutputCharacters == null
           ? parsed.toRadixString(request.targetBase)

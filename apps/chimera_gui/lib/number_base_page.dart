@@ -91,6 +91,7 @@ final class _NumberBasePageState extends State<NumberBasePage> {
   }
 
   Future<void> _submit() async {
+    if (_isRunning) return;
     setState(() {
       _isRunning = true;
       _output = null;
@@ -247,8 +248,12 @@ final class _NumberBasePageState extends State<NumberBasePage> {
                     key: const Key('number-base-input'),
                     controller: _inputController,
                     autofocus: true,
+                    enabled: !_isRunning,
                     textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
+                    onChanged: (_) {
+                      if (!_isRunning) setState(_clearFeedback);
+                    },
+                    onSubmitted: _isRunning ? null : (_) => _submit(),
                     decoration: InputDecoration(
                       labelText: _message('numberBase.inputLabel'),
                       border: const OutlineInputBorder(),

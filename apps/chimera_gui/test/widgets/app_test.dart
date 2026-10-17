@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:chimera_core/chimera_core.dart';
@@ -1834,6 +1835,67 @@ void main() {
 
       expect(find.text('ff'), findsOneWidget);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenNumberResult_WhenInputIsEdited_ThenStaleActionsAreCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('number-base-result')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('number-base-input')), '256');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+      expect(find.byKey(const Key('number-base-copy')), findsNothing);
+      expect(find.byKey(const Key('number-base-save')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenDelayedNumberLoad_WhenPending_ThenKeyboardSubmissionCannotRaceIt',
+    (tester) async {
+      final loadedValue = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+          numberBaseFilePicker: () => loadedValue.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('number-base-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('number-base-file')));
+      await tester.pump();
+      final pendingInput = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(pendingInput.enabled, isFalse);
+      expect(pendingInput.onSubmitted, isNull);
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+
+      loadedValue.complete('15');
+      await tester.pumpAndSettle();
+      final completedInput = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(completedInput.enabled, isTrue);
+      expect(completedInput.controller!.text, '15');
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
     },
   );
 }
