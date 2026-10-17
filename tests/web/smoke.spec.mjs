@@ -138,18 +138,51 @@ test('text escape flow escapes Unicode locally without external requests', async
   await page.goto('/');
   await expect(page).toHaveTitle('Chimera');
   await enableFlutterSemantics(page);
-  await page.getByRole('button', { name: 'Escape text' }).click();
+  await page
+    .getByRole('button', { name: /^Escape text$/ })
+    .click();
   await expect(page.getByText('Escape text').first()).toBeVisible();
 
   await fillFlutterTextBox(
     page.getByRole('textbox', { name: 'Input text' }),
     'A"\\\né',
   );
-  await page.getByRole('button', { name: 'Escape text' }).click();
+  await page.getByRole('button', { name: /^Escape text$/ }).click();
 
   await expect(
     page.getByRole('group', {
       name: /Escaped text A.*é/,
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
+test('text unescape flow decodes Unicode locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page
+    .getByRole('button', { name: /^Unescape text$/ })
+    .click();
+  await expect(page.getByText('Unescape text').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Escaped input text' }),
+    String.raw`A\"\\\né\u0021`,
+  );
+  await page.getByRole('button', { name: /^Unescape text$/ }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: /Unescaped text A.*é!/,
     }),
   ).toBeVisible();
   expect(externalRequests).toEqual([]);

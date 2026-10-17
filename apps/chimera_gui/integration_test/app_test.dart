@@ -108,6 +108,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    'GivenTextUnescapeRoute_WhenUnicodeEscapesDecode_ThenSharedResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/unescape'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-unescape-input')),
+        r'A\"\\\né\u0021',
+      );
+      await tester.tap(find.byKey(const Key('text-unescape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('A"\\\né!'), findsOneWidget);
+    },
+  );
+
   testWidgets('GivenJsonTableRoute_WhenConversionRuns_ThenTableIsVisible', (
     tester,
   ) async {
