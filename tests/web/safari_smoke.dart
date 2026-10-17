@@ -1062,7 +1062,8 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
         await driver.execute(
           '''
     const option = [...document.querySelectorAll('[role="menuitem"]')]
-      .find(element => element.textContent.trim() === arguments[0]);
+      .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+        element.getAttribute('aria-disabled') !== 'true');
     if (!option) return false;
     option.click();
     return true;

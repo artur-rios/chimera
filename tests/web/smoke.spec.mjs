@@ -6,9 +6,14 @@ import { gunzipSync } from 'node:zlib';
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
 
 // Run the native Safari helper's actual observation body against Flutter.
-const safariInputObservation = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8')
+const safariHarness = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8');
+const safariInputObservation = safariHarness
   .split('Future<bool> _inputHasValue(')[1]
   .match(/driver\.execute\(\s*'''([\s\S]*?)'''/)[1];
+const safariGzipScripts = [...safariHarness.split('Future<void> _compressGzip(')[1]
+  .split('Future<void> _convertCertificate(')[0].matchAll(/r?'''([\s\S]*?)'''/g)].map(match => match[1]);
+const safariLevelOpening = safariGzipScripts.find(source => source.includes('Compression level 6'));
+const safariLevelSelection = safariGzipScripts.find(source => source.includes('[role="menuitem"]'));
 
 test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservationAndExactDownloadSucceed', async ({ page }) => {
   const requests = [];
@@ -41,8 +46,8 @@ test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservati
   await expect.poll(() => page.evaluate(source =>
     new Function(source)('Text to compress', 'Olá 🌍', true),
   safariInputObservation)).toBe(true);
-  await page.getByRole('button', { name: 'Compression level 6', exact: true }).click();
-  await page.getByRole('menuitem', { name: '0', exact: true }).click();
+  await expect.poll(() => page.evaluate(source => new Function(source)(), safariLevelOpening)).toBe(true);
+  await expect.poll(() => page.evaluate(source => new Function(source)('0'), safariLevelSelection)).toBe(true);
   await page.getByRole('button', { name: 'Compress', exact: true }).click();
   await expect(page.getByRole('region', {
     name: 'Compressed binary result Compression succeeded. Compression level: 0 Input bytes: 9 Output bytes: 32', exact: true,
