@@ -22,3 +22,5 @@ Versioning and use tags in the form `vX.Y.Z`.
   delimiters and headers, localized preview/save flow, and exact CLI file output.
 - Deterministic JSON-to-YAML serialization with indentation and quoting options,
   typed resource limits, localized preview/save flow, and exact CLI file output.
+- Deterministic JSON validation and formatting with selectable indentation,
+  localized file/clipboard preview, copy/save flows, and exact CLI file output.

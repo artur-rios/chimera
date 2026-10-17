@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
+import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 
@@ -15,6 +16,7 @@ GoRouter buildRouter({
   required CronService cronService,
   required DateService dateService,
   required JsonCsvService jsonCsvService,
+  required JsonFormatService jsonFormatService,
   required JsonTableService jsonTableService,
   required JsonYamlService jsonYamlService,
   required DateTime Function() currentTime,
@@ -22,6 +24,10 @@ GoRouter buildRouter({
   required DateFilePicker dateFilePicker,
   required JsonCsvFilePicker jsonCsvFilePicker,
   required JsonCsvFileSaver jsonCsvFileSaver,
+  required JsonFormatFilePicker jsonFormatFilePicker,
+  required JsonFormatFileSaver jsonFormatFileSaver,
+  required JsonFormatClipboardReader jsonFormatClipboardReader,
+  required JsonFormatClipboardWriter jsonFormatClipboardWriter,
   required JsonTableFilePicker jsonTableFilePicker,
   required JsonYamlFilePicker jsonYamlFilePicker,
   required JsonYamlFileSaver jsonYamlFileSaver,
@@ -78,6 +84,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/json/to-yaml'),
                         child: Text(
                           catalog.lookup(localeTag, 'jsonYaml.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-json-format'),
+                        onPressed: () => context.go('/json/format'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jsonFormat.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -142,6 +156,18 @@ GoRouter buildRouter({
           service: jsonYamlService,
           filePicker: jsonYamlFilePicker,
           fileSaver: jsonYamlFileSaver,
+        ),
+      ),
+      GoRoute(
+        path: '/json/format',
+        builder: (context, state) => JsonFormatPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jsonFormatService,
+          filePicker: jsonFormatFilePicker,
+          fileSaver: jsonFormatFileSaver,
+          clipboardReader: jsonFormatClipboardReader,
+          clipboardWriter: jsonFormatClipboardWriter,
         ),
       ),
     ],

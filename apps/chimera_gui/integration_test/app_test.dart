@@ -127,4 +127,33 @@ void main() {
 
     expect(find.text('name: Ada\nlanguages:\n  - Dart\n  - C'), findsOneWidget);
   });
+
+  testWidgets('GivenJsonFormatRoute_WhenFormattingRuns_ThenJsonIsVisible', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const ChimeraApp(localeTag: 'en', initialLocation: '/json/format'),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(const Key('json-format-input')),
+      '{"name":"Ada","languages":["Dart","C"]}',
+    );
+    await tester.tap(find.byKey(const Key('json-format-submit')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        '{\n'
+        '  "name": "Ada",\n'
+        '  "languages": [\n'
+        '    "Dart",\n'
+        '    "C"\n'
+        '  ]\n'
+        '}',
+      ),
+      findsOneWidget,
+    );
+  });
 }

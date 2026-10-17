@@ -191,8 +191,43 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'JSON YAML');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for JSON format flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Format JSON'),
+      'Home page did not return for JSON format flow',
+    );
+    await _clickButton(driver, 'Format JSON');
+    await _waitUntil(
+      () => _pageContains(driver, 'Paste JSON'),
+      'JSON format page did not open',
+    );
+    await _fillTextBox(driver, 'JSON value', '{"name":"Ada","meta":{"x":1}}');
+    await _clickButton(driver, 'Format JSON');
+    await _waitUntil(
+      () => _pageContains(driver, 'Formatted JSON result'),
+      'Formatted JSON result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, '"name": "Ada"'),
+      'Formatted JSON content was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'JSON format');
+
     stdout.writeln(
-      'Safari cron, date, JSON table, JSON CSV, and JSON YAML smoke: OK',
+      'Safari cron, date, JSON table, JSON CSV, JSON YAML, and JSON format smoke: OK',
     );
   } finally {
     await driver.quit();

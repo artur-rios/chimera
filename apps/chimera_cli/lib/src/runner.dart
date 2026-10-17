@@ -21,6 +21,7 @@ Future<int> runChimera(
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
+  JsonFormatService jsonFormatService = const JsonFormatService(),
   JsonTableService jsonTableService = const JsonTableService(),
   JsonYamlService jsonYamlService = const JsonYamlService(),
   DateTime Function()? currentTime,
@@ -111,6 +112,21 @@ Future<int> runChimera(
         jsonYamlService: jsonYamlService,
       );
     }
+    if (parsed.command!.name == 'json' &&
+        parsed.command!.command?.name == 'format') {
+      return await _runJsonFormat(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        jsonFormatService: jsonFormatService,
+      );
+    }
 
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
@@ -124,12 +140,19 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-csv';
     final isJsonYaml =
         args.length >= 2 && args[0] == 'json' && args[1] == 'to-yaml';
+    final isJsonFormat =
+        args.length >= 2 && args[0] == 'json' && args[1] == 'format';
     _writeFailure(
       err,
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isCron || isDate || isJsonTable || isJsonCsv || isJsonYaml) &&
+          (isCron ||
+              isDate ||
+              isJsonTable ||
+              isJsonCsv ||
+              isJsonYaml ||
+              isJsonFormat) &&
           args.contains('--json'),
       kind: 'validation',
       code: isCron
@@ -142,6 +165,8 @@ Future<int> runChimera(
           ? 'json-csv.invalid-options'
           : isJsonYaml
           ? 'json-yaml.invalid-options'
+          : isJsonFormat
+          ? 'json-format.invalid-options'
           : 'cli.invalid-options',
       messageKey: isCron
           ? 'error.cron.validation'
@@ -153,6 +178,8 @@ Future<int> runChimera(
           ? 'error.jsonCsv.validation'
           : isJsonYaml
           ? 'error.jsonYaml.validation'
+          : isJsonFormat
+          ? 'error.jsonFormat.validation'
           : 'error.unexpected',
     );
     return 64;
@@ -198,15 +225,132 @@ ArgParser _buildParser() {
     ..addOption('indent', defaultsTo: '2')
     ..addFlag('quote-strings', negatable: false)
     ..addFlag('json', negatable: false);
+  final jsonFormat = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('indent', defaultsTo: '2')
+    ..addFlag('json', negatable: false);
   final json = ArgParser()
     ..addCommand('array-to-table', jsonArrayToTable)
     ..addCommand('array-to-csv', jsonArrayToCsv)
-    ..addCommand('to-yaml', jsonToYaml);
+    ..addCommand('to-yaml', jsonToYaml)
+    ..addCommand('format', jsonFormat);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json);
+}
+
+Future<int> _runJsonFormat(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required JsonFormatService jsonFormatService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'json-format.conflicting-inputs',
+      messageKey: 'error.jsonFormat.validation',
+    );
+    return 64;
+  }
+
+  late String source;
+  try {
+    source = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'json-format.input-access'
+          : 'json-format.file-access',
+      messageKey: fileOption == null
+          ? 'error.jsonFormat.inputAccess'
+          : 'error.jsonFormat.fileAccess',
+    );
+    return 74;
+  }
+
+  final indent = int.tryParse(parsed.option('indent') ?? '');
+  if (indent == null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'json-format.invalid-indent',
+      messageKey: 'error.jsonFormat.validation',
+    );
+    return 64;
+  }
+  final result = await jsonFormatService.execute(
+    JsonFormatOperationRequest(source: source, indent: indent),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.formatted));
+        } on IOException {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: parsed.flag('json'),
+            kind: 'access',
+            code: 'json-format.output-access',
+            messageKey: 'error.jsonFormat.outputAccess',
+          );
+          return 74;
+        }
+        if (!parsed.flag('json')) {
+          out.writeln(catalog.lookup(localeTag, 'jsonFormat.savedResult'));
+          return 0;
+        }
+      }
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(value.toJson()));
+      } else {
+        out.write(value.formatted);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
 }
 
 Future<int> _runJsonToYaml(

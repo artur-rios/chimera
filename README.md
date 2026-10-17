@@ -157,6 +157,25 @@ The GUI exposes the same local-only preview/save flow at `/json/to-yaml`.
 Malformed input reports its offset without echoing the source, and source,
 nesting, node, or output limits fail without returning partial YAML.
 
+### Format JSON
+
+`chimera json format` validates any JSON-compatible root value and returns
+deterministically formatted JSON. Use `--indent 2` or `--indent 4`, select input
+with `--input`, standard input, or a local `--file`, write exact UTF-8 bytes
+with `--output`, and request stable metadata with `--json`.
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart json format \
+  --input '{"name":"Ada","skills":["Dart","C"]}' \
+  --indent 2 \
+  --output developer.json
+```
+
+The GUI exposes the same local-only flow at `/json/format` with typed, local
+file, or clipboard input plus accessible preview, copy, and save actions.
+Malformed input reports a redacted reason and offset; access or resource
+failures return no partial result.
+
 ## Architecture
 
 | Project | Responsibility |
@@ -219,7 +238,7 @@ infrastructure-requirement evidence map.
 | Milestone | Delivers | Depends on | Issues | Status |
 | --- | --- | --- | ---: | --- |
 | [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
-| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 5 / 8 closed |
+| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 6 / 8 closed |
 | [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
 | [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 0 / 14 closed |
 | [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 0 / 8 closed |
