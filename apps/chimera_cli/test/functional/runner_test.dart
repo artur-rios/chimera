@@ -1895,4 +1895,203 @@ void main() {
       expect(err.toString(), 'Não foi possível salvar o valor convertido.\n');
     },
   );
+
+  test(
+    'GivenEveryEscapeMode_WhenJsonCommandRuns_ThenStableOutputIsWritten',
+    () async {
+      final cases = <String, (String, String)>{
+        'json': ('"', r'\"'),
+        'unicode': ('A', r'\u0041'),
+        'c': ("'", r"\'"),
+        'html': ('&', '&amp;'),
+        'url': (' ', '%20'),
+      };
+
+      for (final entry in cases.entries) {
+        final out = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'escape',
+            '--mode=${entry.key}',
+            '--input=${entry.value.$1}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+        );
+
+        expect(exitCode, 0, reason: entry.key);
+        expect(jsonDecode(out.toString()), <String, Object?>{
+          'escaped': entry.value.$2,
+          'mode': entry.key,
+        }, reason: entry.key);
+      }
+    },
+  );
+
+  test('GivenStandardInput_WhenTextEscapeRunsInPortuguese_ThenLocalizedResultIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['text', 'escape', '--mode=url'],
+      localeTag: 'pt-BR',
+      out: out,
+      err: StringBuffer(),
+      readStandardInput: () async => 'A B',
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Texto escapado: A%20B\n');
+  });
+
+  test('GivenTextFiles_WhenEscapeRuns_ThenExactUtf8BytesAreSaved', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-text-escape-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final input = File('${directory.path}${Platform.pathSeparator}input.txt');
+    final output = File(
+      '${directory.path}${Platform.pathSeparator}escaped.txt',
+    );
+    await input.writeAsString('&é');
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>[
+        'text',
+        'escape',
+        '--mode=html',
+        '--file=${input.path}',
+        '--output=${output.path}',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Escaped text saved.\n');
+    expect(await output.readAsBytes(), utf8.encode('&amp;é'));
+  });
+
+  test(
+    'GivenInvalidEscapeInputs_WhenCommandRuns_ThenSafeValidationFailuresReturn',
+    () async {
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['text', 'escape', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        );
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('sensitive-text')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await failureFor(const <String>[
+          '--input=sensitive-text',
+          '--mode=bad',
+        ]),
+        allOf(
+          containsPair('code', 'text-escape.invalid-mode'),
+          containsPair(
+            'location',
+            allOf(
+              containsPair('field', 'mode'),
+              containsPair('reason', 'unsupported-mode'),
+            ),
+          ),
+        ),
+      );
+      expect(
+        await failureFor(const <String>[
+          '--input=sensitive-text',
+          '--file=input.txt',
+          '--mode=json',
+        ]),
+        containsPair('code', 'text-escape.conflicting-inputs'),
+      );
+    },
+  );
+
+  test(
+    'GivenTextEscapeResourceLimit_WhenCommandRuns_ThenResourceExitReturns',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['text', 'escape', '--mode=html', '--input=&'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        textEscapeService: const TextEscapeService(
+          escaper: TextEscaper(maxOutputCharacters: 4),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(err.toString(), 'Text escaping exceeded its resource limit.\n');
+    },
+  );
+
+  test(
+    'GivenTextEscapeAccessFailures_WhenCommandRuns_ThenNoSuccessIsWritten',
+    () async {
+      Future<Map<String, dynamic>> inputFailure({required bool file}) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'escape',
+            '--mode=json',
+            if (file) '--file=input.txt',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInput: () async => throw Exception('denied'),
+          readFile: (_) async => throw Exception('denied'),
+        );
+        expect(exitCode, 74);
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await inputFailure(file: false),
+        containsPair('code', 'text-escape.input-access'),
+      );
+      expect(
+        await inputFailure(file: true),
+        containsPair('code', 'text-escape.file-access'),
+      );
+
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'escape',
+          '--mode=html',
+          '--input=&',
+          '--output=escaped.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o texto escapado.\n');
+    },
+  );
 }
