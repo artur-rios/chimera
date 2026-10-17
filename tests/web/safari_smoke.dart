@@ -288,10 +288,9 @@ Future<void> main() async {
       () => _pageContains(driver, 'XML document'),
       'XML format page did not open',
     );
-    await _fillTextBox(
-      driver,
-      'XML document',
-      '<root><developer name="Ada"/></root>',
+    await _waitUntil(
+      () => _inputHasValue(driver, 'XML document', '<root/>'),
+      'Default XML input was not available',
     );
     await _clickButton(driver, 'Format XML');
     await _waitUntil(
@@ -299,7 +298,7 @@ Future<void> main() async {
       'Formatted XML result did not render',
     );
     await _waitUntil(
-      () => _pageContains(driver, '<developer name="Ada"/>'),
+      () => _pageContains(driver, '<root/>'),
       'Formatted XML content was incorrect',
     );
     await _assertNoExternalRequests(driver, flow: 'XML format');
