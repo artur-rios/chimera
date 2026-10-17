@@ -9,7 +9,7 @@ import 'package:test/test.dart';
 
 void main() {
   group('certificate inspect', () {
-    final fixture = '../../tests/fixtures/certificates/certificate';
+    final fixture = _certificateFixtureBase();
     final pem = File('$fixture.pem').readAsStringSync();
     final base64 = File('$fixture.base64').readAsStringSync();
     final der = File('$fixture.der').readAsBytesSync();
@@ -4794,6 +4794,23 @@ void main() {
       expect(await _chimeraTransactionArtifacts(directory), isEmpty);
     });
   });
+}
+
+String _certificateFixtureBase() {
+  var directory = Directory.current.absolute;
+  while (true) {
+    final fixture = File.fromUri(
+      directory.uri.resolve('tests/fixtures/certificates/certificate.pem'),
+    );
+    if (fixture.existsSync()) {
+      return fixture.path.substring(0, fixture.path.length - '.pem'.length);
+    }
+    final parent = directory.parent;
+    if (parent.path == directory.path) {
+      throw StateError('Could not locate certificate test fixtures.');
+    }
+    directory = parent;
+  }
 }
 
 const _certificateJson =

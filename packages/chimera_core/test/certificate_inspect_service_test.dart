@@ -7,12 +7,9 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final pem = File('../../tests/fixtures/certificates/certificate.pem')
-      .readAsStringSync();
-  final base64 = File('../../tests/fixtures/certificates/certificate.base64')
-      .readAsStringSync();
-  final der = File('../../tests/fixtures/certificates/certificate.der')
-      .readAsBytesSync();
+  final pem = _certificateFixture('pem').readAsStringSync();
+  final base64 = _certificateFixture('base64').readAsStringSync();
+  final der = _certificateFixture('der').readAsBytesSync();
 
   for (final representation in CertificateInputRepresentation.values) {
     if (representation != CertificateInputRepresentation.der) {
@@ -243,6 +240,23 @@ void main() {
         );
       },
     );
+  }
+}
+
+File _certificateFixture(String extension) {
+  var directory = Directory.current.absolute;
+  while (true) {
+    final fixture = File.fromUri(
+      directory.uri.resolve(
+        'tests/fixtures/certificates/certificate.$extension',
+      ),
+    );
+    if (fixture.existsSync()) return fixture;
+    final parent = directory.parent;
+    if (parent.path == directory.path) {
+      throw StateError('Could not locate certificate test fixtures.');
+    }
+    directory = parent;
   }
 }
 
