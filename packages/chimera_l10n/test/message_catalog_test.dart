@@ -5,6 +5,29 @@ void main() {
   const catalog = MessageCatalog();
 
   test(
+    'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final key in [
+          'cli.certificateConvertUsage',
+          'certificateConvert.savedResult',
+          'error.certificateConvert.validation',
+          'error.certificateConvert.inputAccess',
+          'error.certificateConvert.fileAccess',
+          'error.certificateConvert.outputAccess',
+          'error.certificateConvert.resource',
+        ]) {
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        expect(
+          catalog.lookup(locale, 'cli.certificateConvertUsage'),
+          contains('--to=pem|der|base64'),
+        );
+      }
+    },
+  );
+
+  test(
     'GivenCertificateInspectMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       for (final locale in supportedLocaleTags) {
@@ -224,6 +247,13 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.certificateConvertUsage',
+      'certificateConvert.savedResult',
+      'error.certificateConvert.validation',
+      'error.certificateConvert.inputAccess',
+      'error.certificateConvert.fileAccess',
+      'error.certificateConvert.outputAccess',
+      'error.certificateConvert.resource',
       'app.name',
       'app.description',
       'certificateInspect.representationLabel',

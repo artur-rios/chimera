@@ -50,6 +50,9 @@ Future<int> runChimera(
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
+  CertificateConvertService certificateConvertService =
+      const CertificateConvertService(),
+  JsonObjectEncoder? certificateConvertJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -73,12 +76,40 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      out.writeln(catalog.lookup(localeTag, 'cli.usage'));
+      final key =
+          parsed.command?.name == 'certificate' &&
+              parsed.command?.command?.name == 'convert'
+          ? 'cli.certificateConvertUsage'
+          : 'cli.usage';
+      out.writeln(catalog.lookup(localeTag, key));
       return 0;
     }
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'certificate' &&
+        parsed.command!.command?.name == 'convert') {
+      return await _runCertificateConvert(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: certificateConvertService,
+        encodeJson: certificateConvertJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'certificate' &&
         parsed.command!.command?.name == 'inspect') {
@@ -364,6 +395,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
     final isCertificateInspect =
         args.length >= 2 && args[0] == 'certificate' && args[1] == 'inspect';
+    final isCertificateConvert =
+        args.length >= 2 && args[0] == 'certificate' && args[1] == 'convert';
     final isBase64Decode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'decode';
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
@@ -402,6 +435,7 @@ Future<int> runChimera(
       json:
           (isBase64Encode ||
               isCertificateInspect ||
+              isCertificateConvert ||
               isBase64Decode ||
               isCron ||
               isDate ||
@@ -420,7 +454,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isCertificateInspect
+      code: isCertificateConvert
+          ? 'certificate-convert.invalid-options'
+          : isCertificateInspect
           ? 'certificate-inspect.invalid-options'
           : isBase64Encode
           ? 'base64-encode.invalid-options'
@@ -457,7 +493,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isCertificateInspect
+      messageKey: isCertificateConvert
+          ? 'error.certificateConvert.validation'
+          : isCertificateInspect
           ? 'error.certificateInspect.validation'
           : isBase64Encode
           ? 'error.base64Encode.validation'
@@ -506,7 +544,17 @@ ArgParser _buildParser() {
     ..addOption('file', abbr: 'f')
     ..addOption('format', defaultsTo: 'auto')
     ..addFlag('json', negatable: false);
-  final certificate = ArgParser()..addCommand('inspect', certificateInspect);
+  final certificateConvert = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('from', defaultsTo: 'auto')
+    ..addOption('to')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final certificate = ArgParser()
+    ..addCommand('inspect', certificateInspect)
+    ..addCommand('convert', certificateConvert);
   final base64Encode = ArgParser()
     ..addOption('text')
     ..addFlag('stdin', negatable: false)
@@ -660,6 +708,169 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runCertificateConvert(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required CertificateConvertService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final source = switch (parsed.option('from')) {
+    'auto' => CertificateInputRepresentation.auto,
+    'pem' => CertificateInputRepresentation.pem,
+    'der' => CertificateInputRepresentation.der,
+    'base64' => CertificateInputRepresentation.base64,
+    _ => null,
+  };
+  final target = switch (parsed.option('to')) {
+    'pem' => CertificateOutputRepresentation.pem,
+    'der' => CertificateOutputRepresentation.der,
+    'base64' => CertificateOutputRepresentation.base64,
+    _ => null,
+  };
+  String? invalidCode;
+  if (parsed.rest.isNotEmpty) {
+    invalidCode = 'invalid-options';
+  } else if (sourceCount != 1) {
+    invalidCode = sourceCount == 0 ? 'missing-source' : 'conflicting-sources';
+  } else if (source == null) {
+    invalidCode = 'invalid-from';
+  } else if (target == null) {
+    invalidCode = 'invalid-to';
+  } else if (target == CertificateOutputRepresentation.der &&
+      outputPath == null &&
+      !json) {
+    invalidCode = 'output-required';
+  }
+  if (invalidCode != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'certificate-convert.$invalidCode',
+      messageKey: 'error.certificateConvert.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field, {String reason = 'allocation-limit'}) =>
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'resource',
+        code: 'certificate-convert.resource-limit',
+        messageKey: 'error.certificateConvert.resource',
+        details: {'field': field, 'reason': reason},
+      );
+
+  late CertificateConvertOperationRequest request;
+  if (text != null) {
+    request = CertificateConvertOperationRequest.fromText(
+      text,
+      source: source!,
+      target: target!,
+    );
+  } else {
+    try {
+      final bytes = useStandardInput
+          ? await readStandardInputBytes()
+          : await readFileBytes(file!);
+      request = CertificateConvertOperationRequest.fromBytes(
+        bytes,
+        source: source!,
+        target: target!,
+      );
+    } on OutOfMemoryError {
+      resourceFailure('input');
+      return 75;
+    } on Object {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'access',
+        code:
+            'certificate-convert.${useStandardInput ? 'input' : 'file'}-access',
+        messageKey: useStandardInput
+            ? 'error.certificateConvert.inputAccess'
+            : 'error.certificateConvert.fileAccess',
+      );
+      return 74;
+    }
+  }
+
+  try {
+    final result = await service.execute(request);
+    return await result.fold(
+      onSuccess: (value) async {
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath == null
+            ? value.text!
+            : '${catalog.lookup(localeTag, 'certificateConvert.savedResult')}\n';
+        if (outputPath != null) {
+          try {
+            await writeOutputFile(outputPath, value.bytes);
+          } on OutOfMemoryError {
+            rethrow;
+          } on Object {
+            _writeFailure(
+              err,
+              catalog: catalog,
+              localeTag: localeTag,
+              json: json,
+              kind: 'access',
+              code: 'certificate-convert.output-access',
+              messageKey: 'error.certificateConvert.outputAccess',
+            );
+            return 74;
+          }
+        }
+        out.write(payload);
+        return 0;
+      },
+      onFailure: (failure) async {
+        _writeFailure(
+          err,
+          catalog: catalog,
+          localeTag: localeTag,
+          json: json,
+          kind: failure.kind.name,
+          code: failure.code,
+          messageKey: failure.messageKey,
+          details: failure.details,
+        );
+        return _exitCodeFor(failure.kind);
+      },
+    );
+  } on CertificateConversionResourceException catch (error) {
+    resourceFailure(error.field, reason: error.reason);
+    return 75;
+  } on OutOfMemoryError {
+    resourceFailure('output');
+    return 75;
+  }
 }
 
 Future<int> _runCertificateInspect(

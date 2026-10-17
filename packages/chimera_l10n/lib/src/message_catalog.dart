@@ -5,6 +5,19 @@ _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
+    'cli.certificateConvertUsage':
+        'Usage: chimera certificate convert (--text=<value>|--stdin|--file=<path>) '
+        '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<path>] [--json]',
+    'certificateConvert.savedResult': 'Converted certificate saved.',
+    'error.certificateConvert.validation':
+        'The certificate conversion request is invalid.',
+    'error.certificateConvert.inputAccess':
+        'The standard input could not be read.',
+    'error.certificateConvert.fileAccess': 'The input file could not be read.',
+    'error.certificateConvert.outputAccess':
+        'The converted certificate could not be saved.',
+    'error.certificateConvert.resource':
+        'Certificate conversion exceeded its resource limit.',
     'certificateInspect.pageTitle': 'Inspect certificate',
     'certificateInspect.openAction': 'Inspect a certificate',
     'certificateInspect.inputLabel': 'Certificate (PEM or Base64)',
@@ -503,6 +516,20 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.certificateConvertUsage':
+        'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
+        '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',
+    'certificateConvert.savedResult': 'Certificado convertido salvo.',
+    'error.certificateConvert.validation':
+        'A solicitação de conversão do certificado é inválida.',
+    'error.certificateConvert.inputAccess':
+        'Não foi possível ler a entrada padrão.',
+    'error.certificateConvert.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.certificateConvert.outputAccess':
+        'Não foi possível salvar o certificado convertido.',
+    'error.certificateConvert.resource':
+        'A conversão do certificado excedeu o limite de recursos.',
     'certificateInspect.pageTitle': 'Inspecionar certificado',
     'certificateInspect.openAction': 'Inspecionar um certificado',
     'certificateInspect.inputLabel': 'Certificado (PEM ou Base64)',
