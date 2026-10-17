@@ -48,9 +48,9 @@ void main() {
         '\r': r'\r',
         '\t': r'\t',
         '\u000B': r'\v',
-        '\u0000': r'\0',
-        '\u0001': r'\x01',
-        '\u007F': r'\x7F',
+        '\u0000': r'\000',
+        '\u0001': r'\001',
+        '\u007F': r'\177',
         'Aé': 'Aé',
       };
 
@@ -61,6 +61,20 @@ void main() {
         expect(result.escaped, entry.value, reason: 'input ${entry.key.runes}');
       }
     });
+
+    test(
+      'GivenControlBeforeDigitOrHex_WhenCModeEscapes_ThenTokensRemainDistinct',
+      () {
+        final result = escaper.escape(
+          TextEscapeRequest(
+            input: String.fromCharCodes(<int>[0x00, 0x37, 0x01, 0x41]),
+            mode: 'c',
+          ),
+        );
+
+        expect(result.escaped, r'\0007\001A');
+      },
+    );
 
     test('GivenHtmlMode_WhenEscaped_ThenFiveSpecialCharactersUseEntities', () {
       final result = escaper.escape(

@@ -144,11 +144,9 @@ final class TextEscaper {
           writer.write(r'\t');
         case 0x0B:
           writer.write(r'\v');
-        case 0x00:
-          writer.write(r'\0');
         default:
           if (unit < 0x20 || unit == 0x7F) {
-            writer.write('\\x${_hex(unit, 2)}');
+            writer.write('\\${unit.toRadixString(8).padLeft(3, '0')}');
           } else {
             writer.writeCharCode(unit);
           }

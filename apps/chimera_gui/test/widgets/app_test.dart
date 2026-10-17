@@ -2077,7 +2077,7 @@ void main() {
   );
 
   testWidgets(
-    'GivenTextEscapeKeyboardSubmission_WhenDoneInvoked_ThenEscapeRunsAccessibly',
+    'GivenMultilineText_WhenTypedAndSubmitted_ThenNewlineEscapesAccessibly',
     (tester) async {
       await tester.pumpWidget(
         const ChimeraApp(localeTag: 'en', initialLocation: '/text/escape'),
@@ -2087,11 +2087,17 @@ void main() {
       final input = tester.widget<TextField>(
         find.byKey(const Key('text-escape-input')),
       );
-      expect(input.textInputAction, TextInputAction.done);
-      input.onSubmitted!('ignored');
+      expect(input.keyboardType, TextInputType.multiline);
+      expect(input.textInputAction, TextInputAction.newline);
+      expect(input.onSubmitted, isNull);
+      await tester.enterText(
+        find.byKey(const Key('text-escape-input')),
+        'line one\nline two',
+      );
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
       await tester.pumpAndSettle();
 
-      expect(find.text(r'Hello, \"Chimera\"!'), findsOneWidget);
+      expect(find.text(r'line one\nline two'), findsOneWidget);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );

@@ -26,9 +26,10 @@ quotes:
   characters therefore use their canonical surrogate-pair spelling, making the
   output deterministic on every Dart target.
 - C-style escapes reverse solidus, both quote kinds, bell, backspace, form feed,
-  newline, carriage return, tab, vertical tab, and NUL using conventional short
-  sequences. Remaining C0 controls and DEL use uppercase `\xHH`; other Unicode
-  text is preserved.
+  newline, carriage return, tab, and vertical tab using conventional short
+  sequences. NUL, remaining C0 controls, and DEL use fixed-width three-digit
+  octal escapes so adjacent octal or hexadecimal characters cannot be consumed
+  as part of the escape; other Unicode text is preserved.
 - HTML escapes `&`, `<`, `>`, `"`, and `'` as `&amp;`, `&lt;`, `&gt;`,
   `&quot;`, and `&#39;`. Other text is preserved.
 - URL percent-encodes the UTF-8 bytes of every character except RFC 3986
@@ -52,7 +53,8 @@ and `mode` fields. Stable failure codes are:
 
 Core message keys are `error.textEscape.validation` and
 `error.textEscape.resource`. Interface access failures use
-`text-escape.input-access`, `text-escape.output-access`,
+`text-escape.input-access`, `text-escape.file-access`,
+`text-escape.output-access`,
 `text-escape.clipboard-read`, and `text-escape.clipboard-write` without
 including source text in diagnostics.
 

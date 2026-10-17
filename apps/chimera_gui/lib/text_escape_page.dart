@@ -231,11 +231,11 @@ final class _TextEscapePageState extends State<TextEscapePage> {
                     enabled: !_isRunning,
                     minLines: 3,
                     maxLines: 6,
-                    textInputAction: TextInputAction.done,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     onChanged: (_) {
                       if (!_isRunning) setState(_clearFeedback);
                     },
-                    onSubmitted: _isRunning ? null : (_) => _submit(),
                     decoration: InputDecoration(
                       labelText: _message('textEscape.inputLabel'),
                       border: const OutlineInputBorder(),
