@@ -27,8 +27,11 @@ certificate schema.
 
 `chimera_utilities` adds `x509: 0.2.4+3`, the current stable package version at
 implementation time and the certificate parser named by the Technology Stack.
-It owns `CertificateInspector`, `CertificateInputRepresentation`, immutable
-metadata value types, and typed inspection failures.
+It also adds `asn1lib: 1.6.5`, the exact public ASN.1 dependency resolved by
+that package, for lossless framing checks and arbitrary-precision serial-byte
+access that `x509` does not expose. It owns `CertificateInspector`,
+`CertificateInputRepresentation`, immutable metadata value types, and typed
+inspection failures.
 
 The public inspector has text and byte entry points. Both accept an explicit
 representation of `auto`, `pem`, `der`, or `base64`; `auto` is the default.
@@ -51,14 +54,21 @@ allocation or parsing. PEM accepts RFC 7468-style ASCII line wrapping but must
 contain exactly one `CERTIFICATE` block and no other PEM object. Unarmored
 Base64 ignores ASCII whitespace, then uses the existing canonical
 `Base64ByteDecoder`; URL-safe characters, malformed padding, non-zero padding
-bits, and non-ASCII data are rejected. DER must be one canonical, complete
-certificate; trailing bytes, BER-only encodings, empty input, private keys,
-certificate requests, chains, and multiple certificates are rejected.
+bits, and non-ASCII data are rejected. DER must be one strictly framed,
+complete certificate; trailing bytes, indefinite or nonminimal lengths, empty
+input, private keys, certificate requests, chains, and multiple certificates
+are rejected.
 
-DER bytes are wrapped transiently as a certificate PEM block for `x509.parsePem`.
-The returned object must be exactly one `X509Certificate`. Its public ASN.1
-encoding is compared byte-for-byte with the decoded DER to reject trailing or
-noncanonical input. The parser object and transient text/DER views are scoped to
+Before certificate parsing, DER bytes pass a lossless framing check over the
+original bytes: one top-level `SEQUENCE` must consume the complete input, every
+TLV must use a definite minimally encoded length, constructed values must end
+exactly at their declared boundary, and no trailing object or byte is allowed.
+The same ASN.1 view supplies the serial's original unsigned value bytes so long
+X.509 serials remain exact on web targets. DER bytes are then wrapped
+transiently as a certificate PEM block for `x509.parsePem`, whose result must be
+exactly one `X509Certificate`. This avoids `X509Certificate.toAsn1()`, because
+`x509: 0.2.4+3` omits extensions and unique IDs when re-encoding and would reject
+valid certificates. Parser objects and transient text/DER views are scoped to
 the call and become unreachable before the immutable metadata result returns.
 
 Optional injectable `maxInputBytes` and `maxDecodedBytes` budgets provide

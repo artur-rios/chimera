@@ -15,9 +15,9 @@ JSON contract. CLI and GUI adapters own ephemeral source access, localization,
 copying, and presentation. Native and browser suites exercise the same service
 path and prove offline behavior.
 
-**Tech stack:** Dart 3.13, `x509: 0.2.4+3`, existing strict Base64 utilities,
-Flutter, `package:test`, `flutter_test`, native Flutter integration tests, and
-Playwright.
+**Tech stack:** Dart 3.13, `x509: 0.2.4+3`, `asn1lib: 1.6.5`, existing strict
+Base64 utilities, Flutter, `package:test`, `flutter_test`, native Flutter
+integration tests, and Playwright.
 
 **Spec:**
 `docs/superpowers/plans/2026-10-17-uc-18-inspect-certificate-design.md`
@@ -53,8 +53,9 @@ Playwright.
 
 ## Review Focus
 
-- Parser boundaries: exact-one-object enforcement, canonical DER round-trip,
-  auto-detection ambiguity, unknown OIDs, and safe exception translation.
+- Parser boundaries: exact-one-object enforcement, strict complete DER framing,
+  arbitrary-precision serials, auto-detection ambiguity, unknown OIDs, and safe
+  exception translation.
 - Privacy: no sensitive source/key/signature/extension values in results,
   diagnostics, widget semantics, logs, paths, or retained adapter state.
 - Cross-adapter consistency: identical metadata and JSON shape from all three
@@ -108,10 +109,12 @@ Playwright.
   name fallback; unknown noncritical extension tolerance; and exact
   input/decoded/allocation resource reasons.
 - [ ] Run the focused utility test and witness missing-API failures.
-- [ ] Add `x509: 0.2.4+3`, fetch the lockfile, and implement the smallest
-  detector, strict decoder reuse, transient PEM wrapping, single-certificate
-  parser, public ASN.1 byte-for-byte DER check, safe OID lookup, metadata copy,
-  limit checks, and exception translation.
+- [ ] Add `x509: 0.2.4+3` and `asn1lib: 1.6.5`, fetch the lockfile, and
+  implement the smallest detector, strict decoder reuse, lossless complete DER
+  framing/minimal-length check, raw serial-byte extraction, transient PEM
+  wrapping, single-certificate parser, safe OID lookup, metadata copy, limit
+  checks, and exception translation. Do not use `X509Certificate.toAsn1()`;
+  version 0.2.4+3 drops extensions and unique IDs when re-encoding.
 - [ ] Run focused tests, strict utility analysis, formatting, and diff checks.
 - [ ] Commit the fixture and shared utility layer.
 
