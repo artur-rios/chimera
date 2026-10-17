@@ -8,6 +8,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'base64_preview_fallback.dart';
+
 typedef Base64DecodeFilePicker = Future<List<int>?> Function();
 typedef Base64DecodeFileSaver = Future<bool> Function(
   String fileName,
@@ -73,6 +75,12 @@ Future<Base64DecodePreview?> decodeBase64Preview(Uint8List bytes) async {
     codec = await descriptor.instantiateCodec();
     final frame = await codec.getNextFrame();
     return _UiBase64DecodePreview(frame.image, mediaType);
+  } on OutOfMemoryError {
+    rethrow;
+  } on Object {
+    final fallbackImage = await decodeBase64PreviewFallback(bytes, mediaType);
+    if (fallbackImage == null) rethrow;
+    return _UiBase64DecodePreview(fallbackImage, mediaType);
   } finally {
     codec?.dispose();
     descriptor?.dispose();
