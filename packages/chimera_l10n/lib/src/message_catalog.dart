@@ -3,6 +3,19 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.gzipCompressUsage':
+        'Usage: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
+        '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
+        'Default level: 6. Exit codes: 64 validation, 74 access, 75 resource.',
+    'gzipCompress.savedResult':
+        'GZIP saved (level {level}, input {inputByteCount} bytes, '
+        'output {outputByteCount} bytes).',
+    'error.gzipCompress.validation': 'The GZIP compression request is invalid.',
+    'error.gzipCompress.inputAccess': 'The standard input could not be read.',
+    'error.gzipCompress.fileAccess': 'The input file could not be read.',
+    'error.gzipCompress.outputAccess': 'The GZIP bytes could not be saved.',
+    'error.gzipCompress.resource':
+        'GZIP compression exceeded its resource limit.',
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
     'cli.certificateConvertUsage':
@@ -540,6 +553,21 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.gzipCompressUsage':
+        'Uso: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
+        '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
+        'Nível padrão: 6. Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'gzipCompress.savedResult':
+        'GZIP salvo (nível {level}, entrada {inputByteCount} bytes, '
+        'saída {outputByteCount} bytes).',
+    'error.gzipCompress.validation':
+        'A solicitação de compressão GZIP é inválida.',
+    'error.gzipCompress.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.gzipCompress.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.gzipCompress.outputAccess': 'Não foi possível salvar os bytes GZIP.',
+    'error.gzipCompress.resource':
+        'A compressão GZIP excedeu o limite de recursos.',
     'cli.certificateConvertUsage':
         'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
         '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',

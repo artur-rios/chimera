@@ -4,6 +4,45 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test('GivenGzipCliMessages_WhenLookedUp_ThenBothLocalesHaveExactParity', () {
+    final keys = <String>{
+      'cli.gzipCompressUsage',
+      'gzipCompress.savedResult',
+      'error.gzipCompress.validation',
+      'error.gzipCompress.inputAccess',
+      'error.gzipCompress.fileAccess',
+      'error.gzipCompress.outputAccess',
+      'error.gzipCompress.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      expect(
+        catalog.lookup(locale, 'gzipCompress.savedResult'),
+        contains('{level}'),
+      );
+      expect(
+        catalog.lookup(locale, 'gzipCompress.savedResult'),
+        contains('{inputByteCount}'),
+      );
+      expect(
+        catalog.lookup(locale, 'gzipCompress.savedResult'),
+        contains('{outputByteCount}'),
+      );
+      expect(
+        catalog.lookup(locale, 'cli.gzipCompressUsage'),
+        contains('--level=<0..9>'),
+      );
+    }
+    expect(
+      catalog.lookup('pt-BR', 'error.gzipCompress.resource'),
+      'A compressão GZIP excedeu o limite de recursos.',
+    );
+  });
+
   test(
     'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -272,6 +311,13 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.gzipCompressUsage',
+      'gzipCompress.savedResult',
+      'error.gzipCompress.validation',
+      'error.gzipCompress.inputAccess',
+      'error.gzipCompress.fileAccess',
+      'error.gzipCompress.outputAccess',
+      'error.gzipCompress.resource',
       'cli.certificateConvertUsage',
       'certificateConvert.savedResult',
       'certificateConvert.pageTitle',
