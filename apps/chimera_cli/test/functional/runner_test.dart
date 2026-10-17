@@ -2535,4 +2535,171 @@ void main() {
       );
     },
   );
+
+  test(
+    'GivenLiteralText_WhenTextAnalyzeRuns_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['text', 'analyze', '--input=Hi there', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 0);
+      expect(err.toString(), isEmpty);
+      expect(jsonDecode(out.toString()), <String, dynamic>{
+        'characters': 8,
+        'words': 2,
+        'lines': 1,
+        'bytes': 8,
+      });
+    },
+  );
+
+  test('GivenStandardInput_WhenTextAnalyzeRunsInPortuguese_ThenLocalizedCountsReturn', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['text', 'analyze'],
+      localeTag: 'pt-BR',
+      out: out,
+      err: StringBuffer(),
+      readStandardInput: () async => 'A\nB',
+    );
+
+    expect(exitCode, 0);
+    expect(
+      out.toString(),
+      'Caracteres: 3\nPalavras: 2\nLinhas: 2\nBytes UTF-8: 3\n',
+    );
+  });
+
+  test('GivenFileInput_WhenTextAnalyzeRuns_ThenLocalFileIsRead', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['text', 'analyze', '--file=input.txt', '--json'],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+      readFile: (path) async {
+        expect(path, 'input.txt');
+        return 'Olá';
+      },
+    );
+
+    expect(exitCode, 0);
+    expect(jsonDecode(out.toString()), containsPair('bytes', 4));
+  });
+
+  test(
+    'GivenOutputPath_WhenTextAnalyzeRuns_ThenExactSelectedPayloadIsSaved',
+    () async {
+      final out = StringBuffer();
+      late String savedPath;
+      late List<int> savedBytes;
+
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'analyze',
+          '--input=one two',
+          '--json',
+          '--output=counts.json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        writeOutputFile: (path, bytes) async {
+          savedPath = path;
+          savedBytes = bytes;
+        },
+      );
+
+      expect(exitCode, 0);
+      expect(savedPath, 'counts.json');
+      expect(jsonDecode(utf8.decode(savedBytes)), containsPair('words', 2));
+      expect(out.toString(), 'Text analysis saved.\n');
+    },
+  );
+
+  test(
+    'GivenTextAnalyzeFailures_WhenRun_ThenTypedRedactedExitsReturn',
+    () async {
+      final validationErr = StringBuffer();
+      final validationExit = await runChimera(
+        const <String>[
+          'text',
+          'analyze',
+          '--input=sensitive-input',
+          '--file=sensitive-file',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: validationErr,
+      );
+      expect(validationExit, 64);
+      expect(validationErr.toString(), isNot(contains('sensitive')));
+      expect(
+        (jsonDecode(validationErr.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'text-analyze.conflicting-inputs'),
+      );
+
+      final accessErr = StringBuffer();
+      final accessExit = await runChimera(
+        const <String>['text', 'analyze', '--file=sensitive-file', '--json'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: accessErr,
+        readFile: (_) async => throw Exception('sensitive-detail'),
+      );
+      expect(accessExit, 74);
+      expect(accessErr.toString(), isNot(contains('sensitive')));
+      expect(
+        (jsonDecode(accessErr.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'text-analyze.file-access'),
+      );
+
+      final outputErr = StringBuffer();
+      final outputExit = await runChimera(
+        const <String>[
+          'text',
+          'analyze',
+          '--input=value',
+          '--output=counts.txt',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: outputErr,
+        writeOutputFile: (_, _) async => throw Exception('write-detail'),
+      );
+      expect(outputExit, 74);
+      expect(
+        (jsonDecode(outputErr.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'text-analyze.output-access'),
+      );
+
+      final resourceErr = StringBuffer();
+      final resourceExit = await runChimera(
+        const <String>['text', 'analyze', '--input=abc'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: resourceErr,
+        textAnalyzeService: const TextAnalyzeService(
+          analyzer: TextAnalyzer(maxInputCodeUnits: 2),
+        ),
+      );
+      expect(resourceExit, 75);
+      expect(
+        resourceErr.toString(),
+        'Text analysis exceeded its resource limit.\n',
+      );
+    },
+  );
 }

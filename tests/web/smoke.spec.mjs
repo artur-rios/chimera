@@ -10,6 +10,8 @@ async function enableFlutterSemantics(page) {
 
 async function fillFlutterTextBox(textBox, value) {
   await textBox.click();
+  await textBox.press('Control+A');
+  await textBox.press('Backspace');
   await textBox.fill(value);
   await expect(textBox).toHaveValue(value);
   await textBox.press('Tab');
@@ -223,6 +225,35 @@ test('list comparison flow compares locally without external requests', async ({
     page.getByRole('region', { name: /Intersection Items: 1 alpha/ }),
   ).toBeVisible();
   await expect(page.getByText('Equal: no').last()).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
+test('text analysis flow counts locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Analyze text' }).click();
+  await expect(page.getByText('Analyze text').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Text to analyze' }),
+    'A\nB',
+  );
+  await page.getByRole('button', { name: 'Analyze text' }).click();
+
+  await expect(
+    page.getByRole('region', {
+      name: /Analyze text Characters: 3 Words: 2 Lines: 2 UTF-8 bytes: 3/,
+    }),
+  ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
 

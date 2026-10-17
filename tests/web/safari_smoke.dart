@@ -445,8 +445,42 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'list comparison');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for text analysis flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Analyze text'),
+      'Home page did not return for text analysis flow',
+    );
+    await _clickButton(driver, 'Analyze text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text to analyze'),
+      'Text analysis page did not open',
+    );
+    await _fillTextBox(driver, 'Text to analyze', 'A\nB');
+    await _clickButton(driver, 'Analyze text');
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Analyze text Characters: 3 Words: 2 Lines: 2 UTF-8 bytes: 3',
+      ),
+      'Text analysis counts were incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'text analysis');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();

@@ -60,6 +60,15 @@ void main() {
     );
   });
 
+  test('GivenTextAnalyzeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'textAnalyze.wordCountLabel'), 'Words');
+    expect(catalog.lookup('pt-BR', 'textAnalyze.wordCountLabel'), 'Palavras');
+    expect(
+      catalog.lookup('pt-BR', 'error.textAnalyze.resource'),
+      'A análise de texto excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -122,6 +131,20 @@ void main() {
       'numberBase.sourceBaseLabel',
       'numberBase.submitAction',
       'numberBase.targetBaseLabel',
+      'textAnalyze.byteCountLabel',
+      'textAnalyze.characterCountLabel',
+      'textAnalyze.copiedResult',
+      'textAnalyze.copyAction',
+      'textAnalyze.fileAction',
+      'textAnalyze.inputLabel',
+      'textAnalyze.lineCountLabel',
+      'textAnalyze.openAction',
+      'textAnalyze.pageTitle',
+      'textAnalyze.pasteAction',
+      'textAnalyze.saveAction',
+      'textAnalyze.savedResult',
+      'textAnalyze.submitAction',
+      'textAnalyze.wordCountLabel',
       'textEscape.copiedResult',
       'textEscape.copyAction',
       'textEscape.fileAction',
@@ -317,6 +340,13 @@ void main() {
       'error.numberBase.outputAccess',
       'error.numberBase.resource',
       'error.numberBase.validation',
+      'error.textAnalyze.clipboardRead',
+      'error.textAnalyze.clipboardWrite',
+      'error.textAnalyze.fileAccess',
+      'error.textAnalyze.inputAccess',
+      'error.textAnalyze.outputAccess',
+      'error.textAnalyze.resource',
+      'error.textAnalyze.validation',
       'error.textEscape.clipboardRead',
       'error.textEscape.clipboardWrite',
       'error.textEscape.fileAccess',

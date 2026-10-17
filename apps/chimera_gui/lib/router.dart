@@ -12,6 +12,7 @@ import 'json_yaml_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
+import 'text_analyze_page.dart';
 import 'text_escape_page.dart';
 import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
@@ -27,6 +28,7 @@ GoRouter buildRouter({
   required JsonYamlService jsonYamlService,
   required ListCompareService listCompareService,
   required NumberBaseService numberBaseService,
+  required TextAnalyzeService textAnalyzeService,
   required TextEscapeService textEscapeService,
   required TextUnescapeService textUnescapeService,
   required SqlFormatService sqlFormatService,
@@ -53,6 +55,10 @@ GoRouter buildRouter({
   required NumberBaseFileSaver numberBaseFileSaver,
   required NumberBaseClipboardReader numberBaseClipboardReader,
   required NumberBaseClipboardWriter numberBaseClipboardWriter,
+  required TextAnalyzeFilePicker textAnalyzeFilePicker,
+  required TextAnalyzeFileSaver textAnalyzeFileSaver,
+  required TextAnalyzeClipboardReader textAnalyzeClipboardReader,
+  required TextAnalyzeClipboardWriter textAnalyzeClipboardWriter,
   required TextEscapeFilePicker textEscapeFilePicker,
   required TextEscapeFileSaver textEscapeFileSaver,
   required TextEscapeClipboardReader textEscapeClipboardReader,
@@ -188,6 +194,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag, 'listCompare.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-text-analyze'),
+                        onPressed: () => context.go('/text/analyze'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'textAnalyze.openAction'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -290,6 +304,18 @@ GoRouter buildRouter({
           fileSaver: textUnescapeFileSaver,
           clipboardReader: textUnescapeClipboardReader,
           clipboardWriter: textUnescapeClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/text/analyze',
+        builder: (context, state) => TextAnalyzePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: textAnalyzeService,
+          filePicker: textAnalyzeFilePicker,
+          fileSaver: textAnalyzeFileSaver,
+          clipboardReader: textAnalyzeClipboardReader,
+          clipboardWriter: textAnalyzeClipboardWriter,
         ),
       ),
       GoRoute(
