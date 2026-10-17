@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
@@ -2512,6 +2513,23 @@ void main() {
       await tester.tap(find.byKey(const Key('open-list-compare')));
       await tester.pumpAndSettle();
 
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('list-compare-left-input')))
+            .controller!
+            .text,
+        'alpha\nbeta',
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const Key('list-compare-right-input')),
+            )
+            .controller!
+            .text,
+        'alpha\ngamma',
+      );
+
       await tester.enterText(
         find.byKey(const Key('list-compare-left-input')),
         ' Alpha \nalpha\nleft',
@@ -2544,6 +2562,47 @@ void main() {
         findsOneWidget,
       );
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenTrailingBlankListItem_WhenCompared_ThenCountAndSemanticsExposeIt',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/list/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'alpha\n',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'alpha',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('list-compare-left-only-semantics')),
+          matching: find.text('Items: 1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('list-compare-right-only-semantics')),
+          matching: find.text('Items: 0'),
+        ),
+        findsOneWidget,
+      );
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('list-compare-left-only-semantics')),
+      );
+      expect(semantics.properties.role, SemanticsRole.region);
+      expect(semantics.properties.value, 'Items: 1\n');
     },
   );
 
@@ -2653,6 +2712,33 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenListCompareSaveFailure_WhenSaved_ThenResultClearsAndErrorAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/list/compare',
+          listCompareFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('list-compare-save')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('list-compare-save')));
+      await tester.tap(find.byKey(const Key('list-compare-save')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('list-compare-save')), findsNothing);
+      expect(
+        find.text('The list comparison could not be saved.'),
+        findsOneWidget,
+      );
     },
   );
 

@@ -2424,6 +2424,37 @@ void main() {
   );
 
   test(
+    'GivenOutputWriteFailure_WhenListCompareRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left=secret',
+          '--right=public',
+          '--output=result.txt',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), isNot(contains('secret')));
+      expect(
+        (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'list-compare.output-access'),
+      );
+    },
+  );
+
+  test(
     'GivenInvalidListSources_WhenCompareRuns_ThenSafeValidationReturns',
     () async {
       Future<Map<String, dynamic>> failureFor(List<String> options) async {

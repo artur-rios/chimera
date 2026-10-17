@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
@@ -84,8 +85,8 @@ final class _ListComparePageState extends State<ListComparePage> {
   @override
   void initState() {
     super.initState();
-    _leftController = TextEditingController();
-    _rightController = TextEditingController();
+    _leftController = TextEditingController(text: 'alpha\nbeta');
+    _rightController = TextEditingController(text: 'alpha\ngamma');
   }
 
   @override
@@ -357,30 +358,38 @@ final class _ListComparePageState extends State<ListComparePage> {
     required String name,
     required String labelKey,
     required List<String> values,
-  }) => Semantics(
-    key: Key('list-compare-$name-semantics'),
-    liveRegion: true,
-    label: _message(labelKey),
-    value: values.join('\n'),
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Theme.of(context).colorScheme.outline),
-        borderRadius: BorderRadius.circular(8),
+  }) {
+    final count = '${_message('listCompare.itemCountLabel')}: ${values.length}';
+    return Semantics(
+      key: Key('list-compare-$name-semantics'),
+      container: true,
+      liveRegion: true,
+      excludeSemantics: true,
+      role: SemanticsRole.region,
+      label: _message(labelKey),
+      value: '$count\n${values.join('\n')}',
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: Theme.of(context).colorScheme.outline),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Text(
+              _message(labelKey),
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 4),
+            Text(count, key: Key('list-compare-$name-count')),
+            const SizedBox(height: 8),
+            SelectableText(values.join('\n'), key: Key('list-compare-$name')),
+          ],
+        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: <Widget>[
-          Text(
-            _message(labelKey),
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          SelectableText(values.join('\n'), key: Key('list-compare-$name')),
-        ],
-      ),
-    ),
-  );
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

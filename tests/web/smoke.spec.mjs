@@ -205,7 +205,7 @@ test('list comparison flow compares locally without external requests', async ({
 
   await fillFlutterTextBox(
     page.getByRole('textbox', { name: 'Left list' }),
-    'alpha\nleft',
+    'alpha\nleft\n',
   );
   await fillFlutterTextBox(
     page.getByRole('textbox', { name: 'Right list' }),
@@ -214,13 +214,13 @@ test('list comparison flow compares locally without external requests', async ({
   await page.getByRole('button', { name: 'Compare lists' }).click();
 
   await expect(
-    page.getByRole('group', { name: 'Left only left' }),
+    page.getByRole('region', { name: /Left only Items: 2 left/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole('group', { name: 'Right only right' }),
+    page.getByRole('region', { name: /Right only Items: 1 right/ }),
   ).toBeVisible();
   await expect(
-    page.getByRole('group', { name: 'Intersection alpha' }),
+    page.getByRole('region', { name: /Intersection Items: 1 alpha/ }),
   ).toBeVisible();
   await expect(page.getByText('Equal: no').last()).toBeVisible();
   expect(externalRequests).toEqual([]);

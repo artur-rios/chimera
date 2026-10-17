@@ -168,6 +168,7 @@ void main() {
       'listCompare.fileAction.left',
       'listCompare.fileAction.right',
       'listCompare.intersectionLabel',
+      'listCompare.itemCountLabel',
       'listCompare.leftInputLabel',
       'listCompare.leftOnlyLabel',
       'listCompare.noValue',

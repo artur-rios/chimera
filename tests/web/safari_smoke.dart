@@ -436,7 +436,7 @@ Future<void> main() async {
     await _fillTextBox(driver, 'Right list', 'alpha');
     await _clickButton(driver, 'Compare lists');
     await _waitUntil(
-      () => _pageContains(driver, 'Intersection alpha'),
+      () => _pageContains(driver, 'Intersection Items: 1 alpha'),
       'List comparison intersection was incorrect',
     );
     await _waitUntil(
