@@ -2,6 +2,72 @@ import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
+// The native Safari harness executes this exact source, resolved from its script.
+const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
+
+for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {
+  test(`GivenGzipSaveBoundary_When${scenario}_ThenOnlyOneMatchingLiveBlobIsAccepted`, async ({ page }) => {
+    await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves({suppressDownloads: true});`);
+    const accepted = await page.evaluate(async scenario => {
+      const anchor = document.createElement('a');
+      anchor.download = 'chimera-compressed.gz';
+      const payload = new Blob([new Uint8Array([31, 139, 8])], {
+        type: scenario === 'wrong-mime' ? 'text/plain' : 'application/gzip',
+      });
+      const url = URL.createObjectURL(payload);
+      anchor.href = scenario === 'unknown-href' ? 'blob:wrong-or-missing-payload' : url;
+      if (scenario === 'revoked-href') URL.revokeObjectURL(url);
+      anchor.click();
+      if (scenario === 'duplicate-click') anchor.click();
+      if (scenario === 'revoke-after-click') URL.revokeObjectURL(url);
+      // Flush the real Blob read queued by the installed observer.
+      await payload.arrayBuffer();
+      await Promise.resolve();
+      return window.__chimeraSavedName === 'chimera-compressed.gz' &&
+        window.__chimeraSaveCount === 1 &&
+        window.__chimeraSavedMime === 'application/gzip' &&
+        window.__chimeraGzipSaveErrors.length === 0 &&
+        JSON.stringify(window.__chimeraSavedBytes) === '[31,139,8]';
+    }, scenario);
+    expect(accepted).toBe(scenario === 'revoke-after-click');
+  });
+}
+
+for (const scenario of ['wrong-mime', 'duplicate-click']) {
+  test(`GivenGzipDownloadBoundary_When${scenario}_ThenActualMimeAndDownloadCountExposeInvalidSave`, async ({ page }) => {
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves();`);
+    await page.evaluate(scenario => {
+      const anchor = document.createElement('a');
+      anchor.download = 'chimera-compressed.gz';
+      anchor.href = URL.createObjectURL(new Blob([new Uint8Array([31, 139, 8])], {
+        type: scenario === 'wrong-mime' ? 'text/plain' : 'application/gzip',
+      }));
+      document.body.append(anchor);
+      anchor.click();
+      if (scenario === 'duplicate-click') anchor.click();
+    }, scenario);
+    const count = scenario === 'duplicate-click' ? 2 : 1;
+    await expect.poll(() => downloads.length).toBe(count);
+    await expect.poll(() => page.evaluate(() => ({
+      count: window.__chimeraSaveCount,
+      mime: window.__chimeraSavedMime,
+      bytes: window.__chimeraSavedBytes,
+      errors: window.__chimeraGzipSaveErrors,
+    }))).toEqual({ count, mime: scenario === 'wrong-mime' ? 'text/plain' : 'application/gzip', bytes: [31, 139, 8], errors: [] });
+    for (const download of downloads) {
+      expect(download.suggestedFilename()).toBe('chimera-compressed.gz');
+      const chunks = [];
+      for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+      expect([...Buffer.concat(chunks)]).toEqual([31, 139, 8]);
+    }
+    // These real downloads would fail the operation's MIME/one-save contract.
+    expect(await page.evaluate(() => window.__chimeraSaveCount === 1 &&
+      window.__chimeraSavedMime === 'application/gzip')).toBe(false);
+  });
+}
+
 for (const source of ['text', 'binary']) {
   test(`GivenGzip${source}_WhenLevelSelectedCompressedAndDownloaded_ThenExactMemberRoundTripsOffline`, async ({ page }) => {
     const input = source === 'text' ? Buffer.from('Olá 🌍', 'utf8') : Buffer.from([0, 255, 128, 1]);
@@ -12,6 +78,9 @@ for (const source of ['text', 'binary']) {
     const outputCount = source === 'text' ? 32 : 24;
     const externalRequests = [];
     const interactionRequests = [];
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
     page.on('request', request => {
       if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') externalRequests.push(request.url());
     });
@@ -47,7 +116,16 @@ for (const source of ['text', 'binary']) {
     expect(download.suggestedFilename()).toBe('chimera-compressed.gz');
     const chunks = [];
     for await (const chunk of await download.createReadStream()) chunks.push(chunk);
-    assertGzipMember(Buffer.concat(chunks), expectedHex, input);
+    const downloaded = Buffer.concat(chunks);
+    assertGzipMember(downloaded, expectedHex, input);
+    await expect.poll(() => page.evaluate(() => ({
+      name: window.__chimeraSavedName,
+      count: window.__chimeraSaveCount,
+      mime: window.__chimeraSavedMime,
+      bytes: window.__chimeraSavedBytes,
+      errors: window.__chimeraGzipSaveErrors,
+    }))).toEqual({ name: 'chimera-compressed.gz', count: 1, mime: 'application/gzip', bytes: [...downloaded], errors: [] });
+    expect(downloads).toHaveLength(1);
     await expect(result).toBeVisible();
     expect(interactionRequests).toEqual([]);
     expect(externalRequests).toEqual([]);

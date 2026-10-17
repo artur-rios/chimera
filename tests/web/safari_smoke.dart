@@ -36,7 +36,18 @@ const _certificateJsonFields =
     '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},'
     '{"oid":"1.2.3.5","name":null,"critical":false}],';
 
-Future<void> main() async {
+Future<String> _loadGzipSaveObserver() =>
+    File.fromUri(Platform.script.resolve('gzip_save_observer.js'))
+        .readAsString();
+
+Future<void> main(List<String> arguments) async {
+  // Exercise the same source loader without needing a SafariDriver session.
+  if (arguments case ['--verify-gzip-save-observer']) {
+    final observer = await _loadGzipSaveObserver();
+    if (observer.isEmpty) throw StateError('GZIP save observer is empty');
+    stdout.writeln('GZIP save observer source loaded successfully.');
+    return;
+  }
   WebDriver? createdDriver;
   try {
     final driver = createdDriver = await createDriver(
@@ -969,27 +980,18 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
     'GZIP page did not open',
   );
   await _assertNoExternalRequests(driver, flow: 'GZIP startup');
+  // Resolve beside this script, independent of the CI working directory.
+  // Playwright's boundary probes execute this same test-only source unchanged.
+  final saveObserver = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$saveObserver\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
   await driver.execute('''
-    window.__chimeraSavedName = null;
-    window.__chimeraSavedBytes = null;
-    window.__chimeraSavedMime = null;
-    window.__chimeraSaveCount = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: {readText: async () => 'Olá 🌍'},
     });
-    const originalCreateObjectURL = URL.createObjectURL.bind(URL);
-    URL.createObjectURL = function(blob) {
-      window.__chimeraSavedMime = blob.type;
-      blob.arrayBuffer().then(buffer => {
-        window.__chimeraSavedBytes = [...new Uint8Array(buffer)];
-      });
-      return originalCreateObjectURL(blob);
-    };
-    HTMLAnchorElement.prototype.click = function() {
-      window.__chimeraSavedName = this.download;
-      window.__chimeraSaveCount++;
-    };
     const originalInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
       if (this.type === 'file') return;
@@ -1081,6 +1083,7 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
     return window.__chimeraSavedName === 'chimera-compressed.gz' &&
       window.__chimeraSaveCount === 1 &&
       window.__chimeraSavedMime === 'application/gzip' &&
+      window.__chimeraGzipSaveErrors.length === 0 &&
       Array.isArray(window.__chimeraSavedBytes);
   ''', const <Object?>[]) ==
         true,
