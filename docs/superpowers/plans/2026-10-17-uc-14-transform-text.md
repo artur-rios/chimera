@@ -94,12 +94,12 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 **Files:**
 - Review: all UC-14 changes and requirement traceability.
 
-- [ ] Run formatting and strict static analysis.
-- [ ] Run focused suites, affected native/browser suites, then unfiltered
+- [x] Run formatting and strict static analysis.
+- [x] Run focused suites, affected native/browser suites, then unfiltered
   `melos run test:all`.
-- [ ] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
+- [x] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
   behavior, and no persistence/network path.
-- [ ] Obtain independent whole-branch review and resolve every blocker with
+- [x] Obtain independent whole-branch review and resolve every blocker with
   affected-suite reruns.
 - [ ] Under the user's explicit unattended self-merging batch authorization,
   commit, push, open the issue-closing PR to `develop`, require green CI, squash
