@@ -3,6 +3,35 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'gzipCompress.pageTitle': 'Compress GZIP',
+    'gzipCompress.openAction': 'Compress to GZIP',
+    'gzipCompress.inputLabel': 'Text to compress',
+    'gzipCompress.fileAction': 'Load file bytes',
+    'gzipCompress.pasteAction': 'Paste text',
+    'gzipCompress.levelLabel': 'Compression level',
+    'gzipCompress.submitAction': 'Compress',
+    'gzipCompress.saveAction': 'Save GZIP file',
+    'gzipCompress.fileSaved': 'GZIP file saved.',
+    'gzipCompress.outputLabel': 'Compressed binary result',
+    'gzipCompress.resultSuccess': 'Compression succeeded.',
+    'gzipCompress.inputByteCountLabel': 'Input bytes',
+    'gzipCompress.outputByteCountLabel': 'Output bytes',
+    'error.gzipCompress.clipboardRead': 'The clipboard text could not be read.',
+    'error.gzipCompress.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.gzipCompressUsage':
+        'Usage: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
+        '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
+        'Default level: 6. Exit codes: 64 validation, 74 access, 75 resource.',
+    'gzipCompress.savedResult':
+        'GZIP saved (level {level}, input {inputByteCount} bytes, '
+        'output {outputByteCount} bytes).',
+    'error.gzipCompress.validation': 'The GZIP compression request is invalid.',
+    'error.gzipCompress.inputAccess': 'The standard input could not be read.',
+    'error.gzipCompress.fileAccess': 'The input file could not be read.',
+    'error.gzipCompress.outputAccess': 'The GZIP bytes could not be saved.',
+    'error.gzipCompress.resource':
+        'GZIP compression exceeded its resource limit.',
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
     'cli.certificateConvertUsage':
@@ -540,6 +569,38 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'gzipCompress.pageTitle': 'Comprimir GZIP',
+    'gzipCompress.openAction': 'Comprimir para GZIP',
+    'gzipCompress.inputLabel': 'Texto para comprimir',
+    'gzipCompress.fileAction': 'Carregar bytes de arquivo',
+    'gzipCompress.pasteAction': 'Colar texto',
+    'gzipCompress.levelLabel': 'Nível de compressão',
+    'gzipCompress.submitAction': 'Comprimir',
+    'gzipCompress.saveAction': 'Salvar arquivo GZIP',
+    'gzipCompress.fileSaved': 'Arquivo GZIP salvo.',
+    'gzipCompress.outputLabel': 'Resultado binário comprimido',
+    'gzipCompress.resultSuccess': 'Compressão concluída.',
+    'gzipCompress.inputByteCountLabel': 'Bytes de entrada',
+    'gzipCompress.outputByteCountLabel': 'Bytes de saída',
+    'error.gzipCompress.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.gzipCompress.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.gzipCompressUsage':
+        'Uso: chimera gzip compress (--text=<valor>|--stdin|--file=<caminho>) '
+        '[--level=<0..9>] (--output=<caminho>|--json) [--json]\n'
+        'Nível padrão: 6. Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'gzipCompress.savedResult':
+        'GZIP salvo (nível {level}, entrada {inputByteCount} bytes, '
+        'saída {outputByteCount} bytes).',
+    'error.gzipCompress.validation':
+        'A solicitação de compressão GZIP é inválida.',
+    'error.gzipCompress.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.gzipCompress.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.gzipCompress.outputAccess': 'Não foi possível salvar os bytes GZIP.',
+    'error.gzipCompress.resource':
+        'A compressão GZIP excedeu o limite de recursos.',
     'cli.certificateConvertUsage':
         'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
         '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',

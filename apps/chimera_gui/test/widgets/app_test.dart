@@ -14,6 +14,24 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
+      'Given${locale}GzipHomeAction_WhenActivated_ThenCompressionRouteOpens',
+      (tester) async {
+        await tester.pumpWidget(ChimeraApp(localeTag: locale));
+        await tester.pumpAndSettle();
+        final action = find.byKey(const Key('open-gzip-compress'));
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('gzip-compress-input')), findsOneWidget);
+        expect(
+          find.text(locale == 'en' ? 'Compress GZIP' : 'Comprimir GZIP'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
       'Given${locale}ConvertHomeAction_WhenActivated_ThenConversionRouteOpens',
       (tester) async {
         await tester.pumpWidget(ChimeraApp(localeTag: locale));

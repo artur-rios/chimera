@@ -36,7 +36,18 @@ const _certificateJsonFields =
     '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},'
     '{"oid":"1.2.3.5","name":null,"critical":false}],';
 
-Future<void> main() async {
+Future<String> _loadGzipSaveObserver() =>
+    File.fromUri(Platform.script.resolve('gzip_save_observer.js'))
+        .readAsString();
+
+Future<void> main(List<String> arguments) async {
+  // Exercise the same source loader without needing a SafariDriver session.
+  if (arguments case ['--verify-gzip-save-observer']) {
+    final observer = await _loadGzipSaveObserver();
+    if (observer.isEmpty) throw StateError('GZIP save observer is empty');
+    stdout.writeln('GZIP save observer source loaded successfully.');
+    return;
+  }
   WebDriver? createdDriver;
   try {
     final driver = createdDriver = await createDriver(
@@ -930,12 +941,182 @@ Future<void> main() async {
       await _convertCertificate(driver, source);
     }
 
+    for (final source in ['text', 'binary']) {
+      await _compressGzip(driver, source);
+    }
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
   }
+}
+
+Future<void> _compressGzip(WebDriver driver, String source) async {
+  final input = source == 'text' ? utf8.encode('Olá 🌍') : [0, 255, 128, 1];
+  final level = source == 'text' ? 0 : 9;
+  final expectedHex = source == 'text'
+      ? '1f8b08000000000000ff010900f6ff4f6cc3a120f09f8c8d65c404fa09000000'
+      : '1f8b08000000000000ff63f8dfc008002c4358d304000000';
+  final outputCount = source == 'text' ? 32 : 24;
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'GZIP semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Compress to GZIP');
+  await _waitUntil(
+    () => _pageContains(driver, 'Text to compress'),
+    'GZIP page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'GZIP startup');
+  // Resolve beside this script, independent of the CI working directory.
+  // Playwright's boundary probes execute this same test-only source unchanged.
+  final saveObserver = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$saveObserver\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute('''
+    window.__chimeraGzipClipboardReads = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {readText: async () => {
+        window.__chimeraGzipClipboardReads++;
+        return 'Olá 🌍';
+      }},
+    });
+    const originalInputClick = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return originalInputClick.call(this);
+    };
+    performance.clearResourceTimings();
+  ''', const <Object?>[]);
+  if (source == 'text') {
+    await _clickButton(driver, 'Paste text');
+    await _waitUntil(
+      // Paste recreates the editor to discard undo history. Flutter attaches
+      // its DOM editing value only after activating that new field's focus.
+      () => _inputHasValue(driver, 'Text to compress', 'Olá 🌍', focus: true),
+      'GZIP UTF-8 clipboard source was not loaded',
+    );
+    final reads = await driver.execute(
+      'return window.__chimeraGzipClipboardReads;',
+      const <Object?>[],
+    );
+    if (reads != 1) {
+      throw StateError('GZIP clipboard was not read exactly once');
+    }
+  } else {
+    await _clickButton(driver, 'Load file bytes');
+    // SafariDriver lacks direct upload; dispatch a real File through the picker.
+    await _waitUntil(
+      () async =>
+          await driver.execute('''
+      const picker = document.querySelector('input[type="file"]');
+      if (!picker) return false;
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([new Uint8Array([0, 255, 128, 1])],
+        'source.bin', {type: 'application/octet-stream'}));
+      picker.files = transfer.files;
+      picker.dispatchEvent(new Event('change', {bubbles: true}));
+      return true;
+    ''', const <Object?>[]) ==
+          true,
+      'GZIP binary fixture could not be dispatched',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Input bytes: 4'),
+      'GZIP binary source was not loaded',
+    );
+    if (!await _inputHasValue(driver, 'Text to compress', '')) {
+      throw StateError('GZIP file source retained text');
+    }
+  }
+  await _waitUntil(
+    () async =>
+        await driver.execute(r'''
+    const normalize = value => value.replace(/\s+/g, ' ').trim();
+    const selector = [...document.querySelectorAll('[role="button"]')]
+      .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'Compression level 6');
+    if (!selector) return false;
+    selector.click();
+    return true;
+  ''', const <Object?>[]) ==
+        true,
+    'GZIP compression level selector was unavailable',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          '''
+    const option = [...document.querySelectorAll('[role="menuitem"]')]
+      .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+        element.getAttribute('aria-disabled') !== 'true');
+    if (!option) return false;
+    option.click();
+    return true;
+  ''',
+          <Object?>['$level'],
+        ) ==
+        true,
+    'GZIP explicit level could not be selected',
+  );
+  await _clickButton(driver, 'Compress');
+  final summary =
+      'Compressed binary result Compression succeeded. '
+      'Compression level: $level Input bytes: ${input.length} Output bytes: $outputCount';
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+    const normalize = value => value.replace(/\s+/g, ' ').trim();
+    return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+      .some(element => normalize(element.getAttribute('aria-label') || '') === arguments[0]);
+  ''',
+          <Object?>[summary],
+        ) ==
+        true,
+    'GZIP success semantics/counts were incorrect',
+  );
+  await _clickButton(driver, 'Save GZIP file');
+  await _waitUntil(
+    () async =>
+        await driver.execute('''
+    return window.__chimeraSavedName === 'chimera-compressed.gz' &&
+      window.__chimeraSaveCount === 1 &&
+      window.__chimeraSavedMime === 'application/gzip' &&
+      window.__chimeraGzipSaveErrors.length === 0 &&
+      Array.isArray(window.__chimeraSavedBytes);
+  ''', const <Object?>[]) ==
+        true,
+    'GZIP exact save boundary did not complete',
+  );
+  final raw = await driver.execute(
+    'return window.__chimeraSavedBytes;',
+    const <Object?>[],
+  );
+  if (raw is! List) throw StateError('GZIP save returned no byte list');
+  final actual = raw.cast<num>().map((value) => value.toInt()).toList();
+  if (actual.map((value) => value.toRadixString(16).padLeft(2, '0')).join() !=
+          expectedHex ||
+      base64.encode(gzip.decode(actual)) != base64.encode(input)) {
+    throw StateError(
+      'GZIP saved bytes or independent platform decompression differed',
+    );
+  }
+  await _assertNoNetworkRequests(driver, flow: 'GZIP $source compression/save');
 }
 
 Future<void> _convertCertificate(WebDriver driver, String source) async {
@@ -1275,17 +1456,20 @@ Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
 Future<bool> _inputHasValue(
   WebDriver driver,
   String label,
-  String expected,
-) async {
+  String expected, {
+  bool focus = false,
+}) async {
   final result = await driver.execute(
     '''
       const label = arguments[0];
       const expected = arguments[1];
       const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
         .find(element => element.getAttribute('aria-label') === label);
-      return input?.value === expected;
+      if (!input || input.disabled) return false;
+      if (arguments[2] === true) input.focus();
+      return input.value === expected;
     ''',
-    <Object?>[label, expected],
+    <Object?>[label, expected, focus],
   );
   return result == true;
 }

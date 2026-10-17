@@ -40,3 +40,10 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - fonts/OFL.txt
+    - fonts/README.md
+  fonts:
+    - family: Noto Color Emoji
+      fonts:
+        - asset: fonts/Noto-COLRv1.ttf

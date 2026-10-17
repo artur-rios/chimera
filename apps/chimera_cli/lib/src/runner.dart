@@ -47,6 +47,8 @@ Future<int> runChimera(
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
+  GzipCompressService gzipCompressService = const GzipCompressService(),
+  JsonObjectEncoder? gzipCompressJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -77,8 +79,11 @@ Future<int> runChimera(
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       final key =
-          parsed.command?.name == 'certificate' &&
-              parsed.command?.command?.name == 'convert'
+          parsed.command?.name == 'gzip' &&
+              parsed.command?.command?.name == 'compress'
+          ? 'cli.gzipCompressUsage'
+          : parsed.command?.name == 'certificate' &&
+                parsed.command?.command?.name == 'convert'
           ? 'cli.certificateConvertUsage'
           : 'cli.usage';
       out.writeln(catalog.lookup(localeTag, key));
@@ -87,6 +92,29 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'gzip' &&
+        parsed.command!.command?.name == 'compress') {
+      return await _runGzipCompress(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: gzipCompressService,
+        encodeJson: gzipCompressJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'certificate' &&
         parsed.command!.command?.name == 'convert') {
@@ -391,6 +419,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isGzipCompress =
+        args.length >= 2 && args[0] == 'gzip' && args[1] == 'compress';
     final isBase64Encode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
     final isCertificateInspect =
@@ -434,6 +464,7 @@ Future<int> runChimera(
       localeTag: localeTag,
       json:
           (isBase64Encode ||
+              isGzipCompress ||
               isCertificateInspect ||
               isCertificateConvert ||
               isBase64Decode ||
@@ -454,7 +485,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isCertificateConvert
+      code: isGzipCompress
+          ? 'gzip-compress.invalid-options'
+          : isCertificateConvert
           ? 'certificate-convert.invalid-options'
           : isCertificateInspect
           ? 'certificate-inspect.invalid-options'
@@ -493,7 +526,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isCertificateConvert
+      messageKey: isGzipCompress
+          ? 'error.gzipCompress.validation'
+          : isCertificateConvert
           ? 'error.certificateConvert.validation'
           : isCertificateInspect
           ? 'error.certificateInspect.validation'
@@ -538,6 +573,14 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final gzipCompress = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('level', defaultsTo: '6')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final gzip = ArgParser()..addCommand('compress', gzipCompress);
   final certificateInspect = ArgParser()
     ..addOption('text')
     ..addFlag('stdin', negatable: false)
@@ -702,6 +745,7 @@ ArgParser _buildParser() {
     ..addCommand('certificate', certificate)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
+    ..addCommand('gzip', gzip)
     ..addCommand('json', json)
     ..addCommand('list', list)
     ..addCommand('number', number)
@@ -1184,6 +1228,158 @@ Future<int> _runBase64Encode(
         catalog: catalog,
         localeTag: localeTag,
         json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runGzipCompress(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required GzipCompressService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final levelOption = parsed.option('level')!;
+  final level = RegExp(r'^[0-9]$').hasMatch(levelOption)
+      ? int.parse(levelOption)
+      : null;
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : level == null
+      ? 'invalid-level'
+      : outputPath == null && !json
+      ? 'output-required'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'gzip-compress.$invalid',
+      messageKey: 'error.gzipCompress.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'gzip-compress.resource-limit',
+    messageKey: 'error.gzipCompress.resource',
+    details: <String, Object?>{'field': field, 'reason': 'allocation-limit'},
+  );
+
+  late GzipCompressOperationRequest request;
+  try {
+    request = text != null
+        ? GzipCompressOperationRequest.text(text, level: level!)
+        : GzipCompressOperationRequest.bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            level: level!,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'gzip-compress.input-access'
+          : 'gzip-compress.file-access',
+      messageKey: useStandardInput
+          ? 'error.gzipCompress.inputAccess'
+          : 'error.gzipCompress.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        if (json) {
+          stdoutPayload = '${encodeJson(value.toJson())}\n';
+        } else {
+          final summary = catalog
+              .lookup(localeTag, 'gzipCompress.savedResult')
+              .replaceAll('{level}', '${value.level}')
+              .replaceAll('{inputByteCount}', '${value.inputByteCount}')
+              .replaceAll('{outputByteCount}', '${value.outputByteCount}');
+          stdoutPayload = '$summary\n';
+        }
+      } on OutOfMemoryError {
+        resourceFailure('output');
+        return 75;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, value.bytes);
+        } on OutOfMemoryError {
+          resourceFailure('output');
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'gzip-compress.output-access',
+            messageKey: 'error.gzipCompress.outputAccess',
+          );
+          return 74;
+        }
+      }
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('output');
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
         kind: failure.kind.name,
         code: failure.code,
         messageKey: failure.messageKey,
