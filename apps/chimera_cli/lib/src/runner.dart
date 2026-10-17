@@ -26,6 +26,7 @@ Future<int> runChimera(
   JsonYamlService jsonYamlService = const JsonYamlService(),
   ListCompareService listCompareService = const ListCompareService(),
   NumberBaseService numberBaseService = const NumberBaseService(),
+  TextAnalyzeService textAnalyzeService = const TextAnalyzeService(),
   TextEscapeService textEscapeService = const TextEscapeService(),
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
@@ -87,6 +88,21 @@ Future<int> runChimera(
         readFile: readFile ?? (path) => File(path).readAsString(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         numberBaseService: numberBaseService,
+      );
+    }
+    if (parsed.command!.name == 'text' &&
+        parsed.command!.command?.name == 'analyze') {
+      return await _runTextAnalyze(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        textAnalyzeService: textAnalyzeService,
       );
     }
     if (parsed.command!.name == 'text' &&
@@ -234,6 +250,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'number' && args[1] == 'convert-base';
     final isTextEscape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'escape';
+    final isTextAnalyze =
+        args.length >= 2 && args[0] == 'text' && args[1] == 'analyze';
     final isTextUnescape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'unescape';
     final isListCompare =
@@ -258,6 +276,7 @@ Future<int> runChimera(
           (isCron ||
               isDate ||
               isNumberBase ||
+              isTextAnalyze ||
               isTextEscape ||
               isTextUnescape ||
               isListCompare ||
@@ -275,6 +294,8 @@ Future<int> runChimera(
           ? 'date.invalid-options'
           : isNumberBase
           ? 'number-base.invalid-options'
+          : isTextAnalyze
+          ? 'text-analyze.invalid-options'
           : isTextEscape
           ? 'text-escape.invalid-options'
           : isTextUnescape
@@ -300,6 +321,8 @@ Future<int> runChimera(
           ? 'error.date.validation'
           : isNumberBase
           ? 'error.numberBase.validation'
+          : isTextAnalyze
+          ? 'error.textAnalyze.validation'
           : isTextEscape
           ? 'error.textEscape.validation'
           : isTextUnescape
@@ -358,6 +381,11 @@ ArgParser _buildParser() {
     ..addOption('output', abbr: 'o')
     ..addOption('mode')
     ..addFlag('json', negatable: false);
+  final textAnalyze = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
   final textUnescape = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addOption('file', abbr: 'f')
@@ -365,6 +393,7 @@ ArgParser _buildParser() {
     ..addOption('mode')
     ..addFlag('json', negatable: false);
   final text = ArgParser()
+    ..addCommand('analyze', textAnalyze)
     ..addCommand('escape', textEscape)
     ..addCommand('unescape', textUnescape);
   final listCompare = ArgParser()
@@ -436,6 +465,132 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runTextAnalyze(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required TextAnalyzeService textAnalyzeService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'text-analyze.conflicting-inputs',
+      messageKey: 'error.textAnalyze.validation',
+    );
+    return 64;
+  }
+
+  late String input;
+  try {
+    input = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'text-analyze.input-access'
+          : 'text-analyze.file-access',
+      messageKey: fileOption == null
+          ? 'error.textAnalyze.inputAccess'
+          : 'error.textAnalyze.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await textAnalyzeService.execute(
+    TextAnalyzeOperationRequest(input: input),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final json = parsed.flag('json');
+      final payload = json
+          ? jsonEncode(value.toJson())
+          : _humanTextAnalyzeResult(
+              value,
+              localeTag: localeTag,
+              catalog: catalog,
+            );
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(payload));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'text-analyze.output-access',
+            messageKey: 'error.textAnalyze.outputAccess',
+          );
+          return 74;
+        }
+        out.writeln(catalog.lookup(localeTag, 'textAnalyze.savedResult'));
+      } else if (json) {
+        out.writeln(payload);
+      } else {
+        out.write(payload);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+String _humanTextAnalyzeResult(
+  TextAnalyzeOutput output, {
+  required String localeTag,
+  required MessageCatalog catalog,
+}) {
+  final buffer = StringBuffer()
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textAnalyze.characterCountLabel')}: '
+      '${output.characterCount}',
+    )
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textAnalyze.wordCountLabel')}: '
+      '${output.wordCount}',
+    )
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textAnalyze.lineCountLabel')}: '
+      '${output.lineCount}',
+    )
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textAnalyze.byteCountLabel')}: '
+      '${output.byteCount}',
+    );
+  return buffer.toString();
 }
 
 Future<int> _runTextEscape(
