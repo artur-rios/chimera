@@ -4264,7 +4264,7 @@ void main() {
             savedBytes = bytes;
             return true;
           },
-          base64DecodePreviewDecoder: (_) async => null,
+          base64DecodePreviewDecoder: (_, {required mediaType}) async => null,
         ),
       );
       await tester.pumpAndSettle();
@@ -4320,8 +4320,8 @@ void main() {
         ChimeraApp(
           localeTag: 'en',
           initialLocation: '/base64/decode',
-          base64DecodePreviewDecoder: (_) async {
-            final preview = await _RecordingPreview.create('image/png');
+          base64DecodePreviewDecoder: (_, {required mediaType}) async {
+            final preview = await _RecordingPreview.create(mediaType);
             images.add(preview);
             return preview;
           },
@@ -4377,7 +4377,7 @@ void main() {
             key: ValueKey<Object?>(failure),
             localeTag: 'en',
             initialLocation: '/base64/decode',
-            base64DecodePreviewDecoder: (_) async {
+            base64DecodePreviewDecoder: (_, {required mediaType}) async {
               if (failure != null) throw failure;
               return null;
             },
@@ -4417,7 +4417,8 @@ void main() {
         ChimeraApp(
           localeTag: 'en',
           initialLocation: '/base64/decode',
-          base64DecodePreviewDecoder: (_) => completed.future,
+          base64DecodePreviewDecoder: (_, {required mediaType}) =>
+              completed.future,
         ),
       );
       await tester.pumpAndSettle();
@@ -4451,8 +4452,8 @@ void main() {
           localeTag: 'en',
           initialLocation: '/base64/decode',
           base64DecodeFilePicker: () async => throw Exception('private path'),
-          base64DecodePreviewDecoder: (_) async {
-            final preview = await _RecordingPreview.create('image/png');
+          base64DecodePreviewDecoder: (_, {required mediaType}) async {
+            final preview = await _RecordingPreview.create(mediaType);
             previews.add(preview);
             return preview;
           },
@@ -4509,7 +4510,8 @@ void main() {
             key: ValueKey<String>(key),
             localeTag: 'en',
             initialLocation: '/base64/decode',
-            base64DecodePreviewDecoder: (_) => _RecordingPreview.create(key),
+            base64DecodePreviewDecoder: (_, {required mediaType}) =>
+                _RecordingPreview.create(mediaType),
             base64DecodeFileSaver: (name, bytes) async {
               savedName = name;
               savedBytes = bytes;
@@ -4521,7 +4523,7 @@ void main() {
         await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
         await tester.enterText(
           find.byKey(const Key('base64-decode-input')),
-          'iVBORw0KGgo=',
+          _validBase64ImageFixtures[key]!,
         );
         await tester.tap(find.byKey(const Key('base64-decode-submit')));
         await tester.pumpAndSettle();
@@ -4530,8 +4532,83 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(savedName, 'chimera-decoded.$value', reason: key);
-        expect(savedBytes, base64.decode('iVBORw0KGgo='), reason: key);
+        expect(
+          savedBytes,
+          base64.decode(_validBase64ImageFixtures[key]!),
+          reason: key,
+        );
       }
+    },
+  );
+
+  testWidgets(
+    'GivenSharedImageCandidateType_WhenRendererDisagreesOrBytesAreUnsupported_ThenOnlyCoreTypeDrivesPreviewAndExtension',
+    (tester) async {
+      var previewCalls = 0;
+      String? receivedMediaType;
+      String? savedName;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/decode',
+          base64DecodePreviewDecoder: (_, {required mediaType}) async {
+            previewCalls++;
+            receivedMediaType = mediaType;
+            return _RecordingPreview.create('image/jpeg');
+          },
+          base64DecodeFileSaver: (name, _) async {
+            savedName = name;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'iVBORw0KGgo=',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(previewCalls, 1);
+      expect(receivedMediaType, 'image/png');
+      expect(find.byType(RawImage), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('base64-decode-save')));
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+      expect(savedName, 'chimera-decoded.png');
+
+      var unsupportedPreviewCalls = 0;
+      await tester.pumpWidget(
+        ChimeraApp(
+          key: const ValueKey<String>('unsupported-image-bytes'),
+          localeTag: 'en',
+          initialLocation: '/base64/decode',
+          base64DecodePreviewDecoder: (_, {required mediaType}) async {
+            unsupportedPreviewCalls++;
+            return _RecordingPreview.create('image/png');
+          },
+          base64DecodeFileSaver: (name, _) async {
+            savedName = name;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'AP8=',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(unsupportedPreviewCalls, 0);
+      expect(find.byType(RawImage), findsNothing);
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+      expect(savedName, 'chimera-decoded.bin');
     },
   );
 
@@ -4543,7 +4620,8 @@ void main() {
         ChimeraApp(
           localeTag: 'en',
           initialLocation: '/base64/decode',
-          base64DecodePreviewDecoder: (_) async => preview,
+          base64DecodePreviewDecoder: (_, {required mediaType}) async =>
+              preview,
           base64DecodeFileSaver: (_, _) async => throw Exception('private'),
         ),
       );
@@ -4836,14 +4914,17 @@ void main() {
     'GivenRealImageFixtures_WhenDecodedInPage_ThenPreviewSemanticsAndExactSaveMatch',
     (tester) async {
       late Completer<void> previewFinished;
-      Future<Base64DecodePreview?> realPreviewDecoder(Uint8List bytes) async {
+      Future<Base64DecodePreview?> realPreviewDecoder(
+        Uint8List bytes, {
+        required String mediaType,
+      }) async {
         Base64DecodePreview? preview;
         Object? decodeError;
         StackTrace? decodeStackTrace;
         try {
           await tester.runAsync(() async {
             try {
-              preview = await decodeBase64Preview(bytes);
+              preview = await decodeBase64Preview(bytes, mediaType: mediaType);
             } on Object catch (error, stackTrace) {
               decodeError = error;
               decodeStackTrace = stackTrace;
@@ -4956,7 +5037,10 @@ void main() {
             in _validBase64ImageFixtures.entries) {
           final Base64DecodePreview? preview;
           try {
-            preview = await decodeBase64Preview(base64.decode(value));
+            preview = await decodeBase64Preview(
+              base64.decode(value),
+              mediaType: key,
+            );
           } on Object catch (error) {
             throw StateError('$key: $error');
           }

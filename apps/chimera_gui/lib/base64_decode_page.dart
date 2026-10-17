@@ -18,8 +18,9 @@ typedef Base64DecodeFileSaver = Future<bool> Function(
 typedef Base64DecodeClipboardReader = Future<String?> Function();
 typedef Base64DecodeClipboardWriter = Future<void> Function(String value);
 typedef Base64DecodePreviewDecoder = Future<Base64DecodePreview?> Function(
-  Uint8List bytes,
-);
+  Uint8List bytes, {
+  required String mediaType,
+});
 
 abstract interface class Base64DecodePreview {
   ui.Image get image;
@@ -62,10 +63,10 @@ Future<String?> readBase64DecodeClipboard() async =>
 Future<void> writeBase64DecodeClipboard(String value) =>
     Clipboard.setData(ClipboardData(text: value));
 
-Future<Base64DecodePreview?> decodeBase64Preview(Uint8List bytes) async {
-  final mediaType = _candidateMediaType(bytes);
-  if (mediaType == null) return null;
-
+Future<Base64DecodePreview?> decodeBase64Preview(
+  Uint8List bytes, {
+  required String mediaType,
+}) async {
   ui.ImmutableBuffer? buffer;
   ui.ImageDescriptor? descriptor;
   ui.Codec? codec;
@@ -86,34 +87,6 @@ Future<Base64DecodePreview?> decodeBase64Preview(Uint8List bytes) async {
     descriptor?.dispose();
     buffer?.dispose();
   }
-}
-
-String? _candidateMediaType(Uint8List bytes) {
-  bool startsWith(List<int> signature) {
-    if (bytes.length < signature.length) return false;
-    for (var index = 0; index < signature.length; index++) {
-      if (bytes[index] != signature[index]) return false;
-    }
-    return true;
-  }
-
-  if (startsWith(const <int>[137, 80, 78, 71, 13, 10, 26, 10])) {
-    return 'image/png';
-  }
-  if (startsWith(const <int>[255, 216, 255])) return 'image/jpeg';
-  if (startsWith(const <int>[71, 73, 70, 56, 55, 97]) ||
-      startsWith(const <int>[71, 73, 70, 56, 57, 97])) {
-    return 'image/gif';
-  }
-  if (bytes.length >= 12 &&
-      startsWith(const <int>[82, 73, 70, 70]) &&
-      bytes[8] == 87 &&
-      bytes[9] == 69 &&
-      bytes[10] == 66 &&
-      bytes[11] == 80) {
-    return 'image/webp';
-  }
-  return null;
 }
 
 final class Base64DecodePage extends StatefulWidget {
@@ -221,10 +194,13 @@ final class _Base64DecodePageState extends State<Base64DecodePage> {
     final output = decoded!;
     Base64DecodePreview? preview;
     var previewUnavailable = false;
-    if (_mode == Base64DecodeMode.binary &&
-        output.imageCandidateMediaType != null) {
+    final imageCandidateMediaType = output.imageCandidateMediaType;
+    if (_mode == Base64DecodeMode.binary && imageCandidateMediaType != null) {
       try {
-        preview = await widget.previewDecoder(output.bytes);
+        preview = await widget.previewDecoder(
+          output.bytes,
+          mediaType: imageCandidateMediaType,
+        );
         previewUnavailable = preview == null;
       } on Object {
         previewUnavailable = true;
@@ -341,13 +317,14 @@ final class _Base64DecodePageState extends State<Base64DecodePage> {
     }
   }
 
-  String? _previewExtension() => switch (_preview?.mediaType) {
-    'image/png' => 'png',
-    'image/jpeg' => 'jpg',
-    'image/gif' => 'gif',
-    'image/webp' => 'webp',
-    _ => null,
-  };
+  String? _previewExtension() =>
+      switch (_preview == null ? null : _output?.imageCandidateMediaType) {
+        'image/png' => 'png',
+        'image/jpeg' => 'jpg',
+        'image/gif' => 'gif',
+        'image/webp' => 'webp',
+        _ => null,
+      };
 
   void _adapterFailure(String key) {
     if (!mounted) return;
