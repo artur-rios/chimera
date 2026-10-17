@@ -11,6 +11,7 @@ import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
+import 'text_escape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -23,6 +24,7 @@ GoRouter buildRouter({
   required JsonTableService jsonTableService,
   required JsonYamlService jsonYamlService,
   required NumberBaseService numberBaseService,
+  required TextEscapeService textEscapeService,
   required SqlFormatService sqlFormatService,
   required XmlFormatService xmlFormatService,
   required DateTime Function() currentTime,
@@ -41,6 +43,10 @@ GoRouter buildRouter({
   required NumberBaseFileSaver numberBaseFileSaver,
   required NumberBaseClipboardReader numberBaseClipboardReader,
   required NumberBaseClipboardWriter numberBaseClipboardWriter,
+  required TextEscapeFilePicker textEscapeFilePicker,
+  required TextEscapeFileSaver textEscapeFileSaver,
+  required TextEscapeClipboardReader textEscapeClipboardReader,
+  required TextEscapeClipboardWriter textEscapeClipboardWriter,
   required SqlFormatFilePicker sqlFormatFilePicker,
   required SqlFormatFileSaver sqlFormatFileSaver,
   required SqlFormatClipboardReader sqlFormatClipboardReader,
@@ -144,6 +150,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag, 'numberBase.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-text-escape'),
+                        onPressed: () => context.go('/text/escape'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'textEscape.openAction'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -222,6 +236,18 @@ GoRouter buildRouter({
           fileSaver: numberBaseFileSaver,
           clipboardReader: numberBaseClipboardReader,
           clipboardWriter: numberBaseClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/text/escape',
+        builder: (context, state) => TextEscapePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: textEscapeService,
+          filePicker: textEscapeFilePicker,
+          fileSaver: textEscapeFileSaver,
+          clipboardReader: textEscapeClipboardReader,
+          clipboardWriter: textEscapeClipboardWriter,
         ),
       ),
       GoRoute(
