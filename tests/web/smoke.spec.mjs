@@ -17,6 +17,74 @@ const certificateJsonFields =
   '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},' +
   '{"oid":"1.2.3.5","name":null,"critical":false}],';
 
+for (const [source, target] of [['pem', 'der'], ['der', 'pem']]) {
+  test(`GivenCertificate${source}_WhenConvertedAndDownloaded_ThenExact${target}FixtureAndSafeSemanticsTransferOffline`, async ({ page }) => {
+    const pem = readFileSync(new URL('../fixtures/certificates/certificate.pem', import.meta.url));
+    const der = readFileSync(new URL('../fixtures/certificates/certificate.der', import.meta.url));
+    const externalRequests = [];
+    const interactionRequests = [];
+    page.on('request', request => {
+      if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+        externalRequests.push(request.url());
+      }
+    });
+    await page.addInitScript(() => {
+      window.__chimeraCopiedText = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async value => { window.__chimeraCopiedText = value; } },
+      });
+    });
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Convert a certificate', exact: true }).click();
+    const textBox = page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true });
+    await expect(textBox).toBeVisible();
+    page.on('request', request => {
+      if (/^https?:/.test(request.url())) interactionRequests.push(request.url());
+    });
+    if (source === 'pem') {
+      await fillFlutterTextBox(textBox, pem.toString('utf8'));
+    } else {
+      const chooserPromise = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Load certificate file', exact: true }).click();
+      await (await chooserPromise).setFiles({ name: 'certificate.der', mimeType: 'application/octet-stream', buffer: der });
+      await expect(page.getByText('Input bytes: 534', { exact: true }).last()).toBeVisible();
+    }
+    await page.getByRole('checkbox', { name: `Source representation: ${source.toUpperCase()}`, exact: true }).click();
+    await page.getByRole('checkbox', { name: `Target representation: ${target.toUpperCase()}`, exact: true }).click();
+    await page.getByRole('button', { name: 'Convert', exact: true }).click();
+    const result = page.getByRole('region', {
+      name: 'Converted certificate Certificate conversion succeeded. ' +
+        `Source representation: ${source.toUpperCase()} Target representation: ${target.toUpperCase()} ` +
+        `Input bytes: ${source === 'pem' ? 778 : 534} DER bytes: 534 Output bytes: ${target === 'pem' ? 778 : 534}`,
+      exact: true,
+    });
+    await expect(result).toBeVisible();
+    const copy = page.getByRole('button', { name: 'Copy converted certificate', exact: true });
+    if (target === 'pem') {
+      // Selectable output is canvas-rendered and excluded from its safe region
+      // announcement. Clipboard output establishes the exact displayed value.
+      await copy.click();
+      await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).toBe(pem.toString('utf8'));
+    } else {
+      await expect(copy).toHaveCount(0);
+    }
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save converted certificate', exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe(`chimera-certificate.${target}`);
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    expect(Buffer.concat(chunks)).toEqual(target === 'der' ? der : pem);
+    // Browser download mode returns no destination URI. Its conversion success
+    // announcement remains valid; byte-exact download is the save evidence.
+    await expect(result).toBeVisible();
+    expect(interactionRequests).toEqual([]);
+    expect(externalRequests).toEqual([]);
+  });
+}
+
 for (const [id, oid] of [['ed25519', '1.3.101.112'], ['unknown-key', '2.999.5']]) {
   test(`certificate ${id} public-key algorithm and 1950 UTC metadata survive compiled inspection`, async ({ page }) => {
     const input = readFileSync(new URL(`../fixtures/certificates/${id}.pem`, import.meta.url), 'utf8');
