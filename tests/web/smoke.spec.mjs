@@ -284,6 +284,39 @@ test('text transformation flow runs locally without external requests', async ({
   expect(externalRequests).toEqual([]);
 });
 
+test('text comparison flow runs locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Compare text' }).click();
+  await expect(page.getByText('Compare text').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Left text' }),
+    'alpha beta',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Right text' }),
+    'alpha brave beta',
+  );
+  await page.getByRole('button', { name: 'Compare text' }).click();
+
+  await expect(
+    page.getByRole('region', {
+      name: /Text comparison result.*Removed: alpha beta.*Added: alpha brave beta.*Added: 1.*Removed: 1.*Unchanged: 0/,
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
 test('JSON array flow renders locally without external requests', async ({ page }) => {
   const externalRequests = [];
   page.on('request', (request) => {

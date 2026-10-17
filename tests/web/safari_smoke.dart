@@ -510,8 +510,44 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'text transformation');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for text comparison flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Compare text'),
+      'Home page did not return for text comparison flow',
+    );
+    await _clickButton(driver, 'Compare text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Left text'),
+      'Text comparison page did not open',
+    );
+    // Use the built-in bounded line sample to avoid SafariDriver multiline
+    // synthesis differences; edited inputs are covered by native and Playwright.
+    await _clickButton(driver, 'Compare text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text comparison result'),
+      'Text comparison result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Added: 1 Removed: 1 Unchanged: 1'),
+      'Text comparison summary was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'text comparison');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();

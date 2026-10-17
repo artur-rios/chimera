@@ -144,12 +144,12 @@ flutter_test, integration_test, and Playwright.
 - Consumes: Task 4's visible labels, semantics, and route.
 - Produces: representative native and browser evidence for the same service path.
 
-- [ ] Add a failing representative text-comparison flow to Windows/Linux
+- [x] Add a failing representative text-comparison flow to Windows/Linux
   integration tests.
-- [ ] Add a failing local-only flow to Chromium, Firefox, and WebKit tests.
-- [ ] Add the bounded equivalent to native Safari smoke.
-- [ ] Run affected native/browser suites and fix only evidence-backed defects.
-- [ ] Commit the cross-platform evidence.
+- [x] Add a failing local-only flow to Chromium, Firefox, and WebKit tests.
+- [x] Add the bounded equivalent to native Safari smoke.
+- [x] Run affected native/browser suites and fix only evidence-backed defects.
+- [x] Commit the cross-platform evidence.
 
 ### Task 6: Gate verification and delivery
 
