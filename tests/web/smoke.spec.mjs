@@ -1018,7 +1018,10 @@ test('Base64 PNG decode previews and downloads exact bytes without requests', as
   ).toEqual([]);
 
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save decoded bytes' }).click();
+  const save = page.getByRole('button', { name: 'Save decoded bytes', exact: true });
+  await expect(save).toBeEnabled();
+  // Auto-scrolling the semantics DOM can leave Flutter's canvas unscrolled.
+  await save.press('Enter');
   const download = await downloadPromise;
   expect(download.suggestedFilename()).toBe('chimera-decoded.png');
   const stream = await download.createReadStream();
