@@ -8,7 +8,7 @@ const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.
 for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {
   test(`GivenGzipSaveBoundary_When${scenario}_ThenOnlyOneMatchingLiveBlobIsAccepted`, async ({ page }) => {
     await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves({suppressDownloads: true});`);
-    const accepted = await page.evaluate(async scenario => {
+    await page.evaluate(scenario => {
       const anchor = document.createElement('a');
       anchor.download = 'chimera-compressed.gz';
       const payload = new Blob([new Uint8Array([31, 139, 8])], {
@@ -20,15 +20,19 @@ for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate
       anchor.click();
       if (scenario === 'duplicate-click') anchor.click();
       if (scenario === 'revoke-after-click') URL.revokeObjectURL(url);
-      // Flush the real Blob read queued by the installed observer.
-      await payload.arrayBuffer();
-      await Promise.resolve();
-      return window.__chimeraSavedName === 'chimera-compressed.gz' &&
+    }, scenario);
+    // Wait for this observer's read or invalid-URL outcome, not a second read.
+    await expect.poll(() => page.evaluate(() =>
+      Array.isArray(window.__chimeraSavedBytes) ||
+      window.__chimeraGzipSaveErrors.length > 0,
+    )).toBe(true);
+    const accepted = await page.evaluate(() =>
+      window.__chimeraSavedName === 'chimera-compressed.gz' &&
         window.__chimeraSaveCount === 1 &&
         window.__chimeraSavedMime === 'application/gzip' &&
         window.__chimeraGzipSaveErrors.length === 0 &&
-        JSON.stringify(window.__chimeraSavedBytes) === '[31,139,8]';
-    }, scenario);
+        JSON.stringify(window.__chimeraSavedBytes) === '[31,139,8]',
+    );
     expect(accepted).toBe(scenario === 'revoke-after-click');
   });
 }
