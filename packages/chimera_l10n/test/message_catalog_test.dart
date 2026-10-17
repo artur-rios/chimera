@@ -98,6 +98,14 @@ void main() {
 
   test('GivenBase64EncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     expect(
+      catalog.lookup('en', 'base64Encode.resultSuccess'),
+      'Base64 encoding succeeded.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'base64Encode.resultSuccess'),
+      'Codificação Base64 concluída.',
+    );
+    expect(
       catalog.lookup('en', 'base64Encode.inputByteCountLabel'),
       'Input bytes',
     );
@@ -170,6 +178,7 @@ void main() {
       'base64Encode.outputLabel',
       'base64Encode.pageTitle',
       'base64Encode.pasteAction',
+      'base64Encode.resultSuccess',
       'base64Encode.saveAction',
       'base64Encode.savedResult',
       'base64Encode.submitAction',
