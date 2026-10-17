@@ -1,5 +1,65 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
+
+for (const source of ['text', 'binary']) {
+  test(`GivenGzip${source}_WhenLevelSelectedCompressedAndDownloaded_ThenExactMemberRoundTripsOffline`, async ({ page }) => {
+    const input = source === 'text' ? Buffer.from('Olá 🌍', 'utf8') : Buffer.from([0, 255, 128, 1]);
+    const level = source === 'text' ? 0 : 9;
+    const expectedHex = source === 'text'
+      ? '1f8b08000000000000ff010900f6ff4f6cc3a120f09f8c8d65c404fa09000000'
+      : '1f8b08000000000000ff63f8dfc008002c4358d304000000';
+    const outputCount = source === 'text' ? 32 : 24;
+    const externalRequests = [];
+    const interactionRequests = [];
+    page.on('request', request => {
+      if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') externalRequests.push(request.url());
+    });
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Compress to GZIP', exact: true }).click();
+    const text = page.getByRole('textbox', { name: 'Text to compress', exact: true });
+    await expect(text).toBeVisible();
+    page.on('request', request => {
+      if (/^https?:/.test(request.url())) interactionRequests.push(request.url());
+    });
+    if (source === 'text') {
+      await fillFlutterTextBox(text, input.toString('utf8'));
+    } else {
+      const chooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Load file bytes', exact: true }).click();
+      await (await chooser).setFiles({ name: 'source.bin', mimeType: 'application/octet-stream', buffer: input });
+      await expect(page.getByRole('group').getByText('Input bytes: 4', { exact: true })).toBeVisible();
+      await expect(text).toHaveValue('');
+    }
+    await page.getByRole('button', { name: 'Compression level 6', exact: true }).click();
+    await page.getByRole('menuitem', { name: `${level}`, exact: true }).click();
+    await page.getByRole('button', { name: 'Compress', exact: true }).click();
+    const result = page.getByRole('region', {
+      name: `Compressed binary result Compression succeeded. Compression level: ${level} Input bytes: ${input.length} Output bytes: ${outputCount}`,
+      exact: true,
+    });
+    await expect(result).toBeVisible();
+    await expect(result).toHaveAttribute('tabindex', '0');
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save GZIP file', exact: true }).click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('chimera-compressed.gz');
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    assertGzipMember(Buffer.concat(chunks), expectedHex, input);
+    await expect(result).toBeVisible();
+    expect(interactionRequests).toEqual([]);
+    expect(externalRequests).toEqual([]);
+  });
+}
+
+function assertGzipMember(actual, expectedHex, source) {
+  // Literal RFC 1952 members also pin MTIME, optional flags, CRC32 and ISIZE.
+  expect(actual.toString('hex')).toBe(expectedHex);
+  // Node's platform zlib decoder is independent of the Dart archive encoder.
+  expect(gunzipSync(actual)).toEqual(source);
+}
 
 // Literal public metadata, independent of the parser and serializer under test.
 const certificateJsonFields =
@@ -65,13 +125,18 @@ for (const [source, target] of [['pem', 'der'], ['der', 'pem']]) {
     if (target === 'pem') {
       // Selectable output is canvas-rendered and excluded from its safe region
       // announcement. Clipboard output establishes the exact displayed value.
-      await copy.click();
+      // Keyboard activation avoids WebKit scrolling only the semantics DOM
+      // when these controls sit below the painted Flutter viewport.
+      await expect(copy).toBeEnabled();
+      await copy.press('Enter');
       await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).toBe(pem.toString('utf8'));
     } else {
       await expect(copy).toHaveCount(0);
     }
     const downloadPromise = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Save converted certificate', exact: true }).click();
+    const save = page.getByRole('button', { name: 'Save converted certificate', exact: true });
+    await expect(save).toBeEnabled();
+    await save.press('Enter');
     const download = await downloadPromise;
     expect(download.suggestedFilename()).toBe(`chimera-certificate.${target}`);
     const chunks = [];
