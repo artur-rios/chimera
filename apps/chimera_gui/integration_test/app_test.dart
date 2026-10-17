@@ -268,4 +268,30 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets(
+    'GivenListCompareRoute_WhenListsCompared_ThenStableSetsAreVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/list/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'alpha\nleft',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'alpha\nright',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('left'), findsOneWidget);
+      expect(find.text('right'), findsOneWidget);
+      expect(find.text('alpha'), findsOneWidget);
+      expect(find.text('Equal: no'), findsOneWidget);
+    },
+  );
 }

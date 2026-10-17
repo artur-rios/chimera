@@ -409,8 +409,44 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'XML format');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for list comparison flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Compare lists'),
+      'Home page did not return for list comparison flow',
+    );
+    await _clickButton(driver, 'Compare lists');
+    await _waitUntil(
+      () => _pageContains(driver, 'Left list'),
+      'List comparison page did not open',
+    );
+    await _fillTextBox(driver, 'Left list', 'alpha');
+    await _fillTextBox(driver, 'Right list', 'alpha');
+    await _clickButton(driver, 'Compare lists');
+    await _waitUntil(
+      () => _pageContains(driver, 'Intersection Items: 1 alpha'),
+      'List comparison intersection was incorrect',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Equal: yes'),
+      'List comparison equality was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'list comparison');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();
@@ -517,11 +553,12 @@ Future<bool> _inputHasValue(
 
 Future<bool> _pageContains(WebDriver driver, String expected) async {
   final result = await driver.execute(
-    '''
-      const expected = arguments[0];
-      if (document.body.innerText.includes(expected)) return true;
+    r'''
+      const normalize = value => value.replace(/\s+/g, ' ').trim();
+      const expected = normalize(arguments[0]);
+      if (normalize(document.body.innerText).includes(expected)) return true;
       return [...document.querySelectorAll('[aria-label]')]
-        .some(element => element.getAttribute('aria-label').includes(expected));
+        .some(element => normalize(element.getAttribute('aria-label')).includes(expected));
     ''',
     <Object?>[expected],
   );

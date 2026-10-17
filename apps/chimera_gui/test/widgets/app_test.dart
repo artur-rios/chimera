@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
@@ -2500,6 +2501,315 @@ void main() {
       );
       expect(tester.takeException(), isNull);
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenListCompareHomeAction_WhenOptionsSelected_ThenLocalizedSetsAndSemanticsRender',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('open-list-compare')));
+      await tester.tap(find.byKey(const Key('open-list-compare')));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('list-compare-left-input')))
+            .controller!
+            .text,
+        'alpha\nbeta',
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const Key('list-compare-right-input')),
+            )
+            .controller!
+            .text,
+        'alpha\ngamma',
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        ' Alpha \nalpha\nleft',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'ALPHA\nright',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-case')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Case insensitive').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-whitespace')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Trim whitespace').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-duplicates')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Distinct items').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('left'), findsOneWidget);
+      expect(find.text('right'), findsOneWidget);
+      expect(find.text(' Alpha '), findsOneWidget);
+      expect(find.text('Equal: no'), findsOneWidget);
+      expect(
+        find.byKey(const Key('list-compare-intersection-semantics')),
+        findsOneWidget,
+      );
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenTrailingBlankListItem_WhenCompared_ThenCountAndSemanticsExposeIt',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/list/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'alpha\n',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'alpha',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('list-compare-left-only-semantics')),
+          matching: find.text('Items: 1'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(const Key('list-compare-right-only-semantics')),
+          matching: find.text('Items: 0'),
+        ),
+        findsOneWidget,
+      );
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('list-compare-left-only-semantics')),
+      );
+      expect(semantics.properties.role, SemanticsRole.region);
+      expect(semantics.properties.value, 'Items: 1\n');
+    },
+  );
+
+  testWidgets(
+    'GivenListCompareAdapters_WhenLoadedCopiedAndSaved_ThenExactPreviewTransfers',
+    (tester) async {
+      String? copied;
+      List<int>? saved;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/list/compare',
+          listCompareLeftFilePicker: () async => 'um\ndois',
+          listCompareRightClipboardReader: () async => 'dois\ntrês',
+          listCompareClipboardWriter: (value) async => copied = value,
+          listCompareFileSaver: (_, bytes) async {
+            saved = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('list-compare-left-file')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-right-paste')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+
+      const preview =
+          'Somente à esquerda:\num\n'
+          'Somente à direita:\ntrês\n'
+          'Interseção:\ndois\n'
+          'Iguais: não\n';
+      await tester.ensureVisible(find.byKey(const Key('list-compare-copy')));
+      await tester.tap(find.byKey(const Key('list-compare-copy')));
+      await tester.pumpAndSettle();
+      expect(copied, preview);
+      expect(find.text('Comparação de listas copiada.'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('list-compare-save')));
+      await tester.tap(find.byKey(const Key('list-compare-save')));
+      await tester.pumpAndSettle();
+      expect(utf8.decode(saved!), preview);
+      expect(find.text('Comparação de listas salva.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenListCompareFailures_WhenActionsFail_ThenNoPartialResultIsRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/list/compare',
+          listCompareLeftFilePicker: () async => throw Exception('secret'),
+          listCompareClipboardWriter: (_) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'same',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'same',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('list-compare-copy')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('list-compare-copy')));
+      await tester.tap(find.byKey(const Key('list-compare-copy')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+
+      await tester.ensureVisible(
+        find.byKey(const Key('list-compare-left-file')),
+      );
+      await tester.tap(find.byKey(const Key('list-compare-left-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The list file could not be read.'), findsOneWidget);
+      expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+
+      await tester.pumpWidget(
+        ChimeraApp(
+          key: UniqueKey(),
+          localeTag: 'en',
+          initialLocation: '/list/compare',
+          listCompareService: const ListCompareService(
+            comparator: ListComparator(maxResultItems: 0),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'item',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('List comparison exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenListCompareSaveFailure_WhenSaved_ThenResultClearsAndErrorAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/list/compare',
+          listCompareFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('list-compare-save')), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('list-compare-save')));
+      await tester.tap(find.byKey(const Key('list-compare-save')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('list-compare-save')), findsNothing);
+      expect(
+        find.text('The list comparison could not be saved.'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenPendingListLoadOrChangedInput_WhenResultExists_ThenStaleClearsAndActionsDisable',
+    (tester) async {
+      final loaded = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/list/compare',
+          listCompareLeftFilePicker: () => loaded.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('list-compare-left-input')),
+        'same',
+      );
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'same',
+      );
+      await tester.tap(find.byKey(const Key('list-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('list-compare-copy')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('list-compare-left-file')));
+      await tester.pump();
+      expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('list-compare-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      loaded.complete('loaded');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('list-compare-right-input')),
+        'changed',
+      );
+      expect(find.byKey(const Key('list-compare-copy')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowListCompareViewport_WhenPortugueseFormRenders_ThenNoOverflowOccurs',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/list/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Comparar listas'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
     },
   );
 }

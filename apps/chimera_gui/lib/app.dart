@@ -11,6 +11,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
@@ -33,6 +34,7 @@ final class ChimeraApp extends StatelessWidget {
     this.jsonYamlService = const JsonYamlService(
       converter: JsonYamlConverter(maxNodes: 10000),
     ),
+    this.listCompareService = const ListCompareService(),
     this.numberBaseService = const NumberBaseService(),
     this.textEscapeService = const TextEscapeService(),
     this.textUnescapeService = const TextUnescapeService(),
@@ -50,6 +52,12 @@ final class ChimeraApp extends StatelessWidget {
     this.jsonTableFilePicker,
     this.jsonYamlFilePicker,
     this.jsonYamlFileSaver,
+    this.listCompareLeftFilePicker,
+    this.listCompareRightFilePicker,
+    this.listCompareFileSaver,
+    this.listCompareLeftClipboardReader,
+    this.listCompareRightClipboardReader,
+    this.listCompareClipboardWriter,
     this.numberBaseFilePicker,
     this.numberBaseFileSaver,
     this.numberBaseClipboardReader,
@@ -81,6 +89,7 @@ final class ChimeraApp extends StatelessWidget {
   final JsonFormatService jsonFormatService;
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
+  final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
   final TextEscapeService textEscapeService;
   final TextUnescapeService textUnescapeService;
@@ -98,6 +107,12 @@ final class ChimeraApp extends StatelessWidget {
   final JsonTableFilePicker? jsonTableFilePicker;
   final JsonYamlFilePicker? jsonYamlFilePicker;
   final JsonYamlFileSaver? jsonYamlFileSaver;
+  final ListCompareFilePicker? listCompareLeftFilePicker;
+  final ListCompareFilePicker? listCompareRightFilePicker;
+  final ListCompareFileSaver? listCompareFileSaver;
+  final ListCompareClipboardReader? listCompareLeftClipboardReader;
+  final ListCompareClipboardReader? listCompareRightClipboardReader;
+  final ListCompareClipboardWriter? listCompareClipboardWriter;
   final NumberBaseFilePicker? numberBaseFilePicker;
   final NumberBaseFileSaver? numberBaseFileSaver;
   final NumberBaseClipboardReader? numberBaseClipboardReader;
@@ -131,6 +146,7 @@ final class ChimeraApp extends StatelessWidget {
         jsonFormatService: jsonFormatService,
         jsonTableService: jsonTableService,
         jsonYamlService: jsonYamlService,
+        listCompareService: listCompareService,
         numberBaseService: numberBaseService,
         textEscapeService: textEscapeService,
         textUnescapeService: textUnescapeService,
@@ -148,6 +164,12 @@ final class ChimeraApp extends StatelessWidget {
         jsonTableFilePicker: jsonTableFilePicker,
         jsonYamlFilePicker: jsonYamlFilePicker,
         jsonYamlFileSaver: jsonYamlFileSaver,
+        listCompareLeftFilePicker: listCompareLeftFilePicker,
+        listCompareRightFilePicker: listCompareRightFilePicker,
+        listCompareFileSaver: listCompareFileSaver,
+        listCompareLeftClipboardReader: listCompareLeftClipboardReader,
+        listCompareRightClipboardReader: listCompareRightClipboardReader,
+        listCompareClipboardWriter: listCompareClipboardWriter,
         numberBaseFilePicker: numberBaseFilePicker,
         numberBaseFileSaver: numberBaseFileSaver,
         numberBaseClipboardReader: numberBaseClipboardReader,
@@ -183,6 +205,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonFormatService,
     required this.jsonTableService,
     required this.jsonYamlService,
+    required this.listCompareService,
     required this.numberBaseService,
     required this.textEscapeService,
     required this.textUnescapeService,
@@ -200,6 +223,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonTableFilePicker,
     required this.jsonYamlFilePicker,
     required this.jsonYamlFileSaver,
+    required this.listCompareLeftFilePicker,
+    required this.listCompareRightFilePicker,
+    required this.listCompareFileSaver,
+    required this.listCompareLeftClipboardReader,
+    required this.listCompareRightClipboardReader,
+    required this.listCompareClipboardWriter,
     required this.numberBaseFilePicker,
     required this.numberBaseFileSaver,
     required this.numberBaseClipboardReader,
@@ -230,6 +259,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonFormatService jsonFormatService;
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
+  final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
   final TextEscapeService textEscapeService;
   final TextUnescapeService textUnescapeService;
@@ -247,6 +277,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonTableFilePicker? jsonTableFilePicker;
   final JsonYamlFilePicker? jsonYamlFilePicker;
   final JsonYamlFileSaver? jsonYamlFileSaver;
+  final ListCompareFilePicker? listCompareLeftFilePicker;
+  final ListCompareFilePicker? listCompareRightFilePicker;
+  final ListCompareFileSaver? listCompareFileSaver;
+  final ListCompareClipboardReader? listCompareLeftClipboardReader;
+  final ListCompareClipboardReader? listCompareRightClipboardReader;
+  final ListCompareClipboardWriter? listCompareClipboardWriter;
   final NumberBaseFilePicker? numberBaseFilePicker;
   final NumberBaseFileSaver? numberBaseFileSaver;
   final NumberBaseClipboardReader? numberBaseClipboardReader;
@@ -289,6 +325,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonFormatService: widget.jsonFormatService,
       jsonTableService: widget.jsonTableService,
       jsonYamlService: widget.jsonYamlService,
+      listCompareService: widget.listCompareService,
       numberBaseService: widget.numberBaseService,
       textEscapeService: widget.textEscapeService,
       textUnescapeService: widget.textUnescapeService,
@@ -308,6 +345,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonTableFilePicker: widget.jsonTableFilePicker ?? pickJsonTableFile,
       jsonYamlFilePicker: widget.jsonYamlFilePicker ?? pickJsonYamlFile,
       jsonYamlFileSaver: widget.jsonYamlFileSaver ?? saveJsonYamlFile,
+      listCompareLeftFilePicker:
+          widget.listCompareLeftFilePicker ?? pickListCompareFile,
+      listCompareRightFilePicker:
+          widget.listCompareRightFilePicker ?? pickListCompareFile,
+      listCompareFileSaver: widget.listCompareFileSaver ?? saveListCompareFile,
+      listCompareLeftClipboardReader:
+          widget.listCompareLeftClipboardReader ?? readListCompareClipboard,
+      listCompareRightClipboardReader:
+          widget.listCompareRightClipboardReader ?? readListCompareClipboard,
+      listCompareClipboardWriter:
+          widget.listCompareClipboardWriter ?? writeListCompareClipboard,
       numberBaseFilePicker: widget.numberBaseFilePicker ?? pickNumberBaseFile,
       numberBaseFileSaver: widget.numberBaseFileSaver ?? saveNumberBaseFile,
       numberBaseClipboardReader:

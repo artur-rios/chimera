@@ -2323,4 +2323,216 @@ void main() {
       expect(err.toString(), 'Não foi possível salvar o texto não escapado.\n');
     },
   );
+
+  test(
+    'GivenLiteralListsAndOptions_WhenListCompareRuns_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left= Alpha \nalpha\nleft',
+          '--right=ALPHA\nright',
+          '--case=insensitive',
+          '--whitespace=trim',
+          '--duplicates=distinct',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 0, reason: err.toString());
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'leftOnly': ['left'],
+        'rightOnly': ['right'],
+        'intersection': [' Alpha '],
+        'equal': false,
+        'options': <String, Object?>{
+          'case': 'insensitive',
+          'whitespace': 'trim',
+          'duplicates': 'distinct',
+        },
+      });
+    },
+  );
+
+  test(
+    'GivenFileAndStandardInputSources_WhenListCompareRuns_ThenBothAreLoaded',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left-file=left.txt',
+          '--right-stdin',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: StringBuffer(),
+        readFile: (path) async => path == 'left.txt' ? 'um\ndois' : 'wrong',
+        readStandardInput: () async => 'dois\ntrês',
+      );
+
+      expect(exitCode, 0);
+      expect(
+        out.toString(),
+        'Somente à esquerda:\num\n'
+        'Somente à direita:\ntrês\n'
+        'Interseção:\ndois\n'
+        'Iguais: não\n',
+      );
+    },
+  );
+
+  test(
+    'GivenOutputPath_WhenListCompareRuns_ThenExactSelectedPayloadIsSaved',
+    () async {
+      List<int>? saved;
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left=a\nb',
+          '--right=a\nc',
+          '--json',
+          '--output=result.json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputFile: (_, bytes) async => saved = bytes,
+      );
+
+      expect(exitCode, 0, reason: err.toString());
+      expect(out.toString(), 'List comparison saved.\n');
+      expect(
+        jsonDecode(utf8.decode(saved!)),
+        containsPair('intersection', ['a']),
+      );
+      expect(utf8.decode(saved!), isNot(endsWith('\n')));
+    },
+  );
+
+  test(
+    'GivenOutputWriteFailure_WhenListCompareRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left=secret',
+          '--right=public',
+          '--output=result.txt',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), isNot(contains('secret')));
+      expect(
+        (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'list-compare.output-access'),
+      );
+    },
+  );
+
+  test(
+    'GivenInvalidListSources_WhenCompareRuns_ThenSafeValidationReturns',
+    () async {
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['list', 'compare', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        );
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('sensitive')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await failureFor(const [
+          '--left=sensitive',
+          '--right=right',
+          '--left-stdin',
+        ]),
+        containsPair('code', 'list-compare.conflicting-left-sources'),
+      );
+      expect(
+        await failureFor(const ['--left=left']),
+        containsPair('code', 'list-compare.missing-right-source'),
+      );
+      expect(
+        await failureFor(const ['--left-stdin', '--right-stdin']),
+        containsPair('code', 'list-compare.shared-stdin'),
+      );
+      expect(
+        await failureFor(const ['--left=left', '--right=right', '--case=fold']),
+        containsPair('code', 'list-compare.invalid-option'),
+      );
+    },
+  );
+
+  test(
+    'GivenListCompareAccessAndResourceFailures_WhenRun_ThenTypedExitsReturn',
+    () async {
+      final accessErr = StringBuffer();
+      final accessExit = await runChimera(
+        const <String>[
+          'list',
+          'compare',
+          '--left-file=secret.txt',
+          '--right=right',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: accessErr,
+        readFile: (_) async => throw Exception('secret-file-detail'),
+      );
+      expect(accessExit, 74);
+      expect(accessErr.toString(), isNot(contains('secret')));
+      expect(
+        (jsonDecode(accessErr.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'list-compare.left-file-access'),
+      );
+
+      final resourceErr = StringBuffer();
+      final resourceExit = await runChimera(
+        const <String>['list', 'compare', '--left=a\nb', '--right='],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: resourceErr,
+        listCompareService: const ListCompareService(
+          comparator: ListComparator(maxResultItems: 1),
+        ),
+      );
+      expect(resourceExit, 75);
+      expect(
+        resourceErr.toString(),
+        'List comparison exceeded its resource limit.\n',
+      );
+    },
+  );
 }
