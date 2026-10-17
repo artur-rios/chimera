@@ -1,4 +1,92 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+// Literal public metadata, independent of the parser and serializer under test.
+const certificateJsonFields =
+  '"version":3,"serialNumberHex":"01AB",' +
+  '"subject":[{"oid":"2.5.4.3","name":"commonName","value":"example.test"},' +
+  '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"},' +
+  '{"oid":"1.2.3.4","name":null,"value":"Unknown attribute"}],' +
+  '"issuer":[{"oid":"2.5.4.3","name":"commonName","value":"Example CA"},' +
+  '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"}],' +
+  '"notBefore":"2024-01-01T00:00:00.000Z",' +
+  '"notAfter":"2034-01-01T00:00:00.000Z",' +
+  '"signatureAlgorithm":{"oid":"1.2.840.113549.1.1.11",' +
+  '"name":"sha256WithRSAEncryption"},' +
+  '"publicKeyAlgorithm":{"oid":"1.2.840.113549.1.1.1","name":"rsaEncryption"},' +
+  '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},' +
+  '{"oid":"1.2.3.5","name":null,"critical":false}],';
+
+for (const { source, representation, byteCount, label } of [
+  { source: 'text', representation: 'pem', byteCount: 778, label: 'PEM' },
+  { source: 'file', representation: 'der', byteCount: 534, label: 'DER' },
+  { source: 'clipboard', representation: 'base64', byteCount: 713, label: 'Base64' },
+]) {
+  test(`certificate ${representation} ${source} inspects and copies exact metadata without HTTP requests`, async ({
+    page,
+  }, testInfo) => {
+    const interactionRequests = [];
+    const input = readFileSync(
+      new URL(`../fixtures/certificates/certificate.${representation}`, import.meta.url),
+    );
+    await page.addInitScript((clipboardText) => {
+      window.__chimeraCopiedText = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          readText: async () => clipboardText,
+          writeText: async (value) => { window.__chimeraCopiedText = value; },
+        },
+      });
+    }, input.toString('utf8'));
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Inspect a certificate', exact: true }).click();
+    await expect(page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true })).toBeVisible();
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) interactionRequests.push(request.url());
+    });
+
+    if (source === 'text') {
+      await fillFlutterTextBox(
+        page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true }),
+        input.toString('utf8'),
+      );
+    } else if (source === 'file') {
+      const chooserPromise = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Load certificate file' }).click();
+      const chooser = await chooserPromise;
+      await chooser.setFiles({ name: 'certificate.der', mimeType: 'application/octet-stream', buffer: input });
+      await expect(page.getByText('Input bytes: 534', { exact: true }).last()).toBeVisible();
+      await page.getByRole('checkbox', { name: 'DER', exact: true }).click();
+    } else {
+      await page.getByRole('button', { name: 'Paste certificate', exact: true }).click();
+      await expect(page.getByRole('button', { name: 'Paste certificate', exact: true })).toBeEnabled();
+      await page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true }).click();
+      await expect(page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true })).toHaveValue(input.toString('utf8'));
+      await page.getByRole('checkbox', { name: 'Base64', exact: true }).click();
+    }
+    await page.getByRole('button', { name: 'Inspect', exact: true }).click();
+    const metadata = page.getByRole('region', {
+      name: `Certificate metadata Certificate inspection succeeded. Representation: ${label} Subject attributes: 3 Issuer attributes: 2 Extensions: 2`,
+      exact: true,
+    });
+    await expect(metadata).toBeVisible();
+    // Full values are intentionally excluded from the region announcement.
+    // Preserve rendered canvas evidence as well as asserting the public summary.
+    const screenshotPath = testInfo.outputPath(`certificate-${representation}-metadata.png`);
+    await metadata.screenshot({ path: screenshotPath });
+    await testInfo.attach(`certificate-${representation}-metadata`, {
+      path: screenshotPath,
+      contentType: 'image/png',
+    });
+    await page.getByRole('button', { name: 'Copy certificate JSON', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText))
+      .toBe(`{"representation":"${representation}",${certificateJsonFields}"inputByteCount":${byteCount},"derByteCount":534}`);
+    await expect(page.getByText('Certificate JSON copied.', { exact: true }).last()).toBeVisible();
+    expect(interactionRequests).toEqual([]);
+  });
+}
 
 async function enableFlutterSemantics(page) {
   const placeholder = page.locator('flt-semantics-placeholder');

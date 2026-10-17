@@ -3,6 +3,38 @@ import 'dart:io';
 
 import 'package:webdriver/async_io.dart';
 
+// Public fixture pinned by tests/fixtures/certificates/manifest.json.
+const _certificatePem = '''-----BEGIN CERTIFICATE-----
+MIICEjCCAXugAwIBAgICAaswDQYJKoZIhvcNAQELBQAwMDETMBEGA1UEAwwKRXhh
+bXBsZSBDQTEZMBcGA1UECgwQQ2hpbWVyYSBmaXh0dXJlczAeFw0yNDAxMDEwMDAw
+MDBaFw0zNDAxMDEwMDAwMDBaME4xFTATBgNVBAMMDGV4YW1wbGUudGVzdDEZMBcG
+A1UECgwQQ2hpbWVyYSBmaXh0dXJlczEaMBgGAyoDBAwRVW5rbm93biBhdHRyaWJ1
+dGUwgZ4wDQYJKoZIhvcNAQEBBQADgYwAMIGIAoGAAIAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAoMCAwEAAaMeMBwwDwYDVR0TAQH/BAUwAwEB/zAJBgMqAwUE
+AgUAMA0GCSqGSIb3DQEBCwUAA4GBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAA
+-----END CERTIFICATE-----
+''';
+// Literal public metadata, independent of the parser and serializer under test.
+const _certificateJsonFields =
+    '"version":3,"serialNumberHex":"01AB",'
+    '"subject":[{"oid":"2.5.4.3","name":"commonName","value":"example.test"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"},'
+    '{"oid":"1.2.3.4","name":null,"value":"Unknown attribute"}],'
+    '"issuer":[{"oid":"2.5.4.3","name":"commonName","value":"Example CA"},'
+    '{"oid":"2.5.4.10","name":"organizationName","value":"Chimera fixtures"}],'
+    '"notBefore":"2024-01-01T00:00:00.000Z",'
+    '"notAfter":"2034-01-01T00:00:00.000Z",'
+    '"signatureAlgorithm":{"oid":"1.2.840.113549.1.1.11",'
+    '"name":"sha256WithRSAEncryption"},'
+    '"publicKeyAlgorithm":{"oid":"1.2.840.113549.1.1.1","name":"rsaEncryption"},'
+    '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},'
+    '{"oid":"1.2.3.5","name":null,"critical":false}],';
+
 Future<void> main() async {
   WebDriver? createdDriver;
   try {
@@ -749,8 +781,152 @@ Future<void> main() async {
     );
     await _assertNoNetworkRequests(driver, flow: 'Base64 decoding interaction');
 
+    for (final representation in ['pem', 'der', 'base64']) {
+      await driver.get('http://127.0.0.1:4173');
+      await _waitUntil(
+        () async =>
+            await driver.execute(
+              "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+              const <Object?>[],
+            ) ==
+            true,
+        'Chimera did not reload for certificate $representation flow',
+      );
+      await driver.execute(
+        "document.querySelector('flt-semantics-placeholder')?.click();",
+        const <Object?>[],
+      );
+      await _clickButton(driver, 'Inspect a certificate');
+      await _waitUntil(
+        () => _pageContains(driver, 'Certificate (PEM or Base64)'),
+        'Certificate page did not open',
+      );
+      final base64Text = _certificatePem
+          .split('\n')
+          .where((line) => !line.startsWith('-----') && line.isNotEmpty)
+          .join();
+      final source = representation == 'pem'
+          ? _certificatePem
+          : '$base64Text\n';
+      await driver.execute(
+        '''
+        window.__chimeraCopiedText = null;
+        const source = arguments[0];
+        Object.defineProperty(navigator, 'clipboard', {
+          configurable: true,
+          value: {
+            readText: async () => source,
+            writeText: async value => { window.__chimeraCopiedText = value; },
+          },
+        });
+        const originalClick = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function() {
+          if (this.type === 'file') return;
+          return originalClick.call(this);
+        };
+        performance.clearResourceTimings();
+      ''',
+        <Object?>[source],
+      );
+      if (representation == 'der') {
+        // SafariDriver does not support direct file upload. Exercise the real
+        // picker change/read path with a File built in this browser context.
+        await _clickButton(driver, 'Load certificate file');
+        await _waitUntil(
+          () async =>
+              await driver.execute(
+                """return document.querySelector('input[type="file"]') !== null;""",
+                const <Object?>[],
+              ) ==
+              true,
+          'Certificate file input did not become available',
+        );
+        final dispatched = await driver.execute(
+          '''
+          const input = document.querySelector('input[type="file"]');
+          if (!input) return false;
+          const bytes = Uint8Array.from(atob(arguments[0]), c => c.charCodeAt(0));
+          const transfer = new DataTransfer();
+          transfer.items.add(new File([bytes], 'certificate.der',
+            {type: 'application/octet-stream'}));
+          input.files = transfer.files;
+          input.dispatchEvent(new Event('change', {bubbles: true}));
+          return input.files.length === 1 && input.files[0].size === 534;
+        ''',
+          <Object?>[base64Text],
+        );
+        if (dispatched != true) {
+          throw StateError('Certificate DER file could not be dispatched');
+        }
+        await _waitUntil(
+          () => _pageContains(driver, 'Input bytes: 534'),
+          'Certificate DER fixture was not loaded',
+        );
+        await _clickCheckbox(driver, 'DER');
+      } else {
+        await _clickButton(driver, 'Paste certificate');
+        await _waitUntil(
+          () async =>
+              await driver.execute(
+                '''
+                const input = [...document.querySelectorAll('textarea[aria-label]')]
+                  .find(element => element.getAttribute('aria-label') === arguments[0]);
+                if (!input || input.disabled) return false;
+                input.focus();
+                return input.value === arguments[1];
+              ''',
+                <Object?>['Certificate (PEM or Base64)', source],
+              ) ==
+              true,
+          'Certificate clipboard source was not loaded exactly',
+        );
+        if (representation == 'base64') {
+          await _clickCheckbox(driver, 'Base64');
+        }
+      }
+      await _clickButton(driver, 'Inspect');
+      final label = representation == 'base64'
+          ? 'Base64'
+          : representation.toUpperCase();
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          'Certificate metadata Certificate inspection succeeded. '
+          'Representation: $label Subject attributes: 3 Issuer attributes: 2 Extensions: 2',
+        ),
+        'Certificate $representation metadata summary was incorrect',
+      );
+      await _clickButton(driver, 'Copy certificate JSON');
+      final count = representation == 'pem'
+          ? 778
+          : representation == 'der'
+          ? 534
+          : 713;
+      final expected =
+          '{"representation":"$representation",'
+          '$_certificateJsonFields'
+          '"inputByteCount":$count,"derByteCount":534}';
+      await _waitUntil(
+        () async =>
+            await driver.execute(
+              'return window.__chimeraCopiedText === arguments[0];',
+              <Object?>[expected],
+            ) ==
+            true,
+        'Certificate $representation copied JSON was not exact',
+      );
+      await _waitUntil(
+        () => _pageContains(driver, 'Certificate JSON copied.'),
+        'Certificate copy did not complete',
+      );
+      await _assertNoNetworkRequests(
+        driver,
+        flow: 'certificate $representation interaction',
+      );
+    }
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
