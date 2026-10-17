@@ -223,4 +223,3 @@ inspection through the shared service and assert no unexpected network requests.
 - FR-PL-09 through FR-PL-11 and BR-03 through BR-05/BR-19: no input/result
   history, preference, account, plugin, collaboration, trust-service, or network
   path is added; browser flows explicitly assert zero unexpected requests.
-
