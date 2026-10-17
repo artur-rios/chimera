@@ -124,14 +124,14 @@ flutter_test, integration_test, and Playwright.
 - Produces: `/text/compare`, dual local file/clipboard loaders, accessible span
   preview, and exact JSON copy/save actions.
 
-- [ ] Add failing widget tests for navigation, three granularities, both input
+- [x] Add failing widget tests for navigation, three granularities, both input
   adapters, exact JSON copy/save, validation/resource and access cleanup, stale
   clearing, busy races, EN/PT-BR, semantics, and narrow layout.
-- [ ] Run focused widget tests and verify missing route/page failures.
-- [ ] Implement the dual-input local-only page and register its home action and
+- [x] Run focused widget tests and verify missing route/page failures.
+- [x] Implement the dual-input local-only page and register its home action and
   route dependencies.
-- [ ] Run widget tests and Flutter analysis until green.
-- [ ] Commit the GUI layer.
+- [x] Run widget tests and Flutter analysis until green.
+- [x] Commit the GUI layer.
 
 ### Task 5: Extend native and compiled-browser flows
 

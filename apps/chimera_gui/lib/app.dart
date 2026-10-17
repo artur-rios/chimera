@@ -16,6 +16,7 @@ import 'number_base_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
+import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
@@ -39,6 +40,7 @@ final class ChimeraApp extends StatelessWidget {
     this.listCompareService = const ListCompareService(),
     this.numberBaseService = const NumberBaseService(),
     this.textAnalyzeService = const TextAnalyzeService(),
+    this.textCompareService = const TextCompareService(),
     this.textEscapeService = const TextEscapeService(),
     this.textTransformService = const TextTransformService(),
     this.textUnescapeService = const TextUnescapeService(),
@@ -70,6 +72,12 @@ final class ChimeraApp extends StatelessWidget {
     this.textAnalyzeFileSaver,
     this.textAnalyzeClipboardReader,
     this.textAnalyzeClipboardWriter,
+    this.textCompareLeftFilePicker,
+    this.textCompareRightFilePicker,
+    this.textCompareFileSaver,
+    this.textCompareLeftClipboardReader,
+    this.textCompareRightClipboardReader,
+    this.textCompareClipboardWriter,
     this.textEscapeFilePicker,
     this.textEscapeFileSaver,
     this.textEscapeClipboardReader,
@@ -104,6 +112,7 @@ final class ChimeraApp extends StatelessWidget {
   final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
   final TextAnalyzeService textAnalyzeService;
+  final TextCompareService textCompareService;
   final TextEscapeService textEscapeService;
   final TextTransformService textTransformService;
   final TextUnescapeService textUnescapeService;
@@ -135,6 +144,12 @@ final class ChimeraApp extends StatelessWidget {
   final TextAnalyzeFileSaver? textAnalyzeFileSaver;
   final TextAnalyzeClipboardReader? textAnalyzeClipboardReader;
   final TextAnalyzeClipboardWriter? textAnalyzeClipboardWriter;
+  final TextCompareFilePicker? textCompareLeftFilePicker;
+  final TextCompareFilePicker? textCompareRightFilePicker;
+  final TextCompareFileSaver? textCompareFileSaver;
+  final TextCompareClipboardReader? textCompareLeftClipboardReader;
+  final TextCompareClipboardReader? textCompareRightClipboardReader;
+  final TextCompareClipboardWriter? textCompareClipboardWriter;
   final TextEscapeFilePicker? textEscapeFilePicker;
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
@@ -171,6 +186,7 @@ final class ChimeraApp extends StatelessWidget {
         listCompareService: listCompareService,
         numberBaseService: numberBaseService,
         textAnalyzeService: textAnalyzeService,
+        textCompareService: textCompareService,
         textEscapeService: textEscapeService,
         textTransformService: textTransformService,
         textUnescapeService: textUnescapeService,
@@ -202,6 +218,12 @@ final class ChimeraApp extends StatelessWidget {
         textAnalyzeFileSaver: textAnalyzeFileSaver,
         textAnalyzeClipboardReader: textAnalyzeClipboardReader,
         textAnalyzeClipboardWriter: textAnalyzeClipboardWriter,
+        textCompareLeftFilePicker: textCompareLeftFilePicker,
+        textCompareRightFilePicker: textCompareRightFilePicker,
+        textCompareFileSaver: textCompareFileSaver,
+        textCompareLeftClipboardReader: textCompareLeftClipboardReader,
+        textCompareRightClipboardReader: textCompareRightClipboardReader,
+        textCompareClipboardWriter: textCompareClipboardWriter,
         textEscapeFilePicker: textEscapeFilePicker,
         textEscapeFileSaver: textEscapeFileSaver,
         textEscapeClipboardReader: textEscapeClipboardReader,
@@ -240,6 +262,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.listCompareService,
     required this.numberBaseService,
     required this.textAnalyzeService,
+    required this.textCompareService,
     required this.textEscapeService,
     required this.textTransformService,
     required this.textUnescapeService,
@@ -271,6 +294,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.textAnalyzeFileSaver,
     required this.textAnalyzeClipboardReader,
     required this.textAnalyzeClipboardWriter,
+    required this.textCompareLeftFilePicker,
+    required this.textCompareRightFilePicker,
+    required this.textCompareFileSaver,
+    required this.textCompareLeftClipboardReader,
+    required this.textCompareRightClipboardReader,
+    required this.textCompareClipboardWriter,
     required this.textEscapeFilePicker,
     required this.textEscapeFileSaver,
     required this.textEscapeClipboardReader,
@@ -304,6 +333,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final ListCompareService listCompareService;
   final NumberBaseService numberBaseService;
   final TextAnalyzeService textAnalyzeService;
+  final TextCompareService textCompareService;
   final TextEscapeService textEscapeService;
   final TextTransformService textTransformService;
   final TextUnescapeService textUnescapeService;
@@ -335,6 +365,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final TextAnalyzeFileSaver? textAnalyzeFileSaver;
   final TextAnalyzeClipboardReader? textAnalyzeClipboardReader;
   final TextAnalyzeClipboardWriter? textAnalyzeClipboardWriter;
+  final TextCompareFilePicker? textCompareLeftFilePicker;
+  final TextCompareFilePicker? textCompareRightFilePicker;
+  final TextCompareFileSaver? textCompareFileSaver;
+  final TextCompareClipboardReader? textCompareLeftClipboardReader;
+  final TextCompareClipboardReader? textCompareRightClipboardReader;
+  final TextCompareClipboardWriter? textCompareClipboardWriter;
   final TextEscapeFilePicker? textEscapeFilePicker;
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
@@ -380,6 +416,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       listCompareService: widget.listCompareService,
       numberBaseService: widget.numberBaseService,
       textAnalyzeService: widget.textAnalyzeService,
+      textCompareService: widget.textCompareService,
       textEscapeService: widget.textEscapeService,
       textTransformService: widget.textTransformService,
       textUnescapeService: widget.textUnescapeService,
@@ -423,6 +460,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.textAnalyzeClipboardReader ?? readTextAnalyzeClipboard,
       textAnalyzeClipboardWriter:
           widget.textAnalyzeClipboardWriter ?? writeTextAnalyzeClipboard,
+      textCompareLeftFilePicker:
+          widget.textCompareLeftFilePicker ?? pickTextCompareFile,
+      textCompareRightFilePicker:
+          widget.textCompareRightFilePicker ?? pickTextCompareFile,
+      textCompareFileSaver: widget.textCompareFileSaver ?? saveTextCompareFile,
+      textCompareLeftClipboardReader:
+          widget.textCompareLeftClipboardReader ?? readTextCompareClipboard,
+      textCompareRightClipboardReader:
+          widget.textCompareRightClipboardReader ?? readTextCompareClipboard,
+      textCompareClipboardWriter:
+          widget.textCompareClipboardWriter ?? writeTextCompareClipboard,
       textEscapeFilePicker: widget.textEscapeFilePicker ?? pickTextEscapeFile,
       textEscapeFileSaver: widget.textEscapeFileSaver ?? saveTextEscapeFile,
       textEscapeClipboardReader:
