@@ -72,10 +72,10 @@
 - Consumes: `NumberBaseService.execute(NumberBaseOperationRequest)`.
 - Produces: `chimera number convert-base --from <2..36> --to <2..36>` with mutually exclusive `--input`/`--file` (stdin fallback), optional `--output`, `--json`, human/JSON output, and stable exit codes.
 
-- [ ] Write failing CLI tests for direct and arbitrary-precision success, stdin/file input, JSON, localized human output, AF-01, AF-02, conflicting input, and access failures. Pin missing, non-integer, and out-of-range `--from`/`--to` diagnostics in source-before-target precedence.
-- [ ] Add failing localization parity assertions for all new English and Brazilian Portuguese keys.
-- [ ] Implement parser dispatch, runner behavior, output cleanup, and localized messages.
-- [ ] Run CLI and localization tests until all cases pass.
+- [x] Write failing CLI tests for direct and arbitrary-precision success, stdin/file input, JSON, localized human output, AF-01, AF-02, conflicting input, and access failures. Pin missing, non-integer, and out-of-range `--from`/`--to` diagnostics in source-before-target precedence.
+- [x] Add failing localization parity assertions for all new English and Brazilian Portuguese keys.
+- [x] Implement parser dispatch, runner behavior, output cleanup, and localized messages.
+- [x] Run CLI and localization tests until all cases pass.
 
 ### Task 4: Flutter route and page
 

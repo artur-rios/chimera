@@ -1596,4 +1596,303 @@ void main() {
       );
     },
   );
+
+  test(
+    'GivenDirectNumber_WhenBaseConversionRuns_ThenLocalizedResultIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'number',
+          'convert-base',
+          '--input=255',
+          '--from=10',
+          '--to=16',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'Converted value: ff\n');
+      expect(err.toString(), isEmpty);
+    },
+  );
+
+  test(
+    'GivenArbitraryPrecisionNumber_WhenJsonModeRuns_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'number',
+          'convert-base',
+          '--input=184467440737095516160',
+          '--from=10',
+          '--to=16',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'converted': 'a0000000000000000',
+        'sourceBase': 10,
+        'targetBase': 16,
+      });
+    },
+  );
+
+  test('GivenStandardInput_WhenBaseConversionRunsInPortuguese_ThenLocalizedResultIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['number', 'convert-base', '--from=36', '--to=10'],
+      localeTag: 'pt-BR',
+      out: out,
+      err: StringBuffer(),
+      readStandardInput: () async => 'zz\n',
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Valor convertido: 1295\n');
+  });
+
+  test(
+    'GivenNumberFiles_WhenBaseConversionRuns_ThenExactBytesAreSaved',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-cli-number-base-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final input = File('${directory.path}${Platform.pathSeparator}value.txt');
+      final output = File(
+        '${directory.path}${Platform.pathSeparator}converted.txt',
+      );
+      await input.writeAsString('-11111111\n');
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'number',
+          'convert-base',
+          '--file=${input.path}',
+          '--output=${output.path}',
+          '--from=2',
+          '--to=16',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'Converted value saved.\n');
+      expect(await output.readAsBytes(), utf8.encode('-ff'));
+    },
+  );
+
+  test(
+    'GivenInvalidNumber_WhenJsonModeRuns_ThenSafeValidationFailureIsWritten',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'number',
+          'convert-base',
+          '--input=secret-Z',
+          '--from=10',
+          '--to=2',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+      );
+
+      expect(exitCode, 64);
+      final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+      expect(
+        failure['error'],
+        containsPair('code', 'number-base.invalid-value'),
+      );
+      expect(
+        failure['error'],
+        containsPair('location', containsPair('reason', 'invalid-digit')),
+      );
+      expect(err.toString(), isNot(contains('secret')));
+    },
+  );
+
+  test(
+    'GivenInvalidBaseOptions_WhenConversionRuns_ThenPrecedenceIsStable',
+    () async {
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['number', 'convert-base', '--input=1', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        );
+        expect(exitCode, 64);
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await failureFor(const <String>['--to=10']),
+        containsPair('location', containsPair('reason', 'missing-base')),
+      );
+      expect(
+        await failureFor(const <String>['--from=x', '--to=10']),
+        containsPair('location', containsPair('reason', 'not-an-integer')),
+      );
+      expect(
+        await failureFor(const <String>['--from=1', '--to=37']),
+        containsPair(
+          'location',
+          allOf(
+            containsPair('field', 'sourceBase'),
+            containsPair('reason', 'out-of-range-base'),
+          ),
+        ),
+      );
+      expect(
+        await failureFor(const <String>['--from=10', '--to=37']),
+        containsPair(
+          'location',
+          allOf(
+            containsPair('field', 'targetBase'),
+            containsPair('reason', 'out-of-range-base'),
+          ),
+        ),
+      );
+    },
+  );
+
+  test('GivenConflictingNumberInputs_WhenConversionRuns_ThenValidationExitIsReturned', () async {
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'number',
+        'convert-base',
+        '--input=1',
+        '--file=value.txt',
+        '--from=10',
+        '--to=2',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: StringBuffer(),
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    expect(
+      jsonDecode(err.toString()),
+      containsPair(
+        'error',
+        containsPair('code', 'number-base.conflicting-inputs'),
+      ),
+    );
+  });
+
+  test(
+    'GivenNumberResourceLimit_WhenConversionRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'number',
+          'convert-base',
+          '--input=zz',
+          '--from=36',
+          '--to=2',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        numberBaseService: const NumberBaseService(
+          converter: NumberBaseConverter(maxOutputCharacters: 3),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The number conversion exceeded its resource limit.\n',
+      );
+    },
+  );
+
+  test('GivenNumberInputAccessFailures_WhenConversionRuns_ThenAccessCodesAreStable', () async {
+    Future<Map<String, dynamic>> failureFor({required bool file}) async {
+      final err = StringBuffer();
+      final exitCode = await runChimera(
+        <String>[
+          'number',
+          'convert-base',
+          if (file) '--file=value.txt',
+          '--from=10',
+          '--to=2',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        readStandardInput: () async => throw Exception('denied'),
+        readFile: (_) async => throw Exception('denied'),
+      );
+      expect(exitCode, 74);
+      return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+          as Map<String, dynamic>;
+    }
+
+    expect(
+      await failureFor(file: false),
+      containsPair('code', 'number-base.input-access'),
+    );
+    expect(
+      await failureFor(file: true),
+      containsPair('code', 'number-base.file-access'),
+    );
+  });
+
+  test(
+    'GivenNumberOutputFailure_WhenConversionRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'number',
+          'convert-base',
+          '--input=255',
+          '--from=10',
+          '--to=16',
+          '--output=converted.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o valor convertido.\n');
+    },
+  );
 }
