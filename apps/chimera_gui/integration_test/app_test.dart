@@ -294,4 +294,26 @@ void main() {
       expect(find.text('Equal: no'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenTextAnalyzeRoute_WhenUnicodeAnalyzed_ThenStableCountsAreVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/analyze'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-analyze-input')),
+        'Cafe\u0301 👩🏽‍💻\nOlá',
+      );
+      await tester.tap(find.byKey(const Key('text-analyze-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Characters: 10'), findsOneWidget);
+      expect(find.text('Words: 2'), findsOneWidget);
+      expect(find.text('Lines: 2'), findsOneWidget);
+      expect(find.text('UTF-8 bytes: 27'), findsOneWidget);
+    },
+  );
 }
