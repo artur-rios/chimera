@@ -83,11 +83,11 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 - Modify: `tests/web/smoke.spec.mjs`
 - Modify: `tests/web/safari_smoke.dart`
 
-- [ ] Add a representative transform flow to Windows/Linux integration.
-- [ ] Add a local-only transform flow to Chromium, Firefox, and WebKit tests.
-- [ ] Add the bounded equivalent to native Safari smoke.
-- [ ] Run affected integration/browser suites and fix evidence-backed defects.
-- [ ] Commit the green cross-platform evidence.
+- [x] Add a representative transform flow to Windows/Linux integration.
+- [x] Add a local-only transform flow to Chromium, Firefox, and WebKit tests.
+- [x] Add the bounded equivalent to native Safari smoke.
+- [x] Run affected integration/browser suites and fix evidence-backed defects.
+- [x] Commit the green cross-platform evidence.
 
 ### Task 6: Gate verification and delivery
 

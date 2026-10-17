@@ -257,6 +257,33 @@ test('text analysis flow counts locally without external requests', async ({ pag
   expect(externalRequests).toEqual([]);
 });
 
+test('text transformation flow runs locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Transform text' }).click();
+  await expect(page.getByText('Transform text').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Input text' }),
+    'ÉCOLE',
+  );
+  await page.getByRole('button', { name: 'Transform text' }).click();
+
+  await expect(
+    page.getByRole('group', { name: /Transformed text école/ }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
 test('JSON array flow renders locally without external requests', async ({ page }) => {
   const externalRequests = [];
   page.on('request', (request) => {

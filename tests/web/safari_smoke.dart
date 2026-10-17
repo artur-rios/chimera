@@ -479,8 +479,39 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'text analysis');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for text transformation flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Transform text'),
+      'Home page did not return for text transformation flow',
+    );
+    await _clickButton(driver, 'Transform text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Input text'),
+      'Text transformation page did not open',
+    );
+    await _fillTextBox(driver, 'Input text', 'ÉCOLE');
+    await _clickButton(driver, 'Transform text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Transformed text école'),
+      'Text transformation result was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'text transformation');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();
