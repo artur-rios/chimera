@@ -22,11 +22,11 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_utilities/lib/chimera_utilities.dart`
 - Create: `packages/chimera_utilities/test/text_unescape/text_unescaper_test.dart`
 
-- [ ] Add failing Given-When-Then tests for every mode, round trips, malformed
+- [x] Add failing Given-When-Then tests for every mode, round trips, malformed
   offsets, empty/Unicode boundaries, unsupported modes, and budgets.
-- [ ] Implement the smallest deterministic unescaper and typed failures.
-- [ ] Run the focused utility test and strict package analysis.
-- [ ] Commit the green shared behavior.
+- [x] Implement the smallest deterministic unescaper and typed failures.
+- [x] Run the focused utility test and strict package analysis.
+- [x] Commit the green shared behavior.
 
 ### Task 2: Add the core operation service
 
