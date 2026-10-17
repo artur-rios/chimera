@@ -2094,4 +2094,201 @@ void main() {
       expect(err.toString(), 'Não foi possível salvar o texto escapado.\n');
     },
   );
+
+  test(
+    'GivenEveryUnescapeMode_WhenJsonCommandRuns_ThenStableOutputIsWritten',
+    () async {
+      final cases = <String, (String, String)>{
+        'json': (r'\"', '"'),
+        'unicode': (r'\u0041', 'A'),
+        'c': (r'\101', 'A'),
+        'html': ('&amp;', '&'),
+        'url': ('%20', ' '),
+      };
+
+      for (final entry in cases.entries) {
+        final out = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'unescape',
+            '--mode=${entry.key}',
+            '--input=${entry.value.$1}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+        );
+
+        expect(exitCode, 0, reason: entry.key);
+        expect(jsonDecode(out.toString()), <String, Object?>{
+          'unescaped': entry.value.$2,
+          'mode': entry.key,
+        }, reason: entry.key);
+      }
+    },
+  );
+
+  test('GivenStandardInput_WhenTextUnescapeRunsInPortuguese_ThenLocalizedResultIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['text', 'unescape', '--mode=url'],
+      localeTag: 'pt-BR',
+      out: out,
+      err: StringBuffer(),
+      readStandardInput: () async => 'A%20B',
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Texto não escapado: A B\n');
+  });
+
+  test('GivenTextFiles_WhenUnescapeRuns_ThenExactUtf8BytesAreSaved', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-text-unescape-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final input = File('${directory.path}${Platform.pathSeparator}input.txt');
+    final output = File(
+      '${directory.path}${Platform.pathSeparator}unescaped.txt',
+    );
+    await input.writeAsString('&amp;é');
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      <String>[
+        'text',
+        'unescape',
+        '--mode=html',
+        '--file=${input.path}',
+        '--output=${output.path}',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Unescaped text saved.\n');
+    expect(await output.readAsBytes(), utf8.encode('&é'));
+  });
+
+  test(
+    'GivenInvalidUnescapeInputs_WhenCommandRuns_ThenSafeFailuresReturn',
+    () async {
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['text', 'unescape', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        );
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('sensitive')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await failureFor(const <String>[r'--input=sensitive\q', '--mode=json']),
+        allOf(
+          containsPair('code', 'text-unescape.malformed-input'),
+          containsPair(
+            'location',
+            allOf(
+              containsPair('field', 'input'),
+              containsPair('reason', 'unknown-escape'),
+              containsPair('offset', 9),
+            ),
+          ),
+        ),
+      );
+      expect(
+        await failureFor(const <String>[
+          '--input=sensitive',
+          '--file=input.txt',
+          '--mode=json',
+        ]),
+        containsPair('code', 'text-unescape.conflicting-inputs'),
+      );
+    },
+  );
+
+  test(
+    'GivenTextUnescapeResourceLimit_WhenCommandRuns_ThenResourceExitReturns',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['text', 'unescape', '--mode=html', '--input=&amp;'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        textUnescapeService: const TextUnescapeService(
+          unescaper: TextUnescaper(maxOutputCharacters: 0),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(err.toString(), 'Text unescaping exceeded its resource limit.\n');
+    },
+  );
+
+  test(
+    'GivenTextUnescapeAccessFailures_WhenCommandRuns_ThenNoSuccessIsWritten',
+    () async {
+      Future<Map<String, dynamic>> inputFailure({required bool file}) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'unescape',
+            '--mode=json',
+            if (file) '--file=input.txt',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInput: () async => throw Exception('denied'),
+          readFile: (_) async => throw Exception('denied'),
+        );
+        expect(exitCode, 74);
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await inputFailure(file: false),
+        containsPair('code', 'text-unescape.input-access'),
+      );
+      expect(
+        await inputFailure(file: true),
+        containsPair('code', 'text-unescape.file-access'),
+      );
+
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'unescape',
+          '--mode=html',
+          '--input=&amp;',
+          '--output=unescaped.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o texto não escapado.\n');
+    },
+  );
 }
