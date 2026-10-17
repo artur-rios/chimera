@@ -15,6 +15,7 @@ import 'number_base_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
 import 'text_escape_page.dart';
+import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
@@ -34,6 +35,7 @@ final class ChimeraApp extends StatelessWidget {
     ),
     this.numberBaseService = const NumberBaseService(),
     this.textEscapeService = const TextEscapeService(),
+    this.textUnescapeService = const TextUnescapeService(),
     this.sqlFormatService = const SqlFormatService(),
     this.xmlFormatService = const XmlFormatService(),
     this.currentTime,
@@ -56,6 +58,10 @@ final class ChimeraApp extends StatelessWidget {
     this.textEscapeFileSaver,
     this.textEscapeClipboardReader,
     this.textEscapeClipboardWriter,
+    this.textUnescapeFilePicker,
+    this.textUnescapeFileSaver,
+    this.textUnescapeClipboardReader,
+    this.textUnescapeClipboardWriter,
     this.sqlFormatFilePicker,
     this.sqlFormatFileSaver,
     this.sqlFormatClipboardReader,
@@ -77,6 +83,7 @@ final class ChimeraApp extends StatelessWidget {
   final JsonYamlService jsonYamlService;
   final NumberBaseService numberBaseService;
   final TextEscapeService textEscapeService;
+  final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
@@ -99,6 +106,10 @@ final class ChimeraApp extends StatelessWidget {
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
   final TextEscapeClipboardWriter? textEscapeClipboardWriter;
+  final TextUnescapeFilePicker? textUnescapeFilePicker;
+  final TextUnescapeFileSaver? textUnescapeFileSaver;
+  final TextUnescapeClipboardReader? textUnescapeClipboardReader;
+  final TextUnescapeClipboardWriter? textUnescapeClipboardWriter;
   final SqlFormatFilePicker? sqlFormatFilePicker;
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
@@ -122,6 +133,7 @@ final class ChimeraApp extends StatelessWidget {
         jsonYamlService: jsonYamlService,
         numberBaseService: numberBaseService,
         textEscapeService: textEscapeService,
+        textUnescapeService: textUnescapeService,
         sqlFormatService: sqlFormatService,
         xmlFormatService: xmlFormatService,
         currentTime: currentTime,
@@ -144,6 +156,10 @@ final class ChimeraApp extends StatelessWidget {
         textEscapeFileSaver: textEscapeFileSaver,
         textEscapeClipboardReader: textEscapeClipboardReader,
         textEscapeClipboardWriter: textEscapeClipboardWriter,
+        textUnescapeFilePicker: textUnescapeFilePicker,
+        textUnescapeFileSaver: textUnescapeFileSaver,
+        textUnescapeClipboardReader: textUnescapeClipboardReader,
+        textUnescapeClipboardWriter: textUnescapeClipboardWriter,
         sqlFormatFilePicker: sqlFormatFilePicker,
         sqlFormatFileSaver: sqlFormatFileSaver,
         sqlFormatClipboardReader: sqlFormatClipboardReader,
@@ -169,6 +185,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonYamlService,
     required this.numberBaseService,
     required this.textEscapeService,
+    required this.textUnescapeService,
     required this.sqlFormatService,
     required this.xmlFormatService,
     required this.currentTime,
@@ -191,6 +208,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.textEscapeFileSaver,
     required this.textEscapeClipboardReader,
     required this.textEscapeClipboardWriter,
+    required this.textUnescapeFilePicker,
+    required this.textUnescapeFileSaver,
+    required this.textUnescapeClipboardReader,
+    required this.textUnescapeClipboardWriter,
     required this.sqlFormatFilePicker,
     required this.sqlFormatFileSaver,
     required this.sqlFormatClipboardReader,
@@ -211,6 +232,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonYamlService jsonYamlService;
   final NumberBaseService numberBaseService;
   final TextEscapeService textEscapeService;
+  final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
@@ -233,6 +255,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
   final TextEscapeClipboardWriter? textEscapeClipboardWriter;
+  final TextUnescapeFilePicker? textUnescapeFilePicker;
+  final TextUnescapeFileSaver? textUnescapeFileSaver;
+  final TextUnescapeClipboardReader? textUnescapeClipboardReader;
+  final TextUnescapeClipboardWriter? textUnescapeClipboardWriter;
   final SqlFormatFilePicker? sqlFormatFilePicker;
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
@@ -265,6 +291,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonYamlService: widget.jsonYamlService,
       numberBaseService: widget.numberBaseService,
       textEscapeService: widget.textEscapeService,
+      textUnescapeService: widget.textUnescapeService,
       sqlFormatService: widget.sqlFormatService,
       xmlFormatService: widget.xmlFormatService,
       currentTime: widget.currentTime ?? DateTime.now,
@@ -293,6 +320,14 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.textEscapeClipboardReader ?? readTextEscapeClipboard,
       textEscapeClipboardWriter:
           widget.textEscapeClipboardWriter ?? writeTextEscapeClipboard,
+      textUnescapeFilePicker:
+          widget.textUnescapeFilePicker ?? pickTextUnescapeFile,
+      textUnescapeFileSaver:
+          widget.textUnescapeFileSaver ?? saveTextUnescapeFile,
+      textUnescapeClipboardReader:
+          widget.textUnescapeClipboardReader ?? readTextUnescapeClipboard,
+      textUnescapeClipboardWriter:
+          widget.textUnescapeClipboardWriter ?? writeTextUnescapeClipboard,
       sqlFormatFilePicker: widget.sqlFormatFilePicker ?? pickSqlFormatFile,
       sqlFormatFileSaver: widget.sqlFormatFileSaver ?? saveSqlFormatFile,
       sqlFormatClipboardReader:
