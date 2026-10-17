@@ -1,6 +1,7 @@
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -701,7 +702,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
       title: _catalog.lookup(widget.localeTag, 'app.name'),
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF6750A4)),
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF6750A4),
+        // Preserve the web engine's Roboto fallback before emoji, including
+        // when a platform/system or monospace font is unavailable. Both fonts
+        // load before startup, so editing emoji never fetches a font.
+        fontFamilyFallback: kIsWeb
+            ? const ['Roboto', 'Noto Color Emoji']
+            : null,
+      ),
     );
   }
 }
