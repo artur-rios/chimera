@@ -22,11 +22,11 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_utilities/lib/chimera_utilities.dart`
 - Create: `packages/chimera_utilities/test/text_escape/text_escaper_test.dart`
 
-- [ ] Add failing Given-When-Then tests for every canonical mode, empty and
+- [x] Add failing Given-When-Then tests for every canonical mode, empty and
   Unicode boundaries, unsupported modes, budgets, and no partial output.
-- [ ] Implement the smallest deterministic escaper and typed failures.
-- [ ] Run the focused utility test and strict package analysis.
-- [ ] Commit the green shared behavior.
+- [x] Implement the smallest deterministic escaper and typed failures.
+- [x] Run the focused utility test and strict package analysis.
+- [x] Commit the green shared behavior.
 
 ### Task 2: Add the core operation service
 
