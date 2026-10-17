@@ -1248,6 +1248,144 @@ void main() {
     );
   });
 
+  test('GivenXmlInput_WhenXmlFormatRuns_ThenIndentedXmlIsWritten', () async {
+    final out = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>['xml', 'format', '--input=<root><name>Ada</name></root>'],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), '<root>\n  <name>Ada</name>\n</root>');
+  });
+
+  test(
+    'GivenXmlStandardInput_WhenJsonModeRuns_ThenStableJsonIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['xml', 'format', '--indent=4', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInput: () async => '<root><child/></root>',
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(out.toString()), <String, Object?>{
+        'formatted': '<root>\n    <child/>\n</root>',
+        'indent': 4,
+      });
+    },
+  );
+
+  test('GivenXmlFiles_WhenXmlFormatRuns_ThenExactBytesAreSaved', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-cli-xml-format-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final input = File('${directory.path}${Platform.pathSeparator}source.xml');
+    final output = File(
+      '${directory.path}${Platform.pathSeparator}formatted.xml',
+    );
+    await input.writeAsString('<root><name>Ada</name></root>');
+
+    final out = StringBuffer();
+    final exitCode = await runChimera(
+      <String>[
+        'xml',
+        'format',
+        '--file=${input.path}',
+        '--output=${output.path}',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: StringBuffer(),
+    );
+
+    expect(exitCode, 0);
+    expect(out.toString(), 'Formatted XML saved.\n');
+    expect(
+      await output.readAsBytes(),
+      utf8.encode('<root>\n  <name>Ada</name>\n</root>'),
+    );
+  });
+
+  test(
+    'GivenXmlBudgetExceeded_WhenXmlFormatRuns_ThenResourceExitIsReturned',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['xml', 'format', '--input=<root/>'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        xmlFormatService: const XmlFormatService(
+          formatter: XmlFormatter(maxOutputChars: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'The XML formatting exceeded its resource limit.\n',
+      );
+    },
+  );
+
+  test('GivenMalformedXml_WhenXmlFormatRuns_ThenLocationIsRedacted', () async {
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'xml',
+        'format',
+        '--input=<root><secret></root>',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: StringBuffer(),
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    final failure = jsonDecode(err.toString()) as Map<String, dynamic>;
+    expect(failure['error'], containsPair('code', 'xml-format.invalid-xml'));
+    expect(failure['error'], containsPair('location', contains('line')));
+    expect(err.toString(), isNot(contains('secret')));
+  });
+
+  test(
+    'GivenXmlOutputFailure_WhenXmlFormatRuns_ThenAccessExitHasNoSuccess',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'xml',
+          'format',
+          '--input=<root/>',
+          '--output=formatted.xml',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (path, bytes) async =>
+            throw const FileSystemException('denied'),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), contains('arquivo XML formatado'));
+    },
+  );
+
   test(
     'GivenInvalidUtf8File_WhenFormatRuns_ThenFileAccessExitIsReturned',
     () async {

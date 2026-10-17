@@ -10,6 +10,7 @@ import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'sql_format_page.dart';
+import 'xml_format_page.dart';
 
 GoRouter buildRouter({
   required MessageCatalog catalog,
@@ -21,6 +22,7 @@ GoRouter buildRouter({
   required JsonTableService jsonTableService,
   required JsonYamlService jsonYamlService,
   required SqlFormatService sqlFormatService,
+  required XmlFormatService xmlFormatService,
   required DateTime Function() currentTime,
   required CronFilePicker cronFilePicker,
   required DateFilePicker dateFilePicker,
@@ -37,6 +39,10 @@ GoRouter buildRouter({
   required SqlFormatFileSaver sqlFormatFileSaver,
   required SqlFormatClipboardReader sqlFormatClipboardReader,
   required SqlFormatClipboardWriter sqlFormatClipboardWriter,
+  required XmlFormatFilePicker xmlFormatFilePicker,
+  required XmlFormatFileSaver xmlFormatFileSaver,
+  required XmlFormatClipboardReader xmlFormatClipboardReader,
+  required XmlFormatClipboardWriter xmlFormatClipboardWriter,
   String initialLocation = '/',
 }) {
   return GoRouter(
@@ -106,6 +112,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/sql/format'),
                         child: Text(
                           catalog.lookup(localeTag, 'sqlFormat.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-xml-format'),
+                        onPressed: () => context.go('/xml/format'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'xmlFormat.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -194,6 +208,18 @@ GoRouter buildRouter({
           fileSaver: sqlFormatFileSaver,
           clipboardReader: sqlFormatClipboardReader,
           clipboardWriter: sqlFormatClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/xml/format',
+        builder: (context, state) => XmlFormatPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: xmlFormatService,
+          filePicker: xmlFormatFilePicker,
+          fileSaver: xmlFormatFileSaver,
+          clipboardReader: xmlFormatClipboardReader,
+          clipboardWriter: xmlFormatClipboardWriter,
         ),
       ),
     ],

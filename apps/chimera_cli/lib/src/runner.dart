@@ -25,6 +25,7 @@ Future<int> runChimera(
   JsonTableService jsonTableService = const JsonTableService(),
   JsonYamlService jsonYamlService = const JsonYamlService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
+  XmlFormatService xmlFormatService = const XmlFormatService(),
   DateTime Function()? currentTime,
 }) async {
   const catalog = MessageCatalog();
@@ -143,6 +144,21 @@ Future<int> runChimera(
         sqlFormatService: sqlFormatService,
       );
     }
+    if (parsed.command!.name == 'xml' &&
+        parsed.command!.command?.name == 'format') {
+      return await _runXmlFormat(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        xmlFormatService: xmlFormatService,
+      );
+    }
 
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
@@ -160,6 +176,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'json' && args[1] == 'format';
     final isSqlFormat =
         args.length >= 2 && args[0] == 'sql' && args[1] == 'format';
+    final isXmlFormat =
+        args.length >= 2 && args[0] == 'xml' && args[1] == 'format';
     _writeFailure(
       err,
       catalog: catalog,
@@ -171,7 +189,8 @@ Future<int> runChimera(
               isJsonCsv ||
               isJsonYaml ||
               isJsonFormat ||
-              isSqlFormat) &&
+              isSqlFormat ||
+              isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
       code: isCron
@@ -188,6 +207,8 @@ Future<int> runChimera(
           ? 'json-format.invalid-options'
           : isSqlFormat
           ? 'sql-format.invalid-options'
+          : isXmlFormat
+          ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
       messageKey: isCron
           ? 'error.cron.validation'
@@ -203,6 +224,8 @@ Future<int> runChimera(
           ? 'error.jsonFormat.validation'
           : isSqlFormat
           ? 'error.sqlFormat.validation'
+          : isXmlFormat
+          ? 'error.xmlFormat.validation'
           : 'error.unexpected',
     );
     return 64;
@@ -268,12 +291,131 @@ ArgParser _buildParser() {
     ..addOption('keyword-case', defaultsTo: 'upper')
     ..addFlag('json', negatable: false);
   final sql = ArgParser()..addCommand('format', sqlFormat);
+  final xmlFormat = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('indent', defaultsTo: '2')
+    ..addFlag('json', negatable: false);
+  final xml = ArgParser()..addCommand('format', xmlFormat);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json)
-    ..addCommand('sql', sql);
+    ..addCommand('sql', sql)
+    ..addCommand('xml', xml);
+}
+
+Future<int> _runXmlFormat(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required XmlFormatService xmlFormatService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'xml-format.conflicting-inputs',
+      messageKey: 'error.xmlFormat.validation',
+    );
+    return 64;
+  }
+
+  late String source;
+  try {
+    source = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'xml-format.input-access'
+          : 'xml-format.file-access',
+      messageKey: fileOption == null
+          ? 'error.xmlFormat.inputAccess'
+          : 'error.xmlFormat.fileAccess',
+    );
+    return 74;
+  }
+
+  final indent = int.tryParse(parsed.option('indent') ?? '');
+  if (indent == null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'xml-format.invalid-indent',
+      messageKey: 'error.xmlFormat.validation',
+    );
+    return 64;
+  }
+
+  final result = await xmlFormatService.execute(
+    XmlFormatOperationRequest(source: source, indent: indent),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.formatted));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: parsed.flag('json'),
+            kind: 'access',
+            code: 'xml-format.output-access',
+            messageKey: 'error.xmlFormat.outputAccess',
+          );
+          return 74;
+        }
+        if (!parsed.flag('json')) {
+          out.writeln(catalog.lookup(localeTag, 'xmlFormat.savedResult'));
+          return 0;
+        }
+      }
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(value.toJson()));
+      } else {
+        out.write(value.formatted);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
 }
 
 Future<int> _runSqlFormat(

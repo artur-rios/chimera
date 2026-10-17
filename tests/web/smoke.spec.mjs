@@ -242,3 +242,32 @@ test('SQL format flow formats locally without external requests', async ({ page 
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('XML format flow formats locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Format XML' }).click();
+  await expect(page.getByText('Format XML').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'XML document' }),
+    '<root><developer name="Ada"/></root>',
+  );
+  await page.getByRole('button', { name: 'Format XML' }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: /Formatted XML result.*root.*developer name="Ada"/,
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});

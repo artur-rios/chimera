@@ -265,8 +265,45 @@ Future<void> main() async {
     );
     await _assertNoExternalRequests(driver, flow: 'SQL format');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for XML format flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Format XML'),
+      'Home page did not return for XML format flow',
+    );
+    await _clickButton(driver, 'Format XML');
+    await _waitUntil(
+      () => _pageContains(driver, 'XML document'),
+      'XML format page did not open',
+    );
+    // SafariDriver cannot reliably synthesize "<" into Flutter's semantics
+    // proxy. Exercise the formatter with the page's built-in valid sample;
+    // custom XML editing is covered by the cross-browser and widget suites.
+    await _clickButton(driver, 'Format XML');
+    await _waitUntil(
+      () => _pageContains(driver, 'Formatted XML result'),
+      'Formatted XML result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, '<root/>'),
+      'Formatted XML content was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'XML format');
+
     stdout.writeln(
-      'Safari cron, date, JSON table, JSON CSV, JSON YAML, JSON format, and SQL format smoke: OK',
+      'Safari cron, date, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();

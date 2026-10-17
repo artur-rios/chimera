@@ -1448,4 +1448,177 @@ void main() {
       expect(find.byKey(const Key('sql-format-input')), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenXmlFormatRoute_WhenSubmitted_ThenAccessibleResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/xml/format'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('xml-format-input')),
+        '<root><name>Ada</name></root>',
+      );
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('<root>\n  <name>Ada</name>\n</root>'), findsOneWidget);
+      expect(
+        find.byKey(const Key('xml-format-result-semantics')),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('xml-format-copy')), findsOneWidget);
+      expect(find.byKey(const Key('xml-format-save')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenMalformedXml_WhenSubmitted_ThenLocalizedLocationIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/xml/format'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('xml-format-input')),
+        '<root>\n<secret></root>',
+      );
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('xml-format-error')), findsOneWidget);
+      expect(find.textContaining('XML malformado'), findsOneWidget);
+      expect(find.textContaining('linha 2'), findsOneWidget);
+      expect(find.byKey(const Key('xml-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenXmlAdapters_WhenLoadCopyAndSaveRun_ThenExactContentIsTransferred',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/xml/format',
+          xmlFormatFilePicker: () async => '<root><file/></root>',
+          xmlFormatClipboardReader: () async => '<root><pasted/></root>',
+          xmlFormatClipboardWriter: (value) async => copied = value,
+          xmlFormatFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('xml-format-file')));
+      await tester.pumpAndSettle();
+      var input = tester.widget<TextField>(
+        find.byKey(const Key('xml-format-input')),
+      );
+      expect(input.controller!.text, '<root><file/></root>');
+
+      await tester.tap(find.byKey(const Key('xml-format-paste')));
+      await tester.pumpAndSettle();
+      input = tester.widget<TextField>(
+        find.byKey(const Key('xml-format-input')),
+      );
+      expect(input.controller!.text, '<root><pasted/></root>');
+
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('xml-format-copy')));
+      await tester.tap(find.byKey(const Key('xml-format-copy')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('xml-format-save')));
+      await tester.tap(find.byKey(const Key('xml-format-save')));
+      await tester.pumpAndSettle();
+
+      const formatted = '<root>\n  <pasted/>\n</root>';
+      expect(copied, formatted);
+      expect(savedName, 'chimera-formatted.xml');
+      expect(savedBytes, utf8.encode(formatted));
+      expect(find.text('Formatted XML saved.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenXmlAccessFailures_WhenAdaptersRun_ThenResultIsNotRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/xml/format',
+          xmlFormatFilePicker: () async => throw Exception('denied'),
+          xmlFormatClipboardReader: () async => throw Exception('denied'),
+          xmlFormatClipboardWriter: (value) async => throw Exception('denied'),
+          xmlFormatFileSaver: (name, bytes) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('xml-format-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('xml-format-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('xml-format-input')),
+        '<root/>',
+      );
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('xml-format-copy')));
+      await tester.tap(find.byKey(const Key('xml-format-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('xml-format-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('xml-format-save')));
+      await tester.tap(find.byKey(const Key('xml-format-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The formatted XML file could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('xml-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenXmlResourceFailure_WhenSubmitted_ThenNoPartialResultAppears',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/xml/format',
+          xmlFormatService: XmlFormatService(
+            formatter: XmlFormatter(maxOutputChars: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('xml-format-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The XML formatting exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('xml-format-result')), findsNothing);
+    },
+  );
 }

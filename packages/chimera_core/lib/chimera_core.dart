@@ -8,3 +8,4 @@ export 'src/json_yaml_service.dart';
 export 'src/operation_service.dart';
 export 'src/result.dart';
 export 'src/sql_format_service.dart';
+export 'src/xml_format_service.dart';
