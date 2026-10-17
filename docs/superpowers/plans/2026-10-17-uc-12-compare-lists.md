@@ -38,11 +38,11 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_core/lib/chimera_core.dart`
 - Create: `packages/chimera_core/test/list_compare_service_test.dart`
 
-- [ ] Add failing service tests for stable success JSON, redacted validation,
+- [x] Add failing service tests for stable success JSON, redacted validation,
   and resource mapping.
-- [ ] Implement the operation request, output serialization, and service mapping.
-- [ ] Run focused core tests and strict package analysis.
-- [ ] Commit the green core layer.
+- [x] Implement the operation request, output serialization, and service mapping.
+- [x] Run focused core tests and strict package analysis.
+- [x] Commit the green core layer.
 
 ### Task 3: Add the CLI command and localization
 
