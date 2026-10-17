@@ -12,5 +12,6 @@ export 'src/result.dart';
 export 'src/sql_format_service.dart';
 export 'src/text_analyze_service.dart';
 export 'src/text_escape_service.dart';
+export 'src/text_transform_service.dart';
 export 'src/text_unescape_service.dart';
 export 'src/xml_format_service.dart';

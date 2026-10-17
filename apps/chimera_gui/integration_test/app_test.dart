@@ -316,4 +316,29 @@ void main() {
       expect(find.text('UTF-8 bytes: 27'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenTextTransformRoute_WhenLinesDeduplicated_ThenSharedResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/transform'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-transform-input')),
+        'beta\r\nalpha\nbeta\n',
+      );
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-transform-mode')),
+          )
+          .onChanged!('deduplicate-lines');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('beta\nalpha\n'), findsOneWidget);
+    },
+  );
 }

@@ -17,6 +17,7 @@ import 'router.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
 import 'text_escape_page.dart';
+import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
@@ -39,6 +40,7 @@ final class ChimeraApp extends StatelessWidget {
     this.numberBaseService = const NumberBaseService(),
     this.textAnalyzeService = const TextAnalyzeService(),
     this.textEscapeService = const TextEscapeService(),
+    this.textTransformService = const TextTransformService(),
     this.textUnescapeService = const TextUnescapeService(),
     this.sqlFormatService = const SqlFormatService(),
     this.xmlFormatService = const XmlFormatService(),
@@ -72,6 +74,10 @@ final class ChimeraApp extends StatelessWidget {
     this.textEscapeFileSaver,
     this.textEscapeClipboardReader,
     this.textEscapeClipboardWriter,
+    this.textTransformFilePicker,
+    this.textTransformFileSaver,
+    this.textTransformClipboardReader,
+    this.textTransformClipboardWriter,
     this.textUnescapeFilePicker,
     this.textUnescapeFileSaver,
     this.textUnescapeClipboardReader,
@@ -99,6 +105,7 @@ final class ChimeraApp extends StatelessWidget {
   final NumberBaseService numberBaseService;
   final TextAnalyzeService textAnalyzeService;
   final TextEscapeService textEscapeService;
+  final TextTransformService textTransformService;
   final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
@@ -132,6 +139,10 @@ final class ChimeraApp extends StatelessWidget {
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
   final TextEscapeClipboardWriter? textEscapeClipboardWriter;
+  final TextTransformFilePicker? textTransformFilePicker;
+  final TextTransformFileSaver? textTransformFileSaver;
+  final TextTransformClipboardReader? textTransformClipboardReader;
+  final TextTransformClipboardWriter? textTransformClipboardWriter;
   final TextUnescapeFilePicker? textUnescapeFilePicker;
   final TextUnescapeFileSaver? textUnescapeFileSaver;
   final TextUnescapeClipboardReader? textUnescapeClipboardReader;
@@ -161,6 +172,7 @@ final class ChimeraApp extends StatelessWidget {
         numberBaseService: numberBaseService,
         textAnalyzeService: textAnalyzeService,
         textEscapeService: textEscapeService,
+        textTransformService: textTransformService,
         textUnescapeService: textUnescapeService,
         sqlFormatService: sqlFormatService,
         xmlFormatService: xmlFormatService,
@@ -194,6 +206,10 @@ final class ChimeraApp extends StatelessWidget {
         textEscapeFileSaver: textEscapeFileSaver,
         textEscapeClipboardReader: textEscapeClipboardReader,
         textEscapeClipboardWriter: textEscapeClipboardWriter,
+        textTransformFilePicker: textTransformFilePicker,
+        textTransformFileSaver: textTransformFileSaver,
+        textTransformClipboardReader: textTransformClipboardReader,
+        textTransformClipboardWriter: textTransformClipboardWriter,
         textUnescapeFilePicker: textUnescapeFilePicker,
         textUnescapeFileSaver: textUnescapeFileSaver,
         textUnescapeClipboardReader: textUnescapeClipboardReader,
@@ -225,6 +241,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.numberBaseService,
     required this.textAnalyzeService,
     required this.textEscapeService,
+    required this.textTransformService,
     required this.textUnescapeService,
     required this.sqlFormatService,
     required this.xmlFormatService,
@@ -258,6 +275,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.textEscapeFileSaver,
     required this.textEscapeClipboardReader,
     required this.textEscapeClipboardWriter,
+    required this.textTransformFilePicker,
+    required this.textTransformFileSaver,
+    required this.textTransformClipboardReader,
+    required this.textTransformClipboardWriter,
     required this.textUnescapeFilePicker,
     required this.textUnescapeFileSaver,
     required this.textUnescapeClipboardReader,
@@ -284,6 +305,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final NumberBaseService numberBaseService;
   final TextAnalyzeService textAnalyzeService;
   final TextEscapeService textEscapeService;
+  final TextTransformService textTransformService;
   final TextUnescapeService textUnescapeService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
@@ -317,6 +339,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final TextEscapeFileSaver? textEscapeFileSaver;
   final TextEscapeClipboardReader? textEscapeClipboardReader;
   final TextEscapeClipboardWriter? textEscapeClipboardWriter;
+  final TextTransformFilePicker? textTransformFilePicker;
+  final TextTransformFileSaver? textTransformFileSaver;
+  final TextTransformClipboardReader? textTransformClipboardReader;
+  final TextTransformClipboardWriter? textTransformClipboardWriter;
   final TextUnescapeFilePicker? textUnescapeFilePicker;
   final TextUnescapeFileSaver? textUnescapeFileSaver;
   final TextUnescapeClipboardReader? textUnescapeClipboardReader;
@@ -355,6 +381,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       numberBaseService: widget.numberBaseService,
       textAnalyzeService: widget.textAnalyzeService,
       textEscapeService: widget.textEscapeService,
+      textTransformService: widget.textTransformService,
       textUnescapeService: widget.textUnescapeService,
       sqlFormatService: widget.sqlFormatService,
       xmlFormatService: widget.xmlFormatService,
@@ -402,6 +429,14 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.textEscapeClipboardReader ?? readTextEscapeClipboard,
       textEscapeClipboardWriter:
           widget.textEscapeClipboardWriter ?? writeTextEscapeClipboard,
+      textTransformFilePicker:
+          widget.textTransformFilePicker ?? pickTextTransformFile,
+      textTransformFileSaver:
+          widget.textTransformFileSaver ?? saveTextTransformFile,
+      textTransformClipboardReader:
+          widget.textTransformClipboardReader ?? readTextTransformClipboard,
+      textTransformClipboardWriter:
+          widget.textTransformClipboardWriter ?? writeTextTransformClipboard,
       textUnescapeFilePicker:
           widget.textUnescapeFilePicker ?? pickTextUnescapeFile,
       textUnescapeFileSaver:

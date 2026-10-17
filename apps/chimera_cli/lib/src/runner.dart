@@ -28,6 +28,7 @@ Future<int> runChimera(
   NumberBaseService numberBaseService = const NumberBaseService(),
   TextAnalyzeService textAnalyzeService = const TextAnalyzeService(),
   TextEscapeService textEscapeService = const TextEscapeService(),
+  TextTransformService textTransformService = const TextTransformService(),
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
@@ -118,6 +119,21 @@ Future<int> runChimera(
         readFile: readFile ?? (path) => File(path).readAsString(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         textEscapeService: textEscapeService,
+      );
+    }
+    if (parsed.command!.name == 'text' &&
+        parsed.command!.command?.name == 'transform') {
+      return await _runTextTransform(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        textTransformService: textTransformService,
       );
     }
     if (parsed.command!.name == 'text' &&
@@ -252,6 +268,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'text' && args[1] == 'escape';
     final isTextAnalyze =
         args.length >= 2 && args[0] == 'text' && args[1] == 'analyze';
+    final isTextTransform =
+        args.length >= 2 && args[0] == 'text' && args[1] == 'transform';
     final isTextUnescape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'unescape';
     final isListCompare =
@@ -277,6 +295,7 @@ Future<int> runChimera(
               isDate ||
               isNumberBase ||
               isTextAnalyze ||
+              isTextTransform ||
               isTextEscape ||
               isTextUnescape ||
               isListCompare ||
@@ -296,6 +315,8 @@ Future<int> runChimera(
           ? 'number-base.invalid-options'
           : isTextAnalyze
           ? 'text-analyze.invalid-options'
+          : isTextTransform
+          ? 'text-transform.invalid-options'
           : isTextEscape
           ? 'text-escape.invalid-options'
           : isTextUnescape
@@ -323,6 +344,8 @@ Future<int> runChimera(
           ? 'error.numberBase.validation'
           : isTextAnalyze
           ? 'error.textAnalyze.validation'
+          : isTextTransform
+          ? 'error.textTransform.validation'
           : isTextEscape
           ? 'error.textEscape.validation'
           : isTextUnescape
@@ -392,9 +415,16 @@ ArgParser _buildParser() {
     ..addOption('output', abbr: 'o')
     ..addOption('mode')
     ..addFlag('json', negatable: false);
+  final textTransform = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('mode')
+    ..addFlag('json', negatable: false);
   final text = ArgParser()
     ..addCommand('analyze', textAnalyze)
     ..addCommand('escape', textEscape)
+    ..addCommand('transform', textTransform)
     ..addCommand('unescape', textUnescape);
   final listCompare = ArgParser()
     ..addOption('left')
@@ -693,6 +723,121 @@ Future<int> _runTextEscape(
   );
 }
 
+Future<int> _runTextTransform(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required TextTransformService textTransformService,
+}) async {
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'text-transform.conflicting-inputs',
+      messageKey: 'error.textTransform.validation',
+    );
+    return 64;
+  }
+
+  final mode = parsed.option('mode') ?? '';
+  try {
+    parseTextTransformMode(mode);
+  } on TextTransformException catch (error) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: error.kind.name,
+      code: error.code,
+      messageKey: 'error.textTransform.validation',
+      details: <String, Object?>{
+        'field': ?error.field,
+        'reason': ?error.reason,
+      },
+    );
+    return 64;
+  }
+
+  late String input;
+  try {
+    input = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'text-transform.input-access'
+          : 'text-transform.file-access',
+      messageKey: fileOption == null
+          ? 'error.textTransform.inputAccess'
+          : 'error.textTransform.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await textTransformService.execute(
+    TextTransformOperationRequest(input: input, mode: mode),
+  );
+  return await result.fold(
+    onSuccess: (output) async {
+      final json = parsed.flag('json');
+      final payload = json ? jsonEncode(output.toJson()) : output.output;
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(payload));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'text-transform.output-access',
+            messageKey: 'error.textTransform.outputAccess',
+          );
+          return 74;
+        }
+        out.writeln(catalog.lookup(localeTag, 'textTransform.savedResult'));
+      } else if (json) {
+        out.writeln(payload);
+      } else {
+        out.write(payload);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
 Future<int> _runTextUnescape(
   ArgResults parsed, {
   required String localeTag,
@@ -951,7 +1096,9 @@ List<String> _normalizeMultilineListOptions(List<String> args) {
   final normalized = <String>[];
   for (final argument in args) {
     final isLiteral =
-        argument.startsWith('--left=') || argument.startsWith('--right=');
+        argument.startsWith('--input=') ||
+        argument.startsWith('--left=') ||
+        argument.startsWith('--right=');
     if (isLiteral && (argument.contains('\n') || argument.contains('\r'))) {
       final separator = argument.indexOf('=');
       normalized

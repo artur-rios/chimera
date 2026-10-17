@@ -69,6 +69,24 @@ void main() {
     );
   });
 
+  test(
+    'GivenTextTransformMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      expect(
+        catalog.lookup('en', 'textTransform.mode.normalize-whitespace'),
+        'Normalize whitespace',
+      );
+      expect(
+        catalog.lookup('pt-BR', 'textTransform.savedResult'),
+        'Texto transformado salvo.',
+      );
+      expect(
+        catalog.lookup('pt-BR', 'error.textTransform.resource'),
+        'A transformação de texto excedeu o limite de recursos.',
+      );
+    },
+  );
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -145,6 +163,23 @@ void main() {
       'textAnalyze.savedResult',
       'textAnalyze.submitAction',
       'textAnalyze.wordCountLabel',
+      'textTransform.copiedResult',
+      'textTransform.copyAction',
+      'textTransform.fileAction',
+      'textTransform.inputLabel',
+      'textTransform.mode.deduplicate-lines',
+      'textTransform.mode.lowercase',
+      'textTransform.mode.normalize-whitespace',
+      'textTransform.mode.sort-lines',
+      'textTransform.mode.uppercase',
+      'textTransform.modeLabel',
+      'textTransform.openAction',
+      'textTransform.outputLabel',
+      'textTransform.pageTitle',
+      'textTransform.pasteAction',
+      'textTransform.saveAction',
+      'textTransform.savedResult',
+      'textTransform.submitAction',
       'textEscape.copiedResult',
       'textEscape.copyAction',
       'textEscape.fileAction',
@@ -347,6 +382,13 @@ void main() {
       'error.textAnalyze.outputAccess',
       'error.textAnalyze.resource',
       'error.textAnalyze.validation',
+      'error.textTransform.clipboardRead',
+      'error.textTransform.clipboardWrite',
+      'error.textTransform.fileAccess',
+      'error.textTransform.inputAccess',
+      'error.textTransform.outputAccess',
+      'error.textTransform.resource',
+      'error.textTransform.validation',
       'error.textEscape.clipboardRead',
       'error.textEscape.clipboardWrite',
       'error.textEscape.fileAccess',
