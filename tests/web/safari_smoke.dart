@@ -4,13 +4,8 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 Future<void> main() async {
-  Directory? fixtureDirectory;
   WebDriver? createdDriver;
   try {
-    final activeFixtureDirectory = fixtureDirectory = await Directory.systemTemp
-        .createTemp('chimera-safari-base64-');
-    final binaryFixture = File('${activeFixtureDirectory.path}/bytes.bin');
-    await binaryFixture.writeAsBytes(const <int>[0x00, 0xff], flush: true);
     final driver = createdDriver = await createDriver(
       uri: Uri.parse('http://127.0.0.1:4444/'),
       desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
@@ -598,16 +593,30 @@ Future<void> main() async {
       const <Object?>[],
     );
     await _clickButton(driver, 'Load bytes from file');
-    WebElement? fileInput;
-    await _waitUntil(() async {
-      final inputs = await driver
-          .findElements(const By.cssSelector('input[type="file"]'))
-          .toList();
-      if (inputs.isEmpty) return false;
-      fileInput = inputs.first;
-      return true;
-    }, 'Base64 file input did not become available');
-    await fileInput!.sendKeys(binaryFixture.path);
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('input[type=\"file\"]') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Base64 file input did not become available',
+    );
+    final binaryFileDispatched = await driver.execute('''
+        const input = document.querySelector('input[type="file"]');
+        if (input === null) return false;
+        const bytes = new Uint8Array([0x00, 0xff]);
+        const transfer = new DataTransfer();
+        transfer.items.add(
+          new File([bytes], 'bytes.bin', {type: 'application/octet-stream'}),
+        );
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+        return input.files.length === 1 && input.files[0].size === 2;
+      ''', const <Object?>[]);
+    if (binaryFileDispatched != true) {
+      throw StateError('Base64 binary file could not be dispatched');
+    }
     await _waitUntil(
       () => _pageContains(driver, 'Input bytes: 2'),
       'Base64 binary fixture was not loaded',
@@ -637,15 +646,7 @@ Future<void> main() async {
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
-    try {
-      await createdDriver?.quit();
-    } finally {
-      if (fixtureDirectory case final directory?) {
-        if (await directory.exists()) {
-          await directory.delete(recursive: true);
-        }
-      }
-    }
+    await createdDriver?.quit();
   }
 }
 
