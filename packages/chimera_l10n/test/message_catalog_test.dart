@@ -87,6 +87,15 @@ void main() {
     },
   );
 
+  test('GivenTextCompareMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'textCompare.kind.added'), 'Added');
+    expect(catalog.lookup('pt-BR', 'textCompare.kind.unchanged'), 'Inalterado');
+    expect(
+      catalog.lookup('pt-BR', 'error.textCompare.resource'),
+      'A comparação de textos excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -180,6 +189,30 @@ void main() {
       'textTransform.saveAction',
       'textTransform.savedResult',
       'textTransform.submitAction',
+      'textCompare.addedCountLabel',
+      'textCompare.copiedResult',
+      'textCompare.copyAction',
+      'textCompare.fileAction.left',
+      'textCompare.fileAction.right',
+      'textCompare.granularity.character',
+      'textCompare.granularity.line',
+      'textCompare.granularity.word',
+      'textCompare.granularityLabel',
+      'textCompare.kind.added',
+      'textCompare.kind.removed',
+      'textCompare.kind.unchanged',
+      'textCompare.leftInputLabel',
+      'textCompare.openAction',
+      'textCompare.outputLabel',
+      'textCompare.pageTitle',
+      'textCompare.pasteAction.left',
+      'textCompare.pasteAction.right',
+      'textCompare.removedCountLabel',
+      'textCompare.rightInputLabel',
+      'textCompare.saveAction',
+      'textCompare.savedResult',
+      'textCompare.submitAction',
+      'textCompare.unchangedCountLabel',
       'textEscape.copiedResult',
       'textEscape.copyAction',
       'textEscape.fileAction',
@@ -389,6 +422,13 @@ void main() {
       'error.textTransform.outputAccess',
       'error.textTransform.resource',
       'error.textTransform.validation',
+      'error.textCompare.clipboardRead',
+      'error.textCompare.clipboardWrite',
+      'error.textCompare.fileAccess',
+      'error.textCompare.inputAccess',
+      'error.textCompare.outputAccess',
+      'error.textCompare.resource',
+      'error.textCompare.validation',
       'error.textEscape.clipboardRead',
       'error.textEscape.clipboardWrite',
       'error.textEscape.fileAccess',

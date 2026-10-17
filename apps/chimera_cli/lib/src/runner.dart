@@ -27,6 +27,7 @@ Future<int> runChimera(
   ListCompareService listCompareService = const ListCompareService(),
   NumberBaseService numberBaseService = const NumberBaseService(),
   TextAnalyzeService textAnalyzeService = const TextAnalyzeService(),
+  TextCompareService textCompareService = const TextCompareService(),
   TextEscapeService textEscapeService = const TextEscapeService(),
   TextTransformService textTransformService = const TextTransformService(),
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
@@ -104,6 +105,21 @@ Future<int> runChimera(
         readFile: readFile ?? (path) => File(path).readAsString(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         textAnalyzeService: textAnalyzeService,
+      );
+    }
+    if (parsed.command!.name == 'text' &&
+        parsed.command!.command?.name == 'compare') {
+      return await _runTextCompare(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        textCompareService: textCompareService,
       );
     }
     if (parsed.command!.name == 'text' &&
@@ -409,6 +425,16 @@ ArgParser _buildParser() {
     ..addOption('file', abbr: 'f')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final textCompare = ArgParser()
+    ..addOption('left')
+    ..addOption('left-file')
+    ..addFlag('left-stdin', negatable: false)
+    ..addOption('right')
+    ..addOption('right-file')
+    ..addFlag('right-stdin', negatable: false)
+    ..addOption('output', abbr: 'o')
+    ..addOption('granularity')
+    ..addFlag('json', negatable: false);
   final textUnescape = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addOption('file', abbr: 'f')
@@ -423,6 +449,7 @@ ArgParser _buildParser() {
     ..addFlag('json', negatable: false);
   final text = ArgParser()
     ..addCommand('analyze', textAnalyze)
+    ..addCommand('compare', textCompare)
     ..addCommand('escape', textEscape)
     ..addCommand('transform', textTransform)
     ..addCommand('unescape', textUnescape);
@@ -1092,6 +1119,175 @@ Future<int> _runListCompare(
   );
 }
 
+Future<int> _runTextCompare(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required TextCompareService textCompareService,
+}) async {
+  final granularity = parsed.option('granularity') ?? '';
+  try {
+    parseTextCompareGranularity(granularity);
+  } on TextCompareException catch (error) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: error.kind.name,
+      code: error.code,
+      messageKey: 'error.textCompare.validation',
+      details: <String, Object?>{
+        'field': ?error.field,
+        'reason': ?error.reason,
+      },
+    );
+    return 64;
+  }
+
+  final leftSources = <Object?>[
+    parsed.option('left'),
+    parsed.option('left-file'),
+    if (parsed.flag('left-stdin')) true,
+  ].where((source) => source != null).length;
+  final rightSources = <Object?>[
+    parsed.option('right'),
+    parsed.option('right-file'),
+    if (parsed.flag('right-stdin')) true,
+  ].where((source) => source != null).length;
+
+  if (leftSources != 1 || rightSources != 1) {
+    final side = leftSources != 1 ? 'left' : 'right';
+    final count = leftSources != 1 ? leftSources : rightSources;
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: count == 0
+          ? 'text-compare.missing-$side-source'
+          : 'text-compare.conflicting-$side-sources',
+      messageKey: 'error.textCompare.validation',
+    );
+    return 64;
+  }
+  if (parsed.flag('left-stdin') && parsed.flag('right-stdin')) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'text-compare.shared-stdin',
+      messageKey: 'error.textCompare.validation',
+    );
+    return 64;
+  }
+
+  late String left;
+  late String right;
+  try {
+    left = await _readListSource(
+      literal: parsed.option('left'),
+      file: parsed.option('left-file'),
+      standardInput: parsed.flag('left-stdin'),
+      readStandardInput: readStandardInput,
+      readFile: readFile,
+    );
+  } on Object {
+    _writeTextCompareSourceFailure(
+      err,
+      parsed: parsed,
+      catalog: catalog,
+      localeTag: localeTag,
+      side: 'left',
+      file: parsed.option('left-file') != null,
+    );
+    return 74;
+  }
+  try {
+    right = await _readListSource(
+      literal: parsed.option('right'),
+      file: parsed.option('right-file'),
+      standardInput: parsed.flag('right-stdin'),
+      readStandardInput: readStandardInput,
+      readFile: readFile,
+    );
+  } on Object {
+    _writeTextCompareSourceFailure(
+      err,
+      parsed: parsed,
+      catalog: catalog,
+      localeTag: localeTag,
+      side: 'right',
+      file: parsed.option('right-file') != null,
+    );
+    return 74;
+  }
+
+  final result = await textCompareService.execute(
+    TextCompareOperationRequest(
+      left: left,
+      right: right,
+      granularity: granularity,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final json = parsed.flag('json');
+      final payload = json
+          ? jsonEncode(value.toJson())
+          : _humanTextCompareResult(
+              value,
+              localeTag: localeTag,
+              catalog: catalog,
+            );
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(payload));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'text-compare.output-access',
+            messageKey: 'error.textCompare.outputAccess',
+          );
+          return 74;
+        }
+        out.writeln(catalog.lookup(localeTag, 'textCompare.savedResult'));
+      } else if (json) {
+        out.writeln(payload);
+      } else {
+        out.write(payload);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
 List<String> _normalizeMultilineListOptions(List<String> args) {
   final normalized = <String>[];
   for (final argument in args) {
@@ -1143,6 +1339,55 @@ void _writeListSourceFailure(
         ? 'error.listCompare.fileAccess'
         : 'error.listCompare.inputAccess',
   );
+}
+
+void _writeTextCompareSourceFailure(
+  StringSink err, {
+  required ArgResults parsed,
+  required MessageCatalog catalog,
+  required String localeTag,
+  required String side,
+  required bool file,
+}) {
+  _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: parsed.flag('json'),
+    kind: 'access',
+    code: 'text-compare.$side-${file ? 'file' : 'input'}-access',
+    messageKey: file
+        ? 'error.textCompare.fileAccess'
+        : 'error.textCompare.inputAccess',
+  );
+}
+
+String _humanTextCompareResult(
+  TextCompareOutput output, {
+  required String localeTag,
+  required MessageCatalog catalog,
+}) {
+  final buffer = StringBuffer();
+  for (final span in output.spans) {
+    buffer.writeln(
+      '${catalog.lookup(localeTag, 'textCompare.kind.${span.kind.slug}')}: '
+      '${jsonEncode(span.text)}',
+    );
+  }
+  buffer
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textCompare.addedCountLabel')}: '
+      '${output.summary.added}',
+    )
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textCompare.removedCountLabel')}: '
+      '${output.summary.removed}',
+    )
+    ..writeln(
+      '${catalog.lookup(localeTag, 'textCompare.unchangedCountLabel')}: '
+      '${output.summary.unchanged}',
+    );
+  return buffer.toString();
 }
 
 String _humanListCompareResult(

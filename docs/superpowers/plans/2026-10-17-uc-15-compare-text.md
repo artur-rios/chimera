@@ -101,15 +101,15 @@ flutter_test, integration_test, and Playwright.
 - Produces: `chimera text compare` with paired literal/file/stdin sources,
   `--granularity`, `--json`, and `--output`.
 
-- [ ] Add failing CLI/catalog tests for every source type, all granularities,
+- [x] Add failing CLI/catalog tests for every source type, all granularities,
   exact human/JSON/file payloads, both locales, validation-before-read, access
   failures, resource exit 75, source conflicts/shared stdin, and redaction.
-- [ ] Run focused CLI/catalog tests and verify missing-command/key failures.
-- [ ] Implement parser registration, source validation/read helpers, stable human
+- [x] Run focused CLI/catalog tests and verify missing-command/key failures.
+- [x] Implement parser registration, source validation/read helpers, stable human
   formatting, localized messages, output writing, and exit mappings.
-- [ ] Run CLI/localization suites and strict affected-package analysis until
+- [x] Run CLI/localization suites and strict affected-package analysis until
   green.
-- [ ] Commit the CLI adapter.
+- [x] Commit the CLI adapter.
 
 ### Task 4: Add the GUI route and interactions
 
