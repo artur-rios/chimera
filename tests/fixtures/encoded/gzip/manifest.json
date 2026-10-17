@@ -1,0 +1,13 @@
+{
+  "generator": "CPython 3.14.0 gzip/zlib/hashlib",
+  "fixtures": [
+    {"name":"empty","source":"empty.source.hex","gzip":"empty.gzip.hex","sourceSha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","gzipSha256":"9ceffb7310338057cfe71a4ae1e2c98d2c485d81cdef906532a801f457a38d64"},
+    {"name":"ascii","source":"ascii.source.hex","gzip":"ascii.gzip.hex","sourceSha256":"2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824","gzipSha256":"3223ab15154bd181c783e5b434b108c68f5798bf10be7eb681faba9b6668bc65"},
+    {"name":"unicode","source":"unicode.source.hex","gzip":"unicode.gzip.hex","sourceSha256":"8f557d9269c613c793057a80ce61596059c9bfae3078167d9d01a533a56bfd70","gzipSha256":"0bce9e1cf490e82584a474c9775bc29c71c526bb1f955b3d26c8694e6a039e8e"},
+    {"name":"bom","source":"bom.source.hex","gzip":"bom.gzip.hex","sourceSha256":"8ef9fd3dcbc12ef767e84de1cee197dd6d258f0adc5eec55f78b8257625b24d3","gzipSha256":"c41200f16ae763e04e6068e13ac998e691907e0729be5863ec7660007755d8c2"},
+    {"name":"binary","source":"binary.source.hex","gzip":"binary.gzip.hex","sourceSha256":"16e2c3b16dfa6d56b5b11393f6491c874afa68133bd45bbfdb0273d39cad935d","gzipSha256":"f863f7dd67533feb9b74f1f5833fcf7d8f0db503d1ec5cbe8ec06b1519d1e036"},
+    {"name":"optional","source":"binary.source.hex","gzip":"optional.gzip.hex","sourceSha256":"16e2c3b16dfa6d56b5b11393f6491c874afa68133bd45bbfdb0273d39cad935d","gzipSha256":"b15904fac9c4af0f77aafc748487718f609652554d355c2bbe96e2bb6bfa3ede"},
+    {"name":"concat","source":"concat.source.hex","gzip":"concat.gzip.hex","sourceSha256":"ec08d84ca65126e510ac8d192e208d44b7a11bc4f42bb7bc17899c88a4378e4f","gzipSha256":"5e9806e1e8ac96c6c3c1d42a1200b9717592e1112c119c2f65f6b2cdee96a5f1"},
+    {"name":"compressible","source":"compressible.source.json","gzip":"compressible.gzip.hex","sourceSha256":"c93eee2d0db02f10acc7460d9576e122dcf8cd53c4bf8dfcae1b3e74ebcfff5a","gzipSha256":"fd920c602e27028127f659f67b54574d81d62b63b8ac9ae47c1a08060355328c"}
+  ]
+}
