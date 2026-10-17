@@ -22,3 +22,22 @@ decode of either text form. Regenerate DER mechanically with PowerShell:
 [IO.File]::WriteAllBytes('certificate.der', [Convert]::FromBase64String([IO.File]::ReadAllText('certificate.base64')))
 openssl x509 -in certificate.pem -text -noout
 ```
+
+## Algorithm/century fixtures
+
+`ed25519.pem` and `unknown-key.pem` are additional directly assembled public
+structural certificates under the same CC0 dedication. Both use the public
+Ed25519 verification key `d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a`
+from [RFC 8032 section 7.1 test 1](https://www.rfc-editor.org/rfc/rfc8032#section-7.1)
+(public key only; no private key is retained).
+The former declares public-key OID 1.3.101.112; the latter deliberately declares
+the structurally valid unknown OID 2.999.5. Each signature algorithm is Ed25519
+with a dummy 64-byte zero signature. They prove structural inspection does not
+attempt key instantiation, signature validation, or trust decisions.
+
+Validity bytes are UTCTime `500101000000Z` and `491231235959Z`: exactly 1950-01-01
+through 2049-12-31T23:59:59Z under RFC 5280. `algorithm-manifest.json` pins
+the independent metadata and exact byte counts. `algorithm_fixtures.dart`
+embeds their identical DER Base64 for native runners whose working directory
+cannot be assumed. Each PEM has LF wrapping and is 509 bytes; each DER is
+335 bytes. Existing subject, issuer, serial, and extensions are unchanged.

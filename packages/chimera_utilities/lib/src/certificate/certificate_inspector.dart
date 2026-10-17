@@ -189,7 +189,17 @@ final class CertificateInspector {
     if (sequence.elements.length != 3) _invalid('malformed-certificate');
     final tbsSequence = sequence.elements.first as ASN1Sequence;
     final serialIndex = tbsSequence.elements.first.tag == 0xA0 ? 1 : 0;
-    _validateTbs(tbsSequence, serialIndex);
+    final version = _validateTbs(tbsSequence, serialIndex);
+    _bitString(sequence.elements[2]);
+    final validity = tbsSequence.elements[serialIndex + 3] as ASN1Sequence;
+    if (validity.elements.length != 2) _invalid('malformed-certificate');
+    final notBefore = _time(validity.elements[0]);
+    final notAfter = _time(validity.elements[1]);
+    _algorithm(tbsSequence.elements[serialIndex + 1] as ASN1Sequence);
+    final spki = tbsSequence.elements[serialIndex + 5] as ASN1Sequence;
+    if (spki.elements.length != 2) _invalid('malformed-certificate');
+    _bitString(spki.elements[1]);
+    final publicKeyAlgorithm = _algorithm(spki.elements[0] as ASN1Sequence);
     final serial = (tbsSequence.elements[serialIndex] as ASN1Integer)
         .valueBytes();
     if (serial.isEmpty || serial.first >= 128) {
@@ -202,16 +212,6 @@ final class CertificateInspector {
         .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
         .join()
         .toUpperCase();
-    final objects = x509
-        .parsePem('$_marker\n${base64Encode(der)}\n-----END CERTIFICATE-----')
-        .toList();
-    if (objects.length != 1 || objects.single is! x509.X509Certificate) {
-      _invalid('malformed-certificate');
-    }
-    final certificate = objects.single as x509.X509Certificate;
-    final tbs = certificate.tbsCertificate;
-    final version = tbs.version!;
-    if (version < 1 || version > 3) _invalid('malformed-certificate');
     return CertificateInspectionResult(
       representation: representation,
       version: version,
@@ -222,13 +222,10 @@ final class CertificateInspector {
       issuer: _attributes(
         tbsSequence.elements[serialIndex + 2] as ASN1Sequence,
       ),
-      notBefore: tbs.validity!.notBefore,
-      notAfter: tbs.validity!.notAfter,
+      notBefore: notBefore,
+      notAfter: notAfter,
       signatureAlgorithm: _algorithm(sequence.elements[1] as ASN1Sequence),
-      publicKeyAlgorithm: _algorithm(
-        (tbsSequence.elements[serialIndex + 5] as ASN1Sequence).elements.first
-            as ASN1Sequence,
-      ),
+      publicKeyAlgorithm: publicKeyAlgorithm,
       extensions: _extensions(tbsSequence, serialIndex),
       inputByteCount: count,
       derByteCount: der.length,
@@ -289,14 +286,16 @@ final class CertificateInspector {
     }
   }
 
-  void _validateTbs(ASN1Sequence tbs, int offset) {
+  int _validateTbs(ASN1Sequence tbs, int offset) {
+    if (tbs.tag != 48) _invalid('malformed-certificate');
     final fields = tbs.elements;
     if (fields.length < offset + 6) _invalid('malformed-certificate');
     var version = 1;
     if (offset == 1) {
       final parser = ASN1Parser(fields.first.valueBytes());
       final encodedVersion = parser.nextObject() as ASN1Integer;
-      if (parser.hasNext() ||
+      if (encodedVersion.tag != 2 ||
+          parser.hasNext() ||
           encodedVersion.valueAsBigInteger < BigInt.zero ||
           encodedVersion.valueAsBigInteger > BigInt.two) {
         _invalid('malformed-certificate');
@@ -323,13 +322,58 @@ final class CertificateInspector {
       lastOptional = order;
       if (order == 3) {
         final parser = ASN1Parser(field.valueBytes());
-        if (parser.nextObject() is! ASN1Sequence || parser.hasNext()) {
+        final extensions = parser.nextObject();
+        if (extensions.tag != 48 ||
+            extensions is! ASN1Sequence ||
+            parser.hasNext()) {
           _invalid('malformed-certificate');
         }
       } else if (field.valueBytes().isEmpty || field.valueBytes().first > 7) {
         _invalid('malformed-certificate');
       }
     }
+    return version;
+  }
+
+  void _bitString(ASN1Object object) {
+    if (object.tag != 3 || object is! ASN1BitString) {
+      _invalid('malformed-certificate');
+    }
+    final bytes = object.valueBytes();
+    if (bytes.isEmpty ||
+        bytes.first > 7 ||
+        (bytes.length == 1 && bytes.first != 0) ||
+        (bytes.last & ((1 << bytes.first) - 1)) != 0) {
+      _invalid('malformed-certificate');
+    }
+  }
+
+  DateTime _time(ASN1Object object) {
+    final utc = object.tag == 23;
+    if (!utc && object.tag != 24) _invalid('malformed-certificate');
+    final text = ascii.decode(object.valueBytes());
+    if (text.length != (utc ? 13 : 15)) _invalid('malformed-certificate');
+    if (!(utc ? _utcTime : _generalizedTime).hasMatch(text)) {
+      _invalid('malformed-certificate');
+    }
+    final yearWidth = utc ? 2 : 4;
+    var year = int.parse(text.substring(0, yearWidth));
+    if (utc) year += year >= 50 ? 1900 : 2000;
+    final month = int.parse(text.substring(yearWidth, yearWidth + 2));
+    final day = int.parse(text.substring(yearWidth + 2, yearWidth + 4));
+    final hour = int.parse(text.substring(yearWidth + 4, yearWidth + 6));
+    final minute = int.parse(text.substring(yearWidth + 6, yearWidth + 8));
+    final second = int.parse(text.substring(yearWidth + 8, yearWidth + 10));
+    final value = DateTime.utc(year, month, day, hour, minute, second);
+    if (value.year != year ||
+        value.month != month ||
+        value.day != day ||
+        value.hour != hour ||
+        value.minute != minute ||
+        value.second != second) {
+      _invalid('malformed-certificate');
+    }
+    return value;
   }
 
   List<CertificateAttribute> _attributes(ASN1Sequence name) {
@@ -339,7 +383,9 @@ final class CertificateInspector {
       if (set.elements.isEmpty) _invalid('malformed-certificate');
       for (final field in set.elements) {
         final pair = field as ASN1Sequence;
-        if (pair.elements.length != 2) _invalid('malformed-certificate');
+        if (pair.tag != 48 || pair.elements.length != 2) {
+          _invalid('malformed-certificate');
+        }
         final oid = _oid(pair.elements.first);
         // Convert one original attribute at a time through x509's public
         // model, so its value conversion cannot collapse repeated OIDs.
@@ -355,7 +401,9 @@ final class CertificateInspector {
   }
 
   CertificateAlgorithm _algorithm(ASN1Sequence algorithm) {
-    if (algorithm.elements.isEmpty || algorithm.elements.length > 2) {
+    if (algorithm.tag != 48 ||
+        algorithm.elements.isEmpty ||
+        algorithm.elements.length > 2) {
       _invalid('malformed-certificate');
     }
     final oid = _oid(algorithm.elements.first);
@@ -372,7 +420,7 @@ final class CertificateInspector {
       for (final item in sequence.elements) {
         final extension = item as ASN1Sequence;
         final fields = extension.elements;
-        if (fields.length != 2 && fields.length != 3) {
+        if (extension.tag != 48 || (fields.length != 2 && fields.length != 3)) {
           _invalid('malformed-certificate');
         }
         final oid = _oid(fields.first);
@@ -522,3 +570,5 @@ final _begin = RegExp('-----BEGIN CERTIFICATE-----');
 final _pem = RegExp(
   r'^[\x09-\x0D ]*-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----[\x09-\x0D ]*$',
 );
+final _utcTime = RegExp(r'^[0-9]{12}Z$');
+final _generalizedTime = RegExp(r'^[0-9]{14}Z$');

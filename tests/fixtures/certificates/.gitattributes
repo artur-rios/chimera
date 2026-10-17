@@ -1,5 +1,6 @@
 # Keep pinned representation byte counts identical on every checkout.
-certificate.pem text eol=lf
+*.pem text eol=lf
+*.json text eol=lf
 certificate.base64 text eol=lf
 certificate.der binary
 manifest.json text eol=lf

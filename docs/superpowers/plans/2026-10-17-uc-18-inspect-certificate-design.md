@@ -14,8 +14,8 @@ or claim that a certificate should be trusted. Those operations would require
 policy and network inputs that UC-18 does not define and would conflict with
 the local/offline boundary.
 
-The standards-backed metadata baseline is the public model exposed by the
-mandated `x509` package: certificate version, serial number, subject and issuer
+The standards-backed metadata baseline is the original X.509 ASN.1 structure:
+certificate version, serial number, subject and issuer
 distinguished-name attributes, validity interval, signature algorithm,
 subject-public-key algorithm, and extension identifiers/criticality. The result
 also reports the detected input representation, input byte count, and canonical
@@ -26,10 +26,12 @@ certificate schema.
 ## Shared inspection contract
 
 `chimera_utilities` adds `x509: 0.2.4+3`, the current stable package version at
-implementation time and the certificate parser named by the Technology Stack.
+implementation time and the X.509 library named by the Technology Stack.
 It also adds `asn1lib: 1.6.5`, the exact public ASN.1 dependency resolved by
-that package, for lossless framing checks and arbitrary-precision serial-byte
-access that `x509` does not expose. It owns `CertificateInspector`,
+that package, for the authoritative structural acceptance and metadata path.
+`x509` supplies best-effort friendly OID names and safe isolated attribute-value
+conversion only; its eager certificate/public-key parser is not an acceptance
+gate. It owns `CertificateInspector`,
 `CertificateInputRepresentation`, immutable metadata value types, and typed
 inspection failures.
 
@@ -63,13 +65,24 @@ Before certificate parsing, DER bytes pass a lossless framing check over the
 original bytes: one top-level `SEQUENCE` must consume the complete input, every
 TLV must use a definite minimally encoded length, constructed values must end
 exactly at their declared boundary, and no trailing object or byte is allowed.
-The same ASN.1 view supplies the serial's original unsigned value bytes so long
-X.509 serials remain exact on web targets. DER bytes are then wrapped
-transiently as a certificate PEM block for `x509.parsePem`, whose result must be
-exactly one `X509Certificate`. This avoids `X509Certificate.toAsn1()`, because
-`x509: 0.2.4+3` omits extensions and unique IDs when re-encoding and would reject
-valid certificates. Parser objects and transient text/DER views are scoped to
-the call and become unreachable before the immutable metadata result returns.
+The original ASN.1 view enforces exact Certificate, TBSCertificate, Validity,
+AlgorithmIdentifier, and SubjectPublicKeyInfo field types/cardinalities,
+including BIT STRING signature/public-key fields and the ordered optional TBS
+fields. It supplies unsigned serial value bytes, source-ordered DN attributes
+(including repeated OIDs within one RDN), correctly decoded base-128 OIDs, and
+ordered extension metadata. Long serials and OID arcs remain exact on web.
+Validity is decoded from its original bytes under RFC 5280: UTCTime years
+00–49 mean 2000–2049, 50–99 mean 1950–1999; GeneralizedTime keeps its four-digit
+year. Both require seconds and Z, and impossible calendar values are rejected.
+
+Public-key and signature BIT STRING values remain opaque structural fields.
+Ed25519 and unknown public-key algorithms return their OID with a nullable
+friendly name; no key instantiation, signature verification, or trust decision
+is performed. `x509.parsePem` is deliberately not called because version
+0.2.4+3 eagerly constructs only RSA/EC keys and would reject structurally valid
+algorithms. `X509Certificate.toAsn1()` is also not called because that version
+loses extensions and unique IDs. Parser objects and transient text/DER views
+remain call-scoped and become unreachable before immutable metadata returns.
 
 Optional injectable `maxInputBytes` and `maxDecodedBytes` budgets provide
 deterministic resource-boundary tests while production remains unbounded, as

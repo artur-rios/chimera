@@ -17,6 +17,39 @@ const certificateJsonFields =
   '"extensions":[{"oid":"2.5.29.19","name":"basicConstraints","critical":true},' +
   '{"oid":"1.2.3.5","name":null,"critical":false}],';
 
+for (const [id, oid] of [['ed25519', '1.3.101.112'], ['unknown-key', '2.999.5']]) {
+  test(`certificate ${id} public-key algorithm and 1950 UTC metadata survive compiled inspection`, async ({ page }) => {
+    const input = readFileSync(new URL(`../fixtures/certificates/${id}.pem`, import.meta.url), 'utf8');
+    await page.addInitScript(() => {
+      window.__chimeraCopiedText = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (value) => { window.__chimeraCopiedText = value; } },
+      });
+    });
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Inspect a certificate', exact: true }).click();
+    const interactionRequests = [];
+    page.on('request', (request) => {
+      if (/^https?:/.test(request.url())) interactionRequests.push(request.url());
+    });
+    await fillFlutterTextBox(page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true }), input);
+    await page.getByRole('button', { name: 'Inspect', exact: true }).click();
+    await expect(page.getByRole('region', {
+      name: 'Certificate metadata Certificate inspection succeeded. Representation: PEM Subject attributes: 3 Issuer attributes: 2 Extensions: 2', exact: true,
+    })).toBeVisible();
+    await page.getByRole('button', { name: 'Copy certificate JSON', exact: true }).click();
+    const expected = `{"representation":"pem",${certificateJsonFields}"inputByteCount":509,"derByteCount":335}`
+      .replace('2024-01-01T00:00:00.000Z', '1950-01-01T00:00:00.000Z')
+      .replace('2034-01-01T00:00:00.000Z', '2049-12-31T23:59:59.000Z')
+      .replace('{"oid":"1.2.840.113549.1.1.11","name":"sha256WithRSAEncryption"}', '{"oid":"1.3.101.112","name":null}')
+      .replace('{"oid":"1.2.840.113549.1.1.1","name":"rsaEncryption"}', `{"oid":"${oid}","name":null}`);
+    await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).toBe(expected);
+    expect(interactionRequests).toEqual([]);
+  });
+}
+
 for (const { source, representation, byteCount, label } of [
   { source: 'text', representation: 'pem', byteCount: 778, label: 'PEM' },
   { source: 'file', representation: 'der', byteCount: 534, label: 'DER' },
@@ -31,10 +64,14 @@ for (const { source, representation, byteCount, label } of [
     );
     await page.addInitScript((clipboardText) => {
       window.__chimeraCopiedText = null;
+      window.__chimeraClipboardReads = 0;
       Object.defineProperty(navigator, 'clipboard', {
         configurable: true,
         value: {
-          readText: async () => clipboardText,
+          readText: async () => {
+            window.__chimeraClipboardReads++;
+            return clipboardText;
+          },
           writeText: async (value) => { window.__chimeraCopiedText = value; },
         },
       });
@@ -61,6 +98,7 @@ for (const { source, representation, byteCount, label } of [
       await page.getByRole('checkbox', { name: 'DER', exact: true }).click();
     } else {
       await page.getByRole('button', { name: 'Paste certificate', exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.__chimeraClipboardReads)).toBe(1);
       await expect(page.getByRole('button', { name: 'Paste certificate', exact: true })).toBeEnabled();
       await page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true }).click();
       await expect(page.getByRole('textbox', { name: 'Certificate (PEM or Base64)', exact: true })).toHaveValue(input.toString('utf8'));

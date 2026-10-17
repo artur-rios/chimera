@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
+import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -510,6 +512,62 @@ void main() {
       expect(savedBytes, base64.decode(_validPngBase64));
     },
   );
+  for (final (id, oid) in [
+    ('ed25519', '1.3.101.112'),
+    ('unknown-key', '2.999.5'),
+  ]) {
+    testWidgets(
+      'GivenAlgorithmCertificate${id}_WhenInspectedAndCopied_ThenOriginalMetadataReturns',
+      (tester) async {
+        String? copied;
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: 'en',
+            initialLocation: '/certificate/inspect',
+            certificateInspectFilePicker: () async =>
+                base64.decode(certificateAlgorithmFixtures[id]!),
+            certificateInspectClipboardWriter: (value) async => copied = value,
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('certificate-inspect-file')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-submit')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-submit')));
+        await tester.pumpAndSettle();
+        final metadata = tester
+            .widget<SelectableText>(
+              find.byKey(const Key('certificate-inspect-result')),
+            )
+            .data!;
+        expect(metadata, contains('Public key algorithm: $oid\n'));
+        expect(
+          metadata,
+          contains('Not before (UTC): 1950-01-01T00:00:00.000Z'),
+        );
+        expect(metadata, contains('Not after (UTC): 2049-12-31T23:59:59.000Z'));
+        await tester.ensureVisible(
+          find.byKey(const Key('certificate-inspect-copy')),
+        );
+        await tester.tap(find.byKey(const Key('certificate-inspect-copy')));
+        await tester.pumpAndSettle();
+        final result = jsonDecode(copied!) as Map<String, Object?>;
+        expect(result['publicKeyAlgorithm'], {'oid': oid, 'name': null});
+        expect(result['signatureAlgorithm'], {
+          'oid': '1.3.101.112',
+          'name': null,
+        });
+        expect(result['notBefore'], '1950-01-01T00:00:00.000Z');
+        expect(result['notAfter'], '2049-12-31T23:59:59.000Z');
+        expect(result['serialNumberHex'], '01AB');
+        expect(result['inputByteCount'], 335);
+        expect(result['derByteCount'], 335);
+        expect(find.text('Certificate JSON copied.'), findsOneWidget);
+      },
+    );
+  }
   for (final source in ['pem text', 'der file', 'base64 clipboard']) {
     testWidgets(
       'GivenCertificate${source}_WhenInspectedAndCopied_ThenExactMetadataTransfers',

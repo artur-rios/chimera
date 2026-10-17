@@ -19,6 +19,172 @@ void main() {
   const inspector = CertificateInspector();
 
   group('CertificateInspector', () {
+    test('GivenThirdValidityField_WhenInspected_ThenSchemaIsRejected', () {
+      final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+      final fields = (certificate.elements.first as ASN1Sequence).elements;
+      final validity = fields[4] as ASN1Sequence;
+      expect(
+        () => inspector.inspectBytes(
+          _replaceTbsField(der, 4, _tlv(48, [...validity.valueBytes(), 5, 0])),
+        ),
+        _invalid('malformed-certificate'),
+      );
+    });
+    test('GivenUtcYearBoundaries_WhenInspected_ThenRfc5280CenturyIsUsed', () {
+      for (final (year, expected) in [
+        ('49', 2049),
+        ('50', 1950),
+        ('75', 1975),
+        ('76', 1976),
+      ]) {
+        final validity = _tlv(48, [
+          ..._tlv(23, ascii.encode('${year}0101000000Z')),
+          ..._tlv(23, ascii.encode('${year}1231235959Z')),
+        ]);
+        final result = inspector.inspectBytes(
+          _replaceTbsField(der, 4, validity),
+        );
+        expect(result.notBefore, DateTime.utc(expected));
+        expect(result.notAfter, DateTime.utc(expected, 12, 31, 23, 59, 59));
+      }
+      final generalized = _tlv(48, [
+        ..._tlv(24, ascii.encode('20500101000000Z')),
+        ..._tlv(24, ascii.encode('99991231235959Z')),
+      ]);
+      final result = inspector.inspectBytes(
+        _replaceTbsField(der, 4, generalized),
+      );
+      expect(result.notBefore, DateTime.utc(2050));
+      expect(result.notAfter, DateTime.utc(9999, 12, 31, 23, 59, 59));
+    });
+
+    test(
+      'GivenMalformedNestedSchema_WhenInspected_ThenCertificateIsRejected',
+      () {
+        final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+        final fields = (certificate.elements.first as ASN1Sequence).elements;
+        final validity = fields[4] as ASN1Sequence;
+        final spki = fields[6] as ASN1Sequence;
+        final signatureAlgorithm = fields[2] as ASN1Sequence;
+        final cases = <String, List<int>>{
+          'ENUMERATED version': _replaceTbsField(
+            der,
+            0,
+            _tlv(0xA0, [10, 1, 2]),
+          ),
+          'application-tagged attribute': _replaceTbsField(
+            der,
+            5,
+            _tlv(
+              48,
+              _tlv(
+                49,
+                _tlv(0x60, [
+                  6,
+                  3,
+                  0x2A,
+                  3,
+                  4,
+                  ..._tlv(12, ascii.encode('value')),
+                ]),
+              ),
+            ),
+          ),
+          'application-tagged extension list': _replaceTbsField(
+            der,
+            7,
+            _tlv(
+              0xA3,
+              _tlv(
+                0x60,
+                ((ASN1Parser(fields[7].valueBytes()).nextObject())
+                        as ASN1Sequence)
+                    .valueBytes(),
+              ),
+            ),
+          ),
+          'application-tagged TBS': _tlv(48, [
+            ..._tlv(
+              0x60,
+              (certificate.elements.first as ASN1Sequence).valueBytes(),
+            ),
+            ...certificate.elements[1].encodedBytes,
+            ...certificate.elements.last.encodedBytes,
+          ]),
+          'application-tagged outer algorithm': _tlv(48, [
+            ...certificate.elements.first.encodedBytes,
+            ..._tlv(
+              0x60,
+              (certificate.elements[1] as ASN1Sequence).valueBytes(),
+            ),
+            ...certificate.elements.last.encodedBytes,
+          ]),
+          'NULL signature': _tlv(48, [
+            ...certificate.elements.first.encodedBytes,
+            ...certificate.elements[1].encodedBytes,
+            5,
+            0,
+          ]),
+          'OCTET STRING signature': _tlv(48, [
+            ...certificate.elements.first.encodedBytes,
+            ...certificate.elements[1].encodedBytes,
+            4,
+            1,
+            0,
+          ]),
+          'third validity field': _replaceTbsField(
+            der,
+            4,
+            _tlv(48, [...validity.valueBytes(), 5, 0]),
+          ),
+          'third TBS algorithm field': _replaceTbsField(
+            der,
+            2,
+            _tlv(48, [...signatureAlgorithm.valueBytes(), 5, 0]),
+          ),
+          'third SPKI field': _replaceTbsField(
+            der,
+            6,
+            _tlv(48, [...spki.valueBytes(), 5, 0]),
+          ),
+          'NULL public key': _replaceTbsField(
+            der,
+            6,
+            _tlv(48, [...spki.elements.first.encodedBytes, 5, 0]),
+          ),
+          'NULL validity date': _replaceTbsField(
+            der,
+            4,
+            _tlv(48, [5, 0, ...validity.elements.last.encodedBytes]),
+          ),
+        };
+        for (final entry in cases.entries) {
+          expect(
+            () => inspector.inspectBytes(entry.value),
+            _invalid('malformed-certificate'),
+            reason: entry.key,
+          );
+        }
+      },
+    );
+
+    test('GivenEd25519OrUnknownPublicKey_WhenInspected_ThenAlgorithmMetadataReturns', () {
+      for (final (oid, encodedOid) in [
+        ('1.3.101.112', [0x2B, 0x65, 0x70]),
+        ('2.999.5', [0x88, 0x37, 5]),
+      ]) {
+        final publicKey = _tlv(48, [
+          ..._tlv(48, _tlv(6, encodedOid)),
+          ..._tlv(3, [0, ...List<int>.filled(32, 1)]),
+        ]);
+        final result = inspector.inspectBytes(
+          _replaceTbsField(der, 6, publicKey),
+        );
+        expect(result.publicKeyAlgorithm.oid, oid);
+        expect(result.publicKeyAlgorithm.name, isNull);
+        expect(result.serialNumberHex, '01AB');
+      }
+    });
     test(
       'GivenCustomTypedDnValue_WhenCopied_ThenX509StringConversionIsPreserved',
       () {
@@ -487,6 +653,15 @@ List<int> _withTbs(Uint8List der, List<int> content) {
   return _tlv(48, [
     ..._tlv(48, content),
     for (final field in certificate.elements.skip(1)) ...field.encodedBytes,
+  ]);
+}
+
+List<int> _replaceTbsField(Uint8List der, int index, List<int> value) {
+  final certificate = ASN1Parser(der).nextObject() as ASN1Sequence;
+  final fields = (certificate.elements.first as ASN1Sequence).elements;
+  return _withTbs(der, [
+    for (var i = 0; i < fields.length; i++)
+      ...(i == index ? value : fields[i].encodedBytes),
   ]);
 }
 
