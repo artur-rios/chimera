@@ -133,6 +133,42 @@ Future<void> main() async {
             const <Object?>[],
           ) ==
           true,
+      'Chimera did not reload for text escape flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Escape text'),
+      'Home page did not return for text escape flow',
+    );
+    await _clickButton(driver, 'Escape text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Input text'),
+      'Text escape page did not open',
+    );
+    // The built-in bounded sample avoids SafariDriver text synthesis quirks;
+    // custom Unicode/control input is covered by native and Playwright flows.
+    await _clickButton(driver, 'Escape text');
+    await _waitUntil(
+      () => _pageContains(driver, 'Escaped text'),
+      'Text escape result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, r'Hello, \"Chimera\"!'),
+      'Text escape result was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'text escape');
+
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
       'Chimera did not reload for JSON table flow',
     );
     await driver.execute(
@@ -338,7 +374,7 @@ Future<void> main() async {
     await _assertNoExternalRequests(driver, flow: 'XML format');
 
     stdout.writeln(
-      'Safari cron, date, number base, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();
