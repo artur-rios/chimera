@@ -190,4 +190,3 @@ narrow width, and 200% text scale are verified in both locales and recorded in
 - FR-PL-09 through FR-PL-11 and BR-03 through BR-05/BR-19: no history,
   preference, account, plugin, collaboration, or network path is added;
   compiled-browser flows explicitly fail on unexpected external requests.
-
