@@ -1006,11 +1006,18 @@ Future<void> _convertCertificate(WebDriver driver, String source) async {
   if (source == 'pem') {
     await _clickButton(driver, 'Paste certificate');
     await _waitUntil(
-      () => _inputHasValue(
-        driver,
-        'Certificate (PEM or Base64)',
-        utf8.decode(pem),
-      ),
+      () async =>
+          await driver.execute(
+            '''
+            const input = [...document.querySelectorAll('textarea[aria-label]')]
+              .find(element => element.getAttribute('aria-label') === arguments[0]);
+            if (!input || input.disabled) return false;
+            input.focus();
+            return input.value === arguments[1];
+          ''',
+            <Object?>['Certificate (PEM or Base64)', utf8.decode(pem)],
+          ) ==
+          true,
       'Certificate conversion PEM source was not loaded exactly',
     );
   } else {
