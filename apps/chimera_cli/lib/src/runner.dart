@@ -12,6 +12,24 @@ typedef BytesReader = Future<List<int>> Function();
 typedef FileBytesReader = Future<List<int>> Function(String path);
 typedef FileBytesWriter = Future<void> Function(String path, List<int> bytes);
 typedef JsonObjectEncoder = String Function(Object? value);
+typedef TryReserveFile = Future<bool> Function(File candidate);
+typedef CopyFile = Future<void> Function(File source, File destination);
+typedef RenameFile = Future<void> Function(File source, String destinationPath);
+typedef DeleteFile = Future<void> Function(File file);
+
+final class TransactionalFileOperations {
+  const TransactionalFileOperations({
+    this.tryReserve,
+    this.copy,
+    this.rename,
+    this.delete,
+  });
+
+  final TryReserveFile? tryReserve;
+  final CopyFile? copy;
+  final RenameFile? rename;
+  final DeleteFile? delete;
+}
 
 Future<int> runChimera(
   List<String> args, {
@@ -24,6 +42,8 @@ Future<int> runChimera(
   FileBytesReader? readFileBytes,
   FileBytesWriter? writeOutputFile,
   FileBytesWriter? writeOutputStage,
+  TransactionalFileOperations outputFileOperations =
+      const TransactionalFileOperations(),
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -89,6 +109,7 @@ Future<int> runChimera(
               path,
               bytes,
               writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
             ),
         base64DecodeService: base64DecodeService,
         encodeJson: base64DecodeJsonEncoder ?? jsonEncode,
@@ -2629,73 +2650,171 @@ Future<void> _writeFileTransactionally(
   String path,
   List<int> bytes, {
   required FileBytesWriter writeStage,
+  required TransactionalFileOperations operations,
 }) async {
   final target = File(path);
-  final stage = await _unusedTransactionSibling(target, 'stage');
+  final stage = await _reserveTransactionSibling(target, 'stage', operations);
   File? backup;
-  var targetMoved = false;
   try {
     await writeStage(stage.path, bytes);
     if (!await stage.exists()) {
       throw const FileSystemException('Output stage was not created');
     }
 
-    if (await target.exists()) {
-      backup = await _unusedTransactionSibling(target, 'backup');
-      await target.rename(backup.path);
-      targetMoved = true;
+    final hadTarget = await target.exists();
+    if (hadTarget) {
+      backup = await _reserveTransactionSibling(target, 'backup', operations);
+      await _copyTransactionFile(target, backup, operations);
+      await _deleteTransactionFile(target, operations);
     }
 
     try {
-      await stage.rename(target.path);
-    } on Object {
-      if (targetMoved && backup != null) {
-        await backup.rename(target.path);
-        targetMoved = false;
-      }
-      rethrow;
+      await _renameTransactionFile(stage, target.path, operations);
+    } on Object catch (error, stackTrace) {
+      await _restoreTransactionTarget(
+        target,
+        backup: backup,
+        hadTarget: hadTarget,
+        operations: operations,
+      );
+      backup = null;
+      Error.throwWithStackTrace(error, stackTrace);
     }
 
-    if (targetMoved && backup != null) {
+    if (backup != null) {
       try {
-        await backup.delete();
-      } on Object {
-        // The decoded output is already installed. A backup cleanup failure
-        // must not turn a completed replacement into a reported write failure.
+        await _deleteTransactionFile(backup, operations);
+        backup = null;
+      } on Object catch (error, stackTrace) {
+        await _restoreTransactionTarget(
+          target,
+          backup: backup,
+          hadTarget: true,
+          operations: operations,
+        );
+        backup = null;
+        Error.throwWithStackTrace(error, stackTrace);
       }
     }
-  } on Object {
-    try {
-      if (await stage.exists()) await stage.delete();
-    } on Object {
-      // Preserve the original output failure.
-    }
-    if (targetMoved && backup != null && !await target.exists()) {
-      try {
-        await backup.rename(target.path);
-      } on Object {
-        // Preserve the original output failure.
+  } on Object catch (error, stackTrace) {
+    await _deleteTransactionFileIfPresent(stage, operations);
+    if (backup != null) {
+      if (await target.exists()) {
+        await _deleteTransactionFileIfPresent(backup, operations);
+      } else {
+        await _renameTransactionFile(backup, target.path, operations);
       }
     }
-    rethrow;
+    Error.throwWithStackTrace(error, stackTrace);
   }
 }
 
-Future<File> _unusedTransactionSibling(File target, String role) async {
+Future<File> _reserveTransactionSibling(
+  File target,
+  String role,
+  TransactionalFileOperations operations,
+) async {
   while (true) {
     final sequence = _transactionFileSequence++;
     final candidate = File(
       '${target.parent.path}${Platform.pathSeparator}'
-      '.chimera-$role-$pid-${DateTime.now().microsecondsSinceEpoch}-$sequence',
+      '.chimera-$role-$pid-$sequence',
     );
-    if (!await candidate.exists()) return candidate;
+    final reserved =
+        await (operations.tryReserve ?? _tryReserveTransactionFile)(candidate);
+    if (reserved) return candidate;
   }
 }
 
 Future<void> _writeFileStageExactly(String path, List<int> bytes) async {
   final stage = File(path);
-  await stage.create(exclusive: true);
   await stage.writeAsBytes(bytes, flush: true);
+}
+
+Future<bool> _tryReserveTransactionFile(File candidate) async {
+  try {
+    await candidate.create(exclusive: true);
+    return true;
+  } on FileSystemException catch (error) {
+    if (switch (error.osError?.errorCode) {
+      17 || 80 || 183 => true,
+      _ => false,
+    }) {
+      return false;
+    }
+    rethrow;
+  }
+}
+
+Future<void> _copyTransactionFile(
+  File source,
+  File destination,
+  TransactionalFileOperations operations,
+) => (operations.copy ?? _copyTransactionFileFlushed)(source, destination);
+
+Future<void> _copyTransactionFileFlushed(File source, File destination) async {
+  final input = await source.open();
+  final output = await destination.open(mode: FileMode.write);
+  try {
+    while (true) {
+      final chunk = await input.read(64 * 1024);
+      if (chunk.isEmpty) break;
+      await output.writeFrom(chunk);
+    }
+    await output.flush();
+  } finally {
+    await input.close();
+    await output.close();
+  }
+}
+
+Future<void> _renameTransactionFile(
+  File source,
+  String destinationPath,
+  TransactionalFileOperations operations,
+) async {
+  final rename = operations.rename;
+  if (rename != null) {
+    await rename(source, destinationPath);
+  } else {
+    await source.rename(destinationPath);
+  }
+}
+
+Future<void> _deleteTransactionFile(
+  File file,
+  TransactionalFileOperations operations,
+) async {
+  final delete = operations.delete;
+  if (delete != null) {
+    await delete(file);
+  } else {
+    await file.delete();
+  }
+}
+
+Future<void> _deleteTransactionFileIfPresent(
+  File file,
+  TransactionalFileOperations operations,
+) async {
+  if (await file.exists()) {
+    await _deleteTransactionFile(file, operations);
+  }
+}
+
+Future<void> _restoreTransactionTarget(
+  File target, {
+  required File? backup,
+  required bool hadTarget,
+  required TransactionalFileOperations operations,
+}) async {
+  await _deleteTransactionFileIfPresent(target, operations);
+  if (hadTarget) {
+    if (backup == null || !await backup.exists()) {
+      throw const FileSystemException('Output backup is unavailable');
+    }
+    await _renameTransactionFile(backup, target.path, operations);
+  }
 }
 
 Future<int> _runJsonArrayToTable(

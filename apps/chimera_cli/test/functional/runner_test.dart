@@ -4213,13 +4213,229 @@ void main() {
       expect(out.toString(), isEmpty);
       expect(err.toString(), 'The decoded bytes could not be saved.\n');
       expect(await target.readAsBytes(), <int>[7, 8, 9]);
-      expect(
-        await directory.list().map((entry) => entry.path).toList(),
-        <String>[target.path],
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenExistingTarget_WhenTransactionalSaveSucceeds_ThenExactBytesReplaceItWithoutArtifacts', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-replace-',
       );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(await target.readAsBytes(), <int>[0, 255]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenStageAndBackupNameCollisions_WhenSaved_ThenUnrelatedFilesArePreservedAndNewNamesAreUsed', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-collision-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final collisions = <File>[];
+      final attempts = <String, int>{'stage': 0, 'backup': 0};
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+        outputFileOperations: TransactionalFileOperations(
+          tryReserve: (candidate) async {
+            final role = candidate.path.contains('.chimera-stage-')
+                ? 'stage'
+                : 'backup';
+            final attempt = attempts[role]!;
+            attempts[role] = attempt + 1;
+            if (attempt == 0) {
+              await candidate.writeAsBytes(
+                role == 'stage' ? <int>[11] : <int>[22],
+                flush: true,
+              );
+              collisions.add(candidate);
+              return false;
+            }
+            await candidate.create(exclusive: true);
+            return true;
+          },
+        ),
+      );
+
+      expect(exitCode, 0);
+      expect(attempts, <String, int>{'stage': 2, 'backup': 2});
+      expect(await target.readAsBytes(), <int>[0, 255]);
+      expect(await collisions[0].readAsBytes(), <int>[11]);
+      expect(await collisions[1].readAsBytes(), <int>[22]);
+      expect(
+        (await _chimeraTransactionArtifacts(directory))
+            .map((file) => file.path)
+            .toSet(),
+        collisions.map((file) => file.path).toSet(),
+      );
+      for (final collision in collisions) {
+        await collision.delete();
+      }
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenStageReplacementFailure_WhenSaved_ThenOriginalTargetIsRestoredWithoutArtifacts', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-rename-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        outputFileOperations: TransactionalFileOperations(
+          rename: (source, destinationPath) async {
+            if (source.path.contains('.chimera-stage-') &&
+                destinationPath == target.path) {
+              throw const FileSystemException('private rename failure');
+            }
+            await source.rename(destinationPath);
+          },
+        ),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenBackupCleanupFailure_WhenSaved_ThenInstalledTargetIsRolledBackAndFailureReturns', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-cleanup-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+      var cleanupFailures = 0;
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        outputFileOperations: TransactionalFileOperations(
+          delete: (file) async {
+            if (file.path.contains('.chimera-backup-') &&
+                cleanupFailures == 0) {
+              cleanupFailures++;
+              throw const FileSystemException('private cleanup failure');
+            }
+            await file.delete();
+          },
+        ),
+      );
+
+      expect(exitCode, 74);
+      expect(cleanupFailures, 1);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenNoExistingTargetAndPartialStageFailure_WhenSaved_ThenNoTargetOrArtifactsRemain', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-new-target-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputStage: (path, bytes) async {
+          await File(path).writeAsBytes(<int>[bytes.first], flush: true);
+          throw const FileSystemException('private partial failure');
+        },
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.exists(), isFalse);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
     });
   });
 }
+
+Future<List<File>> _chimeraTransactionArtifacts(Directory directory) async =>
+    directory
+        .list()
+        .where((entry) {
+          final name = entry.path.split(Platform.pathSeparator).last;
+          return name.startsWith('.chimera-');
+        })
+        .map((entry) => File(entry.path))
+        .toList();
 
 final class _OutOfMemoryStringSink implements StringSink {
   var emissionCalls = 0;
