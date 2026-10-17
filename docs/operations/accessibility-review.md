@@ -100,3 +100,52 @@ modes, real PNG/JPEG/GIF/WebP renderer fixtures, corrupt and failing previews,
 owned-preview disposal at every lifecycle boundary, stale/busy behavior,
 keyboard traversal, bounded semantics, automated guidelines, and narrow
 large-text layouts. No UC-17 accessibility findings remain open.
+
+## UC-18 Inspect Certificate
+
+- Release version: UC-18 candidate for issue #19
+- Branch: `feature/uc-18-inspect-certificate`
+- Reviewer: Chimera UC-18 GUI implementation self-review
+- Date: 2026-10-17
+- Target: shared Flutter web, Windows, and Linux certificate inspection surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Keyboard traversal follows multiline certificate input, local file,
+  clipboard paste, Auto/PEM/DER/Base64, inspect, result, and JSON copy. Keyboard
+  activation works and inspection success focuses the result region.
+- [x] The page title, home action, input, source actions, representation,
+  inspect/copy, human metadata labels, notices, and failures are localized.
+- [x] The selectable metadata report scrolls within a maximum 320 logical-pixel
+  viewport. Its region semantics announce success, detected representation,
+  and subject/issuer/extension counts; certificate values are excluded from
+  duplicate result semantics.
+- [x] Errors and copy notices use live regions. File, clipboard, and copy access
+  failures and allocation failures show only safe localized messages and clear
+  prior source, result, and enabled result actions.
+- [x] In-flight actions disable input, source actions, representation, inspect,
+  and copy. Generation checks suppress late success and failure after source or
+  representation changes and after disposal.
+- [x] Flutter Android tap-target, labeled-target, and text-contrast guidelines
+  pass for the inspection page in both locales.
+- [x] Both locales render input, source/representation controls, selectable
+  metadata, and copy without overflow at 320 logical pixels and 200% text scale.
+
+### Evidence and Findings
+
+`flutter test --no-pub --reporter expanded` in `apps/chimera_gui` passes all
+189 GUI tests, including the complete widget suite, a catalog check, and the
+startup performance test.
+The 45 focused certificate tests cover real public PEM/DER/Base64 fixtures,
+text/file/clipboard exclusivity, explicit text/DER mismatch, exact JSON copy,
+localized human metadata, malformed/unsupported/multiple certificates, access
+and allocation failures, cancellation, all asynchronous stale-completion paths,
+busy controls, keyboard order, bounded semantics, automated accessibility
+guidelines, and narrow large-text layouts. A separate widget test opens the
+certificate route through the localized home action.
+
+Strict Flutter analysis passes with no issues. These are automated widget
+findings; native screen-reader and real-browser platform evidence is recorded
+separately by the cross-platform acceptance work. No automated UC-18
+accessibility findings remain open.

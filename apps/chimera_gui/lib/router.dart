@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
+import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'json_csv_page.dart';
@@ -22,6 +23,10 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required CertificateInspectOperationService certificateInspectService,
+  required CertificateInspectFilePicker certificateInspectFilePicker,
+  required CertificateInspectClipboardReader certificateInspectClipboardReader,
+  required CertificateInspectClipboardWriter certificateInspectClipboardWriter,
   required MessageCatalog catalog,
   required String localeTag,
   required Base64DecodeService base64DecodeService,
@@ -262,6 +267,17 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag, 'textAnalyze.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-certificate-inspect'),
+                        onPressed: () => context.go('/certificate/inspect'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'certificateInspect.openAction',
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -353,6 +369,17 @@ GoRouter buildRouter({
           clipboardReader: base64DecodeClipboardReader,
           clipboardWriter: base64DecodeClipboardWriter,
           previewDecoder: base64DecodePreviewDecoder,
+        ),
+      ),
+      GoRoute(
+        path: '/certificate/inspect',
+        builder: (context, state) => CertificateInspectPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: certificateInspectService,
+          filePicker: certificateInspectFilePicker,
+          clipboardReader: certificateInspectClipboardReader,
+          clipboardWriter: certificateInspectClipboardWriter,
         ),
       ),
       GoRoute(
