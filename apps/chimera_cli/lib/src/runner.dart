@@ -11,6 +11,25 @@ typedef FileTextReader = Future<String> Function(String path);
 typedef BytesReader = Future<List<int>> Function();
 typedef FileBytesReader = Future<List<int>> Function(String path);
 typedef FileBytesWriter = Future<void> Function(String path, List<int> bytes);
+typedef JsonObjectEncoder = String Function(Object? value);
+typedef TryReserveFile = Future<bool> Function(File candidate);
+typedef CopyFile = Future<void> Function(File source, File destination);
+typedef RenameFile = Future<void> Function(File source, String destinationPath);
+typedef DeleteFile = Future<void> Function(File file);
+
+final class TransactionalFileOperations {
+  const TransactionalFileOperations({
+    this.tryReserve,
+    this.copy,
+    this.rename,
+    this.delete,
+  });
+
+  final TryReserveFile? tryReserve;
+  final CopyFile? copy;
+  final RenameFile? rename;
+  final DeleteFile? delete;
+}
 
 Future<int> runChimera(
   List<String> args, {
@@ -22,7 +41,12 @@ Future<int> runChimera(
   BytesReader? readStandardInputBytes,
   FileBytesReader? readFileBytes,
   FileBytesWriter? writeOutputFile,
+  FileBytesWriter? writeOutputStage,
+  TransactionalFileOperations outputFileOperations =
+      const TransactionalFileOperations(),
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
+  Base64DecodeService base64DecodeService = const Base64DecodeService(),
+  JsonObjectEncoder? base64DecodeJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -66,6 +90,29 @@ Future<int> runChimera(
         readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         base64EncodeService: base64EncodeService,
+      );
+    }
+    if (parsed.command!.name == 'base64' &&
+        parsed.command!.command?.name == 'decode') {
+      return await _runBase64Decode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        base64DecodeService: base64DecodeService,
+        encodeJson: base64DecodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'cron' &&
@@ -297,6 +344,8 @@ Future<int> runChimera(
   } on FormatException {
     final isBase64Encode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
+    final isBase64Decode =
+        args.length >= 2 && args[0] == 'base64' && args[1] == 'decode';
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
     final isDate =
         args.length >= 2 && args[0] == 'date' && args[1] == 'convert';
@@ -332,6 +381,7 @@ Future<int> runChimera(
       localeTag: localeTag,
       json:
           (isBase64Encode ||
+              isBase64Decode ||
               isCron ||
               isDate ||
               isNumberBase ||
@@ -351,6 +401,8 @@ Future<int> runChimera(
       kind: 'validation',
       code: isBase64Encode
           ? 'base64-encode.invalid-options'
+          : isBase64Decode
+          ? 'base64-decode.invalid-options'
           : isCron
           ? 'cron.invalid-options'
           : isDate
@@ -384,6 +436,8 @@ Future<int> runChimera(
           : 'cli.invalid-options',
       messageKey: isBase64Encode
           ? 'error.base64Encode.validation'
+          : isBase64Decode
+          ? 'error.base64Decode.validation'
           : isCron
           ? 'error.cron.validation'
           : isDate
@@ -427,7 +481,16 @@ ArgParser _buildParser() {
     ..addOption('file', abbr: 'f')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
-  final base64 = ArgParser()..addCommand('encode', base64Encode);
+  final base64Decode = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('mode')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final base64 = ArgParser()
+    ..addCommand('encode', base64Encode)
+    ..addCommand('decode', base64Decode);
   final cronParse = ArgParser()
     ..addOption('expression', abbr: 'e')
     ..addOption('file', abbr: 'f')
@@ -705,6 +768,208 @@ Future<int> _runBase64Encode(
       );
       return _exitCodeFor(failure.kind);
     },
+  );
+}
+
+Future<int> _runBase64Decode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required Base64DecodeService base64DecodeService,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+
+  if (sourceCount != 1) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: sourceCount == 0
+          ? 'base64-decode.missing-source'
+          : 'base64-decode.conflicting-sources',
+      messageKey: 'error.base64Decode.validation',
+    );
+    return 64;
+  }
+
+  final mode = switch (parsed.option('mode')) {
+    'text' => Base64DecodeMode.text,
+    'binary' => Base64DecodeMode.binary,
+    _ => null,
+  };
+  if (mode == null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'base64-decode.invalid-mode',
+      messageKey: 'error.base64Decode.validation',
+    );
+    return 64;
+  }
+  if (mode == Base64DecodeMode.binary && outputPath == null && !json) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: false,
+      kind: 'validation',
+      code: 'base64-decode.binary-destination-required',
+      messageKey: 'error.base64Decode.validation',
+    );
+    return 64;
+  }
+
+  late Base64DecodeOperationRequest request;
+  if (text != null) {
+    request = Base64DecodeOperationRequest.text(text, mode: mode);
+  } else {
+    try {
+      final bytes = useStandardInput
+          ? await readStandardInputBytes()
+          : await readFileBytes(file!);
+      request = Base64DecodeOperationRequest.utf8Bytes(bytes, mode: mode);
+    } on OutOfMemoryError {
+      _writeBase64DecodeResourceFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        field: 'input',
+      );
+      return 75;
+    } on Object {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'access',
+        code: useStandardInput
+            ? 'base64-decode.input-access'
+            : 'base64-decode.file-access',
+        messageKey: useStandardInput
+            ? 'error.base64Decode.inputAccess'
+            : 'error.base64Decode.fileAccess',
+      );
+      return 74;
+    }
+  }
+
+  final result = await base64DecodeService.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      String? stdoutPayload;
+      try {
+        if (json) {
+          stdoutPayload = '${encodeJson(value.toJson())}\n';
+        } else if (outputPath == null) {
+          stdoutPayload = value.text!;
+        } else {
+          stdoutPayload =
+              '${catalog.lookup(localeTag, 'base64Decode.savedResult')}\n';
+        }
+      } on OutOfMemoryError {
+        _writeBase64DecodeResourceFailure(
+          err,
+          catalog: catalog,
+          localeTag: localeTag,
+          json: json,
+          field: 'output',
+        );
+        return 75;
+      }
+
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, value.bytes);
+        } on OutOfMemoryError {
+          _writeBase64DecodeResourceFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            field: 'output',
+          );
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'base64-decode.output-access',
+            messageKey: 'error.base64Decode.outputAccess',
+          );
+          return 74;
+        }
+      }
+
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        _writeBase64DecodeResourceFailure(
+          err,
+          catalog: catalog,
+          localeTag: localeTag,
+          json: json,
+          field: 'output',
+        );
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+void _writeBase64DecodeResourceFailure(
+  StringSink err, {
+  required MessageCatalog catalog,
+  required String localeTag,
+  required bool json,
+  required String field,
+}) {
+  _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'base64-decode.resource-limit',
+    messageKey: 'error.base64Decode.resource',
+    details: <String, Object?>{'field': field, 'reason': 'allocation-limit'},
   );
 }
 
@@ -2376,6 +2641,179 @@ Future<void> _writeFileExactly(String path, List<int> bytes) async {
       // Preserve the original write failure as the actionable diagnostic.
     }
     rethrow;
+  }
+}
+
+var _transactionFileSequence = 0;
+
+Future<void> _writeFileTransactionally(
+  String path,
+  List<int> bytes, {
+  required FileBytesWriter writeStage,
+  required TransactionalFileOperations operations,
+}) async {
+  final target = File(path);
+  final stage = await _reserveTransactionSibling(target, 'stage', operations);
+  File? backup;
+  try {
+    await writeStage(stage.path, bytes);
+    if (!await stage.exists()) {
+      throw const FileSystemException('Output stage was not created');
+    }
+
+    final hadTarget = await target.exists();
+    if (hadTarget) {
+      backup = await _reserveTransactionSibling(target, 'backup', operations);
+      await _copyTransactionFile(target, backup, operations);
+      await _deleteTransactionFile(target, operations);
+    }
+
+    try {
+      await _renameTransactionFile(stage, target.path, operations);
+    } on Object catch (error, stackTrace) {
+      await _restoreTransactionTarget(
+        target,
+        backup: backup,
+        hadTarget: hadTarget,
+        operations: operations,
+      );
+      backup = null;
+      Error.throwWithStackTrace(error, stackTrace);
+    }
+
+    if (backup != null) {
+      try {
+        await _deleteTransactionFile(backup, operations);
+        backup = null;
+      } on Object catch (error, stackTrace) {
+        await _restoreTransactionTarget(
+          target,
+          backup: backup,
+          hadTarget: true,
+          operations: operations,
+        );
+        backup = null;
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+    }
+  } on Object catch (error, stackTrace) {
+    await _deleteTransactionFileIfPresent(stage, operations);
+    if (backup != null) {
+      if (await target.exists()) {
+        await _deleteTransactionFileIfPresent(backup, operations);
+      } else {
+        await _renameTransactionFile(backup, target.path, operations);
+      }
+    }
+    Error.throwWithStackTrace(error, stackTrace);
+  }
+}
+
+Future<File> _reserveTransactionSibling(
+  File target,
+  String role,
+  TransactionalFileOperations operations,
+) async {
+  while (true) {
+    final sequence = _transactionFileSequence++;
+    final candidate = File(
+      '${target.parent.path}${Platform.pathSeparator}'
+      '.chimera-$role-$pid-$sequence',
+    );
+    final reserved =
+        await (operations.tryReserve ?? _tryReserveTransactionFile)(candidate);
+    if (reserved) return candidate;
+  }
+}
+
+Future<void> _writeFileStageExactly(String path, List<int> bytes) async {
+  final stage = File(path);
+  await stage.writeAsBytes(bytes, flush: true);
+}
+
+Future<bool> _tryReserveTransactionFile(File candidate) async {
+  try {
+    await candidate.create(exclusive: true);
+    return true;
+  } on FileSystemException catch (error) {
+    if (switch (error.osError?.errorCode) {
+      17 || 80 || 183 => true,
+      _ => false,
+    }) {
+      return false;
+    }
+    rethrow;
+  }
+}
+
+Future<void> _copyTransactionFile(
+  File source,
+  File destination,
+  TransactionalFileOperations operations,
+) => (operations.copy ?? _copyTransactionFileFlushed)(source, destination);
+
+Future<void> _copyTransactionFileFlushed(File source, File destination) async {
+  final input = await source.open();
+  final output = await destination.open(mode: FileMode.write);
+  try {
+    while (true) {
+      final chunk = await input.read(64 * 1024);
+      if (chunk.isEmpty) break;
+      await output.writeFrom(chunk);
+    }
+    await output.flush();
+  } finally {
+    await input.close();
+    await output.close();
+  }
+}
+
+Future<void> _renameTransactionFile(
+  File source,
+  String destinationPath,
+  TransactionalFileOperations operations,
+) async {
+  final rename = operations.rename;
+  if (rename != null) {
+    await rename(source, destinationPath);
+  } else {
+    await source.rename(destinationPath);
+  }
+}
+
+Future<void> _deleteTransactionFile(
+  File file,
+  TransactionalFileOperations operations,
+) async {
+  final delete = operations.delete;
+  if (delete != null) {
+    await delete(file);
+  } else {
+    await file.delete();
+  }
+}
+
+Future<void> _deleteTransactionFileIfPresent(
+  File file,
+  TransactionalFileOperations operations,
+) async {
+  if (await file.exists()) {
+    await _deleteTransactionFile(file, operations);
+  }
+}
+
+Future<void> _restoreTransactionTarget(
+  File target, {
+  required File? backup,
+  required bool hadTarget,
+  required TransactionalFileOperations operations,
+}) async {
+  await _deleteTransactionFileIfPresent(target, operations);
+  if (hadTarget) {
+    if (backup == null || !await backup.exists()) {
+      throw const FileSystemException('Output backup is unavailable');
+    }
+    await _renameTransactionFile(backup, target.path, operations);
   }
 }
 

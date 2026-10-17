@@ -3694,7 +3694,748 @@ void main() {
       }
     });
   });
+
+  group('base64 decode', () {
+    test(
+      'GivenLiteralBase64InTextMode_WhenDecoded_ThenExactTextHasNoAddedNewline',
+      () async {
+        for (final input in <(String, String)>[
+          ('', ''),
+          ('SGVsbG8=', 'Hello'),
+          ('T2zDoSDwn5GL', 'Olá 👋'),
+          ('SGVsbG8Kd29ybGQ=', 'Hello\nworld'),
+        ]) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+
+          final exitCode = await runChimera(
+            <String>['base64', 'decode', '--text=${input.$1}', '--mode=text'],
+            localeTag: 'en',
+            out: out,
+            err: err,
+          );
+
+          expect(exitCode, 0, reason: input.$1);
+          expect(out.toString(), input.$2, reason: input.$1);
+          expect(err.toString(), isEmpty, reason: input.$1);
+        }
+      },
+    );
+
+    test(
+      'GivenEverySource_WhenDecoded_ThenRawUtf8BytesReachTheSharedService',
+      () async {
+        final cases =
+            <
+              (
+                List<String>,
+                Future<List<int>> Function()?,
+                Future<List<int>> Function(String)?,
+              )
+            >[
+              (const <String>['--text=SGVsbG8=', '--mode=text'], null, null),
+              (
+                const <String>['--stdin', '--mode=text'],
+                () async => utf8.encode('SGVsbG8='),
+                null,
+              ),
+              (
+                const <String>['--file=secret-input.txt', '--mode=text'],
+                null,
+                (path) async {
+                  expect(path, 'secret-input.txt');
+                  return utf8.encode('SGVsbG8=');
+                },
+              ),
+            ];
+
+        for (final testCase in cases) {
+          final out = StringBuffer();
+          final exitCode = await runChimera(
+            <String>['base64', 'decode', ...testCase.$1],
+            localeTag: 'en',
+            out: out,
+            err: StringBuffer(),
+            readStandardInputBytes: testCase.$2,
+            readFileBytes: testCase.$3,
+          );
+
+          expect(exitCode, 0, reason: testCase.$1.toString());
+          expect(out.toString(), 'Hello', reason: testCase.$1.toString());
+        }
+      },
+    );
+
+    test(
+      'GivenTextOrBinaryModeWithJson_WhenDecoded_ThenStableJsonHasOneNewline',
+      () async {
+        final cases = <(List<String>, String)>[
+          (
+            const <String>['--text=SGVsbG8=', '--mode=text', '--json'],
+            '{"mode":"text","text":"Hello","bytes":null,'
+                '"inputCharacterCount":8,"outputByteCount":5,'
+                '"imageCandidateMediaType":null}\n',
+          ),
+          (
+            const <String>['--stdin', '--mode=binary', '--json'],
+            '{"mode":"binary","text":null,"bytes":[0,255],'
+                '"inputCharacterCount":4,"outputByteCount":2,'
+                '"imageCandidateMediaType":null}\n',
+          ),
+        ];
+
+        for (final testCase in cases) {
+          final out = StringBuffer();
+          final exitCode = await runChimera(
+            <String>['base64', 'decode', ...testCase.$1],
+            localeTag: 'en',
+            out: out,
+            err: StringBuffer(),
+            readStandardInputBytes: () async => utf8.encode('AP8='),
+          );
+
+          expect(exitCode, 0, reason: testCase.$1.toString());
+          expect(out.toString(), testCase.$2, reason: testCase.$1.toString());
+        }
+      },
+    );
+
+    test(
+      'GivenOutputPath_WhenDecoded_ThenExactBytesAreSavedBeforeSuccessOutput',
+      () async {
+        for (final testCase in <(String, String)>[
+          ('en', 'Decoded bytes saved.\n'),
+          ('pt-BR', 'Bytes decodificados salvos.\n'),
+        ]) {
+          final out = StringBuffer();
+          late String savedPath;
+          late List<int> savedBytes;
+          final exitCode = await runChimera(
+            const <String>[
+              'base64',
+              'decode',
+              '--text=AP8=',
+              '--mode=binary',
+              '--output=decoded.bin',
+            ],
+            localeTag: testCase.$1,
+            out: out,
+            err: StringBuffer(),
+            writeOutputFile: (path, bytes) async {
+              expect(out.toString(), isEmpty);
+              savedPath = path;
+              savedBytes = bytes;
+            },
+          );
+
+          expect(exitCode, 0);
+          expect(savedPath, 'decoded.bin');
+          expect(savedBytes, <int>[0, 255]);
+          expect(out.toString(), testCase.$2);
+        }
+      },
+    );
+
+    test(
+      'GivenJsonAndOutputPath_WhenDecoded_ThenRawBytesAreSavedBeforeJsonStdout',
+      () async {
+        final out = StringBuffer();
+        late List<int> savedBytes;
+        final exitCode = await runChimera(
+          const <String>[
+            'base64',
+            'decode',
+            '--text=SGVsbG8=',
+            '--mode=text',
+            '--output=decoded.txt',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          writeOutputFile: (_, bytes) async {
+            expect(out.toString(), isEmpty);
+            savedBytes = bytes;
+          },
+        );
+
+        expect(exitCode, 0);
+        expect(savedBytes, utf8.encode('Hello'));
+        expect(out.toString(), startsWith('{"mode":"text"'));
+        expect(out.toString(), endsWith('}\n'));
+      },
+    );
+
+    test(
+      'GivenInvalidStructure_WhenDecodeRuns_ThenValidationPrecedesEveryRead',
+      () async {
+        var reads = 0;
+        final cases = <(List<String>, String)>[
+          (
+            const <String>['--mode=text', '--json'],
+            'base64-decode.missing-source',
+          ),
+          (
+            const <String>['--text=', '--stdin', '--mode=text', '--json'],
+            'base64-decode.conflicting-sources',
+          ),
+          (
+            const <String>['--stdin', '--file=secret', '--mode=text', '--json'],
+            'base64-decode.conflicting-sources',
+          ),
+          (const <String>['--stdin', '--json'], 'base64-decode.invalid-mode'),
+          (
+            const <String>['--stdin', '--mode=words', '--json'],
+            'base64-decode.invalid-mode',
+          ),
+          (
+            const <String>['--stdin', '--mode=binary'],
+            'base64-decode.binary-destination-required',
+          ),
+        ];
+
+        for (final testCase in cases) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exitCode = await runChimera(
+            <String>['base64', 'decode', ...testCase.$1],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: () async {
+              reads++;
+              return <int>[];
+            },
+            readFileBytes: (_) async {
+              reads++;
+              return <int>[];
+            },
+          );
+
+          expect(exitCode, 64, reason: testCase.$1.toString());
+          expect(out.toString(), isEmpty);
+          expect(err.toString(), isNot(contains('secret')));
+          if (testCase.$1.contains('--json')) {
+            expect(
+              (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+              containsPair('code', testCase.$2),
+            );
+          } else {
+            expect(err.toString(), 'The Base64 decoding request is invalid.\n');
+          }
+        }
+        expect(reads, 0);
+      },
+    );
+
+    test(
+      'GivenUnknownDecodeOption_WhenParsed_ThenTypedValidationPrecedesReads',
+      () async {
+        var reads = 0;
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          const <String>[
+            'base64',
+            'decode',
+            '--stdin',
+            '--mode=text',
+            '--private=secret',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInputBytes: () async {
+            reads++;
+            return <int>[];
+          },
+        );
+
+        expect(exitCode, 64);
+        expect(reads, 0);
+        expect(err.toString(), isNot(contains('secret')));
+        expect(jsonDecode(err.toString()), <String, Object?>{
+          'error': <String, Object?>{
+            'kind': 'validation',
+            'code': 'base64-decode.invalid-options',
+            'message': 'The Base64 decoding request is invalid.',
+          },
+        });
+      },
+    );
+
+    test(
+      'GivenMalformedBase64OrUtf8_WhenDecoded_ThenValidationIsRedacted',
+      () async {
+        final cases = <(List<String>, Future<List<int>> Function()?, String)>[
+          (
+            const <String>['--text=c2VjcmV0!', '--mode=text', '--json'],
+            null,
+            'base64-decode.invalid-input',
+          ),
+          (
+            const <String>['--text=/w==', '--mode=text', '--json'],
+            null,
+            'base64-decode.invalid-text',
+          ),
+          (
+            const <String>['--stdin', '--mode=text', '--json'],
+            () async => <int>[0xC3, 0x28],
+            'base64-decode.invalid-input',
+          ),
+        ];
+
+        for (final testCase in cases) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exitCode = await runChimera(
+            <String>['base64', 'decode', ...testCase.$1],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: testCase.$2,
+          );
+
+          expect(exitCode, 64);
+          expect(out.toString(), isEmpty);
+          expect(err.toString(), isNot(contains('secret')));
+          expect(
+            (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+            containsPair('code', testCase.$3),
+          );
+        }
+      },
+    );
+
+    test('GivenAdapterFailures_WhenDecoded_ThenTypedExitHasNoPartialOutputOrDetail', () async {
+      final cases =
+          <
+            ({
+              List<String> args,
+              BytesReader? stdinReader,
+              FileBytesReader? fileReader,
+              FileBytesWriter? writer,
+              int exitCode,
+              String code,
+            })
+          >[
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              stdinReader: () async => throw Exception('private stdin detail'),
+              fileReader: null,
+              writer: null,
+              exitCode: 74,
+              code: 'base64-decode.input-access',
+            ),
+            (
+              args: const <String>['--file=secret', '--mode=text', '--json'],
+              stdinReader: null,
+              fileReader: (_) async => throw Exception('private file detail'),
+              writer: null,
+              exitCode: 74,
+              code: 'base64-decode.file-access',
+            ),
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              stdinReader: () async => throw OutOfMemoryError(),
+              fileReader: null,
+              writer: null,
+              exitCode: 75,
+              code: 'base64-decode.resource-limit',
+            ),
+            (
+              args: const <String>[
+                '--text=SGVsbG8=',
+                '--mode=text',
+                '--output=secret',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: null,
+              writer: (_, _) async => throw Exception('private write detail'),
+              exitCode: 74,
+              code: 'base64-decode.output-access',
+            ),
+            (
+              args: const <String>[
+                '--text=SGVsbG8=',
+                '--mode=text',
+                '--output=secret',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: null,
+              writer: (_, _) async => throw OutOfMemoryError(),
+              exitCode: 75,
+              code: 'base64-decode.resource-limit',
+            ),
+          ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['base64', 'decode', ...testCase.args],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: testCase.stdinReader,
+          readFileBytes: testCase.fileReader,
+          writeOutputFile: testCase.writer,
+        );
+
+        expect(exitCode, testCase.exitCode);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('private')));
+        expect(err.toString(), isNot(contains('secret')));
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          containsPair('code', testCase.code),
+        );
+      }
+    });
+
+    test('GivenDecodeOrJsonAllocationFailure_WhenDecoded_ThenExit75HasNoPartialOutput', () async {
+      final serviceOut = StringBuffer();
+      final serviceErr = StringBuffer();
+      final serviceExit = await runChimera(
+        const <String>[
+          'base64',
+          'decode',
+          '--text=SGVsbG8=',
+          '--mode=text',
+          '--json',
+        ],
+        localeTag: 'pt-BR',
+        out: serviceOut,
+        err: serviceErr,
+        base64DecodeService: const Base64DecodeService(
+          decoder: Base64ByteDecoder(maxOutputBytes: 1),
+        ),
+      );
+      expect(serviceExit, 75);
+      expect(serviceOut.toString(), isEmpty);
+      expect(serviceErr.toString(), isNot(contains('SGVsbG8=')));
+
+      final jsonOut = StringBuffer();
+      final jsonErr = StringBuffer();
+      final jsonExit = await runChimera(
+        const <String>[
+          'base64',
+          'decode',
+          '--text=SGVsbG8=',
+          '--mode=text',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: jsonOut,
+        err: jsonErr,
+        base64DecodeJsonEncoder: (_) => throw OutOfMemoryError(),
+      );
+      expect(jsonExit, 75);
+      expect(jsonOut.toString(), isEmpty);
+      expect(
+        (jsonDecode(jsonErr.toString()) as Map<String, dynamic>)['error'],
+        allOf(
+          containsPair('kind', 'resource'),
+          containsPair('code', 'base64-decode.resource-limit'),
+        ),
+      );
+    });
+
+    test(
+      'GivenStdoutAllocationFailure_WhenDecodeEmits_ThenNoPartialOutputReturns',
+      () async {
+        for (final json in <bool>[false, true]) {
+          final out = _OutOfMemoryStringSink();
+          final err = StringBuffer();
+          final exitCode = await runChimera(
+            <String>[
+              'base64',
+              'decode',
+              '--text=SGVsbG8=',
+              '--mode=text',
+              if (json) '--json',
+            ],
+            localeTag: 'en',
+            out: out,
+            err: err,
+          );
+
+          expect(exitCode, 75, reason: 'json=$json');
+          expect(out.emissionCalls, 1);
+          expect(out.contents, isEmpty);
+          if (json) {
+            expect(
+              (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+              containsPair('code', 'base64-decode.resource-limit'),
+            );
+          } else {
+            expect(
+              err.toString(),
+              'Base64 decoding exceeded its resource limit.\n',
+            );
+          }
+        }
+      },
+    );
+
+    test('GivenPartialStageFailure_WhenDecoded_ThenStageIsRemovedAndPriorTargetUnchanged', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-decode-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputStage: (path, bytes) async {
+          await File(path).writeAsBytes(<int>[bytes.first], flush: true);
+          throw const FileSystemException('private partial failure');
+        },
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenExistingTarget_WhenTransactionalSaveSucceeds_ThenExactBytesReplaceItWithoutArtifacts', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-replace-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+      );
+
+      expect(exitCode, 0);
+      expect(await target.readAsBytes(), <int>[0, 255]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenStageAndBackupNameCollisions_WhenSaved_ThenUnrelatedFilesArePreservedAndNewNamesAreUsed', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-collision-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final collisions = <File>[];
+      final attempts = <String, int>{'stage': 0, 'backup': 0};
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+        outputFileOperations: TransactionalFileOperations(
+          tryReserve: (candidate) async {
+            final role = candidate.path.contains('.chimera-stage-')
+                ? 'stage'
+                : 'backup';
+            final attempt = attempts[role]!;
+            attempts[role] = attempt + 1;
+            if (attempt == 0) {
+              await candidate.writeAsBytes(
+                role == 'stage' ? <int>[11] : <int>[22],
+                flush: true,
+              );
+              collisions.add(candidate);
+              return false;
+            }
+            await candidate.create(exclusive: true);
+            return true;
+          },
+        ),
+      );
+
+      expect(exitCode, 0);
+      expect(attempts, <String, int>{'stage': 2, 'backup': 2});
+      expect(await target.readAsBytes(), <int>[0, 255]);
+      expect(await collisions[0].readAsBytes(), <int>[11]);
+      expect(await collisions[1].readAsBytes(), <int>[22]);
+      expect(
+        (await _chimeraTransactionArtifacts(directory))
+            .map((file) => file.path)
+            .toSet(),
+        collisions.map((file) => file.path).toSet(),
+      );
+      for (final collision in collisions) {
+        await collision.delete();
+      }
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenStageReplacementFailure_WhenSaved_ThenOriginalTargetIsRestoredWithoutArtifacts', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-rename-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        outputFileOperations: TransactionalFileOperations(
+          rename: (source, destinationPath) async {
+            if (source.path.contains('.chimera-stage-') &&
+                destinationPath == target.path) {
+              throw const FileSystemException('private rename failure');
+            }
+            await source.rename(destinationPath);
+          },
+        ),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenBackupCleanupFailure_WhenSaved_ThenInstalledTargetIsRolledBackAndFailureReturns', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-cleanup-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+      var cleanupFailures = 0;
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        outputFileOperations: TransactionalFileOperations(
+          delete: (file) async {
+            if (file.path.contains('.chimera-backup-') &&
+                cleanupFailures == 0) {
+              cleanupFailures++;
+              throw const FileSystemException('private cleanup failure');
+            }
+            await file.delete();
+          },
+        ),
+      );
+
+      expect(exitCode, 74);
+      expect(cleanupFailures, 1);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenNoExistingTargetAndPartialStageFailure_WhenSaved_ThenNoTargetOrArtifactsRemain', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-base64-new-target-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'base64',
+          'decode',
+          '--text=AP8=',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputStage: (path, bytes) async {
+          await File(path).writeAsBytes(<int>[bytes.first], flush: true);
+          throw const FileSystemException('private partial failure');
+        },
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decoded bytes could not be saved.\n');
+      expect(await target.exists(), isFalse);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+  });
 }
+
+Future<List<File>> _chimeraTransactionArtifacts(Directory directory) async =>
+    directory
+        .list()
+        .where((entry) {
+          final name = entry.path.split(Platform.pathSeparator).last;
+          return name.startsWith('.chimera-');
+        })
+        .map((entry) => File(entry.path))
+        .toList();
 
 final class _OutOfMemoryStringSink implements StringSink {
   var emissionCalls = 0;

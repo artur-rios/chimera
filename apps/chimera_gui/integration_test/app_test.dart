@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:chimera_gui/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -432,4 +434,83 @@ void main() {
       expect(savedBytes, <int>[0x41, 0x50, 0x38, 0x3d]);
     },
   );
+
+  testWidgets(
+    'GivenBase64Utf8Text_WhenDecodedCopiedAndSaved_ThenExactPayloadTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/decode',
+          base64DecodeClipboardWriter: (value) async => copied = value,
+          base64DecodeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = List<int>.of(bytes);
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'T2zDoSDwn5GL',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Olá 👋'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('base64-decode-copy')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, 'Olá 👋');
+      expect(savedName, 'chimera-decoded.txt');
+      expect(savedBytes, utf8.encode('Olá 👋'));
+    },
+  );
+
+  testWidgets(
+    'GivenBase64Png_WhenDecodedAndSaved_ThenPreviewAndExactBytesTransfer',
+    (tester) async {
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/base64/decode',
+          base64DecodeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = List<int>.of(bytes);
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        _validPngBase64,
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('base64-decode-preview')), findsOneWidget);
+      expect(find.text('Image preview available.'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('base64-decode-save')));
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+
+      expect(savedName, 'chimera-decoded.png');
+      expect(savedBytes, base64.decode(_validPngBase64));
+    },
+  );
 }
+
+const _validPngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';

@@ -642,8 +642,115 @@ Future<void> main() async {
     await _assertNoResourceRequests(driver, flow: 'Base64 interaction');
     await _assertNoExternalRequests(driver, flow: 'Base64 encoding');
 
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Chimera did not reload for Base64 decoding flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Decode Base64'),
+      'Home page did not return for Base64 decoding flow',
+    );
+    await _clickButton(driver, 'Decode Base64');
+    await _waitUntil(
+      () => _pageContains(driver, 'Base64 to decode'),
+      'Base64 decoding page did not open',
+    );
+    await driver.execute('''
+        window.__chimeraSavedName = null;
+        window.__chimeraSavedBytes = null;
+        window.__chimeraOriginalCreateObjectURL = URL.createObjectURL.bind(URL);
+        URL.createObjectURL = function(blob) {
+          blob.arrayBuffer().then(buffer => {
+            window.__chimeraSavedBytes = [...new Uint8Array(buffer)];
+          });
+          return window.__chimeraOriginalCreateObjectURL(blob);
+        };
+        window.__chimeraOriginalAnchorClick = HTMLAnchorElement.prototype.click;
+        HTMLAnchorElement.prototype.click = function() {
+          window.__chimeraSavedName = this.download;
+        };
+        window.__chimeraOriginalDecodeFileInputClick = HTMLInputElement.prototype.click;
+        HTMLInputElement.prototype.click = function() {
+          if (this.type === 'file') {
+            window.__chimeraDecodeFileInput = this;
+            return;
+          }
+          return window.__chimeraOriginalDecodeFileInputClick.call(this);
+        };
+      ''', const <Object?>[]);
+    await driver.execute(
+      'performance.clearResourceTimings();',
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Load Base64 from file');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('input[type=\"file\"]') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Base64 decode file input did not become available',
+    );
+    final decodeFileDispatched = await driver.execute('''
+        const input = document.querySelector('input[type="file"]');
+        if (input === null) return false;
+        const source = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        const transfer = new DataTransfer();
+        transfer.items.add(
+          new File(
+            [new TextEncoder().encode(source)],
+            'pixel.b64',
+            {type: 'text/plain'},
+          ),
+        );
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+        return input.files.length === 1 && input.files[0].size === source.length;
+      ''', const <Object?>[]);
+    if (decodeFileDispatched != true) {
+      throw StateError('Base64 decode file could not be dispatched');
+    }
+    await _waitUntil(
+      () => _pageContains(driver, 'Input characters: 92'),
+      'Base64 PNG source fixture was not loaded',
+    );
+    await _clickCheckbox(driver, 'Binary');
+    await _clickButton(driver, 'Decode');
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Base64 decoding succeeded. Output mode: Binary Input characters: 92 Output bytes: 68 Image preview available.',
+      ),
+      'Base64 PNG preview did not render',
+    );
+    await _clickButton(driver, 'Save decoded bytes');
+    await _waitUntil(
+      () async =>
+          await driver.execute('''
+              const expected = '89504e470d0a1a0a0000000d4948445200000001000000010804000000b51c0c020000000b4944415478da6364f80f00010501012718e3660000000049454e44ae426082';
+              const actual = window.__chimeraSavedBytes;
+              return window.__chimeraSavedName === 'chimera-decoded.png' &&
+                Array.isArray(actual) &&
+                actual.map(value => value.toString(16).padStart(2, '0')).join('') === expected;
+            ''', const <Object?>[]) ==
+          true,
+      'Base64 PNG save was not byte-exact',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Base64 decoding interaction');
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -663,6 +770,25 @@ Future<void> _assertNoResourceRequests(
       : <String>[];
   if (urls.isNotEmpty) {
     throw StateError('Safari $flow made resource requests: $urls');
+  }
+}
+
+Future<void> _assertNoNetworkRequests(
+  WebDriver driver, {
+  required String flow,
+}) async {
+  final resourceUrls = await driver.execute(
+    "return performance.getEntriesByType('resource').map(entry => entry.name);",
+    const <Object?>[],
+  );
+  final urls = resourceUrls is List
+      ? resourceUrls.map((entry) => entry.toString()).where((url) {
+          final scheme = Uri.parse(url).scheme;
+          return scheme == 'http' || scheme == 'https';
+        }).toList()
+      : <String>[];
+  if (urls.isNotEmpty) {
+    throw StateError('Safari $flow made network requests: $urls');
   }
 }
 
@@ -700,6 +826,49 @@ Future<void> _clickButton(WebDriver driver, String text) async {
     );
     return result == true;
   }, 'Button did not become available: $text');
+}
+
+Future<void> _clickCheckbox(WebDriver driver, String text) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+          const expected = arguments[0];
+          const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
+            .find(element => element.getAttribute('aria-label') === expected);
+          return checkbox !== undefined;
+        ''',
+      <Object?>[text],
+    );
+    return result == true;
+  }, 'Checkbox did not become available: $text');
+
+  final clicked = await driver.execute(
+    '''
+      const expected = arguments[0];
+      const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
+        .find(element => element.getAttribute('aria-label') === expected);
+      if (!checkbox) return false;
+      if (checkbox.getAttribute('aria-checked') !== 'true') checkbox.click();
+      return true;
+    ''',
+    <Object?>[text],
+  );
+  if (clicked != true) {
+    throw StateError('Checkbox disappeared before selection: $text');
+  }
+
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+        const expected = arguments[0];
+        const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
+          .find(element => element.getAttribute('aria-label') === expected);
+        return checkbox?.getAttribute('aria-checked') === 'true';
+      ''',
+      <Object?>[text],
+    );
+    return result == true;
+  }, 'Checkbox did not become selected: $text');
 }
 
 Future<void> _fillTextBox(WebDriver driver, String label, String value) async {

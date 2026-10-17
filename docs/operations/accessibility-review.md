@@ -62,3 +62,41 @@ clipboard-writer/file-saver/output-buffer allocation cleanup, stale/busy state,
 keyboard traversal, localized bounded semantics, automated guidelines in both
 locales, and narrow large-text cases. No UC-16 accessibility findings remain
 open.
+
+## UC-17 Base64 Decode
+
+- Release version: UC-17 candidate for issue #18
+- Branch: `feature/uc-17-base64-decode`
+- Reviewer: Chimera UC-17 implementation review
+- Date: 2026-10-17
+- Target: web, Windows, and Linux Base64 decode surface
+- Locale: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Focus traversal follows Base64 input, file, paste, output mode, decode,
+  bounded result, text copy when available, and save; controls support keyboard
+  activation and the completed result receives focus.
+- [x] The multiline input, source actions, output modes, result, copy/save
+  actions, notices, and errors expose localized labels in both locales.
+- [x] Success semantics announce mode, input characters, output bytes, and
+  renderer-confirmed image availability without announcing arbitrary decoded
+  content; visible decoded text remains selectable.
+- [x] Binary image previews are excluded from duplicate semantics, rendered
+  from page-owned disposable images, and accompanied by a localized live-region
+  availability notice.
+- [x] Flutter's automated Android tap-target, labeled-target, and text-contrast
+  guidelines pass in English and Brazilian Portuguese.
+- [x] The page remains usable at a 320-pixel logical width and 200% text scale
+  in both locales without overflow.
+- [x] Busy source/preview work disables racing actions, while localized access,
+  resource, and nonfatal preview notices use live-region semantics.
+
+### Evidence and Findings
+
+The GUI widget regression run covers 141 tests, including focused UC-17 text,
+empty text, binary file, clipboard, exact copy/save, exclusive sources and
+modes, real PNG/JPEG/GIF/WebP renderer fixtures, corrupt and failing previews,
+owned-preview disposal at every lifecycle boundary, stale/busy behavior,
+keyboard traversal, bounded semantics, automated guidelines, and narrow
+large-text layouts. No UC-17 accessibility findings remain open.

@@ -119,6 +119,35 @@ void main() {
     );
   });
 
+  test('GivenBase64DecodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(
+      catalog.lookup('en', 'base64Decode.resultSuccess'),
+      'Base64 decoding succeeded.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'base64Decode.resultSuccess'),
+      'Decodificação Base64 concluída.',
+    );
+    expect(
+      catalog.lookup('en', 'base64Decode.savedResult'),
+      'Decoded bytes saved.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'base64Decode.savedResult'),
+      'Bytes decodificados salvos.',
+    );
+    expect(catalog.lookup('en', 'base64Decode.mode.binary'), 'Binary');
+    expect(catalog.lookup('pt-BR', 'base64Decode.mode.text'), 'Texto');
+    expect(
+      catalog.lookup('en', 'error.base64Decode.validation'),
+      'The Base64 decoding request is invalid.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.base64Decode.resource'),
+      'A decodificação Base64 excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -182,6 +211,25 @@ void main() {
       'base64Encode.saveAction',
       'base64Encode.savedResult',
       'base64Encode.submitAction',
+      'base64Decode.copiedResult',
+      'base64Decode.copyAction',
+      'base64Decode.fileAction',
+      'base64Decode.imageAvailable',
+      'base64Decode.imageUnavailable',
+      'base64Decode.inputCharacterCountLabel',
+      'base64Decode.inputLabel',
+      'base64Decode.mode.binary',
+      'base64Decode.mode.text',
+      'base64Decode.modeLabel',
+      'base64Decode.openAction',
+      'base64Decode.outputByteCountLabel',
+      'base64Decode.outputLabel',
+      'base64Decode.pageTitle',
+      'base64Decode.pasteAction',
+      'base64Decode.resultSuccess',
+      'base64Decode.saveAction',
+      'base64Decode.savedResult',
+      'base64Decode.submitAction',
       'numberBase.copiedResult',
       'numberBase.copyAction',
       'numberBase.fileAction',
@@ -445,6 +493,13 @@ void main() {
       'error.base64Encode.outputAccess',
       'error.base64Encode.resource',
       'error.base64Encode.validation',
+      'error.base64Decode.clipboardRead',
+      'error.base64Decode.clipboardWrite',
+      'error.base64Decode.fileAccess',
+      'error.base64Decode.inputAccess',
+      'error.base64Decode.outputAccess',
+      'error.base64Decode.resource',
+      'error.base64Decode.validation',
       'error.numberBase.clipboardRead',
       'error.numberBase.clipboardWrite',
       'error.numberBase.fileAccess',

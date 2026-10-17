@@ -3,6 +3,7 @@ import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
@@ -23,6 +24,7 @@ import 'xml_format_page.dart';
 GoRouter buildRouter({
   required MessageCatalog catalog,
   required String localeTag,
+  required Base64DecodeService base64DecodeService,
   required Base64EncodeService base64EncodeService,
   required CronService cronService,
   required DateService dateService,
@@ -40,6 +42,11 @@ GoRouter buildRouter({
   required SqlFormatService sqlFormatService,
   required XmlFormatService xmlFormatService,
   required DateTime Function() currentTime,
+  required Base64DecodeFilePicker base64DecodeFilePicker,
+  required Base64DecodeFileSaver base64DecodeFileSaver,
+  required Base64DecodeClipboardReader base64DecodeClipboardReader,
+  required Base64DecodeClipboardWriter base64DecodeClipboardWriter,
+  required Base64DecodePreviewDecoder base64DecodePreviewDecoder,
   required Base64EncodeFilePicker base64EncodeFilePicker,
   required Base64EncodeFileSaver base64EncodeFileSaver,
   required Base64EncodeClipboardReader base64EncodeClipboardReader,
@@ -193,6 +200,14 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
+                        key: const Key('open-base64-decode'),
+                        onPressed: () => context.go('/base64/decode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'base64Decode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
                         key: const Key('open-base64-encode'),
                         onPressed: () => context.go('/base64/encode'),
                         child: Text(
@@ -325,6 +340,19 @@ GoRouter buildRouter({
           fileSaver: numberBaseFileSaver,
           clipboardReader: numberBaseClipboardReader,
           clipboardWriter: numberBaseClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/base64/decode',
+        builder: (context, state) => Base64DecodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: base64DecodeService,
+          filePicker: base64DecodeFilePicker,
+          fileSaver: base64DecodeFileSaver,
+          clipboardReader: base64DecodeClipboardReader,
+          clipboardWriter: base64DecodeClipboardWriter,
+          previewDecoder: base64DecodePreviewDecoder,
         ),
       ),
       GoRoute(

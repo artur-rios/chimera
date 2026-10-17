@@ -571,3 +571,60 @@ test('Base64 binary file flow transfers exact output locally without external re
   expect(interactionRequests).toEqual([]);
   expect(externalRequests).toEqual([]);
 });
+
+test('Base64 PNG decode previews and downloads exact bytes without requests', async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  const pngBase64 =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+  const expectedPng = Buffer.from(pngBase64, 'base64');
+  const externalRequests = [];
+  const interactionRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      url.hostname !== '127.0.0.1'
+    ) {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decode Base64' }).click();
+  await expect(page.getByText('Base64 decode').first()).toBeVisible();
+  page.on('request', (request) => interactionRequests.push(request.url()));
+
+  await page.getByRole('checkbox', { name: 'Binary' }).click();
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Base64 to decode' }),
+    pngBase64,
+  );
+  await page.getByRole('button', { name: 'Decode', exact: true }).click();
+
+  await expect(
+    page.getByRole('region', {
+      name: /Base64 decoding succeeded\..*Output mode: Binary.*Output bytes: 68.*Image preview available\./,
+    }),
+  ).toBeVisible();
+  expect(
+    interactionRequests.filter((url) => /^https?:/.test(url)),
+  ).toEqual([]);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save decoded bytes' }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('chimera-decoded.png');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
+  }
+  expect(Buffer.concat(chunks)).toEqual(expectedPng);
+  expect(
+    interactionRequests.filter((url) => /^https?:/.test(url)),
+  ).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});

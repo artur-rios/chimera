@@ -1,6 +1,7 @@
 /// Shared local-only algorithms and validators for Chimera.
 library;
 
+export 'src/base64/base64_byte_decoder.dart';
 export 'src/base64/base64_byte_encoder.dart';
 export 'src/cron/cron_evaluator.dart';
 export 'src/date/date_converter.dart';
