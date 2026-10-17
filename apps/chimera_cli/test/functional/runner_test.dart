@@ -3260,4 +3260,462 @@ void main() {
       );
     },
   );
+
+  group('base64 encode', () {
+    test(
+      'GivenLiteralText_WhenBase64EncodeRuns_ThenLocalizedHumanResultReturns',
+      () async {
+        for (final testCase in <(String, String)>{
+          (
+            'en',
+            'Base64: T2zDoSDwn5GL\n'
+                'Input bytes: 9\n'
+                'Output characters: 12\n',
+          ),
+          (
+            'pt-BR',
+            'Base64: T2zDoSDwn5GL\n'
+                'Bytes de entrada: 9\n'
+                'Caracteres de saída: 12\n',
+          ),
+        }) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+
+          final exitCode = await runChimera(
+            const <String>['base64', 'encode', '--text=Olá 👋'],
+            localeTag: testCase.$1,
+            out: out,
+            err: err,
+          );
+
+          expect(exitCode, 0, reason: err.toString());
+          expect(out.toString(), testCase.$2);
+          expect(err.toString(), isEmpty);
+        }
+      },
+    );
+
+    test(
+      'GivenStdinBytes_WhenBase64EncodeJsonRuns_ThenStableJsonReturns',
+      () async {
+        final out = StringBuffer();
+
+        final exitCode = await runChimera(
+          const <String>['base64', 'encode', '--stdin', '--json'],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          readStandardInputBytes: () async => <int>[0xC3, 0xA9],
+        );
+
+        expect(exitCode, 0);
+        expect(
+          out.toString(),
+          '{"encoded":"w6k=","inputByteCount":2,"outputCharacterCount":4}\n',
+        );
+      },
+    );
+
+    test(
+      'GivenBinaryFile_WhenBase64EncodeRuns_ThenExactBytesAreEncoded',
+      () async {
+        final out = StringBuffer();
+        var requestedPath = '';
+
+        final exitCode = await runChimera(
+          const <String>['base64', 'encode', '--file=bytes.bin', '--json'],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          readFileBytes: (path) async {
+            requestedPath = path;
+            return <int>[0x00, 0xFF];
+          },
+        );
+
+        expect(exitCode, 0);
+        expect(requestedPath, 'bytes.bin');
+        expect(jsonDecode(out.toString()), <String, Object?>{
+          'encoded': 'AP8=',
+          'inputByteCount': 2,
+          'outputCharacterCount': 4,
+        });
+      },
+    );
+
+    test(
+      'GivenEmptySelectedSources_WhenBase64EncodeRuns_ThenEachSourceIsValid',
+      () async {
+        final commands = <List<String>>[
+          const <String>['base64', 'encode', '--text=', '--json'],
+          const <String>['base64', 'encode', '--stdin', '--json'],
+          const <String>['base64', 'encode', '--file=empty.bin', '--json'],
+        ];
+
+        for (final command in commands) {
+          final out = StringBuffer();
+          final exitCode = await runChimera(
+            command,
+            localeTag: 'en',
+            out: out,
+            err: StringBuffer(),
+            readStandardInputBytes: () async => <int>[],
+            readFileBytes: (_) async => <int>[],
+          );
+
+          expect(exitCode, 0, reason: command.toString());
+          expect(jsonDecode(out.toString()), <String, Object?>{
+            'encoded': '',
+            'inputByteCount': 0,
+            'outputCharacterCount': 0,
+          });
+        }
+      },
+    );
+
+    test('GivenOutputPath_WhenBase64EncodeRuns_ThenExactSelectedPayloadIsSaved', () async {
+      final cases = <(List<String>, String)>[
+        (
+          const <String>[
+            'base64',
+            'encode',
+            '--text=Hello',
+            '--output=result.txt',
+          ],
+          'SGVsbG8=',
+        ),
+        (
+          const <String>[
+            'base64',
+            'encode',
+            '--text=Hello',
+            '--json',
+            '--output=result.json',
+          ],
+          '{"encoded":"SGVsbG8=","inputByteCount":5,"outputCharacterCount":8}',
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        late String savedPath;
+        late List<int> savedBytes;
+        final exitCode = await runChimera(
+          testCase.$1,
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          writeOutputFile: (path, bytes) async {
+            savedPath = path;
+            savedBytes = bytes;
+          },
+        );
+
+        expect(exitCode, 0);
+        expect(savedPath, testCase.$1.last.split('=').last);
+        expect(utf8.decode(savedBytes), testCase.$2);
+        expect(utf8.decode(savedBytes), isNot(endsWith('\n')));
+        expect(out.toString(), isEmpty);
+      }
+    });
+
+    test(
+      'GivenInvalidSources_WhenBase64EncodeRuns_ThenValidationPrecedesReads',
+      () async {
+        var reads = 0;
+        for (final options in <List<String>>[
+          const <String>[],
+          const <String>['--text=secret', '--stdin'],
+          const <String>['--stdin', '--file=secret.bin'],
+        ]) {
+          final err = StringBuffer();
+          final exitCode = await runChimera(
+            <String>['base64', 'encode', '--json', ...options],
+            localeTag: 'en',
+            out: StringBuffer(),
+            err: err,
+            readStandardInputBytes: () async {
+              reads++;
+              return <int>[];
+            },
+            readFileBytes: (_) async {
+              reads++;
+              return <int>[];
+            },
+          );
+
+          expect(exitCode, 64);
+          expect(err.toString(), isNot(contains('secret')));
+          expect(
+            (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+            containsPair(
+              'code',
+              options.isEmpty
+                  ? 'base64-encode.missing-source'
+                  : 'base64-encode.conflicting-sources',
+            ),
+          );
+        }
+        expect(reads, 0);
+      },
+    );
+
+    test('GivenMalformedTextOrUtf8_WhenBase64EncodeRuns_ThenRedactedValidationReturns', () async {
+      final cases = <(List<String>, Future<List<int>> Function()?)>[
+        (
+          <String>[
+            'base64',
+            'encode',
+            '--text=${String.fromCharCode(0xD800)}',
+            '--json',
+          ],
+          null,
+        ),
+        (
+          const <String>['base64', 'encode', '--stdin', '--json'],
+          () async => <int>[0xC3, 0x28],
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          testCase.$1,
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInputBytes: testCase.$2,
+        );
+
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('secret')));
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          containsPair('code', 'base64-encode.invalid-text'),
+        );
+      }
+    });
+
+    test('GivenAdapterFailures_WhenBase64EncodeRuns_ThenAccessAndResourceExitsAreTyped', () async {
+      final cases =
+          <
+            ({
+              List<String> args,
+              Future<List<int>> Function()? stdinReader,
+              Future<List<int>> Function(String)? fileReader,
+              Future<void> Function(String, List<int>)? writer,
+              int exitCode,
+              String code,
+            })
+          >[
+            (
+              args: const <String>[
+                'base64',
+                'encode',
+                '--file=secret.bin',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: (_) async => throw Exception('private file detail'),
+              writer: null,
+              exitCode: 74,
+              code: 'base64-encode.file-access',
+            ),
+            (
+              args: const <String>[
+                'base64',
+                'encode',
+                '--file=secret.bin',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: (_) async => throw OutOfMemoryError(),
+              writer: null,
+              exitCode: 75,
+              code: 'base64-encode.resource-limit',
+            ),
+            (
+              args: const <String>['base64', 'encode', '--stdin', '--json'],
+              stdinReader: () async => throw Exception('private stdin detail'),
+              fileReader: null,
+              writer: null,
+              exitCode: 74,
+              code: 'base64-encode.input-access',
+            ),
+            (
+              args: const <String>['base64', 'encode', '--stdin', '--json'],
+              stdinReader: () async => throw OutOfMemoryError(),
+              fileReader: null,
+              writer: null,
+              exitCode: 75,
+              code: 'base64-encode.resource-limit',
+            ),
+            (
+              args: const <String>[
+                'base64',
+                'encode',
+                '--text=value',
+                '--output=secret.txt',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: null,
+              writer: (_, _) async => throw Exception('private output detail'),
+              exitCode: 74,
+              code: 'base64-encode.output-access',
+            ),
+            (
+              args: const <String>[
+                'base64',
+                'encode',
+                '--text=value',
+                '--output=result.txt',
+                '--json',
+              ],
+              stdinReader: null,
+              fileReader: null,
+              writer: (_, _) async => throw OutOfMemoryError(),
+              exitCode: 75,
+              code: 'base64-encode.resource-limit',
+            ),
+          ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          testCase.args,
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: testCase.stdinReader,
+          readFileBytes: testCase.fileReader,
+          writeOutputFile: testCase.writer,
+        );
+
+        expect(exitCode, testCase.exitCode);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('private')));
+        expect(err.toString(), isNot(contains('secret')));
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          containsPair('code', testCase.code),
+        );
+      }
+    });
+
+    test('GivenEncoderResourceLimit_WhenBase64EncodeRuns_ThenExit75HasNoPartialOutput', () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exitCode = await runChimera(
+        const <String>['base64', 'encode', '--text=secret', '--json'],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        base64EncodeService: const Base64EncodeService(
+          encoder: Base64ByteEncoder(maxInputBytes: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), isNot(contains('secret')));
+      expect(
+        (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+        allOf(
+          containsPair('kind', 'resource'),
+          containsPair('code', 'base64-encode.resource-limit'),
+        ),
+      );
+    });
+
+    test(
+      'GivenUnknownBase64Option_WhenJsonRequested_ThenTypedValidationReturns',
+      () async {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          const <String>[
+            'base64',
+            'encode',
+            '--text=value',
+            '--bogus',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+
+        expect(exitCode, 64);
+        expect(out.toString(), isEmpty);
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          <String, dynamic>{
+            'kind': 'validation',
+            'code': 'base64-encode.invalid-options',
+            'message': 'The Base64 encoding source is invalid.',
+          },
+        );
+      },
+    );
+
+    test('GivenStdoutAllocationFailure_WhenEitherFormatRuns_ThenNoPartialOutputReturns', () async {
+      for (final json in <bool>[false, true]) {
+        final out = _OutOfMemoryStringSink();
+        final err = StringBuffer();
+
+        final exitCode = await runChimera(
+          <String>['base64', 'encode', '--text=secret', if (json) '--json'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+
+        expect(exitCode, 75, reason: 'json=$json');
+        expect(out.emissionCalls, 1, reason: 'json=$json');
+        expect(out.contents, isEmpty, reason: 'json=$json');
+        expect(err.toString(), isNot(contains('secret')), reason: 'json=$json');
+        if (json) {
+          expect(
+            (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+            allOf(
+              containsPair('kind', 'resource'),
+              containsPair('code', 'base64-encode.resource-limit'),
+            ),
+          );
+        } else {
+          expect(
+            err.toString(),
+            'Base64 encoding exceeded its resource limit.\n',
+          );
+        }
+      }
+    });
+  });
+}
+
+final class _OutOfMemoryStringSink implements StringSink {
+  var emissionCalls = 0;
+  final StringBuffer _contents = StringBuffer();
+
+  String get contents => _contents.toString();
+
+  Never _fail() {
+    emissionCalls++;
+    throw OutOfMemoryError();
+  }
+
+  @override
+  void write(Object? object) => _fail();
+
+  @override
+  void writeAll(Iterable<Object?> objects, [String separator = '']) => _fail();
+
+  @override
+  void writeCharCode(int charCode) => _fail();
+
+  @override
+  void writeln([Object? object = '']) => _fail();
 }

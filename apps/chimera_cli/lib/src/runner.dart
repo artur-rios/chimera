@@ -8,6 +8,8 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 
 typedef TextReader = Future<String> Function();
 typedef FileTextReader = Future<String> Function(String path);
+typedef BytesReader = Future<List<int>> Function();
+typedef FileBytesReader = Future<List<int>> Function(String path);
 typedef FileBytesWriter = Future<void> Function(String path, List<int> bytes);
 
 Future<int> runChimera(
@@ -17,7 +19,10 @@ Future<int> runChimera(
   required StringSink err,
   TextReader? readStandardInput,
   FileTextReader? readFile,
+  BytesReader? readStandardInputBytes,
+  FileBytesReader? readFileBytes,
   FileBytesWriter? writeOutputFile,
+  Base64EncodeService base64EncodeService = const Base64EncodeService(),
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -47,6 +52,21 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'base64' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runBase64Encode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        base64EncodeService: base64EncodeService,
+      );
     }
     if (parsed.command!.name == 'cron' &&
         parsed.command!.command?.name == 'parse') {
@@ -275,6 +295,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isBase64Encode =
+        args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
     final isDate =
         args.length >= 2 && args[0] == 'date' && args[1] == 'convert';
@@ -309,7 +331,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isCron ||
+          (isBase64Encode ||
+              isCron ||
               isDate ||
               isNumberBase ||
               isTextAnalyze ||
@@ -326,7 +349,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isCron
+      code: isBase64Encode
+          ? 'base64-encode.invalid-options'
+          : isCron
           ? 'cron.invalid-options'
           : isDate
           ? 'date.invalid-options'
@@ -357,7 +382,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isCron
+      messageKey: isBase64Encode
+          ? 'error.base64Encode.validation'
+          : isCron
           ? 'error.cron.validation'
           : isDate
           ? 'error.date.validation'
@@ -394,6 +421,13 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final base64Encode = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final base64 = ArgParser()..addCommand('encode', base64Encode);
   final cronParse = ArgParser()
     ..addOption('expression', abbr: 'e')
     ..addOption('file', abbr: 'f')
@@ -521,6 +555,7 @@ ArgParser _buildParser() {
   final xml = ArgParser()..addCommand('format', xmlFormat);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
+    ..addCommand('base64', base64)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json)
@@ -530,6 +565,170 @@ ArgParser _buildParser() {
     ..addCommand('text', text)
     ..addCommand('xml', xml);
 }
+
+Future<int> _runBase64Encode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required Base64EncodeService base64EncodeService,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  if (sourceCount != 1) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: sourceCount == 0
+          ? 'base64-encode.missing-source'
+          : 'base64-encode.conflicting-sources',
+      messageKey: 'error.base64Encode.validation',
+    );
+    return 64;
+  }
+
+  late Base64EncodeOperationRequest request;
+  if (text != null) {
+    request = Base64EncodeOperationRequest.text(text);
+  } else {
+    try {
+      final bytes = useStandardInput
+          ? await readStandardInputBytes()
+          : await readFileBytes(file!);
+      request = useStandardInput
+          ? Base64EncodeOperationRequest.utf8Bytes(bytes)
+          : Base64EncodeOperationRequest.bytes(bytes);
+    } on OutOfMemoryError {
+      _writeBase64ResourceFailure(
+        err,
+        parsed: parsed,
+        catalog: catalog,
+        localeTag: localeTag,
+        field: 'input',
+      );
+      return 75;
+    } on Object {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: 'access',
+        code: useStandardInput
+            ? 'base64-encode.input-access'
+            : 'base64-encode.file-access',
+        messageKey: useStandardInput
+            ? 'error.base64Encode.inputAccess'
+            : 'error.base64Encode.fileAccess',
+      );
+      return 74;
+    }
+  }
+
+  final result = await base64EncodeService.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      final json = parsed.flag('json');
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          final payload = json ? jsonEncode(value.toJson()) : value.encoded;
+          await writeOutputFile(outputPath, utf8.encode(payload));
+        } on OutOfMemoryError {
+          _writeBase64ResourceFailure(
+            err,
+            parsed: parsed,
+            catalog: catalog,
+            localeTag: localeTag,
+            field: 'output',
+          );
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'base64-encode.output-access',
+            messageKey: 'error.base64Encode.outputAccess',
+          );
+          return 74;
+        }
+        return 0;
+      }
+
+      try {
+        final payload = json
+            ? '${jsonEncode(value.toJson())}\n'
+            : '${catalog.lookup(localeTag, 'base64Encode.outputLabel')}: '
+                  '${value.encoded}\n'
+                  '${catalog.lookup(localeTag, 'base64Encode.inputByteCountLabel')}: '
+                  '${value.inputByteCount}\n'
+                  '${catalog.lookup(localeTag, 'base64Encode.outputCharacterCountLabel')}: '
+                  '${value.outputCharacterCount}\n';
+        out.write(payload);
+      } on OutOfMemoryError {
+        _writeBase64ResourceFailure(
+          err,
+          parsed: parsed,
+          catalog: catalog,
+          localeTag: localeTag,
+          field: 'output',
+        );
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+void _writeBase64ResourceFailure(
+  StringSink err, {
+  required ArgResults parsed,
+  required MessageCatalog catalog,
+  required String localeTag,
+  required String field,
+}) {
+  _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: parsed.flag('json'),
+    kind: 'resource',
+    code: 'base64-encode.resource-limit',
+    messageKey: 'error.base64Encode.resource',
+    details: <String, Object?>{'field': field, 'reason': 'allocation-limit'},
+  );
+}
+
+Future<List<int>> _readStandardInputBytes() =>
+    stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
 
 Future<int> _runTextAnalyze(
   ArgResults parsed, {
