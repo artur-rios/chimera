@@ -68,6 +68,7 @@ final class Base64ByteDecoder {
   }) {
     try {
       _validateBytes(input);
+      _ensureInputBudget(input.length);
 
       late final String source;
       try {

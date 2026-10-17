@@ -194,6 +194,23 @@ void main() {
       );
     });
 
+    test(
+      'GivenOversizedMalformedUtf8Source_WhenDecoded_ThenResourceLimitWins',
+      () {
+        expect(
+          () =>
+              const Base64ByteDecoder(maxInputCharacters: 1)
+                  .decodeUtf8(<int>[0xC3, 0x28], mode: Base64DecodeMode.binary),
+          _decodeFailure(
+            kind: Base64DecodeFailureKind.resource,
+            code: 'base64-decode.resource-limit',
+            field: 'input',
+            reason: 'character-limit',
+          ),
+        );
+      },
+    );
+
     test('GivenBomPrefixedUtf8Source_WhenDecoded_ThenSourceIsNotRewritten', () {
       expect(
         () => decoder.decodeUtf8(<int>[
