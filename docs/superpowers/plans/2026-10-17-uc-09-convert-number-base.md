@@ -89,9 +89,9 @@
 - Consumes: `NumberBaseService`, local file/clipboard adapters, and message-catalog keys.
 - Produces: `/number/convert-base` and an accessible localized input/result workflow.
 
-- [ ] Write failing widget tests for routing, main flow, Portuguese copy, invalid input, resource failure, file/paste, copy/save failures, keyboard semantics, and stale-result clearing. Select and propagate boundary bases 2 and 36 in addition to the default 10-to-16 flow.
-- [ ] Implement the page, adapters, dependency injection, route, and home action.
-- [ ] Run the widget suite until all cases pass.
+- [x] Write failing widget tests for routing, main flow, Portuguese copy, invalid input, resource failure, file/paste, copy/save failures, keyboard semantics, and stale-result clearing. Select and propagate boundary bases 2 and 36 in addition to the default 10-to-16 flow.
+- [x] Implement the page, adapters, dependency injection, route, and home action.
+- [x] Run the widget suite until all cases pass.
 
 ### Task 5: Full-flow and cross-platform evidence
 
