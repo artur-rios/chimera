@@ -553,11 +553,12 @@ Future<bool> _inputHasValue(
 
 Future<bool> _pageContains(WebDriver driver, String expected) async {
   final result = await driver.execute(
-    '''
-      const expected = arguments[0];
-      if (document.body.innerText.includes(expected)) return true;
+    r'''
+      const normalize = value => value.replace(/\s+/g, ' ').trim();
+      const expected = normalize(arguments[0]);
+      if (normalize(document.body.innerText).includes(expected)) return true;
       return [...document.querySelectorAll('[aria-label]')]
-        .some(element => element.getAttribute('aria-label').includes(expected));
+        .some(element => normalize(element.getAttribute('aria-label')).includes(expected));
     ''',
     <Object?>[expected],
   );
