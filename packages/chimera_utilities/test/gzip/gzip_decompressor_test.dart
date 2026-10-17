@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
@@ -196,6 +197,9 @@ void main() {
           65,
           ...List<int>.filled(8, 0),
         ],
+        'zero stored LEN with invalid NLEN': _hex(
+          '1f8b08000000000000ff01000000000000000000000000',
+        ),
         'invalid dynamic Huffman': invalidHuffman,
         'payload crc mismatch': List<int>.of(valid)..[valid.length - 8] ^= 1,
         'payload size mismatch': List<int>.of(valid)..[valid.length - 4] ^= 1,
@@ -387,6 +391,32 @@ void main() {
       );
     });
 
+    test('GivenStoredBlock_WhenWriteBytesExceedsBudget_ThenNoBytesEscape', () {
+      final storedHello = _hex(
+        '1f8b08000000000000ff010500faff68656c6c6f86a6103605000000',
+      );
+
+      expect(
+        const GzipDecompressor(maxOutputBytes: 5)
+            .decompressBytes(storedHello, mode: GzipDecompressMode.binary)
+            .bytes,
+        utf8.encode('hello'),
+      );
+      GzipDecompressionResult? published;
+      expect(
+        () =>
+            published = const GzipDecompressor(maxOutputBytes: 4)
+                .decompressBytes(storedHello, mode: GzipDecompressMode.binary),
+        _failure(
+          GzipDecompressFailureKind.resource,
+          'gzip-decompress.resource-limit',
+          'output',
+          'byte-limit',
+        ),
+      );
+      expect(published, isNull);
+    });
+
     test('GivenConcatenatedMembers_WhenBounded_ThenLimitIsAggregate', () {
       final input = _fixture('concat.gzip.hex');
       expect(
@@ -466,6 +496,28 @@ void main() {
         ),
       );
     });
+
+    test(
+      'GivenAggregateGrowthRangeError_WhenDecoded_ThenAllocationLimitReturns',
+      () {
+        final decompressor = GzipDecompressor.forTesting(
+          createOutput: _RangeFailingOutput.new,
+        );
+
+        expect(
+          () => decompressor.decompressBytes(
+            _fixture('ascii.gzip.hex'),
+            mode: GzipDecompressMode.binary,
+          ),
+          _failure(
+            GzipDecompressFailureKind.resource,
+            'gzip-decompress.resource-limit',
+            'output',
+            'allocation-limit',
+          ),
+        );
+      },
+    );
   });
 }
 
@@ -528,4 +580,11 @@ int _crc32(List<int> bytes) {
     }
   }
   return (crc ^ 0xffffffff) & 0xffffffff;
+}
+
+final class _RangeFailingOutput extends OutputMemoryStream {
+  _RangeFailingOutput() : super(size: 0);
+
+  @override
+  void writeByte(int value) => throw RangeError('secret allocation failure');
 }

@@ -45,6 +45,7 @@ final class GzipDecompressor {
     : _copyInput = _copyGzipDecompressBytes,
       _copyOutput = _copyGzipDecompressBytes,
       _decodeUtf8 = _decodeGzipUtf8,
+      _createOutput = _createGzipDecompressOutput,
       assert(maxInputBytes == null || maxInputBytes >= 0),
       assert(maxOutputBytes == null || maxOutputBytes >= 0);
 
@@ -56,6 +57,7 @@ final class GzipDecompressor {
     this._copyInput = _copyGzipDecompressBytes,
     this._copyOutput = _copyGzipDecompressBytes,
     this._decodeUtf8 = _decodeGzipUtf8,
+    this._createOutput = _createGzipDecompressOutput,
   }) : assert(maxInputBytes == null || maxInputBytes >= 0),
        assert(maxOutputBytes == null || maxOutputBytes >= 0);
 
@@ -64,6 +66,7 @@ final class GzipDecompressor {
   final Uint8List Function(List<int>) _copyInput;
   final Uint8List Function(List<int>) _copyOutput;
   final String Function(List<int>) _decodeUtf8;
+  final OutputMemoryStream Function() _createOutput;
 
   GzipDecompressionResult decompressBytes(
     List<int> input, {
@@ -89,7 +92,12 @@ final class GzipDecompressor {
     }
 
     try {
-      final aggregate = OutputMemoryStream(size: 0);
+      late final OutputMemoryStream aggregate;
+      try {
+        aggregate = _createOutput();
+      } on RangeError {
+        throw const _GzipOutputAllocationFailure();
+      }
       _decodeMembers(source, aggregate);
       final bytes = _copyOutput(aggregate.getBytes()).asUnmodifiableView();
       String? text;
@@ -112,6 +120,8 @@ final class GzipDecompressor {
       );
     } on GzipDecompressException {
       rethrow;
+    } on _GzipOutputAllocationFailure {
+      _throwResource(field: 'output', reason: 'allocation-limit');
     } on OutOfMemoryError {
       _throwResource(field: 'output', reason: 'allocation-limit');
     }
@@ -119,7 +129,7 @@ final class GzipDecompressor {
 
   void _decodeMembers(Uint8List source, OutputMemoryStream aggregate) {
     if (source.isEmpty) _throwMalformed();
-    final input = InputMemoryStream(source);
+    final input = _StrictDeflateInput(source);
     while (!input.isEOS) {
       _decodeMember(source, input, aggregate);
     }
@@ -127,7 +137,7 @@ final class GzipDecompressor {
 
   void _decodeMember(
     Uint8List source,
-    InputMemoryStream input,
+    _StrictDeflateInput input,
     OutputMemoryStream aggregate,
   ) {
     final memberStart = input.position;
@@ -172,6 +182,7 @@ final class GzipDecompressor {
       if (input.isEOS) _throwMalformed();
       _throwCorrupt();
     }
+    if (input.invalidStoredBlock) _throwCorrupt();
 
     _require(input, 8);
     final expectedCrc = input.readUint32();
@@ -228,6 +239,30 @@ final class GzipDecompressor {
       );
 }
 
+/// Records the stored-block length words that `archive` reads internally.
+///
+/// archive 4.5.2 does not compare LEN and NLEN when LEN is zero. Intercepting
+/// its existing `readBytes` boundary keeps Chimera's framing strict without
+/// duplicating the DEFLATE parser or relying on compressed byte patterns.
+final class _StrictDeflateInput extends InputMemoryStream {
+  _StrictDeflateInput(super.bytes);
+
+  bool invalidStoredBlock = false;
+
+  @override
+  InputStream readBytes(int count) {
+    if (position >= 4) {
+      final data = buffer!;
+      final declaredLength = data[position - 4] | data[position - 3] << 8;
+      final complement = data[position - 2] | data[position - 1] << 8;
+      if (count != declaredLength || complement != (declaredLength ^ 0xffff)) {
+        invalidStoredBlock = true;
+      }
+    }
+    return super.readBytes(count);
+  }
+}
+
 final class _MemberOutput extends OutputStream {
   _MemberOutput(
     this._aggregate, {
@@ -257,7 +292,11 @@ final class _MemberOutput extends OutputStream {
   @override
   void writeByte(int value) {
     _ensureCapacity(1);
-    _aggregate.writeByte(value);
+    try {
+      _aggregate.writeByte(value);
+    } on RangeError {
+      throw const _GzipOutputAllocationFailure();
+    }
   }
 
   @override
@@ -267,15 +306,16 @@ final class _MemberOutput extends OutputStream {
       throw ArchiveException('Invalid output length');
     }
     _ensureCapacity(count);
-    _aggregate.writeBytes(bytes, length: count);
+    try {
+      _aggregate.writeBytes(bytes, length: count);
+    } on RangeError {
+      throw const _GzipOutputAllocationFailure();
+    }
   }
 
   @override
-  void writeStream(InputStream stream) {
-    final count = stream.length;
-    _ensureCapacity(count);
-    _aggregate.writeStream(stream);
-  }
+  void writeStream(InputStream stream) =>
+      writeBytes(stream.toUint8List(), length: stream.length);
 
   @override
   void writeBackReference(int distance, int count) {
@@ -283,7 +323,11 @@ final class _MemberOutput extends OutputStream {
       throw ArchiveException('Invalid back-reference');
     }
     _ensureCapacity(count);
-    _aggregate.writeBackReference(distance, count);
+    try {
+      _aggregate.writeBackReference(distance, count);
+    } on RangeError {
+      throw const _GzipOutputAllocationFailure();
+    }
   }
 
   @override
@@ -313,8 +357,14 @@ final class _MemberOutput extends OutputStream {
   void flush() => _aggregate.flush();
 }
 
+final class _GzipOutputAllocationFailure implements Exception {
+  const _GzipOutputAllocationFailure();
+}
+
 Uint8List _copyGzipDecompressBytes(List<int> input) =>
     Uint8List.fromList(input);
+
+OutputMemoryStream _createGzipDecompressOutput() => OutputMemoryStream(size: 0);
 
 String _decodeGzipUtf8(List<int> bytes) {
   final decoded = utf8.decode(bytes, allowMalformed: false);
