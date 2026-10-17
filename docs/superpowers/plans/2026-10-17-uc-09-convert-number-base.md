@@ -103,9 +103,9 @@
 **Interfaces:**
 - Consumes: the public GUI route and accessible controls.
 
-- [ ] Add failing native integration and Playwright flows using a nontrivial conversion and no-external-request assertion.
-- [ ] Add a bounded Safari workflow smoke using values SafariDriver can enter reliably.
-- [ ] Run the affected integration/browser suites and fix only product or harness defects supported by evidence.
+- [x] Add failing native integration and Playwright flows using a nontrivial conversion and no-external-request assertion.
+- [x] Add a bounded Safari workflow smoke using values SafariDriver can enter reliably.
+- [x] Run the affected integration/browser suites and fix only product or harness defects supported by evidence.
 
 ### Task 6: Gate verification and delivery
 

@@ -97,6 +97,35 @@ test('date flow converts locally without external requests', async ({ page }) =>
   expect(externalRequests).toEqual([]);
 });
 
+test('number base flow converts arbitrary precision locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Convert a number base' }).click();
+  await expect(page.getByText('Convert number base').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Number value' }),
+    '184467440737095516160',
+  );
+  await page.getByRole('button', { name: 'Convert number' }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: 'Converted value a0000000000000000',
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
 test('JSON array flow renders locally without external requests', async ({ page }) => {
   const externalRequests = [];
   page.on('request', (request) => {

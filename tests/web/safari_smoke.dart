@@ -98,6 +98,41 @@ Future<void> main() async {
             const <Object?>[],
           ) ==
           true,
+      'Chimera did not reload for number base flow',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder')?.click();",
+      const <Object?>[],
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Convert a number base'),
+      'Home page did not return for number base flow',
+    );
+    await _clickButton(driver, 'Convert a number base');
+    await _waitUntil(
+      () => _pageContains(driver, 'Number value'),
+      'Number base page did not open',
+    );
+    await _fillTextBox(driver, 'Number value', '65535');
+    await _clickButton(driver, 'Convert number');
+    await _waitUntil(
+      () => _pageContains(driver, 'Converted value'),
+      'Number base result did not render',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'ffff'),
+      'Number base result was incorrect',
+    );
+    await _assertNoExternalRequests(driver, flow: 'number base');
+
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
       'Chimera did not reload for JSON table flow',
     );
     await driver.execute(
@@ -303,7 +338,7 @@ Future<void> main() async {
     await _assertNoExternalRequests(driver, flow: 'XML format');
 
     stdout.writeln(
-      'Safari cron, date, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await driver.quit();

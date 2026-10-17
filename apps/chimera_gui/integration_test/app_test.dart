@@ -67,6 +67,28 @@ void main() {
     );
   });
 
+  testWidgets(
+    'GivenNumberBaseRoute_WhenArbitraryPrecisionConversionRuns_ThenSharedResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('number-base-input')),
+        '184467440737095516160',
+      );
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('a0000000000000000'), findsOneWidget);
+    },
+  );
+
   testWidgets('GivenJsonTableRoute_WhenConversionRuns_ThenTableIsVisible', (
     tester,
   ) async {
