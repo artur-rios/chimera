@@ -213,3 +213,32 @@ test('JSON format flow formats locally without external requests', async ({ page
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
 });
+
+test('SQL format flow formats locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Format SQL' }).click();
+  await expect(page.getByText('Format SQL').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'SQL statement' }),
+    'select id,name from users where active=true',
+  );
+  await page.getByRole('button', { name: 'Format SQL' }).click();
+
+  await expect(
+    page.getByRole('group', {
+      name: /Formatted SQL result.*SELECT.*id.*name.*FROM users.*WHERE active = TRUE/,
+    }),
+  ).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});

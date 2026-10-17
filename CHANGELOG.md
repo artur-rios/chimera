@@ -24,3 +24,6 @@ Versioning and use tags in the form `vX.Y.Z`.
   typed resource limits, localized preview/save flow, and exact CLI file output.
 - Deterministic JSON validation and formatting with selectable indentation,
   localized file/clipboard preview, copy/save flows, and exact CLI file output.
+- Dialect-aware PostgreSQL, MySQL, SQL Server, and SQLite formatting with
+  selectable indentation and keyword case across the shared library, CLI, and
+  localized file/clipboard GUI flows.

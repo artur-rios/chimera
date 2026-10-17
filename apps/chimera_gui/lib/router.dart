@@ -9,6 +9,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'sql_format_page.dart';
 
 GoRouter buildRouter({
   required MessageCatalog catalog,
@@ -19,6 +20,7 @@ GoRouter buildRouter({
   required JsonFormatService jsonFormatService,
   required JsonTableService jsonTableService,
   required JsonYamlService jsonYamlService,
+  required SqlFormatService sqlFormatService,
   required DateTime Function() currentTime,
   required CronFilePicker cronFilePicker,
   required DateFilePicker dateFilePicker,
@@ -31,6 +33,10 @@ GoRouter buildRouter({
   required JsonTableFilePicker jsonTableFilePicker,
   required JsonYamlFilePicker jsonYamlFilePicker,
   required JsonYamlFileSaver jsonYamlFileSaver,
+  required SqlFormatFilePicker sqlFormatFilePicker,
+  required SqlFormatFileSaver sqlFormatFileSaver,
+  required SqlFormatClipboardReader sqlFormatClipboardReader,
+  required SqlFormatClipboardWriter sqlFormatClipboardWriter,
   String initialLocation = '/',
 }) {
   return GoRouter(
@@ -92,6 +98,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/json/format'),
                         child: Text(
                           catalog.lookup(localeTag, 'jsonFormat.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-sql-format'),
+                        onPressed: () => context.go('/sql/format'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'sqlFormat.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -168,6 +182,18 @@ GoRouter buildRouter({
           fileSaver: jsonFormatFileSaver,
           clipboardReader: jsonFormatClipboardReader,
           clipboardWriter: jsonFormatClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/sql/format',
+        builder: (context, state) => SqlFormatPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: sqlFormatService,
+          filePicker: sqlFormatFilePicker,
+          fileSaver: sqlFormatFileSaver,
+          clipboardReader: sqlFormatClipboardReader,
+          clipboardWriter: sqlFormatClipboardWriter,
         ),
       ),
     ],
