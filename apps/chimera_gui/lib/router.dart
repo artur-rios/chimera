@@ -9,6 +9,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
 import 'text_escape_page.dart';
@@ -24,6 +25,7 @@ GoRouter buildRouter({
   required JsonFormatService jsonFormatService,
   required JsonTableService jsonTableService,
   required JsonYamlService jsonYamlService,
+  required ListCompareService listCompareService,
   required NumberBaseService numberBaseService,
   required TextEscapeService textEscapeService,
   required TextUnescapeService textUnescapeService,
@@ -41,6 +43,12 @@ GoRouter buildRouter({
   required JsonTableFilePicker jsonTableFilePicker,
   required JsonYamlFilePicker jsonYamlFilePicker,
   required JsonYamlFileSaver jsonYamlFileSaver,
+  required ListCompareFilePicker listCompareLeftFilePicker,
+  required ListCompareFilePicker listCompareRightFilePicker,
+  required ListCompareFileSaver listCompareFileSaver,
+  required ListCompareClipboardReader listCompareLeftClipboardReader,
+  required ListCompareClipboardReader listCompareRightClipboardReader,
+  required ListCompareClipboardWriter listCompareClipboardWriter,
   required NumberBaseFilePicker numberBaseFilePicker,
   required NumberBaseFileSaver numberBaseFileSaver,
   required NumberBaseClipboardReader numberBaseClipboardReader,
@@ -172,6 +180,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag, 'textUnescape.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-list-compare'),
+                        onPressed: () => context.go('/list/compare'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'listCompare.openAction'),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -274,6 +290,20 @@ GoRouter buildRouter({
           fileSaver: textUnescapeFileSaver,
           clipboardReader: textUnescapeClipboardReader,
           clipboardWriter: textUnescapeClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/list/compare',
+        builder: (context, state) => ListComparePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: listCompareService,
+          leftFilePicker: listCompareLeftFilePicker,
+          rightFilePicker: listCompareRightFilePicker,
+          fileSaver: listCompareFileSaver,
+          leftClipboardReader: listCompareLeftClipboardReader,
+          rightClipboardReader: listCompareRightClipboardReader,
+          clipboardWriter: listCompareClipboardWriter,
         ),
       ),
       GoRoute(

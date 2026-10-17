@@ -67,12 +67,12 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `apps/chimera_gui/lib/router.dart`
 - Modify: `apps/chimera_gui/test/widgets/app_test.dart`
 
-- [ ] Add failing widget tests for navigation, comparison/options, file and
+- [x] Add failing widget tests for navigation, comparison/options, file and
   clipboard adapters on both sides, copy/save, AF-01/AF-02 cleanup, stale
   clearing, busy-state races, localization, accessibility, and responsive layout.
-- [ ] Implement the route and injected local adapters.
-- [ ] Run widget tests and Flutter analysis.
-- [ ] Commit the green GUI layer.
+- [x] Implement the route and injected local adapters.
+- [x] Run widget tests and Flutter analysis.
+- [x] Commit the green GUI layer.
 
 ### Task 5: Extend native and compiled-browser flows
 
