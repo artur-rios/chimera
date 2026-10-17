@@ -5,6 +5,64 @@ import { gunzipSync } from 'node:zlib';
 // The native Safari harness executes this exact source, resolved from its script.
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
 
+// Run the native Safari helper's actual observation body against Flutter.
+const safariInputObservation = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8')
+  .split('Future<bool> _inputHasValue(')[1]
+  .match(/driver\.execute\(\s*'''([\s\S]*?)'''/)[1];
+
+test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservationAndExactDownloadSucceed', async ({ page }) => {
+  const requests = [];
+  const downloads = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') requests.push(request.url());
+  });
+  page.on('download', download => downloads.push(download));
+  await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+  await page.addInitScript(() => {
+    window.__chimeraGzipClipboardReads = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {readText: async () => {
+        window.__chimeraGzipClipboardReads++;
+        return 'Olá 🌍';
+      }},
+    });
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Compress to GZIP', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Text to compress', exact: true })).toBeVisible();
+  page.on('request', request => {
+    if (/^https?:/.test(request.url())) requests.push(request.url());
+  });
+  // Match Safari's existing semantics activation instead of filling the editor.
+  await page.getByRole('button', { name: 'Paste text', exact: true }).evaluate(button => button.click());
+  await expect.poll(() => page.evaluate(() => window.__chimeraGzipClipboardReads)).toBe(1);
+  await expect.poll(() => page.evaluate(source =>
+    new Function(source)('Text to compress', 'Olá 🌍', true),
+  safariInputObservation)).toBe(true);
+  await page.getByRole('button', { name: 'Compression level 6', exact: true }).click();
+  await page.getByRole('menuitem', { name: '0', exact: true }).click();
+  await page.getByRole('button', { name: 'Compress', exact: true }).click();
+  await expect(page.getByRole('region', {
+    name: 'Compressed binary result Compression succeeded. Compression level: 0 Input bytes: 9 Output bytes: 32', exact: true,
+  })).toBeVisible();
+  const pendingDownload = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save GZIP file', exact: true }).click();
+  const download = await pendingDownload;
+  expect(download.suggestedFilename()).toBe('chimera-compressed.gz');
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  const actual = Buffer.concat(chunks);
+  assertGzipMember(actual, '1f8b08000000000000ff010900f6ff4f6cc3a120f09f8c8d65c404fa09000000', Buffer.from('Olá 🌍'));
+  await expect.poll(() => page.evaluate(() => ({
+    count: window.__chimeraSaveCount, mime: window.__chimeraSavedMime,
+    bytes: window.__chimeraSavedBytes, errors: window.__chimeraGzipSaveErrors,
+  }))).toEqual({ count: 1, mime: 'application/gzip', bytes: [...actual], errors: [] });
+  expect(downloads).toHaveLength(1);
+  expect(requests).toEqual([]);
+});
+
 for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {
   test(`GivenGzipSaveBoundary_When${scenario}_ThenOnlyOneMatchingLiveBlobIsAccepted`, async ({ page }) => {
     await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves({suppressDownloads: true});`);

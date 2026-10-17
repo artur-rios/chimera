@@ -988,9 +988,13 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
     const <Object?>[],
   );
   await driver.execute('''
+    window.__chimeraGzipClipboardReads = 0;
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
-      value: {readText: async () => 'Olá 🌍'},
+      value: {readText: async () => {
+        window.__chimeraGzipClipboardReads++;
+        return 'Olá 🌍';
+      }},
     });
     const originalInputClick = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
@@ -1002,9 +1006,18 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
   if (source == 'text') {
     await _clickButton(driver, 'Paste text');
     await _waitUntil(
-      () => _inputHasValue(driver, 'Text to compress', 'Olá 🌍'),
+      // Paste recreates the editor to discard undo history. Flutter attaches
+      // its DOM editing value only after activating that new field's focus.
+      () => _inputHasValue(driver, 'Text to compress', 'Olá 🌍', focus: true),
       'GZIP UTF-8 clipboard source was not loaded',
     );
+    final reads = await driver.execute(
+      'return window.__chimeraGzipClipboardReads;',
+      const <Object?>[],
+    );
+    if (reads != 1) {
+      throw StateError('GZIP clipboard was not read exactly once');
+    }
   } else {
     await _clickButton(driver, 'Load file bytes');
     // SafariDriver lacks direct upload; dispatch a real File through the picker.
@@ -1442,17 +1455,20 @@ Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
 Future<bool> _inputHasValue(
   WebDriver driver,
   String label,
-  String expected,
-) async {
+  String expected, {
+  bool focus = false,
+}) async {
   final result = await driver.execute(
     '''
       const label = arguments[0];
       const expected = arguments[1];
       const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
         .find(element => element.getAttribute('aria-label') === label);
-      return input?.value === expected;
+      if (!input || input.disabled) return false;
+      if (arguments[2] === true) input.focus();
+      return input.value === expected;
     ''',
-    <Object?>[label, expected],
+    <Object?>[label, expected, focus],
   );
   return result == true;
 }
