@@ -3034,6 +3034,33 @@ void main() {
     },
   );
 
+  test('GivenUnicodeSeparators_WhenCompareHumanOutputIsWritten_ThenWhitespaceIsEscaped', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'text',
+        'compare',
+        '--granularity=character',
+        '--left=a\u0085\u2028\u2029',
+        '--right=a\u0085\u2028\u2029',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 0, reason: err.toString());
+    expect(
+      out.toString(),
+      'Unchanged: "a\\u0085\\u2028\\u2029"\n'
+      'Added: 0\n'
+      'Removed: 0\n'
+      'Unchanged: 4\n',
+    );
+  });
+
   test(
     'GivenTextCompareOutputPath_WhenRun_ThenExactSelectedJsonIsSaved',
     () async {
@@ -3132,6 +3159,37 @@ void main() {
       expect(sourceReads, 0);
     },
   );
+
+  test('GivenUnknownTextCompareOption_WhenJsonRequested_ThenTypedValidationReturns', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'text',
+        'compare',
+        '--granularity=line',
+        '--left=left',
+        '--right=right',
+        '--bogus',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    expect(out.toString(), isEmpty);
+    expect(
+      (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+      <String, dynamic>{
+        'kind': 'validation',
+        'code': 'text-compare.invalid-options',
+        'message': 'The text comparison sources or granularity are invalid.',
+      },
+    );
+  });
 
   test(
     'GivenTextCompareAccessAndResourceFailures_WhenRun_ThenTypedExitsReturn',

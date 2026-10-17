@@ -156,10 +156,10 @@ flutter_test, integration_test, and Playwright.
 **Files:**
 - Review: all UC-15 changes and requirement traceability.
 
-- [ ] Run repository formatting and strict static analysis.
-- [ ] Run focused suites, affected native/browser suites, then unfiltered
+- [x] Run repository formatting and strict static analysis.
+- [x] Run focused suites, affected native/browser suites, then unfiltered
   `dart run melos run test:all`.
-- [ ] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
+- [x] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
   behavior, redaction, and no persistence/network path.
 - [ ] Obtain independent whole-branch review and resolve every blocker with
   affected-suite reruns.

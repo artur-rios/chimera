@@ -3393,6 +3393,40 @@ void main() {
   );
 
   testWidgets(
+    'GivenMixedTextCompareSpans_WhenRendered_ThenKindsAreVisibleAndContrastPasses',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('word');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        'same old',
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        'same new',
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-compare-span-0-kind')), findsOneWidget);
+      expect(find.byKey(const Key('text-compare-span-1-kind')), findsOneWidget);
+      expect(find.byKey(const Key('text-compare-span-2-kind')), findsOneWidget);
+      expect(find.text('Unchanged'), findsOneWidget);
+      expect(find.text('Removed'), findsOneWidget);
+      expect(find.text('Added'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    },
+  );
+
+  testWidgets(
     'GivenTextCompareAdapters_WhenLoadedCopiedAndSaved_ThenExactJsonTransfers',
     (tester) async {
       String? copied;

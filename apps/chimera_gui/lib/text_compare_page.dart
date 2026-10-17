@@ -311,6 +311,65 @@ final class _TextComparePageState extends State<TextComparePage> {
     ],
   );
 
+  Widget _diffSpan(TextDiffSpan span, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final (background, foreground, icon) = switch (span.kind) {
+      TextDiffKind.unchanged => (
+        colorScheme.surfaceContainerHighest,
+        colorScheme.onSurface,
+        Icons.drag_handle,
+      ),
+      TextDiffKind.removed => (
+        colorScheme.errorContainer,
+        colorScheme.onErrorContainer,
+        Icons.remove_circle_outline,
+      ),
+      TextDiffKind.added => (
+        colorScheme.primaryContainer,
+        colorScheme.onPrimaryContainer,
+        Icons.add_circle_outline,
+      ),
+    };
+    return Container(
+      key: Key('text-compare-span-$index'),
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          Row(
+            children: <Widget>[
+              Icon(icon, color: foreground, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                _message('textCompare.kind.${span.kind.slug}'),
+                key: Key('text-compare-span-$index-kind'),
+                style: Theme.of(context).textTheme.labelLarge
+                    ?.copyWith(color: foreground),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SelectableText(
+            span.text,
+            key: Key('text-compare-span-$index-text'),
+            style: TextStyle(
+              color: foreground,
+              decoration: span.kind == TextDiffKind.removed
+                  ? TextDecoration.lineThrough
+                  : null,
+              decorationColor: foreground,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _result(TextCompareOutput output) => Semantics(
     key: const Key('text-compare-result-semantics'),
     container: true,
@@ -334,37 +393,8 @@ final class _TextComparePageState extends State<TextComparePage> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          SelectableText.rich(
-            TextSpan(
-              children: <InlineSpan>[
-                for (final span in output.spans)
-                  TextSpan(
-                    text: span.text,
-                    style: TextStyle(
-                      color: switch (span.kind) {
-                        TextDiffKind.unchanged => Theme.of(
-                          context,
-                        ).colorScheme.onSurface,
-                        TextDiffKind.removed => Theme.of(
-                          context,
-                        ).colorScheme.error,
-                        TextDiffKind.added => Colors.green.shade700,
-                      },
-                      decoration: span.kind == TextDiffKind.removed
-                          ? TextDecoration.lineThrough
-                          : null,
-                      backgroundColor: switch (span.kind) {
-                        TextDiffKind.unchanged => null,
-                        TextDiffKind.removed => Theme.of(
-                          context,
-                        ).colorScheme.errorContainer,
-                        TextDiffKind.added => Colors.green.shade100,
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
+          for (var index = 0; index < output.spans.length; index++)
+            _diffSpan(output.spans[index], index),
           const SizedBox(height: 12),
           Text(
             '${_message('textCompare.addedCountLabel')}: '

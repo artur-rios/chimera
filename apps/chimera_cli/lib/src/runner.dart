@@ -286,6 +286,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'text' && args[1] == 'analyze';
     final isTextTransform =
         args.length >= 2 && args[0] == 'text' && args[1] == 'transform';
+    final isTextCompare =
+        args.length >= 2 && args[0] == 'text' && args[1] == 'compare';
     final isTextUnescape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'unescape';
     final isListCompare =
@@ -312,6 +314,7 @@ Future<int> runChimera(
               isNumberBase ||
               isTextAnalyze ||
               isTextTransform ||
+              isTextCompare ||
               isTextEscape ||
               isTextUnescape ||
               isListCompare ||
@@ -333,6 +336,8 @@ Future<int> runChimera(
           ? 'text-analyze.invalid-options'
           : isTextTransform
           ? 'text-transform.invalid-options'
+          : isTextCompare
+          ? 'text-compare.invalid-options'
           : isTextEscape
           ? 'text-escape.invalid-options'
           : isTextUnescape
@@ -362,6 +367,8 @@ Future<int> runChimera(
           ? 'error.textAnalyze.validation'
           : isTextTransform
           ? 'error.textTransform.validation'
+          : isTextCompare
+          ? 'error.textCompare.validation'
           : isTextEscape
           ? 'error.textEscape.validation'
           : isTextUnescape
@@ -1371,7 +1378,7 @@ String _humanTextCompareResult(
   for (final span in output.spans) {
     buffer.writeln(
       '${catalog.lookup(localeTag, 'textCompare.kind.${span.kind.slug}')}: '
-      '${jsonEncode(span.text)}',
+      '${_jsonEncodeHumanDiffText(span.text)}',
     );
   }
   buffer
@@ -1389,6 +1396,41 @@ String _humanTextCompareResult(
     );
   return buffer.toString();
 }
+
+String _jsonEncodeHumanDiffText(String value) {
+  final encoded = jsonEncode(value);
+  final buffer = StringBuffer();
+  for (final rune in encoded.runes) {
+    if (_humanEscapedWhitespace.contains(rune)) {
+      buffer.write('\\u${rune.toRadixString(16).padLeft(4, '0')}');
+    } else {
+      buffer.writeCharCode(rune);
+    }
+  }
+  return buffer.toString();
+}
+
+const Set<int> _humanEscapedWhitespace = <int>{
+  0x0085,
+  0x00A0,
+  0x1680,
+  0x2000,
+  0x2001,
+  0x2002,
+  0x2003,
+  0x2004,
+  0x2005,
+  0x2006,
+  0x2007,
+  0x2008,
+  0x2009,
+  0x200A,
+  0x2028,
+  0x2029,
+  0x202F,
+  0x205F,
+  0x3000,
+};
 
 String _humanListCompareResult(
   ListCompareOutput output, {
