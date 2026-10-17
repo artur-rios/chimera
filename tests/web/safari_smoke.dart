@@ -834,12 +834,37 @@ Future<void> _clickCheckbox(WebDriver driver, String text) async {
       '''
           const expected = arguments[0];
           const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
-            .find(element => element.textContent.trim() === expected);
-          if (!checkbox) return false;
-          if (checkbox.getAttribute('aria-checked') === 'true') return true;
-          checkbox.click();
-          return false;
+            .find(element => element.getAttribute('aria-label') === expected);
+          return checkbox !== undefined;
         ''',
+      <Object?>[text],
+    );
+    return result == true;
+  }, 'Checkbox did not become available: $text');
+
+  final clicked = await driver.execute(
+    '''
+      const expected = arguments[0];
+      const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
+        .find(element => element.getAttribute('aria-label') === expected);
+      if (!checkbox) return false;
+      if (checkbox.getAttribute('aria-checked') !== 'true') checkbox.click();
+      return true;
+    ''',
+    <Object?>[text],
+  );
+  if (clicked != true) {
+    throw StateError('Checkbox disappeared before selection: $text');
+  }
+
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+        const expected = arguments[0];
+        const checkbox = [...document.querySelectorAll('[role="checkbox"]')]
+          .find(element => element.getAttribute('aria-label') === expected);
+        return checkbox?.getAttribute('aria-checked') === 'true';
+      ''',
       <Object?>[text],
     );
     return result == true;
