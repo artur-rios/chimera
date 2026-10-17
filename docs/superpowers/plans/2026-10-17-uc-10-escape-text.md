@@ -94,4 +94,3 @@ package:test, flutter_test, integration_test, and Playwright.
 - [ ] Verify the main flow, AF-01, AF-02, every cited FR/BR, both locales, offline behavior, and no persistence/network path.
 - [ ] Obtain independent whole-branch review and resolve every blocker with affected-suite reruns.
 - [ ] Commit, push, open the issue-closing PR to `develop`, require green CI, squash merge, delete the branch, verify Done/closed state, and sync `develop`.
-

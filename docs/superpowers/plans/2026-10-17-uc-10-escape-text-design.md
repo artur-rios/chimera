@@ -79,8 +79,9 @@ and failure.
 - FR-TX-02 and the main flow: utility known-answer tests cover all five modes,
   empty text, controls, quotes, Unicode, supplementary characters, HTML
   metacharacters, URL reserved characters, and UTF-8 percent encoding.
-- FR-TX-11 and AF-01: utility, core, CLI, and widget tests cover unsupported
-  mode validation with stable field/reason data and redacted diagnostics.
+- FR-TX-11 and AF-01: utility, core, and CLI tests cover unsupported mode
+  validation with stable field/reason data and redacted diagnostics; widget
+  tests prove the GUI prevents unsupported mode selection.
 - AF-02: CLI and widget tests cover input-file, output-file, clipboard-read,
   clipboard-write, and save failures with no retained/result output.
 - FR-PL-01 through FR-PL-06 and BR-02: core, CLI, GUI, native, and compiled
@@ -88,4 +89,3 @@ and failure.
   JSON, localized, copy, and save behavior.
 - FR-PL-09 through FR-PL-11 and BR-03 through BR-05/BR-19: tests assert no
   history or network path, and each operation is local and ephemeral.
-
