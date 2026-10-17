@@ -12,6 +12,113 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   for (final locale in ['en', 'pt-BR']) {
+    for (final source in ['text', 'binary']) {
+      testWidgets(
+        'Given${locale}Gzip${source}_WhenLevelSelectedCompressedAndSaved_ThenExactMemberRoundTripsOffline',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          final directory = await Directory.systemTemp.createTemp(
+            'chimera-gzip-',
+          );
+          addTearDown(() => directory.delete(recursive: true));
+          final sourceBytes = source == 'text'
+              ? utf8.encode('Olá 🌍')
+              : [0, 255, 128, 1];
+          final level = source == 'text' ? 0 : 9;
+          final expectedHex = source == 'text'
+              ? '1f8b08000000000000ff010900f6ff4f6cc3a120f09f8c8d65c404fa09000000'
+              : '1f8b08000000000000ff63f8dfc008002c4358d304000000';
+          final outputCount = source == 'text' ? 32 : 24;
+          var saves = 0;
+          final saved = File('${directory.path}/chimera-compressed.gz');
+          try {
+            await tester.pumpWidget(
+              ChimeraApp(
+                localeTag: locale,
+                initialLocation: '/gzip/compress',
+                gzipCompressFilePicker: () async => sourceBytes,
+                gzipCompressFileSaver: (name, bytes, mime) async {
+                  saves++;
+                  expect(name, 'chimera-compressed.gz');
+                  expect(mime, 'application/gzip');
+                  await saved.writeAsBytes(bytes, flush: true);
+                  return true;
+                },
+              ),
+            );
+            await tester.pumpAndSettle();
+            if (source == 'text') {
+              await tester.enterText(
+                find.byKey(const Key('gzip-compress-input')),
+                'Olá 🌍',
+              );
+            } else {
+              await tester.tap(find.byKey(const Key('gzip-compress-file')));
+              await tester.pumpAndSettle();
+            }
+            final selector = find.byKey(const Key('gzip-compress-level'));
+            await tester.ensureVisible(selector);
+            await tester.tap(selector);
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('$level'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const Key('gzip-compress-submit')));
+            await tester.pumpAndSettle();
+            final result = tester
+                .getSemantics(find.byKey(const Key('gzip-compress-result')))
+                .getSemanticsData();
+            expect(
+              result.label,
+              locale == 'en'
+                  ? 'Compressed binary result'
+                  : 'Resultado binário comprimido',
+            );
+            expect(
+              result.value,
+              locale == 'en'
+                  ? 'Compression succeeded.\nCompression level: $level\nInput bytes: ${sourceBytes.length}\nOutput bytes: $outputCount'
+                  : 'Compressão concluída.\nNível de compressão: $level\nBytes de entrada: ${sourceBytes.length}\nBytes de saída: $outputCount',
+            );
+            expect(
+              tester
+                  .widget<Semantics>(
+                    find.byKey(const Key('gzip-compress-result')),
+                  )
+                  .properties
+                  .liveRegion,
+              isTrue,
+            );
+            expect(find.byType(SelectableText), findsNothing);
+            final save = find.byKey(const Key('gzip-compress-save'));
+            await tester.ensureVisible(save);
+            await tester.tap(save);
+            await tester.pumpAndSettle();
+            expect(saves, 1);
+            _assertGzipMember(
+              await saved.readAsBytes(),
+              expectedHex,
+              sourceBytes,
+            );
+            expect(
+              find.text(
+                locale == 'en' ? 'GZIP file saved.' : 'Arquivo GZIP salvo.',
+              ),
+              findsOneWidget,
+            );
+            expect(network.attempts, 0);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+  }
+
+  for (final locale in ['en', 'pt-BR']) {
     for (final source in ['pem', 'der']) {
       testWidgets(
         'Given${locale}Certificate${source}_WhenConvertedAndSaved_ThenExactFixtureAndSafeSemanticsTransferOffline',
@@ -826,6 +933,16 @@ const _certificateJsonFields =
 
 const _validPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+void _assertGzipMember(List<int> actual, String expectedHex, List<int> source) {
+  // Literal RFC 1952 members: zero MTIME, no metadata, CRC32 and ISIZE.
+  expect(
+    actual.map((value) => value.toRadixString(16).padLeft(2, '0')).join(),
+    expectedHex,
+  );
+  // dart:io delegates to the platform zlib decoder, independent of archive.
+  expect(gzip.decode(actual), source);
+}
 
 final class _RejectConversionNetwork extends HttpOverrides {
   var attempts = 0;

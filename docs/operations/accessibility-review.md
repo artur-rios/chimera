@@ -200,3 +200,65 @@ platform file-picker implementations own their save transaction. No GUI path-lev
 staging or rollback claim is made. These are automated widget findings; native
 screen-reader and compiled browser/platform evidence belongs to cross-platform
 acceptance. No automated UC-19 accessibility findings remain open.
+
+## UC-20 GZIP Compress
+
+- Release version: UC-20 candidate for issue #21
+- Branch: `feature/uc-20-gzip-compress`
+- Reviewer: Chimera UC-20 GUI implementation self-review
+- Date: 2026-10-17
+- Target: shared Flutter web, Windows, and Linux compression surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Keyboard focus follows multiline text, local file, clipboard paste,
+  compression level, compress, binary result, and save. Enter activates compress;
+  success focuses the result and Tab reaches save.
+- [x] The title, home action, input, source actions, level, compress/save,
+  result labels, notices, and errors are localized in both locales.
+- [x] The result is a live region announcing success, level, input bytes, and
+  output bytes. Binary content is never rendered, selected, or copied.
+- [x] Successful compression immediately discards text, file bytes, and editor
+  undo history while preserving the exact output for save and focusing result.
+- [x] File, clipboard, service, and save access/allocation failures publish only
+  safe localized live errors and clear source, result, notices, and save actions.
+- [x] Busy actions disable input, file, paste, level, compress, and save.
+  Generation guards ignore late success/failure after text or level changes and
+  disposal. Disposal explicitly clears the text controller.
+- [x] File-picker and save cancellation are neutral and preserve completed
+  output. Source/level changes clear prior output and notices.
+- [x] Source, level, compress, and save controls measure at least 48 by 48 logical
+  pixels. Flutter Android tap-target, labeled-target, and text-contrast
+  guidelines pass with a completed result in both locales.
+- [x] At 320 logical pixels and 200% text scale, both locales render without
+  overflow and the save action remains reachable by scrolling.
+
+### Evidence and Findings
+
+`flutter test --no-pub --reporter expanded test` passes all 396 GUI tests,
+including 109 focused GZIP tests, localized home navigation, the existing widget
+surfaces, catalog checks, and startup performance. The complete localization
+suite passes 17 tests with exact English/PT-BR key parity; reviewed CLI/shared
+GZIP messages remain unchanged. Strict GUI and localization analysis pass.
+
+The GZIP regressions cover empty/text/raw-file/clipboard input, default level 6,
+levels 0 and 9, all ten selector choices, independent GZIP decoding, one service
+call per compression, immutable byte identity at the injected save boundary and
+platform file picker, default `.gz` filename and `application/gzip` MIME,
+exclusive sources, neutral cancellation, typed invalid Unicode/byte/level and
+input/output resource limits, access/allocation redaction in both locales,
+24 stale success/failure/disposal paths, source clearing on disposal, focus,
+live regions, control sizes, contrast, and narrow large-text layouts.
+
+Review follow-up also verifies that source cleanup disposes the editor's undo
+history and pending snapshot timer. Ctrl+Z/Ctrl+Shift+Z cannot restore discarded
+text after successful compression, file/clipboard replacement, or access/resource
+failure. Both settled and pending success snapshots are covered. Ordinary
+editing undo/redo still works before and after a source reset; keyboard focus
+and page-owned controller listeners remain intact.
+
+Saving promises exact one-time payload handoff; platform file-picker
+implementations own their save transaction. These are automated widget findings;
+native screen-reader and compiled browser/platform evidence belongs to Task 5.
+No automated UC-20 accessibility findings remain open.

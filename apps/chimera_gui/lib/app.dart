@@ -1,6 +1,7 @@
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -11,6 +12,7 @@ import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'gzip_compress_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -28,6 +30,10 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.gzipCompressService = const GzipCompressService(),
+    this.gzipCompressFilePicker,
+    this.gzipCompressClipboardReader,
+    this.gzipCompressFileSaver,
     this.localeTag = 'en',
     this.certificateConvertService = const CertificateConvertService(),
     this.certificateConvertFilePicker,
@@ -128,6 +134,10 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final GzipCompressOperationService gzipCompressService;
+  final GzipCompressFilePicker? gzipCompressFilePicker;
+  final GzipCompressClipboardReader? gzipCompressClipboardReader;
+  final GzipCompressFileSaver? gzipCompressFileSaver;
   final CertificateConvertOperationService certificateConvertService;
   final CertificateConvertFilePicker? certificateConvertFilePicker;
   final CertificateConvertFileSaver? certificateConvertFileSaver;
@@ -222,6 +232,10 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        gzipCompressService: gzipCompressService,
+        gzipCompressFilePicker: gzipCompressFilePicker,
+        gzipCompressClipboardReader: gzipCompressClipboardReader,
+        gzipCompressFileSaver: gzipCompressFileSaver,
         localeTag: localeTag,
         certificateConvertService: certificateConvertService,
         certificateConvertFilePicker: certificateConvertFilePicker,
@@ -319,6 +333,10 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.gzipCompressService,
+    required this.gzipCompressFilePicker,
+    required this.gzipCompressClipboardReader,
+    required this.gzipCompressFileSaver,
     required this.certificateConvertService,
     required this.certificateConvertFilePicker,
     required this.certificateConvertFileSaver,
@@ -504,6 +522,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
 
   @override
   State<_RoutedChimeraApp> createState() => _RoutedChimeraAppState();
+
+  final GzipCompressOperationService gzipCompressService;
+  final GzipCompressFilePicker? gzipCompressFilePicker;
+  final GzipCompressClipboardReader? gzipCompressClipboardReader;
+  final GzipCompressFileSaver? gzipCompressFileSaver;
 }
 
 final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
@@ -514,6 +537,13 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      gzipCompressService: widget.gzipCompressService,
+      gzipCompressFilePicker:
+          widget.gzipCompressFilePicker ?? pickGzipCompressFile,
+      gzipCompressClipboardReader:
+          widget.gzipCompressClipboardReader ?? readGzipCompressClipboard,
+      gzipCompressFileSaver:
+          widget.gzipCompressFileSaver ?? saveGzipCompressFile,
       certificateConvertService: widget.certificateConvertService,
       certificateConvertFilePicker:
           widget.certificateConvertFilePicker ?? pickCertificateConvertFile,
@@ -672,7 +702,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
       title: _catalog.lookup(widget.localeTag, 'app.name'),
-      theme: ThemeData(colorSchemeSeed: const Color(0xFF6750A4)),
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF6750A4),
+        // Preserve the web engine's Roboto fallback before emoji, including
+        // when a platform/system or monospace font is unavailable. Both fonts
+        // load before startup, so editing emoji never fetches a font.
+        fontFamilyFallback: kIsWeb
+            ? const ['Roboto', 'Noto Color Emoji']
+            : null,
+      ),
     );
   }
 }

@@ -9,6 +9,7 @@ import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'gzip_compress_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -24,6 +25,10 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required GzipCompressOperationService gzipCompressService,
+  required GzipCompressFilePicker gzipCompressFilePicker,
+  required GzipCompressClipboardReader gzipCompressClipboardReader,
+  required GzipCompressFileSaver gzipCompressFileSaver,
   required CertificateConvertOperationService certificateConvertService,
   required CertificateConvertFilePicker certificateConvertFilePicker,
   required CertificateConvertFileSaver certificateConvertFileSaver,
@@ -119,6 +124,17 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/gzip/compress',
+        builder: (context, state) => GzipCompressPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: gzipCompressService,
+          filePicker: gzipCompressFilePicker,
+          clipboardReader: gzipCompressClipboardReader,
+          fileSaver: gzipCompressFileSaver,
+        ),
+      ),
       GoRoute(
         path: '/',
         builder: (context, state) => Scaffold(
@@ -293,6 +309,14 @@ GoRouter buildRouter({
                             localeTag,
                             'certificateConvert.openAction',
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-gzip-compress'),
+                        onPressed: () => context.go('/gzip/compress'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'gzipCompress.openAction'),
                         ),
                       ),
                     ],
