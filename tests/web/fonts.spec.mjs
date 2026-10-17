@@ -1,4 +1,68 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+const bootstrapTemplate = readFileSync(
+  new URL('../../apps/chimera_gui/web/flutter_bootstrap.js', import.meta.url), 'utf8',
+);
+
+for (const serviceWorkerVersion of ['123456789', null]) {
+  test(`GivenPwaVersion${serviceWorkerVersion}_WhenBootstrapIsSubstituted_ThenOnlyEnabledModeHasSettings`, async ({ page, baseURL }) => {
+    // Match Flutter's template substitutions at the public loader boundary.
+    const bootstrap = bootstrapTemplate
+      .replace('{{flutter_js}}', '')
+      .replace('{{flutter_build_config}}', '')
+      .replace('{{flutter_service_worker_version}}', JSON.stringify(serviceWorkerVersion));
+    for (const appPath of ['/', '/tools/chimera/']) {
+      await page.goto('/manifest.json');
+      await page.evaluate(base => {
+        document.head.innerHTML = `<base href="${base}">`;
+        window._flutter = { loader: { load: options => { window.startupOptions = options; } } };
+      }, new URL(appPath, baseURL).href);
+      await page.addScriptTag({ content: bootstrap });
+      const options = await page.evaluate(() => window.startupOptions);
+      expect(Object.hasOwn(options, 'serviceWorkerSettings')).toBe(serviceWorkerVersion !== null);
+      if (serviceWorkerVersion !== null) {
+        expect(options.serviceWorkerSettings).toEqual({ serviceWorkerVersion });
+      }
+      expect(options.config.fontFallbackBaseUrl).toBe(new URL(`${appPath}font-fallback/`, baseURL).href);
+    }
+  });
+}
+
+test('GivenPreviousServiceWorker_WhenGeneratedBootstrapRuns_ThenRegistrationMatchesBuildMode', async ({ page, baseURL }) => {
+  // Exercise the actual bundled Flutter loader, with only the browser's worker
+  // API replaced. Fresh profiles miss the existing-registration branch entirely.
+  await page.addInitScript(() => {
+    window.workerCalls = { lookups: 0, registrations: [] };
+    Object.defineProperty(navigator, 'serviceWorker', {
+      value: {
+        getRegistration: async () => {
+          window.workerCalls.lookups++;
+          return {};
+        },
+        register: async url => {
+          const scriptURL = String(url);
+          window.workerCalls.registrations.push(scriptURL);
+          return { active: { scriptURL, state: 'activated' } };
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  // App startup follows the awaited worker-loading branch; no timing sleeps.
+  await page.locator('flt-semantics-placeholder').waitFor({ state: 'attached' });
+  const calls = await page.evaluate(() => window.workerCalls);
+  if (process.env.CHIMERA_EXPECT_PWA_STRATEGY === 'none') {
+    expect(calls).toEqual({ lookups: 0, registrations: [] });
+  } else {
+    expect(calls.lookups).toBe(1);
+    expect(calls.registrations).toHaveLength(1);
+    const workerUrl = new URL(calls.registrations[0]);
+    expect(workerUrl.origin).toBe(new URL(baseURL).origin);
+    expect(workerUrl.pathname).toBe('/flutter_service_worker.js');
+    expect(workerUrl.searchParams.get('v')).toMatch(/^\d+$/);
+  }
+});
 
 test('GivenWebBuild_WhenBootstrappedAtRootOrSubpath_ThenFallbackStaysInAppOrigin', async ({ page, baseURL }) => {
   // Execute the actual generated bootstrap, capturing its public loader boundary.
