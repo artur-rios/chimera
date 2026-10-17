@@ -3039,4 +3039,304 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets(
+    'GivenTextTransformHomeAction_WhenOpened_ThenAllModesAndSemanticsWork',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-text-transform')));
+      await tester.tap(find.byKey(const Key('open-text-transform')));
+      await tester.pumpAndSettle();
+      expect(find.text('Transform text'), findsWidgets);
+
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const Key('text-transform-mode')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(dropdown.items!.map((item) => item.value), <String>[
+        'lowercase',
+        'uppercase',
+        'normalize-whitespace',
+        'sort-lines',
+        'deduplicate-lines',
+      ]);
+
+      final cases = <String, (String, String)>{
+        'lowercase': ('ÉCOLE', 'école'),
+        'uppercase': ('straße', 'STRASSE'),
+        'normalize-whitespace': (' one\t two ', 'one two'),
+        'sort-lines': ('b\na', 'a\nb'),
+        'deduplicate-lines': ('b\na\nb', 'b\na'),
+      };
+      for (final entry in cases.entries) {
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byKey(const Key('text-transform-mode')),
+            )
+            .onChanged!(entry.key);
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('text-transform-input')),
+          entry.value.$1,
+        );
+        await tester.tap(find.byKey(const Key('text-transform-submit')));
+        await tester.pumpAndSettle();
+
+        final semantics = tester.widget<Semantics>(
+          find.byKey(const Key('text-transform-result-semantics')),
+        );
+        expect(semantics.properties.label, 'Transformed text');
+        expect(semantics.properties.value, entry.value.$2, reason: entry.key);
+      }
+    },
+  );
+
+  testWidgets(
+    'GivenTextTransformAdapters_WhenLoadPasteCopyAndSaveRun_ThenExactOutputTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/transform',
+          textTransformFilePicker: () async => 'FILE',
+          textTransformClipboardReader: () async => 'straße',
+          textTransformClipboardWriter: (value) async => copied = value,
+          textTransformFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-transform-file')));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('text-transform-input')))
+            .controller!
+            .text,
+        'FILE',
+      );
+
+      await tester.tap(find.byKey(const Key('text-transform-paste')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-transform-mode')),
+          )
+          .onChanged!('uppercase');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('text-transform-copy')));
+      await tester.tap(find.byKey(const Key('text-transform-copy')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-transform-save')));
+      await tester.tap(find.byKey(const Key('text-transform-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, 'STRASSE');
+      expect(savedName, 'chimera-transformed-text.txt');
+      expect(savedBytes, utf8.encode('STRASSE'));
+      expect(find.text('Transformed text saved.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenTextTransformAccessFailures_WhenAdaptersRun_ThenResultIsCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/transform',
+          textTransformFilePicker: () async => throw Exception('denied'),
+          textTransformClipboardReader: () async => throw Exception('denied'),
+          textTransformClipboardWriter: (_) async => throw Exception('denied'),
+          textTransformFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-transform-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-transform-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-transform-copy')));
+      await tester.tap(find.byKey(const Key('text-transform-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('text-transform-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-transform-save')));
+      await tester.tap(find.byKey(const Key('text-transform-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The transformed text could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-transform-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextTransformResourceFailure_WhenSubmitted_ThenNoPartialOutputRemains',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/transform',
+          textTransformService: TextTransformService(
+            transformer: TextTransformer(maxOutputCodeUnits: 1),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-transform-input')),
+        'ß',
+      );
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-transform-mode')),
+          )
+          .onChanged!('uppercase');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('A transformação de texto excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-transform-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextTransformResult_WhenInputOrModeChanges_ThenStaleOutputClears',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/transform'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-transform-result')), findsOneWidget);
+
+      await tester.enterText(
+        find.byKey(const Key('text-transform-input')),
+        'x',
+      );
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-transform-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-transform-submit')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-transform-mode')),
+          )
+          .onChanged!('uppercase');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-transform-result')), findsNothing);
+      expect(find.byKey(const Key('text-transform-copy')), findsNothing);
+      expect(find.byKey(const Key('text-transform-save')), findsNothing);
+    },
+  );
+
+  testWidgets('GivenPendingTextTransformLoad_WhenBusy_ThenActionsCannotRace', (
+    tester,
+  ) async {
+    final loaded = Completer<String?>();
+    await tester.pumpWidget(
+      ChimeraApp(
+        localeTag: 'en',
+        initialLocation: '/text/transform',
+        textTransformFilePicker: () => loaded.future,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('text-transform-submit')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('text-transform-result')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('text-transform-file')));
+    await tester.pump();
+    expect(find.byKey(const Key('text-transform-result')), findsNothing);
+    expect(
+      tester
+          .widget<ElevatedButton>(
+            find.byKey(const Key('text-transform-submit')),
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('text-transform-input')))
+          .enabled,
+      isFalse,
+    );
+
+    loaded.complete('loaded');
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('text-transform-input')))
+          .controller!
+          .text,
+      'loaded',
+    );
+  });
+
+  testWidgets(
+    'GivenNarrowTextTransformViewport_WhenPortugueseFormRenders_ThenNoOverflowOccurs',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/transform',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Transformar texto'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

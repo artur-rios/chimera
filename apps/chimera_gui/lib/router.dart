@@ -14,6 +14,7 @@ import 'number_base_page.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
 import 'text_escape_page.dart';
+import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
@@ -30,6 +31,7 @@ GoRouter buildRouter({
   required NumberBaseService numberBaseService,
   required TextAnalyzeService textAnalyzeService,
   required TextEscapeService textEscapeService,
+  required TextTransformService textTransformService,
   required TextUnescapeService textUnescapeService,
   required SqlFormatService sqlFormatService,
   required XmlFormatService xmlFormatService,
@@ -63,6 +65,10 @@ GoRouter buildRouter({
   required TextEscapeFileSaver textEscapeFileSaver,
   required TextEscapeClipboardReader textEscapeClipboardReader,
   required TextEscapeClipboardWriter textEscapeClipboardWriter,
+  required TextTransformFilePicker textTransformFilePicker,
+  required TextTransformFileSaver textTransformFileSaver,
+  required TextTransformClipboardReader textTransformClipboardReader,
+  required TextTransformClipboardWriter textTransformClipboardWriter,
   required TextUnescapeFilePicker textUnescapeFilePicker,
   required TextUnescapeFileSaver textUnescapeFileSaver,
   required TextUnescapeClipboardReader textUnescapeClipboardReader,
@@ -188,6 +194,14 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
+                        key: const Key('open-text-transform'),
+                        onPressed: () => context.go('/text/transform'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'textTransform.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
                         key: const Key('open-list-compare'),
                         onPressed: () => context.go('/list/compare'),
                         child: Text(
@@ -304,6 +318,18 @@ GoRouter buildRouter({
           fileSaver: textUnescapeFileSaver,
           clipboardReader: textUnescapeClipboardReader,
           clipboardWriter: textUnescapeClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/text/transform',
+        builder: (context, state) => TextTransformPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: textTransformService,
+          filePicker: textTransformFilePicker,
+          fileSaver: textTransformFileSaver,
+          clipboardReader: textTransformClipboardReader,
+          clipboardWriter: textTransformClipboardWriter,
         ),
       ),
       GoRoute(
