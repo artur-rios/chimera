@@ -27,6 +27,15 @@ void main() {
     );
   });
 
+  test('GivenTextEscapeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'textEscape.resultLabel'), 'Escaped text');
+    expect(catalog.lookup('pt-BR', 'textEscape.resultLabel'), 'Texto escapado');
+    expect(
+      catalog.lookup('pt-BR', 'error.textEscape.resource'),
+      'O escape de texto excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -89,6 +98,23 @@ void main() {
       'numberBase.sourceBaseLabel',
       'numberBase.submitAction',
       'numberBase.targetBaseLabel',
+      'textEscape.copiedResult',
+      'textEscape.copyAction',
+      'textEscape.fileAction',
+      'textEscape.inputLabel',
+      'textEscape.mode.c',
+      'textEscape.mode.html',
+      'textEscape.mode.json',
+      'textEscape.mode.unicode',
+      'textEscape.mode.url',
+      'textEscape.modeLabel',
+      'textEscape.openAction',
+      'textEscape.pageTitle',
+      'textEscape.pasteAction',
+      'textEscape.resultLabel',
+      'textEscape.saveAction',
+      'textEscape.savedResult',
+      'textEscape.submitAction',
       'jsonTable.emptyResult',
       'jsonTable.fileAction',
       'jsonTable.inputLabel',
@@ -221,6 +247,13 @@ void main() {
       'error.numberBase.outputAccess',
       'error.numberBase.resource',
       'error.numberBase.validation',
+      'error.textEscape.clipboardRead',
+      'error.textEscape.clipboardWrite',
+      'error.textEscape.fileAccess',
+      'error.textEscape.inputAccess',
+      'error.textEscape.outputAccess',
+      'error.textEscape.resource',
+      'error.textEscape.validation',
       'error.cron.fileAccess',
       'error.cron.inputAccess',
       'error.cron.resource',

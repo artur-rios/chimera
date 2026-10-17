@@ -89,6 +89,25 @@ void main() {
     },
   );
 
+  testWidgets(
+    'GivenTextEscapeRoute_WhenUnicodeContentEscapes_ThenSharedResultIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/escape'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(
+        find.byKey(const Key('text-escape-input')),
+        'A"\\\né',
+      );
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(r'A\"\\\né'), findsOneWidget);
+    },
+  );
+
   testWidgets('GivenJsonTableRoute_WhenConversionRuns_ThenTableIsVisible', (
     tester,
   ) async {

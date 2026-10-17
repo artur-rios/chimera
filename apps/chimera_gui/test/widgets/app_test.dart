@@ -1898,4 +1898,301 @@ void main() {
       expect(find.byKey(const Key('number-base-result')), findsNothing);
     },
   );
+
+  testWidgets(
+    'GivenTextEscapeHomeAction_WhenOpened_ThenAllModesAndSemanticsWork',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-text-escape')));
+      await tester.tap(find.byKey(const Key('open-text-escape')));
+      await tester.pumpAndSettle();
+      expect(find.text('Escape text'), findsWidgets);
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text(r'Hello, \"Chimera\"!'), findsOneWidget);
+
+      final selector = tester.widget<DropdownButtonFormField<String>>(
+        find.byKey(const Key('text-escape-mode')),
+      );
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const Key('text-escape-mode')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(dropdown.items!.map((item) => item.value), <String>[
+        'json',
+        'unicode',
+        'c',
+        'html',
+        'url',
+      ]);
+      selector.onChanged!('html');
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byKey(const Key('text-escape-input')), '&<');
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('&amp;&lt;'), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('text-escape-result-semantics')),
+      );
+      expect(semantics.properties.value, '&amp;&lt;');
+    },
+  );
+
+  testWidgets(
+    'GivenTextEscapeResourceFailure_WhenSubmitted_ThenLocalizedFailureHasNoResult',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/escape',
+          textEscapeService: TextEscapeService(
+            escaper: TextEscaper(maxOutputCharacters: 4),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Escapar texto'), findsWidgets);
+      await tester.enterText(find.byKey(const Key('text-escape-input')), '&');
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-escape-mode')),
+          )
+          .onChanged!('html');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('O escape de texto excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextEscapeAdapters_WhenLoadPasteCopyAndSaveRun_ThenExactContentTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/escape',
+          textEscapeFilePicker: () async => '&',
+          textEscapeClipboardReader: () async => '<',
+          textEscapeClipboardWriter: (value) async => copied = value,
+          textEscapeFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-escape-mode')),
+          )
+          .onChanged!('html');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-escape-file')));
+      await tester.pumpAndSettle();
+      var input = tester.widget<TextField>(
+        find.byKey(const Key('text-escape-input')),
+      );
+      expect(input.controller!.text, '&');
+
+      await tester.tap(find.byKey(const Key('text-escape-paste')));
+      await tester.pumpAndSettle();
+      input = tester.widget<TextField>(
+        find.byKey(const Key('text-escape-input')),
+      );
+      expect(input.controller!.text, '<');
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-escape-copy')));
+      await tester.tap(find.byKey(const Key('text-escape-copy')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-escape-save')));
+      await tester.tap(find.byKey(const Key('text-escape-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, '&lt;');
+      expect(savedName, 'chimera-escaped-text.txt');
+      expect(savedBytes, utf8.encode('&lt;'));
+      expect(find.text('Escaped text saved.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenTextEscapeAccessFailures_WhenAdaptersRun_ThenResultIsNotRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/escape',
+          textEscapeFilePicker: () async => throw Exception('denied'),
+          textEscapeClipboardReader: () async => throw Exception('denied'),
+          textEscapeClipboardWriter: (_) async => throw Exception('denied'),
+          textEscapeFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-escape-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-escape-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-escape-copy')));
+      await tester.tap(find.byKey(const Key('text-escape-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-escape-save')));
+      await tester.tap(find.byKey(const Key('text-escape-save')));
+      await tester.pumpAndSettle();
+      expect(find.text('The escaped text could not be saved.'), findsOneWidget);
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenMultilineText_WhenTypedAndSubmitted_ThenNewlineEscapesAccessibly',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/escape'),
+      );
+      await tester.pumpAndSettle();
+
+      final input = tester.widget<TextField>(
+        find.byKey(const Key('text-escape-input')),
+      );
+      expect(input.keyboardType, TextInputType.multiline);
+      expect(input.textInputAction, TextInputAction.newline);
+      expect(input.onSubmitted, isNull);
+      await tester.enterText(
+        find.byKey(const Key('text-escape-input')),
+        'line one\nline two',
+      );
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(r'line one\nline two'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenTextEscapeResult_WhenInputOrModeChanges_ThenStaleActionsAreCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/escape'),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-escape-result')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('text-escape-input')), 'new');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-escape-mode')),
+          )
+          .onChanged!('unicode');
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+      expect(find.byKey(const Key('text-escape-copy')), findsNothing);
+      expect(find.byKey(const Key('text-escape-save')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenDelayedTextLoad_WhenPending_ThenKeyboardSubmissionCannotRaceIt',
+    (tester) async {
+      final loadedValue = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/escape',
+          textEscapeFilePicker: () => loadedValue.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-escape-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-escape-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-escape-file')));
+      await tester.pump();
+      final pendingInput = tester.widget<TextField>(
+        find.byKey(const Key('text-escape-input')),
+      );
+      expect(pendingInput.enabled, isFalse);
+      expect(pendingInput.onSubmitted, isNull);
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+
+      loadedValue.complete('&');
+      await tester.pumpAndSettle();
+      final completedInput = tester.widget<TextField>(
+        find.byKey(const Key('text-escape-input')),
+      );
+      expect(completedInput.enabled, isTrue);
+      expect(completedInput.controller!.text, '&');
+      expect(find.byKey(const Key('text-escape-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowTextEscapeViewport_WhenLargeText_ThenFormDoesNotOverflow',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/text/escape'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Escapar texto'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }
