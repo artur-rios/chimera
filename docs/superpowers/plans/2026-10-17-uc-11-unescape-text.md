@@ -35,11 +35,11 @@ package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_core/lib/chimera_core.dart`
 - Create: `packages/chimera_core/test/text_unescape_service_test.dart`
 
-- [ ] Add failing service tests for success, validation details, and resource
+- [x] Add failing service tests for success, validation details, and resource
   mapping.
-- [ ] Implement request, output serialization, and service mapping.
-- [ ] Run focused core tests and strict package analysis.
-- [ ] Commit the green core layer.
+- [x] Implement request, output serialization, and service mapping.
+- [x] Run focused core tests and strict package analysis.
+- [x] Commit the green core layer.
 
 ### Task 3: Add the CLI command and localization
 
