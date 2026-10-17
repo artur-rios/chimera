@@ -188,6 +188,44 @@ test('text unescape flow decodes Unicode locally without external requests', asy
   expect(externalRequests).toEqual([]);
 });
 
+test('list comparison flow compares locally without external requests', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+
+  await page.goto('/');
+  await expect(page).toHaveTitle('Chimera');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Compare lists' }).click();
+  await expect(page.getByText('Compare lists').first()).toBeVisible();
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Left list' }),
+    'alpha\nleft',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Right list' }),
+    'alpha\nright',
+  );
+  await page.getByRole('button', { name: 'Compare lists' }).click();
+
+  await expect(
+    page.getByRole('group', { name: 'Left only left' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Right only right' }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole('group', { name: 'Intersection alpha' }),
+  ).toBeVisible();
+  await expect(page.getByText('Equal: no').last()).toBeVisible();
+  expect(externalRequests).toEqual([]);
+});
+
 test('JSON array flow renders locally without external requests', async ({ page }) => {
   const externalRequests = [];
   page.on('request', (request) => {
