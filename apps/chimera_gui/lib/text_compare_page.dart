@@ -6,6 +6,7 @@ import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
 
 typedef TextCompareFilePicker = Future<String?> Function();
@@ -393,8 +394,17 @@ final class _TextComparePageState extends State<TextComparePage> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 8),
-          for (var index = 0; index < output.spans.length; index++)
-            _diffSpan(output.spans[index], index),
+          SizedBox(
+            height: 360,
+            child: ListView.builder(
+              key: const Key('text-compare-spans'),
+              primary: false,
+              scrollCacheExtent: const ScrollCacheExtent.pixels(0),
+              itemCount: output.spans.length,
+              itemBuilder: (context, index) =>
+                  _diffSpan(output.spans[index], index),
+            ),
+          ),
           const SizedBox(height: 12),
           Text(
             '${_message('textCompare.addedCountLabel')}: '

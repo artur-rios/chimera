@@ -3427,6 +3427,48 @@ void main() {
   );
 
   testWidgets(
+    'GivenManyTextCompareSpans_WhenRendered_ThenOnlyVisibleCardsAreBuilt',
+    (tester) async {
+      final left = List<String>.filled(200, 'ab').join();
+      final right = List<String>.filled(200, 'ac').join();
+      final spanCount = const TextComparer()
+          .compare(left: left, right: right, granularity: 'character')
+          .spans
+          .length;
+      expect(spanCount, greaterThan(100));
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('character');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        left,
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        right,
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-compare-spans')), findsOneWidget);
+      final renderedCards = find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            RegExp(r'^text-compare-span-\d+$').hasMatch(key.value);
+      });
+      expect(renderedCards.evaluate().length, lessThan(spanCount));
+    },
+  );
+
+  testWidgets(
     'GivenTextCompareAdapters_WhenLoadedCopiedAndSaved_ThenExactJsonTransfers',
     (tester) async {
       String? copied;
