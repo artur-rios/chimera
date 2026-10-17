@@ -44,6 +44,15 @@ void main() {
       },
     );
 
+    test(
+      'GivenUnicodeNumbers_WhenAnalyzed_ThenOnlyDecimalDigitsCreateWords',
+      () {
+        final result = analyzer.analyze('١٢٣ ² Ⅻ');
+
+        expect(result.wordCount, 1);
+      },
+    );
+
     test('GivenPunctuationAndEmoji_WhenAnalyzed_ThenTheyDoNotCreateWords', () {
       final result = analyzer.analyze('... 👩‍💻 --');
 

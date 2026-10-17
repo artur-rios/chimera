@@ -11,7 +11,7 @@ counting; `chimera_core` owns result/failure mapping; CLI and GUI remain thin
 local adapters. No input, result, or history persistence and no processing
 network path are added.
 
-**Tech Stack:** Dart 3.11, Flutter 3.41, characters, args, Riverpod, go_router,
+**Tech Stack:** Dart 3.13, Flutter 3.47.7, characters, args, Riverpod, go_router,
 file_picker, package:test, flutter_test, integration_test, and Playwright.
 
 ---
@@ -85,19 +85,19 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 - [x] Add a local-only analysis flow to Chromium, Firefox, and WebKit tests.
 - [x] Add the bounded equivalent to native Safari smoke.
 - [x] Run affected integration/browser suites and fix evidence-backed defects.
-- [ ] Commit the green cross-platform evidence.
+- [x] Commit the green cross-platform evidence.
 
 ### Task 6: Gate verification and delivery
 
 **Files:**
 - Review: all UC-13 changes and requirement traceability.
 
-- [ ] Run formatting and strict static analysis.
-- [ ] Run focused suites, affected native/browser suites, then unfiltered
+- [x] Run formatting and strict static analysis.
+- [x] Run focused suites, affected native/browser suites, then unfiltered
   `melos run test:all`.
-- [ ] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
+- [x] Verify main flow, AF-01, AF-02, every cited FR/BR, both locales, offline
   behavior, and no persistence/network path.
-- [ ] Obtain independent whole-branch review and resolve every blocker with
+- [x] Obtain independent whole-branch review and resolve every blocker with
   affected-suite reruns.
 - [ ] Commit, push, open the issue-closing PR to `develop`, require green CI,
   squash merge, delete the branch, verify Done/closed state, and sync `develop`.

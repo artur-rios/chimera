@@ -40,7 +40,7 @@ final class TextAnalyzer {
       );
 
   static final RegExp _wordPattern = RegExp(
-    r"[\p{L}\p{N}\p{M}]+(?:['’][\p{L}\p{N}\p{M}]+)*",
+    r"[\p{L}\p{Nd}\p{M}]+(?:['’][\p{L}\p{Nd}\p{M}]+)*",
     unicode: true,
   );
 
