@@ -59,6 +59,22 @@ Future<void> _tap(WidgetTester tester, String name) async {
   await tester.pumpAndSettle();
 }
 
+Future<void> _historyShortcut(WidgetTester tester, {bool redo = false}) async {
+  await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+  if (redo) await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyEvent(LogicalKeyboardKey.keyZ);
+  if (redo) await tester.sendKeyUpEvent(LogicalKeyboardKey.shiftLeft);
+  await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+  await tester.pump();
+}
+
+Future<void> _settledText(WidgetTester tester, String text) async {
+  // UndoHistory coalesces snapshots for 500ms; settle before and after editing.
+  await tester.pump(const Duration(milliseconds: 600));
+  await tester.enterText(_control('input'), text);
+  await tester.pump(const Duration(milliseconds: 600));
+}
+
 void _noSuccess() {
   expect(_control('result'), findsNothing);
   expect(_control('save'), findsNothing);
@@ -66,6 +82,203 @@ void _noSuccess() {
 }
 
 void main() {
+  for (final boundary in ['file', 'paste', 'save', 'service']) {
+    for (final allocation in [false, true]) {
+      testWidgets(
+        'GivenSettledSensitiveHistory_When$boundary${allocation ? 'Allocation' : 'Access'}Fails_ThenUndoAndRedoCannotRestoreDiscardedSource',
+        (tester) async {
+          var fail = false;
+          Object error() =>
+              allocation ? OutOfMemoryError() : StateError('access');
+          final service = _Service(
+            callback: (request) async {
+              if (fail && boundary == 'service') throw error();
+              return const GzipCompressService().execute(request);
+            },
+          );
+          await tester.pumpWidget(
+            ChimeraApp(
+              initialLocation: '/gzip/compress',
+              gzipCompressService: service,
+              gzipCompressFilePicker: () async {
+                if (fail) throw error();
+                return [1];
+              },
+              gzipCompressClipboardReader: () async {
+                if (fail) throw error();
+                return 'pasted';
+              },
+              gzipCompressFileSaver: (_, _, _) async {
+                if (fail) throw error();
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          await _settledText(tester, 'discarded sensitive source');
+          await _tap(tester, 'submit');
+          fail = true;
+          await _tap(tester, boundary == 'service' ? 'submit' : boundary);
+          expect(_control('error'), findsOneWidget);
+          await tester.tap(_control('input'));
+          await tester.pump(const Duration(milliseconds: 600));
+          for (final redo in [false, true, false]) {
+            await _historyShortcut(tester, redo: redo);
+            expect(
+              tester.widget<TextField>(_control('input')).controller!.text,
+              isEmpty,
+            );
+          }
+          _noSuccess();
+        },
+      );
+    }
+  }
+
+  for (final replacement in ['file', 'paste']) {
+    testWidgets(
+      'GivenSettledSensitiveHistory_When${replacement}ReplacesText_ThenUndoAndRedoCannotRestoreDiscardedSource',
+      (tester) async {
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/gzip/compress',
+            gzipCompressFilePicker: () async => [255],
+            gzipCompressClipboardReader: () async => 'new clipboard',
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _settledText(tester, 'discarded sensitive source');
+        await _tap(tester, replacement);
+        await tester.tap(_control('input'));
+        await tester.pump(const Duration(milliseconds: 600));
+        for (final redo in [false, true, false]) {
+          await _historyShortcut(tester, redo: redo);
+          final text = tester
+              .widget<TextField>(_control('input'))
+              .controller!
+              .text;
+          expect(text, isNot(contains('discarded sensitive source')));
+          if (replacement == 'file') expect(text, isEmpty);
+        }
+      },
+    );
+  }
+
+  for (final afterReset in [false, true]) {
+    testWidgets(
+      'GivenNormalEditing${afterReset ? 'AfterSourceReset' : ''}_WhenKeyboardUndoAndRedoRun_ThenEditingHistoryStillWorks',
+      (tester) async {
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/gzip/compress',
+            gzipCompressFilePicker: () async => [255],
+          ),
+        );
+        await tester.pumpAndSettle();
+        if (afterReset) {
+          await _settledText(tester, 'discarded sensitive source');
+          await _tap(tester, 'file');
+        }
+        await _settledText(tester, 'first edit');
+        await _settledText(tester, 'second edit');
+        final controller = tester
+            .widget<TextField>(_control('input'))
+            .controller!;
+        await _historyShortcut(tester);
+        expect(controller.text, 'first edit');
+        await _historyShortcut(tester, redo: true);
+        expect(controller.text, 'second edit');
+      },
+    );
+  }
+
+  for (final replacement in ['file', 'paste', 'dispose']) {
+    testWidgets(
+      'GivenPendingUndoSnapshot_When${replacement}DiscardsEditor_ThenOldHistoryIsDisposedAndCannotRestoreSource',
+      (tester) async {
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/gzip/compress',
+            gzipCompressFilePicker: () async => [255],
+            gzipCompressClipboardReader: () async => 'new text',
+          ),
+        );
+        await tester.pumpAndSettle();
+        await _settledText(tester, 'settled sensitive source');
+        await tester.enterText(_control('input'), 'pending sensitive source');
+        final oldHistory = tester.state<UndoHistoryState<TextEditingValue>>(
+          find.byType(UndoHistory<TextEditingValue>),
+        );
+        if (replacement == 'dispose') {
+          await tester.pumpWidget(const SizedBox());
+        } else {
+          await _tap(tester, replacement);
+        }
+        expect(oldHistory.mounted, isFalse);
+        expect(UndoManager.client, isNot(same(oldHistory)));
+        // The previous editor's pending 500ms snapshot must not outlive its reset.
+        await tester.pump(const Duration(milliseconds: 600));
+        if (replacement != 'dispose') {
+          await tester.tap(_control('input'));
+          await tester.pump(const Duration(milliseconds: 600));
+          for (final redo in [false, true, false]) {
+            await _historyShortcut(tester, redo: redo);
+            expect(
+              tester.widget<TextField>(_control('input')).controller!.text,
+              isNot(contains('sensitive source')),
+            );
+          }
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  testWidgets(
+    'GivenFileButtonFocus_WhenKeyboardLoadDiscardsText_ThenFocusAndControllerListenersSurvive',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          initialLocation: '/gzip/compress',
+          gzipCompressFilePicker: () async => [255],
+        ),
+      );
+      await tester.pumpAndSettle();
+      await _settledText(tester, 'discarded sensitive source');
+      final controller = tester
+          .widget<TextField>(_control('input'))
+          .controller!;
+      var notifications = 0;
+      void changed() => notifications++;
+      controller.addListener(changed);
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+      await tester.pumpAndSettle();
+      expect(
+        find.ancestor(
+          of: find.byWidget(
+            FocusManager.instance.primaryFocus!.context!.widget,
+          ),
+          matching: _control('file'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        identical(
+          tester.widget<TextField>(_control('input')).controller,
+          controller,
+        ),
+        isTrue,
+      );
+      expect(notifications, greaterThan(0));
+      controller.removeListener(changed);
+      await tester.tap(_control('input'));
+      await tester.pump(const Duration(milliseconds: 600));
+      await _historyShortcut(tester);
+      expect(controller.text, isEmpty);
+    },
+  );
+
   testWidgets(
     'GivenSensitiveText_WhenPageIsDisposed_ThenControllerDropsSource',
     (tester) async {

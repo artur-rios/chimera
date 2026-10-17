@@ -234,8 +234,8 @@ acceptance. No automated UC-19 accessibility findings remain open.
 
 ### Evidence and Findings
 
-`flutter test --no-pub --reporter expanded test` passes all 374 GUI tests,
-including 87 focused GZIP tests, localized home navigation, the existing widget
+`flutter test --no-pub --reporter expanded test` passes all 390 GUI tests,
+including 103 focused GZIP tests, localized home navigation, the existing widget
 surfaces, catalog checks, and startup performance. The complete localization
 suite passes 17 tests with exact English/PT-BR key parity; reviewed CLI/shared
 GZIP messages remain unchanged. Strict GUI and localization analysis pass.
@@ -248,6 +248,12 @@ exclusive sources, neutral cancellation, typed invalid Unicode/byte/level and
 input/output resource limits, access/allocation redaction in both locales,
 24 stale success/failure/disposal paths, source clearing on disposal, focus,
 live regions, control sizes, contrast, and narrow large-text layouts.
+
+Review follow-up also verifies that source cleanup disposes the editor's undo
+history and pending snapshot timer. Ctrl+Z/Ctrl+Shift+Z cannot restore discarded
+text after file/clipboard replacement or access/resource failure. Ordinary
+editing undo/redo still works before and after a source reset; keyboard focus
+and page-owned controller listeners remain intact.
 
 Saving promises exact one-time payload handoff; platform file-picker
 implementations own their save transaction. These are automated widget findings;

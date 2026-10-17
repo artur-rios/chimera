@@ -63,6 +63,7 @@ final class GzipCompressPage extends StatefulWidget {
 
 final class _GzipCompressPageState extends State<GzipCompressPage> {
   final _inputController = TextEditingController();
+  final _inputFocus = FocusNode(debugLabel: 'GZIP compression input');
   final _resultFocus = FocusNode(debugLabel: 'GZIP compression result');
   List<int>? _fileBytes;
   GzipCompressOutput? _output;
@@ -70,6 +71,7 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
   String? _notice;
   int _level = 6;
   int _generation = 0;
+  int _editorGeneration = 0;
   bool _busy = false;
 
   String _message(String key) => widget.catalog.lookup(widget.localeTag, key);
@@ -81,6 +83,7 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
     _clearSource();
     _output = null;
     _inputController.dispose();
+    _inputFocus.dispose();
     _resultFocus.dispose();
     super.dispose();
   }
@@ -95,6 +98,10 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
   void _clearSource() {
     _fileBytes = null;
     _inputController.clear();
+    // UndoHistory retains editing snapshots independently of controller text.
+    // Recreate the editor subtree to dispose its stack and pending snapshot
+    // timer, keeping the page-owned controller/listeners and focus node stable.
+    _editorGeneration++;
   }
 
   bool _current(int generation) => mounted && generation == _generation;
@@ -266,20 +273,24 @@ final class _GzipCompressPageState extends State<GzipCompressPage> {
                 children: [
                   _ordered(
                     1,
-                    TextField(
-                      key: const Key('gzip-compress-input'),
-                      controller: _inputController,
-                      autofocus: true,
-                      enabled: !_busy,
-                      minLines: 3,
-                      maxLines: 8,
-                      keyboardType: TextInputType.multiline,
-                      textInputAction: TextInputAction.newline,
-                      onChanged: _textChanged,
-                      decoration: InputDecoration(
-                        labelText: _label('inputLabel'),
-                        border: const OutlineInputBorder(),
-                        alignLabelWithHint: true,
+                    KeyedSubtree(
+                      key: ValueKey(_editorGeneration),
+                      child: TextField(
+                        key: const Key('gzip-compress-input'),
+                        controller: _inputController,
+                        focusNode: _inputFocus,
+                        autofocus: _editorGeneration == 0,
+                        enabled: !_busy,
+                        minLines: 3,
+                        maxLines: 8,
+                        keyboardType: TextInputType.multiline,
+                        textInputAction: TextInputAction.newline,
+                        onChanged: _textChanged,
+                        decoration: InputDecoration(
+                          labelText: _label('inputLabel'),
+                          border: const OutlineInputBorder(),
+                          alignLabelWithHint: true,
+                        ),
                       ),
                     ),
                   ),
