@@ -54,12 +54,12 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_l10n/lib/src/message_catalog.dart`
 - Modify: `packages/chimera_l10n/test/message_catalog_test.dart`
 
-- [ ] Add failing command tests for literal/stdin/file input, modes,
+- [x] Add failing command tests for literal/stdin/file input, modes,
   human/JSON output, exact output files, missing/invalid modes, conflicting
   explicit input sources, access/resource failures, localization, and redaction.
-- [ ] Add `chimera text transform` and English/Portuguese messages.
-- [ ] Run CLI/localization suites and strict affected-package analysis.
-- [ ] Commit the green CLI adapter.
+- [x] Add `chimera text transform` and English/Portuguese messages.
+- [x] Run CLI/localization suites and strict affected-package analysis.
+- [x] Commit the green CLI adapter.
 
 ### Task 4: Add the GUI route and interactions
 

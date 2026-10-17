@@ -2702,4 +2702,256 @@ void main() {
       );
     },
   );
+
+  test(
+    'GivenEveryTransformMode_WhenJsonCommandRuns_ThenStableOutputIsWritten',
+    () async {
+      final cases = <String, (String, String)>{
+        'lowercase': ('ÉCOLE', 'école'),
+        'uppercase': ('straße', 'STRASSE'),
+        'normalize-whitespace': ('  one\t two\n', 'one two'),
+        'sort-lines': ('b\r\na\n', 'a\nb\n'),
+        'deduplicate-lines': ('b\r\na\nb\n', 'b\na\n'),
+      };
+
+      for (final entry in cases.entries) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'transform',
+            '--mode=${entry.key}',
+            '--input=${entry.value.$1}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+
+        expect(exitCode, 0, reason: entry.key);
+        expect(err.toString(), isEmpty, reason: entry.key);
+        expect(jsonDecode(out.toString()), <String, Object?>{
+          'mode': entry.key,
+          'output': entry.value.$2,
+        }, reason: entry.key);
+      }
+    },
+  );
+
+  test(
+    'GivenStandardInput_WhenTextTransformRuns_ThenExactHumanTextIsWritten',
+    () async {
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['text', 'transform', '--mode=uppercase'],
+        localeTag: 'pt-BR',
+        out: out,
+        err: StringBuffer(),
+        readStandardInput: () async => 'olá',
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), 'OLÁ');
+    },
+  );
+
+  test(
+    'GivenFileAndOutput_WhenTextTransformRuns_ThenExactPayloadIsSaved',
+    () async {
+      final out = StringBuffer();
+      late String readPath;
+      late String savedPath;
+      late List<int> savedBytes;
+
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'transform',
+          '--mode=normalize-whitespace',
+          '--file=input.txt',
+          '--output=result.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: StringBuffer(),
+        readFile: (path) async {
+          readPath = path;
+          return '  um\t dois\n';
+        },
+        writeOutputFile: (path, bytes) async {
+          savedPath = path;
+          savedBytes = bytes;
+        },
+      );
+
+      expect(exitCode, 0);
+      expect(readPath, 'input.txt');
+      expect(savedPath, 'result.txt');
+      expect(utf8.decode(savedBytes), 'um dois');
+      expect(out.toString(), 'Texto transformado salvo.\n');
+    },
+  );
+
+  test(
+    'GivenJsonOutputFile_WhenTextTransformRuns_ThenSelectedJsonIsSaved',
+    () async {
+      final out = StringBuffer();
+      late List<int> savedBytes;
+
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'transform',
+          '--mode=lowercase',
+          '--input=ABC',
+          '--json',
+          '--output=result.json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        writeOutputFile: (_, bytes) async => savedBytes = bytes,
+      );
+
+      expect(exitCode, 0);
+      expect(jsonDecode(utf8.decode(savedBytes)), <String, Object?>{
+        'mode': 'lowercase',
+        'output': 'abc',
+      });
+      expect(out.toString(), 'Transformed text saved.\n');
+    },
+  );
+
+  test(
+    'GivenInvalidTransformInputs_WhenRun_ThenTypedRedactedFailuresReturn',
+    () async {
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['text', 'transform', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInput: () async => 'sensitive-standard-input',
+        );
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('sensitive')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      for (final options in <List<String>>[
+        const <String>['--input=sensitive-input'],
+        const <String>['--input=sensitive-input', '--mode=title-case'],
+      ]) {
+        expect(
+          await failureFor(options),
+          allOf(
+            containsPair('code', 'text-transform.invalid-mode'),
+            containsPair(
+              'location',
+              allOf(
+                containsPair('field', 'mode'),
+                containsPair('reason', 'unsupported-mode'),
+              ),
+            ),
+          ),
+        );
+      }
+
+      expect(
+        await failureFor(const <String>[
+          '--input=sensitive-input',
+          '--file=sensitive-file',
+          '--mode=lowercase',
+        ]),
+        containsPair('code', 'text-transform.conflicting-inputs'),
+      );
+    },
+  );
+
+  test(
+    'GivenTextTransformAccessFailures_WhenRun_ThenNoSuccessIsWritten',
+    () async {
+      Future<Map<String, dynamic>> inputFailure({required bool file}) async {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'transform',
+            '--mode=lowercase',
+            if (file) '--file=input.txt',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInput: () async => throw Exception('sensitive-detail'),
+          readFile: (_) async => throw Exception('sensitive-detail'),
+        );
+        expect(exitCode, 74);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('sensitive')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await inputFailure(file: false),
+        containsPair('code', 'text-transform.input-access'),
+      );
+      expect(
+        await inputFailure(file: true),
+        containsPair('code', 'text-transform.file-access'),
+      );
+
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final outputExit = await runChimera(
+        const <String>[
+          'text',
+          'transform',
+          '--mode=uppercase',
+          '--input=text',
+          '--output=result.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        writeOutputFile: (_, _) async => throw Exception('sensitive-detail'),
+      );
+
+      expect(outputExit, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'Não foi possível salvar o texto transformado.\n');
+    },
+  );
+
+  test(
+    'GivenTextTransformResourceLimit_WhenRun_ThenResourceExitReturns',
+    () async {
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>['text', 'transform', '--mode=uppercase', '--input=ß'],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: err,
+        textTransformService: const TextTransformService(
+          transformer: TextTransformer(maxOutputCodeUnits: 1),
+        ),
+      );
+
+      expect(exitCode, 75);
+      expect(
+        err.toString(),
+        'Text transformation exceeded its resource limit.\n',
+      );
+    },
+  );
 }
