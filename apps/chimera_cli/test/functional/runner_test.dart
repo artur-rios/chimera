@@ -267,21 +267,14 @@ void main() {
           expect(exit, 0);
           expect(
             out.toString(),
-            startsWith(locale == 'en' ? 'Usage:' : 'Uso:'),
+            locale == 'en'
+                ? 'Usage: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
+                      '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
+                      'Default level: 6. Exit codes: 64 validation, 74 access, 75 resource.\n'
+                : 'Uso: chimera gzip compress (--text=<valor>|--stdin|--file=<caminho>) '
+                      '[--level=<0..9>] (--output=<caminho>|--json) [--json]\n'
+                      'Nível padrão: 6. Códigos de saída: 64 validação, 74 acesso, 75 recursos.\n',
           );
-          expect(
-            out.toString(),
-            contains(
-              'chimera gzip compress (--text=<value>|--stdin|--file=<path>)',
-            ),
-          );
-          expect(
-            out.toString(),
-            contains('[--level=<0..9>] (--output=<path>|--json)'),
-          );
-          expect(out.toString(), contains('64'));
-          expect(out.toString(), contains('74'));
-          expect(out.toString(), contains('75'));
           expect(err.toString(), isEmpty);
         },
       );

@@ -554,8 +554,8 @@ _catalogs = <String, Map<String, String>>{
   },
   'pt-BR': <String, String>{
     'cli.gzipCompressUsage':
-        'Uso: chimera gzip compress (--text=<value>|--stdin|--file=<path>) '
-        '[--level=<0..9>] (--output=<path>|--json) [--json]\n'
+        'Uso: chimera gzip compress (--text=<valor>|--stdin|--file=<caminho>) '
+        '[--level=<0..9>] (--output=<caminho>|--json) [--json]\n'
         'Nível padrão: 6. Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
     'gzipCompress.savedResult':
         'GZIP salvo (nível {level}, entrada {inputByteCount} bytes, '
