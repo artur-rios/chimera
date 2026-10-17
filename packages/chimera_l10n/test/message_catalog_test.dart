@@ -48,6 +48,18 @@ void main() {
     );
   });
 
+  test('GivenListCompareMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'listCompare.leftOnlyLabel'), 'Left only');
+    expect(
+      catalog.lookup('pt-BR', 'listCompare.leftOnlyLabel'),
+      'Somente à esquerda',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.listCompare.resource'),
+      'A comparação de listas excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -144,6 +156,34 @@ void main() {
       'textUnescape.saveAction',
       'textUnescape.savedResult',
       'textUnescape.submitAction',
+      'listCompare.case.insensitive',
+      'listCompare.case.sensitive',
+      'listCompare.caseLabel',
+      'listCompare.copiedResult',
+      'listCompare.copyAction',
+      'listCompare.duplicate.distinct',
+      'listCompare.duplicate.preserve',
+      'listCompare.duplicateLabel',
+      'listCompare.equalLabel',
+      'listCompare.fileAction.left',
+      'listCompare.fileAction.right',
+      'listCompare.intersectionLabel',
+      'listCompare.leftInputLabel',
+      'listCompare.leftOnlyLabel',
+      'listCompare.noValue',
+      'listCompare.openAction',
+      'listCompare.pageTitle',
+      'listCompare.pasteAction.left',
+      'listCompare.pasteAction.right',
+      'listCompare.rightInputLabel',
+      'listCompare.rightOnlyLabel',
+      'listCompare.saveAction',
+      'listCompare.savedResult',
+      'listCompare.submitAction',
+      'listCompare.whitespace.preserve',
+      'listCompare.whitespace.trim',
+      'listCompare.whitespaceLabel',
+      'listCompare.yesValue',
       'jsonTable.emptyResult',
       'jsonTable.fileAction',
       'jsonTable.inputLabel',
@@ -290,6 +330,13 @@ void main() {
       'error.textUnescape.outputAccess',
       'error.textUnescape.resource',
       'error.textUnescape.validation',
+      'error.listCompare.clipboardRead',
+      'error.listCompare.clipboardWrite',
+      'error.listCompare.fileAccess',
+      'error.listCompare.inputAccess',
+      'error.listCompare.outputAccess',
+      'error.listCompare.resource',
+      'error.listCompare.validation',
       'error.cron.fileAccess',
       'error.cron.inputAccess',
       'error.cron.resource',

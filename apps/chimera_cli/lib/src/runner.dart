@@ -24,6 +24,7 @@ Future<int> runChimera(
   JsonFormatService jsonFormatService = const JsonFormatService(),
   JsonTableService jsonTableService = const JsonTableService(),
   JsonYamlService jsonYamlService = const JsonYamlService(),
+  ListCompareService listCompareService = const ListCompareService(),
   NumberBaseService numberBaseService = const NumberBaseService(),
   TextEscapeService textEscapeService = const TextEscapeService(),
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
@@ -35,7 +36,7 @@ Future<int> runChimera(
   final parser = _buildParser();
 
   try {
-    final parsed = parser.parse(args);
+    final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       out.writeln(catalog.lookup(localeTag, 'cli.usage'));
       return 0;
@@ -116,6 +117,21 @@ Future<int> runChimera(
         readFile: readFile ?? (path) => File(path).readAsString(),
         writeOutputFile: writeOutputFile ?? _writeFileExactly,
         textUnescapeService: textUnescapeService,
+      );
+    }
+    if (parsed.command!.name == 'list' &&
+        parsed.command!.command?.name == 'compare') {
+      return await _runListCompare(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        listCompareService: listCompareService,
       );
     }
     if (parsed.command!.name == 'json' &&
@@ -220,6 +236,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'text' && args[1] == 'escape';
     final isTextUnescape =
         args.length >= 2 && args[0] == 'text' && args[1] == 'unescape';
+    final isListCompare =
+        args.length >= 2 && args[0] == 'list' && args[1] == 'compare';
     final isJsonTable =
         args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-table';
     final isJsonCsv =
@@ -242,6 +260,7 @@ Future<int> runChimera(
               isNumberBase ||
               isTextEscape ||
               isTextUnescape ||
+              isListCompare ||
               isJsonTable ||
               isJsonCsv ||
               isJsonYaml ||
@@ -260,6 +279,8 @@ Future<int> runChimera(
           ? 'text-escape.invalid-options'
           : isTextUnescape
           ? 'text-unescape.invalid-options'
+          : isListCompare
+          ? 'list-compare.invalid-options'
           : isJsonTable
           ? 'json-table.invalid-options'
           : isJsonCsv
@@ -283,6 +304,8 @@ Future<int> runChimera(
           ? 'error.textEscape.validation'
           : isTextUnescape
           ? 'error.textUnescape.validation'
+          : isListCompare
+          ? 'error.listCompare.validation'
           : isJsonTable
           ? 'error.jsonTable.validation'
           : isJsonCsv
@@ -344,6 +367,19 @@ ArgParser _buildParser() {
   final text = ArgParser()
     ..addCommand('escape', textEscape)
     ..addCommand('unescape', textUnescape);
+  final listCompare = ArgParser()
+    ..addOption('left')
+    ..addOption('left-file')
+    ..addFlag('left-stdin', negatable: false)
+    ..addOption('right')
+    ..addOption('right-file')
+    ..addFlag('right-stdin', negatable: false)
+    ..addOption('output', abbr: 'o')
+    ..addOption('case', defaultsTo: 'sensitive')
+    ..addOption('whitespace', defaultsTo: 'preserve')
+    ..addOption('duplicates', defaultsTo: 'preserve')
+    ..addFlag('json', negatable: false);
+  final list = ArgParser()..addCommand('compare', listCompare);
   final jsonArrayToTable = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addOption('file', abbr: 'f')
@@ -395,6 +431,7 @@ ArgParser _buildParser() {
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json)
+    ..addCommand('list', list)
     ..addCommand('number', number)
     ..addCommand('sql', sql)
     ..addCommand('text', text)
@@ -602,6 +639,231 @@ Future<int> _runTextUnescape(
       return _exitCodeFor(failure.kind);
     },
   );
+}
+
+Future<int> _runListCompare(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required ListCompareService listCompareService,
+}) async {
+  final leftSources = <Object?>[
+    parsed.option('left'),
+    parsed.option('left-file'),
+    if (parsed.flag('left-stdin')) true,
+  ].where((source) => source != null).length;
+  final rightSources = <Object?>[
+    parsed.option('right'),
+    parsed.option('right-file'),
+    if (parsed.flag('right-stdin')) true,
+  ].where((source) => source != null).length;
+
+  if (leftSources != 1 || rightSources != 1) {
+    final side = leftSources != 1 ? 'left' : 'right';
+    final count = leftSources != 1 ? leftSources : rightSources;
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: count == 0
+          ? 'list-compare.missing-$side-source'
+          : 'list-compare.conflicting-$side-sources',
+      messageKey: 'error.listCompare.validation',
+    );
+    return 64;
+  }
+  if (parsed.flag('left-stdin') && parsed.flag('right-stdin')) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'list-compare.shared-stdin',
+      messageKey: 'error.listCompare.validation',
+    );
+    return 64;
+  }
+
+  late String left;
+  late String right;
+  try {
+    left = await _readListSource(
+      literal: parsed.option('left'),
+      file: parsed.option('left-file'),
+      standardInput: parsed.flag('left-stdin'),
+      readStandardInput: readStandardInput,
+      readFile: readFile,
+    );
+  } on Object {
+    _writeListSourceFailure(
+      err,
+      parsed: parsed,
+      catalog: catalog,
+      localeTag: localeTag,
+      side: 'left',
+      file: parsed.option('left-file') != null,
+    );
+    return 74;
+  }
+  try {
+    right = await _readListSource(
+      literal: parsed.option('right'),
+      file: parsed.option('right-file'),
+      standardInput: parsed.flag('right-stdin'),
+      readStandardInput: readStandardInput,
+      readFile: readFile,
+    );
+  } on Object {
+    _writeListSourceFailure(
+      err,
+      parsed: parsed,
+      catalog: catalog,
+      localeTag: localeTag,
+      side: 'right',
+      file: parsed.option('right-file') != null,
+    );
+    return 74;
+  }
+
+  final result = await listCompareService.execute(
+    ListCompareOperationRequest(
+      left: left,
+      right: right,
+      caseMode: parsed.option('case') ?? '',
+      whitespaceMode: parsed.option('whitespace') ?? '',
+      duplicateMode: parsed.option('duplicates') ?? '',
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      final json = parsed.flag('json');
+      final payload = json
+          ? jsonEncode(value.toJson())
+          : _humanListCompareResult(
+              value,
+              localeTag: localeTag,
+              catalog: catalog,
+            );
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(payload));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'list-compare.output-access',
+            messageKey: 'error.listCompare.outputAccess',
+          );
+          return 74;
+        }
+        out.writeln(catalog.lookup(localeTag, 'listCompare.savedResult'));
+      } else if (json) {
+        out.writeln(payload);
+      } else {
+        out.write(payload);
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+List<String> _normalizeMultilineListOptions(List<String> args) {
+  final normalized = <String>[];
+  for (final argument in args) {
+    final isLiteral =
+        argument.startsWith('--left=') || argument.startsWith('--right=');
+    if (isLiteral && (argument.contains('\n') || argument.contains('\r'))) {
+      final separator = argument.indexOf('=');
+      normalized
+        ..add(argument.substring(0, separator))
+        ..add(argument.substring(separator + 1));
+    } else {
+      normalized.add(argument);
+    }
+  }
+  return normalized;
+}
+
+Future<String> _readListSource({
+  required String? literal,
+  required String? file,
+  required bool standardInput,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+}) {
+  if (literal != null) return Future.value(literal);
+  if (file != null) return readFile(file);
+  assert(standardInput, 'A validated source must use standard input');
+  return readStandardInput();
+}
+
+void _writeListSourceFailure(
+  StringSink err, {
+  required ArgResults parsed,
+  required MessageCatalog catalog,
+  required String localeTag,
+  required String side,
+  required bool file,
+}) {
+  _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: parsed.flag('json'),
+    kind: 'access',
+    code: 'list-compare.$side-${file ? 'file' : 'input'}-access',
+    messageKey: file
+        ? 'error.listCompare.fileAccess'
+        : 'error.listCompare.inputAccess',
+  );
+}
+
+String _humanListCompareResult(
+  ListCompareOutput output, {
+  required String localeTag,
+  required MessageCatalog catalog,
+}) {
+  final buffer = StringBuffer();
+  void writeSection(String messageKey, List<String> values) {
+    buffer.writeln('${catalog.lookup(localeTag, messageKey)}:');
+    for (final value in values) {
+      buffer.writeln(value);
+    }
+  }
+
+  writeSection('listCompare.leftOnlyLabel', output.leftOnly);
+  writeSection('listCompare.rightOnlyLabel', output.rightOnly);
+  writeSection('listCompare.intersectionLabel', output.intersection);
+  buffer.writeln(
+    '${catalog.lookup(localeTag, 'listCompare.equalLabel')}: '
+    '${catalog.lookup(localeTag, output.equal ? 'listCompare.yesValue' : 'listCompare.noValue')}',
+  );
+  return buffer.toString();
 }
 
 Future<int> _runNumberBaseConvert(
