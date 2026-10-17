@@ -2964,4 +2964,300 @@ void main() {
       );
     },
   );
+
+  test(
+    'GivenEveryTextGranularity_WhenCompareJsonRuns_ThenStableSpansAreWritten',
+    () async {
+      final cases = <String, (String, String)>{
+        'line': ('alpha\nbeta', 'alpha\ngamma'),
+        'word': ('Hello world', 'Hello brave world'),
+        'character': ('café', 'cafe'),
+      };
+
+      for (final entry in cases.entries) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'text',
+            'compare',
+            '--granularity=${entry.key}',
+            '--left=${entry.value.$1}',
+            '--right=${entry.value.$2}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+
+        expect(exitCode, 0, reason: err.toString());
+        final output = jsonDecode(out.toString()) as Map<String, dynamic>;
+        expect(output['granularity'], entry.key);
+        expect(output['spans'], isA<List<dynamic>>());
+        expect(output['summary'], isA<Map<String, dynamic>>());
+      }
+    },
+  );
+
+  test(
+    'GivenFileAndStdinTexts_WhenCompareRuns_ThenLocalizedHumanDiffIsWritten',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'compare',
+          '--granularity=line',
+          '--left-file=left.txt',
+          '--right-stdin',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: err,
+        readFile: (path) async => path == 'left.txt' ? 'um\ndois' : 'wrong',
+        readStandardInput: () async => 'um\ntrês',
+      );
+
+      expect(exitCode, 0, reason: err.toString());
+      expect(
+        out.toString(),
+        'Inalterado: "um\\n"\n'
+        'Removido: "dois"\n'
+        'Adicionado: "três"\n'
+        'Adicionados: 1\n'
+        'Removidos: 1\n'
+        'Inalterados: 1\n',
+      );
+    },
+  );
+
+  test('GivenUnicodeSeparators_WhenCompareHumanOutputIsWritten_ThenWhitespaceIsEscaped', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'text',
+        'compare',
+        '--granularity=character',
+        '--left=a\u0085\u2028\u2029',
+        '--right=a\u0085\u2028\u2029',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 0, reason: err.toString());
+    expect(
+      out.toString(),
+      'Unchanged: "a\\u0085\\u2028\\u2029"\n'
+      'Added: 0\n'
+      'Removed: 0\n'
+      'Unchanged: 4\n',
+    );
+  });
+
+  test(
+    'GivenTextCompareOutputPath_WhenRun_ThenExactSelectedJsonIsSaved',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      late List<int> savedBytes;
+
+      final exitCode = await runChimera(
+        const <String>[
+          'text',
+          'compare',
+          '--granularity=word',
+          '--left=Hello world',
+          '--right=Hello brave world',
+          '--json',
+          '--output=diff.json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputFile: (_, bytes) async => savedBytes = bytes,
+      );
+
+      expect(exitCode, 0, reason: err.toString());
+      expect(out.toString(), 'Text comparison saved.\n');
+      expect(
+        jsonDecode(utf8.decode(savedBytes)),
+        containsPair('granularity', 'word'),
+      );
+      expect(utf8.decode(savedBytes), isNot(endsWith('\n')));
+    },
+  );
+
+  test(
+    'GivenInvalidTextCompareInputs_WhenRun_ThenValidationPrecedesSourceReads',
+    () async {
+      var sourceReads = 0;
+      Future<Map<String, dynamic>> failureFor(List<String> options) async {
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['text', 'compare', '--json', ...options],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInput: () async {
+            sourceReads++;
+            return 'sensitive-stdin';
+          },
+          readFile: (_) async {
+            sourceReads++;
+            return 'sensitive-file';
+          },
+        );
+        expect(exitCode, 64);
+        expect(err.toString(), isNot(contains('sensitive')));
+        return (jsonDecode(err.toString()) as Map<String, dynamic>)['error']
+            as Map<String, dynamic>;
+      }
+
+      expect(
+        await failureFor(const <String>[
+          '--left-file=sensitive-left',
+          '--right=right',
+        ]),
+        containsPair('code', 'text-compare.invalid-granularity'),
+      );
+      expect(
+        await failureFor(const <String>[
+          '--granularity=sentence',
+          '--left-file=sensitive-left',
+          '--right=right',
+        ]),
+        containsPair('code', 'text-compare.invalid-granularity'),
+      );
+      expect(
+        await failureFor(const <String>[
+          '--granularity=line',
+          '--left=sensitive-left',
+          '--left-stdin',
+          '--right=right',
+        ]),
+        containsPair('code', 'text-compare.conflicting-left-sources'),
+      );
+      expect(
+        await failureFor(const <String>['--granularity=line', '--left=left']),
+        containsPair('code', 'text-compare.missing-right-source'),
+      );
+      expect(
+        await failureFor(const <String>[
+          '--granularity=line',
+          '--left-stdin',
+          '--right-stdin',
+        ]),
+        containsPair('code', 'text-compare.shared-stdin'),
+      );
+      expect(sourceReads, 0);
+    },
+  );
+
+  test('GivenUnknownTextCompareOption_WhenJsonRequested_ThenTypedValidationReturns', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+
+    final exitCode = await runChimera(
+      const <String>[
+        'text',
+        'compare',
+        '--granularity=line',
+        '--left=left',
+        '--right=right',
+        '--bogus',
+        '--json',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    expect(out.toString(), isEmpty);
+    expect(
+      (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+      <String, dynamic>{
+        'kind': 'validation',
+        'code': 'text-compare.invalid-options',
+        'message': 'The text comparison sources or granularity are invalid.',
+      },
+    );
+  });
+
+  test(
+    'GivenTextCompareAccessAndResourceFailures_WhenRun_ThenTypedExitsReturn',
+    () async {
+      final accessErr = StringBuffer();
+      final accessExit = await runChimera(
+        const <String>[
+          'text',
+          'compare',
+          '--granularity=line',
+          '--left-file=secret.txt',
+          '--right=right',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: accessErr,
+        readFile: (_) async => throw Exception('sensitive-detail'),
+      );
+      expect(accessExit, 74);
+      expect(accessErr.toString(), isNot(contains('sensitive')));
+      expect(
+        (jsonDecode(accessErr.toString()) as Map<String, dynamic>)['error'],
+        containsPair('code', 'text-compare.left-file-access'),
+      );
+
+      final outputErr = StringBuffer();
+      final outputExit = await runChimera(
+        const <String>[
+          'text',
+          'compare',
+          '--granularity=line',
+          '--left=left',
+          '--right=right',
+          '--output=diff.txt',
+        ],
+        localeTag: 'pt-BR',
+        out: StringBuffer(),
+        err: outputErr,
+        writeOutputFile: (_, _) async => throw Exception('sensitive-detail'),
+      );
+      expect(outputExit, 74);
+      expect(
+        outputErr.toString(),
+        'Não foi possível salvar a comparação de textos.\n',
+      );
+
+      final resourceErr = StringBuffer();
+      final resourceExit = await runChimera(
+        const <String>[
+          'text',
+          'compare',
+          '--granularity=character',
+          '--left=a',
+          '--right=b',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: resourceErr,
+        textCompareService: const TextCompareService(
+          comparer: TextComparer(maxWorkUnits: 0),
+        ),
+      );
+      expect(resourceExit, 75);
+      expect(
+        resourceErr.toString(),
+        'Text comparison exceeded its resource limit.\n',
+      );
+    },
+  );
 }

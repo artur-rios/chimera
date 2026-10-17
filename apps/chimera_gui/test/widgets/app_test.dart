@@ -3339,4 +3339,347 @@ void main() {
       await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     },
   );
+
+  testWidgets(
+    'GivenTextCompareHomeAction_WhenOpened_ThenGranularitiesAndSemanticsWork',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-text-compare')));
+      await tester.tap(find.byKey(const Key('open-text-compare')));
+      await tester.pumpAndSettle();
+      expect(find.text('Compare text'), findsWidgets);
+
+      final dropdown = tester.widget<DropdownButton<String>>(
+        find.descendant(
+          of: find.byKey(const Key('text-compare-granularity')),
+          matching: find.byType(DropdownButton<String>),
+        ),
+      );
+      expect(dropdown.items!.map((item) => item.value), <String>[
+        'line',
+        'word',
+        'character',
+      ]);
+
+      for (final granularity in <String>['line', 'word', 'character']) {
+        tester
+            .widget<DropdownButtonFormField<String>>(
+              find.byKey(const Key('text-compare-granularity')),
+            )
+            .onChanged!(granularity);
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('text-compare-left-input')),
+          'alpha beta',
+        );
+        await tester.enterText(
+          find.byKey(const Key('text-compare-right-input')),
+          'alpha brave beta',
+        );
+        await tester.tap(find.byKey(const Key('text-compare-submit')));
+        await tester.pumpAndSettle();
+
+        final semantics = tester.widget<Semantics>(
+          find.byKey(const Key('text-compare-result-semantics')),
+        );
+        expect(semantics.properties.role, SemanticsRole.region);
+        expect(semantics.properties.label, 'Text comparison result');
+        expect(semantics.properties.value, contains('Added'));
+      }
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenMixedTextCompareSpans_WhenRendered_ThenKindsAreVisibleAndContrastPasses',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('word');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        'same old',
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        'same new',
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-compare-span-0-kind')), findsOneWidget);
+      expect(find.byKey(const Key('text-compare-span-1-kind')), findsOneWidget);
+      expect(find.byKey(const Key('text-compare-span-2-kind')), findsOneWidget);
+      expect(find.text('Unchanged'), findsOneWidget);
+      expect(find.text('Removed'), findsOneWidget);
+      expect(find.text('Added'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(textContrastGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenManyTextCompareSpans_WhenRendered_ThenOnlyVisibleCardsAreBuilt',
+    (tester) async {
+      final left = List<String>.filled(200, 'ab').join();
+      final right = List<String>.filled(200, 'ac').join();
+      final spanCount = const TextComparer()
+          .compare(left: left, right: right, granularity: 'character')
+          .spans
+          .length;
+      expect(spanCount, greaterThan(100));
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('character');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        left,
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        right,
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-compare-spans')), findsOneWidget);
+      final renderedCards = find.byWidgetPredicate((widget) {
+        final key = widget.key;
+        return key is ValueKey<String> &&
+            RegExp(r'^text-compare-span-\d+$').hasMatch(key.value);
+      });
+      expect(renderedCards.evaluate().length, lessThan(spanCount));
+    },
+  );
+
+  testWidgets(
+    'GivenTextCompareAdapters_WhenLoadedCopiedAndSaved_ThenExactJsonTransfers',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/compare',
+          textCompareLeftFilePicker: () async => 'Hello world',
+          textCompareRightClipboardReader: () async => 'Hello brave world',
+          textCompareClipboardWriter: (value) async => copied = value,
+          textCompareFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-compare-left-file')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-compare-right-paste')));
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('word');
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      final expected = jsonEncode(const <String, Object?>{
+        'granularity': 'word',
+        'spans': <Map<String, Object?>>[
+          <String, Object?>{
+            'kind': 'unchanged',
+            'text': 'Hello ',
+            'tokenCount': 2,
+          },
+          <String, Object?>{'kind': 'added', 'text': 'brave ', 'tokenCount': 2},
+          <String, Object?>{
+            'kind': 'unchanged',
+            'text': 'world',
+            'tokenCount': 1,
+          },
+        ],
+        'summary': <String, Object?>{'added': 2, 'removed': 0, 'unchanged': 3},
+      });
+      await tester.ensureVisible(find.byKey(const Key('text-compare-copy')));
+      await tester.tap(find.byKey(const Key('text-compare-copy')));
+      await tester.pumpAndSettle();
+      expect(copied, expected);
+      expect(find.text('Comparação de textos copiada.'), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(const Key('text-compare-save')));
+      await tester.tap(find.byKey(const Key('text-compare-save')));
+      await tester.pumpAndSettle();
+      expect(savedName, 'chimera-text-diff.json');
+      expect(utf8.decode(savedBytes!), expected);
+      expect(find.text('Comparação de textos salva.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenTextCompareAccessFailures_WhenAdaptersRun_ThenResultIsCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/compare',
+          textCompareLeftFilePicker: () async => throw Exception('secret'),
+          textCompareRightClipboardReader: () async =>
+              throw Exception('secret'),
+          textCompareClipboardWriter: (_) async => throw Exception('secret'),
+          textCompareFileSaver: (_, _) async => throw Exception('secret'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('text-compare-left-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The text file could not be read.'), findsOneWidget);
+      await tester.tap(find.byKey(const Key('text-compare-right-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-compare-copy')));
+      await tester.tap(find.byKey(const Key('text-compare-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('text-compare-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('text-compare-save')));
+      await tester.tap(find.byKey(const Key('text-compare-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The text comparison could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-compare-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenTextCompareResourceFailure_WhenSubmitted_ThenNoPartialOutputRemains',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/text/compare',
+          textCompareService: TextCompareService(
+            comparer: TextComparer(maxWorkUnits: 0),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        'a',
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        'b',
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('A comparação de textos excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('text-compare-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenPendingTextCompareLoadOrChangedInput_WhenResultExists_ThenStaleClearsAndActionsDisable',
+    (tester) async {
+      final loaded = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/text/compare',
+          textCompareLeftFilePicker: () => loaded.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('text-compare-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('text-compare-left-file')));
+      await tester.pump();
+      expect(find.byKey(const Key('text-compare-result')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('text-compare-submit')),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<TextField>(
+              find.byKey(const Key('text-compare-right-input')),
+            )
+            .enabled,
+        isFalse,
+      );
+      loaded.complete('loaded');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        'changed',
+      );
+      expect(find.byKey(const Key('text-compare-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNarrowTextCompareViewport_WhenPortugueseFormRenders_ThenNoOverflowOccurs',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 568);
+      tester.view.devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'pt-BR', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('Comparar textos'),
+        ),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
 }

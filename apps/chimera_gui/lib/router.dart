@@ -13,6 +13,7 @@ import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
+import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
@@ -30,6 +31,7 @@ GoRouter buildRouter({
   required ListCompareService listCompareService,
   required NumberBaseService numberBaseService,
   required TextAnalyzeService textAnalyzeService,
+  required TextCompareService textCompareService,
   required TextEscapeService textEscapeService,
   required TextTransformService textTransformService,
   required TextUnescapeService textUnescapeService,
@@ -61,6 +63,12 @@ GoRouter buildRouter({
   required TextAnalyzeFileSaver textAnalyzeFileSaver,
   required TextAnalyzeClipboardReader textAnalyzeClipboardReader,
   required TextAnalyzeClipboardWriter textAnalyzeClipboardWriter,
+  required TextCompareFilePicker textCompareLeftFilePicker,
+  required TextCompareFilePicker textCompareRightFilePicker,
+  required TextCompareFileSaver textCompareFileSaver,
+  required TextCompareClipboardReader textCompareLeftClipboardReader,
+  required TextCompareClipboardReader textCompareRightClipboardReader,
+  required TextCompareClipboardWriter textCompareClipboardWriter,
   required TextEscapeFilePicker textEscapeFilePicker,
   required TextEscapeFileSaver textEscapeFileSaver,
   required TextEscapeClipboardReader textEscapeClipboardReader,
@@ -198,6 +206,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/text/transform'),
                         child: Text(
                           catalog.lookup(localeTag, 'textTransform.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-text-compare'),
+                        onPressed: () => context.go('/text/compare'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'textCompare.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -342,6 +358,20 @@ GoRouter buildRouter({
           fileSaver: textAnalyzeFileSaver,
           clipboardReader: textAnalyzeClipboardReader,
           clipboardWriter: textAnalyzeClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/text/compare',
+        builder: (context, state) => TextComparePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: textCompareService,
+          leftFilePicker: textCompareLeftFilePicker,
+          rightFilePicker: textCompareRightFilePicker,
+          fileSaver: textCompareFileSaver,
+          leftClipboardReader: textCompareLeftClipboardReader,
+          rightClipboardReader: textCompareRightClipboardReader,
+          clipboardWriter: textCompareClipboardWriter,
         ),
       ),
       GoRoute(

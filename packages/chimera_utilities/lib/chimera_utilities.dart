@@ -11,6 +11,7 @@ export 'src/list_compare/list_comparator.dart';
 export 'src/number_base/number_base_converter.dart';
 export 'src/sql_format/sql_formatter.dart';
 export 'src/text_analyze/text_analyzer.dart';
+export 'src/text_compare/text_comparer.dart';
 export 'src/text_escape/text_escaper.dart';
 export 'src/text_transform/text_transformer.dart';
 export 'src/text_unescape/text_unescaper.dart';

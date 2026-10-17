@@ -341,4 +341,36 @@ void main() {
       expect(find.text('beta\nalpha\n'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenTextCompareRoute_WhenWordsCompared_ThenStructuredDiffIsVisible',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/text/compare'),
+      );
+      await tester.pumpAndSettle();
+
+      tester
+          .widget<DropdownButtonFormField<String>>(
+            find.byKey(const Key('text-compare-granularity')),
+          )
+          .onChanged!('word');
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('text-compare-left-input')),
+        'Hello world',
+      );
+      await tester.enterText(
+        find.byKey(const Key('text-compare-right-input')),
+        'Hello brave world',
+      );
+      await tester.tap(find.byKey(const Key('text-compare-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('text-compare-result')), findsOneWidget);
+      expect(find.text('Added: 2'), findsOneWidget);
+      expect(find.text('Removed: 0'), findsOneWidget);
+      expect(find.text('Unchanged: 3'), findsOneWidget);
+    },
+  );
 }
