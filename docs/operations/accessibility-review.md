@@ -94,7 +94,7 @@ open.
 
 ### Evidence and Findings
 
-The GUI widget regression run covers 139 tests, including focused UC-17 text,
+The GUI widget regression run covers 141 tests, including focused UC-17 text,
 empty text, binary file, clipboard, exact copy/save, exclusive sources and
 modes, real PNG/JPEG/GIF/WebP renderer fixtures, corrupt and failing previews,
 owned-preview disposal at every lifecycle boundary, stale/busy behavior,

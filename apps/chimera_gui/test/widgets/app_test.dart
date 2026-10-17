@@ -4348,6 +4348,14 @@ void main() {
 
       await tester.tap(find.byKey(const Key('base64-decode-submit')));
       await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'iVBORw0KGgo=',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+      expect(images, hasLength(2));
+      expect(images.last.disposeCount, 0);
       await tester.pumpWidget(const SizedBox());
       await tester.pump();
       expect(images.last.disposeCount, 1);
@@ -4699,6 +4707,38 @@ void main() {
   );
 
   testWidgets(
+    'GivenDecodedInvalidUtf8_WhenTextModeRuns_ThenFailureIsRedactedAndBusyResets',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(localeTag: 'en', initialLocation: '/base64/decode'),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        '/w==',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The Base64 decoding request is invalid.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-decode-result')), findsNothing);
+      expect(
+        tester.widget<Text>(find.byKey(const Key('base64-decode-error'))).data,
+        isNot(contains('/w==')),
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-decode-input')))
+            .enabled,
+        isTrue,
+      );
+    },
+  );
+
+  testWidgets(
     'GivenDecodeAdapterFailures_WhenActionsRun_ThenLocalizedErrorsClearBusyState',
     (tester) async {
       await tester.pumpWidget(
@@ -4724,6 +4764,38 @@ void main() {
         find.text('A decodificação Base64 excedeu o limite de recursos.'),
         findsOneWidget,
       );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('base64-decode-input')))
+            .enabled,
+        isTrue,
+      );
+
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'SGk=',
+      );
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-decode-copy')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Não foi possível gravar na área de transferência.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-decode-result')), findsNothing);
+      expect(find.textContaining('secret'), findsNothing);
+
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('base64-decode-save')));
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('A decodificação Base64 excedeu o limite de recursos.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('base64-decode-result')), findsNothing);
       expect(
         tester
             .widget<TextField>(find.byKey(const Key('base64-decode-input')))
@@ -4761,17 +4833,127 @@ void main() {
   );
 
   testWidgets(
+    'GivenRealImageFixtures_WhenDecodedInPage_ThenPreviewSemanticsAndExactSaveMatch',
+    (tester) async {
+      late Completer<void> previewFinished;
+      Future<Base64DecodePreview?> realPreviewDecoder(Uint8List bytes) async {
+        Base64DecodePreview? preview;
+        Object? decodeError;
+        StackTrace? decodeStackTrace;
+        try {
+          await tester.runAsync(() async {
+            try {
+              preview = await decodeBase64Preview(bytes);
+            } on Object catch (error, stackTrace) {
+              decodeError = error;
+              decodeStackTrace = stackTrace;
+            }
+          });
+          if (decodeError case final error?) {
+            Error.throwWithStackTrace(error, decodeStackTrace!);
+          }
+          return preview;
+        } finally {
+          previewFinished.complete();
+        }
+      }
+
+      const extensions = <String, String>{
+        'image/png': 'png',
+        'image/jpeg': 'jpg',
+        'image/gif': 'gif',
+        'image/webp': 'webp',
+      };
+      for (final MapEntry(:key, :value) in _validBase64ImageFixtures.entries) {
+        String? savedName;
+        List<int>? savedBytes;
+        await tester.pumpWidget(
+          ChimeraApp(
+            key: ValueKey<String>('real-$key'),
+            localeTag: 'en',
+            initialLocation: '/base64/decode',
+            base64DecodePreviewDecoder: realPreviewDecoder,
+            base64DecodeFileSaver: (name, bytes) async {
+              savedName = name;
+              savedBytes = bytes;
+              return true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
+        await tester.enterText(
+          find.byKey(const Key('base64-decode-input')),
+          value,
+        );
+        previewFinished = Completer<void>();
+        await tester.tap(find.byKey(const Key('base64-decode-submit')));
+        await tester.pump();
+        await previewFinished.future;
+        await tester.pumpAndSettle();
+
+        expect(find.byType(RawImage), findsOneWidget, reason: key);
+        expect(find.text('Image preview available.'), findsOneWidget);
+        expect(
+          tester
+              .widget<Semantics>(
+                find.byKey(const Key('base64-decode-result-semantics')),
+              )
+              .properties
+              .value,
+          contains('Image preview available.'),
+          reason: key,
+        );
+        await tester.ensureVisible(find.byKey(const Key('base64-decode-save')));
+        await tester.tap(find.byKey(const Key('base64-decode-save')));
+        await tester.pumpAndSettle();
+        expect(savedName, 'chimera-decoded.${extensions[key]}', reason: key);
+        expect(savedBytes, base64.decode(value), reason: key);
+      }
+
+      String? fallbackName;
+      List<int>? fallbackBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          key: const ValueKey<String>('real-corrupt-png'),
+          localeTag: 'en',
+          initialLocation: '/base64/decode',
+          base64DecodePreviewDecoder: realPreviewDecoder,
+          base64DecodeFileSaver: (name, bytes) async {
+            fallbackName = name;
+            fallbackBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('base64-decode-mode-binary')));
+      await tester.enterText(
+        find.byKey(const Key('base64-decode-input')),
+        'iVBORw0KGgo=',
+      );
+      previewFinished = Completer<void>();
+      await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      await tester.pump();
+      await previewFinished.future;
+      await tester.pumpAndSettle();
+      expect(find.byType(RawImage), findsNothing);
+      expect(find.text('Image preview unavailable.'), findsOneWidget);
+      expect(find.text('Output bytes: 8'), findsOneWidget);
+      await tester.ensureVisible(find.byKey(const Key('base64-decode-save')));
+      await tester.tap(find.byKey(const Key('base64-decode-save')));
+      await tester.pumpAndSettle();
+      expect(fallbackName, 'chimera-decoded.bin');
+      expect(fallbackBytes, base64.decode('iVBORw0KGgo='));
+    },
+  );
+
+  testWidgets(
     'GivenValidPngJpegGifAndWebpFixtures_WhenPreviewed_ThenRendererOwnsEachImage',
     (tester) async {
-      const fixtures = <String, String>{
-        'image/png': 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
-        'image/jpeg': '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/EH//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/EH//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/EH//2Q==',
-        'image/gif': 'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
-        'image/webp': 'UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoBAAEAAgA0JaACdLoB+AADsAD+8Oj3/yC5YXXI1/8gP+QH/ID/+PIAAAA=',
-      };
-
       await tester.runAsync(() async {
-        for (final MapEntry(:key, :value) in fixtures.entries) {
+        for (final MapEntry(:key, :value)
+            in _validBase64ImageFixtures.entries) {
           final Base64DecodePreview? preview;
           try {
             preview = await decodeBase64Preview(base64.decode(value));
@@ -4788,6 +4970,13 @@ void main() {
     },
   );
 }
+
+const _validBase64ImageFixtures = <String, String>{
+  'image/png': 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'image/jpeg': '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////2wBDAf//////////////////////////////////////////////////////////////////////////////////////wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIQAxAAAAF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABBQJ//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAwEBPwF//8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAgBAgEBPwF//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQAGPwJ//8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPyF//9oADAMBAAIAAwAAABD/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAEDAQE/EH//xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oACAECAQE/EH//xAAUEAEAAAAAAAAAAAAAAAAAAAAA/9oACAEBAAE/EH//2Q==',
+  'image/gif': 'R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==',
+  'image/webp': 'UklGRjwAAABXRUJQVlA4IDAAAADQAQCdASoBAAEAAgA0JaACdLoB+AADsAD+8Oj3/yC5YXXI1/8gP+QH/ID/+PIAAAA=',
+};
 
 final class _RecordingPreview implements Base64DecodePreview {
   _RecordingPreview._(this.image, this.mediaType);
