@@ -15,6 +15,18 @@ void main() {
     );
   });
 
+  test('GivenNumberBaseMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    expect(catalog.lookup('en', 'numberBase.resultLabel'), 'Converted value');
+    expect(
+      catalog.lookup('pt-BR', 'numberBase.resultLabel'),
+      'Valor convertido',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.numberBase.resource'),
+      'A conversão numérica excedeu o limite de recursos.',
+    );
+  });
+
   test('GivenUnsupportedLocale_WhenMessageLookedUp_ThenEnglishIsUsed', () {
     expect(catalog.lookup('es', 'cli.noCommand'), 'No command provided.');
   });
@@ -64,6 +76,19 @@ void main() {
       'date.targetRepresentationLabel',
       'date.targetTimeZoneLabel',
       'date.valueLabel',
+      'numberBase.copiedResult',
+      'numberBase.copyAction',
+      'numberBase.fileAction',
+      'numberBase.inputLabel',
+      'numberBase.openAction',
+      'numberBase.pageTitle',
+      'numberBase.pasteAction',
+      'numberBase.resultLabel',
+      'numberBase.saveAction',
+      'numberBase.savedResult',
+      'numberBase.sourceBaseLabel',
+      'numberBase.submitAction',
+      'numberBase.targetBaseLabel',
       'jsonTable.emptyResult',
       'jsonTable.fileAction',
       'jsonTable.inputLabel',
@@ -189,6 +214,13 @@ void main() {
       'error.date.inputAccess',
       'error.date.range',
       'error.date.validation',
+      'error.numberBase.clipboardRead',
+      'error.numberBase.clipboardWrite',
+      'error.numberBase.fileAccess',
+      'error.numberBase.inputAccess',
+      'error.numberBase.outputAccess',
+      'error.numberBase.resource',
+      'error.numberBase.validation',
       'error.cron.fileAccess',
       'error.cron.inputAccess',
       'error.cron.resource',

@@ -24,6 +24,7 @@ Future<int> runChimera(
   JsonFormatService jsonFormatService = const JsonFormatService(),
   JsonTableService jsonTableService = const JsonTableService(),
   JsonYamlService jsonYamlService = const JsonYamlService(),
+  NumberBaseService numberBaseService = const NumberBaseService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
   DateTime Function()? currentTime,
@@ -68,6 +69,21 @@ Future<int> runChimera(
             readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
         readFile: readFile ?? (path) => File(path).readAsString(),
         dateService: dateService,
+      );
+    }
+    if (parsed.command!.name == 'number' &&
+        parsed.command!.command?.name == 'convert-base') {
+      return await _runNumberBaseConvert(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInput:
+            readStandardInput ?? () => stdin.transform(utf8.decoder).join(),
+        readFile: readFile ?? (path) => File(path).readAsString(),
+        writeOutputFile: writeOutputFile ?? _writeFileExactly,
+        numberBaseService: numberBaseService,
       );
     }
     if (parsed.command!.name == 'json' &&
@@ -166,6 +182,8 @@ Future<int> runChimera(
     final isCron = args.length >= 2 && args[0] == 'cron' && args[1] == 'parse';
     final isDate =
         args.length >= 2 && args[0] == 'date' && args[1] == 'convert';
+    final isNumberBase =
+        args.length >= 2 && args[0] == 'number' && args[1] == 'convert-base';
     final isJsonTable =
         args.length >= 2 && args[0] == 'json' && args[1] == 'array-to-table';
     final isJsonCsv =
@@ -185,6 +203,7 @@ Future<int> runChimera(
       json:
           (isCron ||
               isDate ||
+              isNumberBase ||
               isJsonTable ||
               isJsonCsv ||
               isJsonYaml ||
@@ -197,6 +216,8 @@ Future<int> runChimera(
           ? 'cron.invalid-options'
           : isDate
           ? 'date.invalid-options'
+          : isNumberBase
+          ? 'number-base.invalid-options'
           : isJsonTable
           ? 'json-table.invalid-options'
           : isJsonCsv
@@ -214,6 +235,8 @@ Future<int> runChimera(
           ? 'error.cron.validation'
           : isDate
           ? 'error.date.validation'
+          : isNumberBase
+          ? 'error.numberBase.validation'
           : isJsonTable
           ? 'error.jsonTable.validation'
           : isJsonCsv
@@ -252,6 +275,14 @@ ArgParser _buildParser() {
     ..addOption('target-pattern')
     ..addFlag('json', negatable: false);
   final date = ArgParser()..addCommand('convert', dateConvert);
+  final numberConvertBase = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addOption('from')
+    ..addOption('to')
+    ..addFlag('json', negatable: false);
+  final number = ArgParser()..addCommand('convert-base', numberConvertBase);
   final jsonArrayToTable = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addOption('file', abbr: 'f')
@@ -303,8 +334,162 @@ ArgParser _buildParser() {
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('json', json)
+    ..addCommand('number', number)
     ..addCommand('sql', sql)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runNumberBaseConvert(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required TextReader readStandardInput,
+  required FileTextReader readFile,
+  required FileBytesWriter writeOutputFile,
+  required NumberBaseService numberBaseService,
+}) async {
+  final sourceBase = _parseNumberBase(
+    parsed.option('from'),
+    field: 'sourceBase',
+    parsed: parsed,
+    localeTag: localeTag,
+    catalog: catalog,
+    err: err,
+  );
+  if (sourceBase == null) return 64;
+  final targetBase = _parseNumberBase(
+    parsed.option('to'),
+    field: 'targetBase',
+    parsed: parsed,
+    localeTag: localeTag,
+    catalog: catalog,
+    err: err,
+  );
+  if (targetBase == null) return 64;
+
+  final inputOption = parsed.option('input');
+  final fileOption = parsed.option('file');
+  if (inputOption != null && fileOption != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'validation',
+      code: 'number-base.conflicting-inputs',
+      messageKey: 'error.numberBase.validation',
+    );
+    return 64;
+  }
+
+  late String value;
+  try {
+    value = fileOption != null
+        ? await readFile(fileOption)
+        : inputOption ?? await readStandardInput();
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: parsed.flag('json'),
+      kind: 'access',
+      code: fileOption == null
+          ? 'number-base.input-access'
+          : 'number-base.file-access',
+      messageKey: fileOption == null
+          ? 'error.numberBase.inputAccess'
+          : 'error.numberBase.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await numberBaseService.execute(
+    NumberBaseOperationRequest(
+      value: value,
+      sourceBase: sourceBase,
+      targetBase: targetBase,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (output) async {
+      final outputPath = parsed.option('output');
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(output.converted));
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: parsed.flag('json'),
+            kind: 'access',
+            code: 'number-base.output-access',
+            messageKey: 'error.numberBase.outputAccess',
+          );
+          return 74;
+        }
+        if (!parsed.flag('json')) {
+          out.writeln(catalog.lookup(localeTag, 'numberBase.savedResult'));
+          return 0;
+        }
+      }
+      if (parsed.flag('json')) {
+        out.writeln(jsonEncode(output.toJson()));
+      } else {
+        out.writeln(
+          '${catalog.lookup(localeTag, 'numberBase.resultLabel')}: '
+          '${output.converted}',
+        );
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+int? _parseNumberBase(
+  String? raw, {
+  required String field,
+  required ArgResults parsed,
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink err,
+}) {
+  final parsedBase = raw == null ? null : int.tryParse(raw);
+  final reason = raw == null
+      ? 'missing-base'
+      : parsedBase == null
+      ? 'not-an-integer'
+      : parsedBase < 2 || parsedBase > 36
+      ? 'out-of-range-base'
+      : null;
+  if (reason == null) return parsedBase;
+  _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: parsed.flag('json'),
+    kind: 'validation',
+    code: 'number-base.invalid-base',
+    messageKey: 'error.numberBase.validation',
+    details: <String, Object?>{'field': field, 'reason': reason},
+  );
+  return null;
 }
 
 Future<int> _runXmlFormat(
@@ -1205,9 +1390,11 @@ void _writeFailure(
     err.writeln(message);
     if (details.isNotEmpty) {
       final location = details['path'] ?? details['offset'];
-      err.writeln(
-        '${catalog.lookup(localeTag, 'jsonTable.locationLabel')}: $location',
-      );
+      if (location != null) {
+        err.writeln(
+          '${catalog.lookup(localeTag, 'jsonTable.locationLabel')}: $location',
+        );
+      }
     }
     return;
   }

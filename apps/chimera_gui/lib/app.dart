@@ -11,6 +11,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'number_base_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
 import 'xml_format_page.dart';
@@ -30,6 +31,7 @@ final class ChimeraApp extends StatelessWidget {
     this.jsonYamlService = const JsonYamlService(
       converter: JsonYamlConverter(maxNodes: 10000),
     ),
+    this.numberBaseService = const NumberBaseService(),
     this.sqlFormatService = const SqlFormatService(),
     this.xmlFormatService = const XmlFormatService(),
     this.currentTime,
@@ -44,6 +46,10 @@ final class ChimeraApp extends StatelessWidget {
     this.jsonTableFilePicker,
     this.jsonYamlFilePicker,
     this.jsonYamlFileSaver,
+    this.numberBaseFilePicker,
+    this.numberBaseFileSaver,
+    this.numberBaseClipboardReader,
+    this.numberBaseClipboardWriter,
     this.sqlFormatFilePicker,
     this.sqlFormatFileSaver,
     this.sqlFormatClipboardReader,
@@ -63,6 +69,7 @@ final class ChimeraApp extends StatelessWidget {
   final JsonFormatService jsonFormatService;
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
+  final NumberBaseService numberBaseService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
@@ -77,6 +84,10 @@ final class ChimeraApp extends StatelessWidget {
   final JsonTableFilePicker? jsonTableFilePicker;
   final JsonYamlFilePicker? jsonYamlFilePicker;
   final JsonYamlFileSaver? jsonYamlFileSaver;
+  final NumberBaseFilePicker? numberBaseFilePicker;
+  final NumberBaseFileSaver? numberBaseFileSaver;
+  final NumberBaseClipboardReader? numberBaseClipboardReader;
+  final NumberBaseClipboardWriter? numberBaseClipboardWriter;
   final SqlFormatFilePicker? sqlFormatFilePicker;
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
@@ -98,6 +109,7 @@ final class ChimeraApp extends StatelessWidget {
         jsonFormatService: jsonFormatService,
         jsonTableService: jsonTableService,
         jsonYamlService: jsonYamlService,
+        numberBaseService: numberBaseService,
         sqlFormatService: sqlFormatService,
         xmlFormatService: xmlFormatService,
         currentTime: currentTime,
@@ -112,6 +124,10 @@ final class ChimeraApp extends StatelessWidget {
         jsonTableFilePicker: jsonTableFilePicker,
         jsonYamlFilePicker: jsonYamlFilePicker,
         jsonYamlFileSaver: jsonYamlFileSaver,
+        numberBaseFilePicker: numberBaseFilePicker,
+        numberBaseFileSaver: numberBaseFileSaver,
+        numberBaseClipboardReader: numberBaseClipboardReader,
+        numberBaseClipboardWriter: numberBaseClipboardWriter,
         sqlFormatFilePicker: sqlFormatFilePicker,
         sqlFormatFileSaver: sqlFormatFileSaver,
         sqlFormatClipboardReader: sqlFormatClipboardReader,
@@ -135,6 +151,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonFormatService,
     required this.jsonTableService,
     required this.jsonYamlService,
+    required this.numberBaseService,
     required this.sqlFormatService,
     required this.xmlFormatService,
     required this.currentTime,
@@ -149,6 +166,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jsonTableFilePicker,
     required this.jsonYamlFilePicker,
     required this.jsonYamlFileSaver,
+    required this.numberBaseFilePicker,
+    required this.numberBaseFileSaver,
+    required this.numberBaseClipboardReader,
+    required this.numberBaseClipboardWriter,
     required this.sqlFormatFilePicker,
     required this.sqlFormatFileSaver,
     required this.sqlFormatClipboardReader,
@@ -167,6 +188,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonFormatService jsonFormatService;
   final JsonTableService jsonTableService;
   final JsonYamlService jsonYamlService;
+  final NumberBaseService numberBaseService;
   final SqlFormatService sqlFormatService;
   final XmlFormatService xmlFormatService;
   final DateTime Function()? currentTime;
@@ -181,6 +203,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JsonTableFilePicker? jsonTableFilePicker;
   final JsonYamlFilePicker? jsonYamlFilePicker;
   final JsonYamlFileSaver? jsonYamlFileSaver;
+  final NumberBaseFilePicker? numberBaseFilePicker;
+  final NumberBaseFileSaver? numberBaseFileSaver;
+  final NumberBaseClipboardReader? numberBaseClipboardReader;
+  final NumberBaseClipboardWriter? numberBaseClipboardWriter;
   final SqlFormatFilePicker? sqlFormatFilePicker;
   final SqlFormatFileSaver? sqlFormatFileSaver;
   final SqlFormatClipboardReader? sqlFormatClipboardReader;
@@ -211,6 +237,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonFormatService: widget.jsonFormatService,
       jsonTableService: widget.jsonTableService,
       jsonYamlService: widget.jsonYamlService,
+      numberBaseService: widget.numberBaseService,
       sqlFormatService: widget.sqlFormatService,
       xmlFormatService: widget.xmlFormatService,
       currentTime: widget.currentTime ?? DateTime.now,
@@ -227,6 +254,12 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jsonTableFilePicker: widget.jsonTableFilePicker ?? pickJsonTableFile,
       jsonYamlFilePicker: widget.jsonYamlFilePicker ?? pickJsonYamlFile,
       jsonYamlFileSaver: widget.jsonYamlFileSaver ?? saveJsonYamlFile,
+      numberBaseFilePicker: widget.numberBaseFilePicker ?? pickNumberBaseFile,
+      numberBaseFileSaver: widget.numberBaseFileSaver ?? saveNumberBaseFile,
+      numberBaseClipboardReader:
+          widget.numberBaseClipboardReader ?? readNumberBaseClipboard,
+      numberBaseClipboardWriter:
+          widget.numberBaseClipboardWriter ?? writeNumberBaseClipboard,
       sqlFormatFilePicker: widget.sqlFormatFilePicker ?? pickSqlFormatFile,
       sqlFormatFileSaver: widget.sqlFormatFileSaver ?? saveSqlFormatFile,
       sqlFormatClipboardReader:

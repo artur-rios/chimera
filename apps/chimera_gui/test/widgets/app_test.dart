@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:chimera_core/chimera_core.dart';
@@ -1619,6 +1620,282 @@ void main() {
         findsOneWidget,
       );
       expect(find.byKey(const Key('xml-format-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNumberBaseHomeAction_WhenOpened_ThenDefaultConversionAndBoundariesWork',
+    (tester) async {
+      await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(const Key('open-number-base')));
+      await tester.tap(find.byKey(const Key('open-number-base')));
+      await tester.pumpAndSettle();
+      expect(find.text('Convert number base'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('ff'), findsOneWidget);
+
+      tester
+          .widget<DropdownButtonFormField<int>>(
+            find.byKey(const Key('number-base-source')),
+          )
+          .onChanged!(2);
+      await tester.pumpAndSettle();
+      tester
+          .widget<DropdownButtonFormField<int>>(
+            find.byKey(const Key('number-base-target')),
+          )
+          .onChanged!(36);
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('number-base-input')),
+        '1010',
+      );
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('a'), findsOneWidget);
+      final semantics = tester.widget<Semantics>(
+        find.byKey(const Key('number-base-result-semantics')),
+      );
+      expect(semantics.properties.value, 'a');
+    },
+  );
+
+  testWidgets(
+    'GivenInvalidNumber_WhenSubmittedInPortuguese_ThenLocalizedFailureHasNoResult',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'pt-BR',
+          initialLocation: '/number/convert-base',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Converter base numérica'), findsOneWidget);
+      await tester.enterText(
+        find.byKey(const Key('number-base-input')),
+        'segredo-Z',
+      );
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('O número ou a base é inválido.'), findsOneWidget);
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNumberResourceFailure_WhenSubmitted_ThenStaleResultIsCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+          numberBaseService: NumberBaseService(
+            converter: NumberBaseConverter(maxOutputCharacters: 2),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.text('ff'), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('number-base-input')), '256');
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The number conversion exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNumberAdapters_WhenLoadPasteCopyAndSaveRun_ThenExactContentIsTransferred',
+    (tester) async {
+      String? copied;
+      String? savedName;
+      List<int>? savedBytes;
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+          numberBaseFilePicker: () async => '15',
+          numberBaseClipboardReader: () async => '255',
+          numberBaseClipboardWriter: (value) async => copied = value,
+          numberBaseFileSaver: (name, bytes) async {
+            savedName = name;
+            savedBytes = bytes;
+            return true;
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-file')));
+      await tester.pumpAndSettle();
+      var input = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(input.controller!.text, '15');
+
+      await tester.tap(find.byKey(const Key('number-base-paste')));
+      await tester.pumpAndSettle();
+      input = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(input.controller!.text, '255');
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('number-base-copy')));
+      await tester.tap(find.byKey(const Key('number-base-copy')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('number-base-save')));
+      await tester.tap(find.byKey(const Key('number-base-save')));
+      await tester.pumpAndSettle();
+
+      expect(copied, 'ff');
+      expect(savedName, 'chimera-converted-number.txt');
+      expect(savedBytes, utf8.encode('ff'));
+      expect(find.text('Converted value saved.'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenNumberAccessFailures_WhenAdaptersRun_ThenResultIsNotRetained',
+    (tester) async {
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+          numberBaseFilePicker: () async => throw Exception('denied'),
+          numberBaseClipboardReader: () async => throw Exception('denied'),
+          numberBaseClipboardWriter: (_) async => throw Exception('denied'),
+          numberBaseFileSaver: (_, _) async => throw Exception('denied'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-file')));
+      await tester.pumpAndSettle();
+      expect(find.text('The input file could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('number-base-paste')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be read.'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('number-base-copy')));
+      await tester.tap(find.byKey(const Key('number-base-copy')));
+      await tester.pumpAndSettle();
+      expect(find.text('The clipboard could not be written.'), findsOneWidget);
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('number-base-save')));
+      await tester.tap(find.byKey(const Key('number-base-save')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('The converted value could not be saved.'),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenNumberKeyboardSubmission_WhenDoneIsInvoked_ThenConversionRunsAccessibly',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final input = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(input.textInputAction, TextInputAction.done);
+      input.onSubmitted!('255');
+      await tester.pumpAndSettle();
+
+      expect(find.text('ff'), findsOneWidget);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+    },
+  );
+
+  testWidgets(
+    'GivenNumberResult_WhenInputIsEdited_ThenStaleActionsAreCleared',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('number-base-result')), findsOneWidget);
+
+      await tester.enterText(find.byKey(const Key('number-base-input')), '256');
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+      expect(find.byKey(const Key('number-base-copy')), findsNothing);
+      expect(find.byKey(const Key('number-base-save')), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'GivenDelayedNumberLoad_WhenPending_ThenKeyboardSubmissionCannotRaceIt',
+    (tester) async {
+      final loadedValue = Completer<String?>();
+      await tester.pumpWidget(
+        ChimeraApp(
+          localeTag: 'en',
+          initialLocation: '/number/convert-base',
+          numberBaseFilePicker: () => loadedValue.future,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('number-base-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('number-base-result')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('number-base-file')));
+      await tester.pump();
+      final pendingInput = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(pendingInput.enabled, isFalse);
+      expect(pendingInput.onSubmitted, isNull);
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
+
+      loadedValue.complete('15');
+      await tester.pumpAndSettle();
+      final completedInput = tester.widget<TextField>(
+        find.byKey(const Key('number-base-input')),
+      );
+      expect(completedInput.enabled, isTrue);
+      expect(completedInput.controller!.text, '15');
+      expect(find.byKey(const Key('number-base-result')), findsNothing);
     },
   );
 }
