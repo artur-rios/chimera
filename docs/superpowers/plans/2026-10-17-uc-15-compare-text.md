@@ -60,14 +60,14 @@ flutter_test, integration_test, and Playwright.
   `TextCompareSummary`, `TextCompareResult`, `TextCompareException`, and
   `TextComparer.compare({left, right, granularity})`.
 
-- [ ] Add failing Given-When-Then tests for all granularities, stable ordered
+- [x] Add failing Given-When-Then tests for all granularities, stable ordered
   spans/counts, mixed boundaries, Unicode whitespace exclusions, graphemes,
   empty/equal inputs, invalid granularity, and exact resource budgets.
-- [ ] Run the focused test and verify failure because the API is absent.
-- [ ] Add `diff_match_patch` 0.4.1 and implement the smallest deterministic
+- [x] Run the focused test and verify failure because the API is absent.
+- [x] Add `diff_match_patch` 0.4.1 and implement the smallest deterministic
   token encoder, diff adapter, span coalescer, and typed failures.
-- [ ] Run focused utility tests and strict package analysis until green.
-- [ ] Commit the shared behavior.
+- [x] Run focused utility tests and strict package analysis until green.
+- [x] Commit the shared behavior.
 
 ### Task 2: Add the core operation service
 
