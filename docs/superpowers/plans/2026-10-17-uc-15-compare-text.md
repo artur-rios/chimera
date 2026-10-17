@@ -81,12 +81,12 @@ flutter_test, integration_test, and Playwright.
 - Produces: `TextCompareOperationRequest`, `TextCompareOutput.toJson()`, and
   `TextCompareService.execute()`.
 
-- [ ] Add failing service tests for the exact stable JSON object and redacted
+- [x] Add failing service tests for the exact stable JSON object and redacted
   validation/resource failure mapping without partial output.
-- [ ] Run the focused service test and verify the missing API failure.
-- [ ] Implement request/output types and utility-to-core result mapping.
-- [ ] Run focused core tests and strict package analysis until green.
-- [ ] Commit the core layer.
+- [x] Run the focused service test and verify the missing API failure.
+- [x] Implement request/output types and utility-to-core result mapping.
+- [x] Run focused core tests and strict package analysis until green.
+- [x] Commit the core layer.
 
 ### Task 3: Add the CLI command and localization
 
