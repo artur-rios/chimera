@@ -24,14 +24,14 @@ file_picker, package:test, flutter_test, integration_test, and Playwright.
 - Modify: `packages/chimera_utilities/lib/chimera_utilities.dart`
 - Create: `packages/chimera_utilities/test/text_transform/text_transformer_test.dart`
 
-- [ ] Add failing Given-When-Then tests for every mode, the Unicode 15.1
+- [x] Add failing Given-When-Then tests for every mode, the Unicode 15.1
   White_Space set and exclusions, non-ASCII case expansion, UTF-16 sort order,
   mixed line boundaries, empty/blank/trailing lines, invalid modes, and exact
   input/output resource budgets.
-- [ ] Implement the smallest deterministic transformer with typed validation
+- [x] Implement the smallest deterministic transformer with typed validation
   and resource failures.
-- [ ] Run focused utility tests and strict package analysis.
-- [ ] Commit the green shared behavior.
+- [x] Run focused utility tests and strict package analysis.
+- [x] Commit the green shared behavior.
 
 ### Task 2: Add the core operation service
 
