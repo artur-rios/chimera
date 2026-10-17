@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:chimera_gui/app.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,141 @@ import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final locale in ['en', 'pt-BR']) {
+    for (final source in ['pem', 'der']) {
+      testWidgets(
+        'Given${locale}Certificate${source}_WhenConvertedAndSaved_ThenExactFixtureAndSafeSemanticsTransferOffline',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            final network = _RejectConversionNetwork();
+            final previous = HttpOverrides.current;
+            HttpOverrides.global = network;
+            addTearDown(() => HttpOverrides.global = previous);
+            final der = base64.decode(
+              _certificatePem
+                  .split('\n')
+                  .where((line) => !line.startsWith('-----'))
+                  .join(),
+            );
+            final target = source == 'pem' ? 'der' : 'pem';
+            final inputCount = source == 'pem' ? 778 : 534;
+            final outputCount = target == 'pem' ? 778 : 534;
+            String? savedName;
+            List<int>? savedBytes;
+            String? copied;
+            var saves = 0;
+            await tester.pumpWidget(
+              ChimeraApp(
+                localeTag: locale,
+                initialLocation: '/certificate/convert',
+                certificateConvertFilePicker: () async => der,
+                certificateConvertClipboardWriter: (value) async =>
+                    copied = value,
+                certificateConvertFileSaver: (name, bytes) async {
+                  saves++;
+                  savedName = name;
+                  savedBytes = List<int>.of(bytes);
+                  return true;
+                },
+              ),
+            );
+            await tester.pumpAndSettle();
+            if (source == 'pem') {
+              await tester.enterText(
+                find.byKey(const Key('certificate-convert-input')),
+                _certificatePem,
+              );
+            } else {
+              await tester.tap(
+                find.byKey(const Key('certificate-convert-file')),
+              );
+              await tester.pumpAndSettle();
+            }
+            for (final key in ['source-$source', 'target-$target', 'submit']) {
+              final control = find.byKey(Key('certificate-convert-$key'));
+              await tester.ensureVisible(control);
+              await tester.tap(control);
+              await tester.pumpAndSettle();
+            }
+            final result = tester
+                .getSemantics(
+                  find.byKey(const Key('certificate-convert-result-semantics')),
+                )
+                .getSemanticsData();
+            expect(
+              result.label,
+              locale == 'en'
+                  ? 'Converted certificate'
+                  : 'Certificado convertido',
+            );
+            expect(
+              result.value,
+              locale == 'en'
+                  ? 'Certificate conversion succeeded.\n'
+                        'Source representation: ${source.toUpperCase()}\n'
+                        'Target representation: ${target.toUpperCase()}\n'
+                        'Input bytes: $inputCount\nDER bytes: 534\nOutput bytes: $outputCount'
+                  : 'Conversão do certificado concluída.\n'
+                        'Representação de origem: ${source.toUpperCase()}\n'
+                        'Representação de destino: ${target.toUpperCase()}\n'
+                        'Bytes de entrada: $inputCount\nBytes DER: 534\nBytes de saída: $outputCount',
+            );
+            if (target == 'pem') {
+              expect(
+                tester
+                    .widget<SelectableText>(
+                      find.byKey(const Key('certificate-convert-result')),
+                    )
+                    .data,
+                _certificatePem,
+              );
+              await tester.ensureVisible(
+                find.byKey(const Key('certificate-convert-copy')),
+              );
+              await tester.tap(
+                find.byKey(const Key('certificate-convert-copy')),
+              );
+              await tester.pumpAndSettle();
+              expect(copied, _certificatePem);
+            } else {
+              expect(
+                find.byKey(const Key('certificate-convert-result')),
+                findsNothing,
+              );
+              expect(
+                find.byKey(const Key('certificate-convert-copy')),
+                findsNothing,
+              );
+            }
+            await tester.ensureVisible(
+              find.byKey(const Key('certificate-convert-save')),
+            );
+            await tester.tap(find.byKey(const Key('certificate-convert-save')));
+            await tester.pumpAndSettle();
+            expect(saves, 1);
+            expect(savedName, 'chimera-certificate.$target');
+            expect(
+              savedBytes,
+              target == 'der' ? der : utf8.encode(_certificatePem),
+            );
+            expect(
+              find.text(
+                locale == 'en'
+                    ? 'Converted certificate saved.'
+                    : 'Certificado convertido salvo.',
+              ),
+              findsOneWidget,
+            );
+            expect(network.attempts, 0);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+  }
 
   testWidgets('GivenApplicationLaunch_WhenRootRouteLoads_ThenShellIsVisible', (
     tester,
@@ -690,3 +826,13 @@ const _certificateJsonFields =
 
 const _validPngBase64 =
     'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+
+final class _RejectConversionNetwork extends HttpOverrides {
+  var attempts = 0;
+
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    attempts++;
+    throw StateError('Certificate conversion must stay offline.');
+  }
+}

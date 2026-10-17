@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:webdriver/async_io.dart';
@@ -925,12 +926,192 @@ Future<void> main() async {
       );
     }
 
+    for (final source in ['pem', 'der']) {
+      await _convertCertificate(driver, source);
+    }
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
   }
+}
+
+Future<void> _convertCertificate(WebDriver driver, String source) async {
+  final target = source == 'pem' ? 'der' : 'pem';
+  final pem = await File.fromUri(
+    Platform.script.resolve('../fixtures/certificates/certificate.pem'),
+  ).readAsBytes();
+  final der = await File.fromUri(
+    Platform.script.resolve('../fixtures/certificates/certificate.der'),
+  ).readAsBytes();
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flutter-view, flt-glass-pane') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Chimera did not reload for certificate $source conversion',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder')?.click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Convert a certificate');
+  await _waitUntil(
+    () => _pageContains(driver, 'Certificate (PEM or Base64)'),
+    'Certificate conversion page did not open',
+  );
+  await _assertNoExternalRequests(
+    driver,
+    flow: 'certificate conversion startup',
+  );
+  await driver.execute(
+    '''
+    window.__chimeraCopiedText = null;
+    window.__chimeraSavedName = null;
+    window.__chimeraSavedBytes = null;
+    window.__chimeraSaveCount = 0;
+    const pem = arguments[0];
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: async () => pem,
+        writeText: async value => { window.__chimeraCopiedText = value; },
+      },
+    });
+    const originalCreateObjectURL = URL.createObjectURL.bind(URL);
+    URL.createObjectURL = function(blob) {
+      blob.arrayBuffer().then(buffer => {
+        window.__chimeraSavedBytes = [...new Uint8Array(buffer)];
+      });
+      return originalCreateObjectURL(blob);
+    };
+    HTMLAnchorElement.prototype.click = function() {
+      window.__chimeraSavedName = this.download;
+      window.__chimeraSaveCount++;
+    };
+    const originalInputClick = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return originalInputClick.call(this);
+    };
+    performance.clearResourceTimings();
+  ''',
+    <Object?>[utf8.decode(pem)],
+  );
+  if (source == 'pem') {
+    await _clickButton(driver, 'Paste certificate');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            '''
+            const input = [...document.querySelectorAll('textarea[aria-label]')]
+              .find(element => element.getAttribute('aria-label') === arguments[0]);
+            if (!input || input.disabled) return false;
+            input.focus();
+            return input.value === arguments[1];
+          ''',
+            <Object?>['Certificate (PEM or Base64)', utf8.decode(pem)],
+          ) ==
+          true,
+      'Certificate conversion PEM source was not loaded exactly',
+    );
+  } else {
+    await _clickButton(driver, 'Load certificate file');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            '''
+        const input = document.querySelector('input[type="file"]');
+        if (!input) return false;
+        const bytes = Uint8Array.from(atob(arguments[0]), c => c.charCodeAt(0));
+        const transfer = new DataTransfer();
+        transfer.items.add(new File([bytes], 'certificate.der',
+          {type: 'application/octet-stream'}));
+        input.files = transfer.files;
+        input.dispatchEvent(new Event('change', {bubbles: true}));
+        return input.files.length === 1 && input.files[0].size === 534;
+      ''',
+            <Object?>[base64.encode(der)],
+          ) ==
+          true,
+      'Certificate conversion DER file could not be dispatched',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Input bytes: 534'),
+      'Certificate conversion DER fixture was not loaded',
+    );
+  }
+  await _clickCheckbox(
+    driver,
+    'Source representation: ${source.toUpperCase()}',
+  );
+  await _clickCheckbox(
+    driver,
+    'Target representation: ${target.toUpperCase()}',
+  );
+  await _clickButton(driver, 'Convert');
+  final summary =
+      'Converted certificate Certificate conversion succeeded. '
+      'Source representation: ${source.toUpperCase()} '
+      'Target representation: ${target.toUpperCase()} '
+      'Input bytes: ${source == 'pem' ? 778 : 534} DER bytes: 534 '
+      'Output bytes: ${target == 'pem' ? 778 : 534}';
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+      const normalize = value => value.replace(/\s+/g, ' ').trim();
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => normalize(element.getAttribute('aria-label') || '') === arguments[0]);
+    ''',
+          <Object?>[summary],
+        ) ==
+        true,
+    'Certificate conversion safe localized success semantics were incorrect',
+  );
+  if (target == 'pem') {
+    await _clickButton(driver, 'Copy converted certificate');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            'return window.__chimeraCopiedText === arguments[0];',
+            <Object?>[utf8.decode(pem)],
+          ) ==
+          true,
+      'Certificate conversion displayed/copied PEM was not fixture-exact',
+    );
+  } else {
+    final hasCopy = await driver.execute('''
+      return [...document.querySelectorAll('[role="button"]')]
+        .some(element => element.textContent.trim() === 'Copy converted certificate');
+    ''', const <Object?>[]);
+    if (hasCopy != false) throw StateError('DER conversion exposed text copy');
+  }
+  await _clickButton(driver, 'Save converted certificate');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          '''
+      const bytes = window.__chimeraSavedBytes;
+      return window.__chimeraSavedName === arguments[0] &&
+        window.__chimeraSaveCount === 1 && Array.isArray(bytes) &&
+        bytes.length === arguments[1].length &&
+        bytes.every((value, index) => value === arguments[1][index]);
+    ''',
+          <Object?>['chimera-certificate.$target', target == 'der' ? der : pem],
+        ) ==
+        true,
+    'Certificate conversion save was not fixture-exact',
+  );
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'certificate $source-to-$target conversion/save',
+  );
 }
 
 Future<void> _assertNoResourceRequests(

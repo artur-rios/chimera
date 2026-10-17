@@ -5,6 +5,54 @@ void main() {
   const catalog = MessageCatalog();
 
   test(
+    'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final key in [
+          'cli.certificateConvertUsage',
+          'certificateConvert.savedResult',
+          for (final name in [
+            'pageTitle',
+            'openAction',
+            'inputLabel',
+            'fileAction',
+            'pasteAction',
+            'sourceLabel',
+            'targetLabel',
+            'submitAction',
+            'copyAction',
+            'saveAction',
+            'copiedResult',
+            'outputLabel',
+            'resultSuccess',
+            'inputByteCountLabel',
+            'derByteCountLabel',
+            'outputByteCountLabel',
+            'representation.auto',
+            'representation.pem',
+            'representation.der',
+            'representation.base64',
+          ])
+            'certificateConvert.$name',
+          'error.certificateConvert.clipboardRead',
+          'error.certificateConvert.clipboardWrite',
+          'error.certificateConvert.validation',
+          'error.certificateConvert.inputAccess',
+          'error.certificateConvert.fileAccess',
+          'error.certificateConvert.outputAccess',
+          'error.certificateConvert.resource',
+        ]) {
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        expect(
+          catalog.lookup(locale, 'cli.certificateConvertUsage'),
+          contains('--to=pem|der|base64'),
+        );
+      }
+    },
+  );
+
+  test(
     'GivenCertificateInspectMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       for (final locale in supportedLocaleTags) {
@@ -224,6 +272,35 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.certificateConvertUsage',
+      'certificateConvert.savedResult',
+      'certificateConvert.pageTitle',
+      'certificateConvert.openAction',
+      'certificateConvert.inputLabel',
+      'certificateConvert.fileAction',
+      'certificateConvert.pasteAction',
+      'certificateConvert.sourceLabel',
+      'certificateConvert.targetLabel',
+      'certificateConvert.submitAction',
+      'certificateConvert.copyAction',
+      'certificateConvert.saveAction',
+      'certificateConvert.copiedResult',
+      'certificateConvert.outputLabel',
+      'certificateConvert.resultSuccess',
+      'certificateConvert.inputByteCountLabel',
+      'certificateConvert.derByteCountLabel',
+      'certificateConvert.outputByteCountLabel',
+      'certificateConvert.representation.auto',
+      'certificateConvert.representation.pem',
+      'certificateConvert.representation.der',
+      'certificateConvert.representation.base64',
+      'error.certificateConvert.clipboardRead',
+      'error.certificateConvert.clipboardWrite',
+      'error.certificateConvert.validation',
+      'error.certificateConvert.inputAccess',
+      'error.certificateConvert.fileAccess',
+      'error.certificateConvert.outputAccess',
+      'error.certificateConvert.resource',
       'app.name',
       'app.description',
       'certificateInspect.representationLabel',

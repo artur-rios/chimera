@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
+import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
@@ -23,6 +24,11 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required CertificateConvertOperationService certificateConvertService,
+  required CertificateConvertFilePicker certificateConvertFilePicker,
+  required CertificateConvertFileSaver certificateConvertFileSaver,
+  required CertificateConvertClipboardReader certificateConvertClipboardReader,
+  required CertificateConvertClipboardWriter certificateConvertClipboardWriter,
   required CertificateInspectOperationService certificateInspectService,
   required CertificateInspectFilePicker certificateInspectFilePicker,
   required CertificateInspectClipboardReader certificateInspectClipboardReader,
@@ -278,6 +284,17 @@ GoRouter buildRouter({
                           ),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-certificate-convert'),
+                        onPressed: () => context.go('/certificate/convert'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'certificateConvert.openAction',
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -380,6 +397,18 @@ GoRouter buildRouter({
           filePicker: certificateInspectFilePicker,
           clipboardReader: certificateInspectClipboardReader,
           clipboardWriter: certificateInspectClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/certificate/convert',
+        builder: (context, state) => CertificateConvertPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: certificateConvertService,
+          filePicker: certificateConvertFilePicker,
+          fileSaver: certificateConvertFileSaver,
+          clipboardReader: certificateConvertClipboardReader,
+          clipboardWriter: certificateConvertClipboardWriter,
         ),
       ),
       GoRoute(

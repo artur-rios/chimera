@@ -2,11 +2,217 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:asn1lib/asn1lib.dart';
+import 'package:meta/meta.dart';
 import 'package:x509/x509.dart' as x509;
 
 import '../base64/base64_byte_decoder.dart';
 
 enum CertificateInputRepresentation { auto, pem, der, base64 }
+
+enum CertificateOutputRepresentation { pem, der, base64 }
+
+/// One owned immutable byte list. Text views are computed only on request.
+final class CertificateConversionResult {
+  CertificateConversionResult._({
+    required this.sourceRepresentation,
+    required this.targetRepresentation,
+    required this.bytes,
+    required this.inputByteCount,
+    required this.derByteCount,
+    required this._decodeText,
+  });
+
+  final CertificateInputRepresentation sourceRepresentation;
+  final CertificateOutputRepresentation targetRepresentation;
+  final Uint8List bytes;
+  final int inputByteCount;
+  final int derByteCount;
+  final String Function(Uint8List) _decodeText;
+  int get outputByteCount => bytes.length;
+
+  String? get text {
+    if (targetRepresentation == CertificateOutputRepresentation.der) {
+      return null;
+    }
+    try {
+      return _decodeText(bytes);
+    } on OutOfMemoryError {
+      throw const CertificateConversionResourceException(
+        field: 'output',
+        reason: 'allocation-limit',
+      );
+    }
+  }
+}
+
+final class CertificateConversionException implements Exception {
+  const CertificateConversionException({required this.reason});
+  final String reason;
+  String get code => 'certificate-convert.invalid-input';
+  String get field => 'input';
+}
+
+final class CertificateConversionResourceException implements Exception {
+  const CertificateConversionResourceException({
+    required this.field,
+    required this.reason,
+  });
+  final String field;
+  final String reason;
+  String get code => 'certificate-convert.resource-limit';
+}
+
+/// Converts only the representation of one validated certificate.
+final class CertificateConverter {
+  const CertificateConverter({
+    this.inspector = const CertificateInspector(),
+    this.maxOutputBytes,
+  }) : _allocateOutput = _allocateCertificateOutput,
+       _decodeText = _decodeCertificateText,
+       assert(maxOutputBytes == null || maxOutputBytes >= 0);
+
+  /// Resource-boundary injection for deterministic allocation regression tests.
+  @visibleForTesting
+  const CertificateConverter.forTesting({
+    this.inspector = const CertificateInspector(),
+    this.maxOutputBytes,
+    this._allocateOutput = _allocateCertificateOutput,
+    this._decodeText = _decodeCertificateText,
+  }) : assert(maxOutputBytes == null || maxOutputBytes >= 0);
+
+  final CertificateInspector inspector;
+  final int? maxOutputBytes;
+  final Uint8List Function(int) _allocateOutput;
+  final String Function(Uint8List) _decodeText;
+
+  CertificateConversionResult convertText(
+    String input, {
+    CertificateInputRepresentation source = CertificateInputRepresentation.auto,
+    required CertificateOutputRepresentation target,
+  }) => _convert(() => inspector._parseText(input, source), target);
+
+  CertificateConversionResult convertBytes(
+    List<int> input, {
+    CertificateInputRepresentation source = CertificateInputRepresentation.auto,
+    required CertificateOutputRepresentation target,
+  }) => _convert(() => inspector._parseBytes(input, source), target);
+
+  CertificateConversionResult _convert(
+    _ParsedCertificateDocument Function() parse,
+    CertificateOutputRepresentation target,
+  ) {
+    late final _ParsedCertificateDocument document;
+    try {
+      document = parse();
+    } on CertificateInspectionException catch (error) {
+      throw CertificateConversionException(reason: error.reason);
+    } on CertificateInspectionResourceException catch (error) {
+      throw CertificateConversionResourceException(
+        field: 'input',
+        reason: error.reason,
+      );
+    }
+    try {
+      final der = document.der;
+      final encodedLength = ((der.length + 2) ~/ 3) * 4;
+      final outputLength = switch (target) {
+        CertificateOutputRepresentation.der => der.length,
+        CertificateOutputRepresentation.base64 => encodedLength,
+        CertificateOutputRepresentation.pem =>
+          _marker.length +
+              1 +
+              encodedLength +
+              ((encodedLength + 63) ~/ 64) +
+              _endMarker.length +
+              1,
+      };
+      if (maxOutputBytes case final maximum? when outputLength > maximum) {
+        throw const CertificateConversionResourceException(
+          field: 'output',
+          reason: 'output-limit',
+        );
+      }
+      final bytes = target == CertificateOutputRepresentation.der
+          ? der
+          : _encode(der, target, outputLength);
+      return CertificateConversionResult._(
+        sourceRepresentation: document.representation,
+        targetRepresentation: target,
+        bytes: bytes,
+        inputByteCount: document.inputByteCount,
+        derByteCount: der.length,
+        decodeText: _decodeText,
+      );
+    } on OutOfMemoryError {
+      throw const CertificateConversionResourceException(
+        field: 'output',
+        reason: 'allocation-limit',
+      );
+    }
+  }
+
+  Uint8List _encode(
+    Uint8List der,
+    CertificateOutputRepresentation target,
+    int length,
+  ) {
+    final output = _allocateOutput(length);
+    var offset = 0;
+    var column = 0;
+    final pem = target == CertificateOutputRepresentation.pem;
+    if (pem) {
+      for (final unit in _marker.codeUnits) {
+        output[offset++] = unit;
+      }
+      output[offset++] = 10;
+    }
+    void write(int unit) {
+      output[offset++] = unit;
+      if (pem && ++column == 64) {
+        output[offset++] = 10;
+        column = 0;
+      }
+    }
+
+    for (var i = 0; i < der.length; i += 3) {
+      final remaining = der.length - i;
+      final bits =
+          (der[i] << 16) |
+          (remaining > 1 ? der[i + 1] << 8 : 0) |
+          (remaining > 2 ? der[i + 2] : 0);
+      write(_base64Alphabet.codeUnitAt((bits >> 18) & 63));
+      write(_base64Alphabet.codeUnitAt((bits >> 12) & 63));
+      write(remaining > 1 ? _base64Alphabet.codeUnitAt((bits >> 6) & 63) : 61);
+      write(remaining > 2 ? _base64Alphabet.codeUnitAt(bits & 63) : 61);
+    }
+    if (pem) {
+      if (column != 0) output[offset++] = 10;
+      for (final unit in _endMarker.codeUnits) {
+        output[offset++] = unit;
+      }
+      output[offset++] = 10;
+    }
+    return output.asUnmodifiableView();
+  }
+}
+
+Uint8List _allocateCertificateOutput(int length) => Uint8List(length);
+String _decodeCertificateText(Uint8List bytes) => ascii.decode(bytes);
+
+final class _ParsedCertificateDocument {
+  const _ParsedCertificateDocument({
+    required this.der,
+    required this.representation,
+    required this.inputByteCount,
+    required this.root,
+    required this.metadata,
+  });
+  final Uint8List der;
+  final CertificateInputRepresentation representation;
+  final int inputByteCount;
+  final ASN1Sequence root;
+  final CertificateInspectionResult metadata;
+}
 
 final class CertificateAttribute {
   const CertificateAttribute({
@@ -97,7 +303,12 @@ final class CertificateInspector {
     String input, {
     CertificateInputRepresentation representation =
         CertificateInputRepresentation.auto,
-  }) => _translate(() {
+  }) => _parseText(input, representation).metadata;
+
+  _ParsedCertificateDocument _parseText(
+    String input,
+    CertificateInputRepresentation representation,
+  ) => _translate(() {
     final count = _utf8Length(input);
     _inputBudget(count);
     if (representation == CertificateInputRepresentation.der) {
@@ -108,14 +319,19 @@ final class CertificateInspector {
               ? CertificateInputRepresentation.pem
               : CertificateInputRepresentation.base64)
         : representation;
-    return _inspect(_decodeText(input, selected), selected, count);
+    return _parseDer(_decodeText(input, selected), selected, count);
   });
 
   CertificateInspectionResult inspectBytes(
     List<int> input, {
     CertificateInputRepresentation representation =
         CertificateInputRepresentation.auto,
-  }) => _translate(() {
+  }) => _parseBytes(input, representation).metadata;
+
+  _ParsedCertificateDocument _parseBytes(
+    List<int> input,
+    CertificateInputRepresentation representation,
+  ) => _translate(() {
     for (final byte in input) {
       if (byte < 0 || byte > 255) _invalid('byte-range');
     }
@@ -131,13 +347,17 @@ final class CertificateInspector {
         : representation;
     if (selected == CertificateInputRepresentation.der) {
       _decodedBudget(input.length);
-      return _inspect(Uint8List.fromList(input), selected, input.length);
+      return _parseDer(
+        Uint8List.fromList(input).asUnmodifiableView(),
+        selected,
+        input.length,
+      );
     }
     if (selected == CertificateInputRepresentation.pem &&
         !_bytesStartWithPem(input)) {
       _invalid('unsupported-representation');
     }
-    return _inspect(
+    return _parseDer(
       _decodeText(ascii.decode(input), selected),
       selected,
       input.length,
@@ -178,7 +398,7 @@ final class CertificateInspector {
     }
   }
 
-  CertificateInspectionResult _inspect(
+  _ParsedCertificateDocument _parseDer(
     Uint8List der,
     CertificateInputRepresentation representation,
     int count,
@@ -212,7 +432,7 @@ final class CertificateInspector {
         .map((byte) => byte.toRadixString(16).padLeft(2, '0'))
         .join()
         .toUpperCase();
-    return CertificateInspectionResult(
+    final metadata = CertificateInspectionResult(
       representation: representation,
       version: version,
       serialNumberHex: serialHex,
@@ -229,6 +449,13 @@ final class CertificateInspector {
       extensions: _extensions(tbsSequence, serialIndex),
       inputByteCount: count,
       derByteCount: der.length,
+    );
+    return _ParsedCertificateDocument(
+      der: der,
+      representation: representation,
+      inputByteCount: count,
+      root: sequence,
+      metadata: metadata,
     );
   }
 
@@ -483,9 +710,7 @@ final class CertificateInspector {
     }
   }
 
-  CertificateInspectionResult _translate(
-    CertificateInspectionResult Function() action,
-  ) {
+  T _translate<T>(T Function() action) {
     try {
       return action();
     } on CertificateInspectionException {
@@ -566,6 +791,9 @@ Never _invalid(String reason) =>
 Never _resource(String reason) =>
     throw CertificateInspectionResourceException(reason: reason);
 const _marker = '-----BEGIN CERTIFICATE-----';
+const _endMarker = '-----END CERTIFICATE-----';
+const _base64Alphabet =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 final _begin = RegExp('-----BEGIN CERTIFICATE-----');
 final _pem = RegExp(
   r'^[\x09-\x0D ]*-----BEGIN CERTIFICATE-----([\s\S]*?)-----END CERTIFICATE-----[\x09-\x0D ]*$',

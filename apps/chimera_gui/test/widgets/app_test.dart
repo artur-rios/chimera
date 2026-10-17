@@ -12,6 +12,29 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}ConvertHomeAction_WhenActivated_ThenConversionRouteOpens',
+      (tester) async {
+        await tester.pumpWidget(ChimeraApp(localeTag: locale));
+        await tester.pumpAndSettle();
+        final action = find.byKey(const Key('open-certificate-convert'));
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const Key('certificate-convert-input')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            locale == 'en' ? 'Convert certificate' : 'Converter certificado',
+          ),
+          findsOneWidget,
+        );
+      },
+    );
+  }
   testWidgets(
     'GivenCertificateHomeAction_WhenActivated_ThenInspectionRouteOpens',
     (tester) async {

@@ -5,6 +5,43 @@ _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
+    'cli.certificateConvertUsage':
+        'Usage: chimera certificate convert (--text=<value>|--stdin|--file=<path>) '
+        '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<path>] [--json]',
+    'certificateConvert.savedResult': 'Converted certificate saved.',
+    'certificateConvert.pageTitle': 'Convert certificate',
+    'certificateConvert.openAction': 'Convert a certificate',
+    'certificateConvert.inputLabel': 'Certificate (PEM or Base64)',
+    'certificateConvert.fileAction': 'Load certificate file',
+    'certificateConvert.pasteAction': 'Paste certificate',
+    'certificateConvert.sourceLabel': 'Source representation',
+    'certificateConvert.targetLabel': 'Target representation',
+    'certificateConvert.submitAction': 'Convert',
+    'certificateConvert.copyAction': 'Copy converted certificate',
+    'certificateConvert.saveAction': 'Save converted certificate',
+    'certificateConvert.copiedResult': 'Converted certificate copied.',
+    'certificateConvert.outputLabel': 'Converted certificate',
+    'certificateConvert.resultSuccess': 'Certificate conversion succeeded.',
+    'certificateConvert.inputByteCountLabel': 'Input bytes',
+    'certificateConvert.derByteCountLabel': 'DER bytes',
+    'certificateConvert.outputByteCountLabel': 'Output bytes',
+    'certificateConvert.representation.auto': 'Auto',
+    'certificateConvert.representation.pem': 'PEM',
+    'certificateConvert.representation.der': 'DER',
+    'certificateConvert.representation.base64': 'Base64',
+    'error.certificateConvert.clipboardRead':
+        'The clipboard could not be read.',
+    'error.certificateConvert.clipboardWrite':
+        'The result could not be copied to the clipboard.',
+    'error.certificateConvert.validation':
+        'The certificate conversion request is invalid.',
+    'error.certificateConvert.inputAccess':
+        'The standard input could not be read.',
+    'error.certificateConvert.fileAccess': 'The input file could not be read.',
+    'error.certificateConvert.outputAccess':
+        'The converted certificate could not be saved.',
+    'error.certificateConvert.resource':
+        'Certificate conversion exceeded its resource limit.',
     'certificateInspect.pageTitle': 'Inspect certificate',
     'certificateInspect.openAction': 'Inspect a certificate',
     'certificateInspect.inputLabel': 'Certificate (PEM or Base64)',
@@ -503,6 +540,44 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.certificateConvertUsage':
+        'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
+        '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',
+    'certificateConvert.savedResult': 'Certificado convertido salvo.',
+    'certificateConvert.pageTitle': 'Converter certificado',
+    'certificateConvert.openAction': 'Converter um certificado',
+    'certificateConvert.inputLabel': 'Certificado (PEM ou Base64)',
+    'certificateConvert.fileAction': 'Carregar arquivo de certificado',
+    'certificateConvert.pasteAction': 'Colar certificado',
+    'certificateConvert.sourceLabel': 'Representação de origem',
+    'certificateConvert.targetLabel': 'Representação de destino',
+    'certificateConvert.submitAction': 'Converter',
+    'certificateConvert.copyAction': 'Copiar certificado convertido',
+    'certificateConvert.saveAction': 'Salvar certificado convertido',
+    'certificateConvert.copiedResult': 'Certificado convertido copiado.',
+    'certificateConvert.outputLabel': 'Certificado convertido',
+    'certificateConvert.resultSuccess': 'Conversão do certificado concluída.',
+    'certificateConvert.inputByteCountLabel': 'Bytes de entrada',
+    'certificateConvert.derByteCountLabel': 'Bytes DER',
+    'certificateConvert.outputByteCountLabel': 'Bytes de saída',
+    'certificateConvert.representation.auto': 'Automática',
+    'certificateConvert.representation.pem': 'PEM',
+    'certificateConvert.representation.der': 'DER',
+    'certificateConvert.representation.base64': 'Base64',
+    'error.certificateConvert.clipboardRead':
+        'Não foi possível ler a área de transferência.',
+    'error.certificateConvert.clipboardWrite':
+        'Não foi possível copiar o resultado para a área de transferência.',
+    'error.certificateConvert.validation':
+        'A solicitação de conversão do certificado é inválida.',
+    'error.certificateConvert.inputAccess':
+        'Não foi possível ler a entrada padrão.',
+    'error.certificateConvert.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.certificateConvert.outputAccess':
+        'Não foi possível salvar o certificado convertido.',
+    'error.certificateConvert.resource':
+        'A conversão do certificado excedeu o limite de recursos.',
     'certificateInspect.pageTitle': 'Inspecionar certificado',
     'certificateInspect.openAction': 'Inspecionar um certificado',
     'certificateInspect.inputLabel': 'Certificado (PEM ou Base64)',

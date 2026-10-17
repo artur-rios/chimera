@@ -1,6 +1,7 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
@@ -8,6 +9,840 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('certificate convert', () {
+    final fixture = _certificateFixtureBase();
+    final pem = File('$fixture.pem').readAsStringSync();
+    final encoded = File('$fixture.base64').readAsStringSync().trim();
+    final der = File('$fixture.der').readAsBytesSync();
+
+    for (final locale in ['en', 'pt-BR']) {
+      for (final representation in ['pem', 'der', 'base64']) {
+        for (final source in ['text', 'stdin', 'file']) {
+          if (source == 'text' && representation == 'der') continue;
+          for (final from in [null, 'auto', representation]) {
+            for (final target in ['pem', 'der', 'base64']) {
+              test('Given${locale}_${source}_${representation}_${from}_$target'
+                  '_WhenCertificateConverted_ThenExactJsonReturns', () async {
+                final input = representation == 'pem' ? pem : encoded;
+                final inputBytes = representation == 'der'
+                    ? der
+                    : ascii.encode(input);
+                final text = target == 'pem' ? pem : encoded;
+                final out = StringBuffer();
+                final err = StringBuffer();
+                final exit = await runChimera(
+                  [
+                    'certificate',
+                    'convert',
+                    if (source == 'text') '--text=$input',
+                    if (source == 'stdin') '--stdin',
+                    if (source == 'file') '--file=$fixture.$representation',
+                    if (from != null) '--from=$from',
+                    '--to=$target',
+                    '--json',
+                  ],
+                  localeTag: locale,
+                  out: out,
+                  err: err,
+                  readStandardInputBytes: () async => inputBytes,
+                );
+                // The Base64 file fixture contains a trailing LF.
+                final inputCount =
+                    source == 'file' && representation == 'base64'
+                    ? 713
+                    : inputBytes.length;
+                expect(exit, 0);
+                expect(err.toString(), isEmpty);
+                expect(
+                  out.toString(),
+                  '{"sourceRepresentation":"$representation",'
+                  '"targetRepresentation":"$target",'
+                  '"text":${jsonEncode(target == 'der' ? null : text)},'
+                  '"bytes":${jsonEncode(target == 'der' ? der : null)},'
+                  '"inputByteCount":$inputCount,"derByteCount":534,'
+                  '"outputByteCount":${target == 'der'
+                      ? 534
+                      : target == 'pem'
+                      ? 778
+                      : 712}}\n',
+                );
+              });
+            }
+          }
+        }
+      }
+
+      for (final target in ['pem', 'base64']) {
+        test(
+          'Given${locale}_$target'
+          '_WhenCertificateConvertedForStdout_ThenNoNewlineIsAdded',
+          () async {
+            final out = StringBuffer();
+            final err = StringBuffer();
+            final exit = await runChimera(
+              ['certificate', 'convert', '--stdin', '--to=$target'],
+              localeTag: locale,
+              out: out,
+              err: err,
+              readStandardInputBytes: () async => der,
+            );
+            expect(exit, 0);
+            expect(err.toString(), isEmpty);
+            expect(out.toString(), target == 'pem' ? pem : encoded);
+          },
+        );
+      }
+
+      for (final target in ['pem', 'der', 'base64']) {
+        for (final json in [false, true]) {
+          test('Given${locale}_${target}_$json'
+              '_WhenCertificateSaved_ThenExactBytesPrecedeSuccess', () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-convert-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final destination = File('${directory.path}/converted.$target');
+            await destination.writeAsBytes([7, 8, 9]);
+            final out = StringBuffer();
+            final err = StringBuffer();
+            final expected = target == 'der'
+                ? der
+                : ascii.encode(target == 'pem' ? pem : encoded);
+            var writes = 0;
+            final exit = await runChimera(
+              [
+                'certificate',
+                'convert',
+                '--text=$pem',
+                '--to=$target',
+                '--output=${destination.path}',
+                if (json) '--json',
+              ],
+              localeTag: locale,
+              out: out,
+              err: err,
+              writeOutputStage: (path, bytes) async {
+                writes++;
+                expect(out.toString(), isEmpty);
+                expect(bytes, orderedEquals(expected));
+                expect(() => bytes[0] = 0, throwsUnsupportedError);
+                await File(path).writeAsBytes(bytes, flush: true);
+              },
+            );
+            expect(exit, 0);
+            expect(writes, 1);
+            expect(err.toString(), isEmpty);
+            expect(await destination.readAsBytes(), orderedEquals(expected));
+            expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+            if (json) {
+              expect(
+                jsonDecode(out.toString()),
+                containsPair('targetRepresentation', target),
+              );
+              expect(out.toString(), endsWith('}\n'));
+              expect(out.toString(), isNot(endsWith('\n\n')));
+            } else {
+              expect(
+                out.toString(),
+                locale == 'en'
+                    ? 'Converted certificate saved.\n'
+                    : 'Certificado convertido salvo.\n',
+              );
+            }
+          });
+        }
+      }
+    }
+
+    test(
+      'GivenInvalidStructure_WhenCertificateConverted_ThenValidationPrecedesIo',
+      () async {
+        final cases = <(List<String>, String)>[
+          (['--to=pem'], 'missing-source'),
+          (['--stdin', '--text=secret', '--to=pem'], 'conflicting-sources'),
+          (
+            ['--stdin', '--file=secret-path', '--to=pem'],
+            'conflicting-sources',
+          ),
+          (
+            ['--text=', '--file=secret-path', '--to=pem'],
+            'conflicting-sources',
+          ),
+          (
+            ['--stdin', '--file=secret-path', '--text=secret', '--to=pem'],
+            'conflicting-sources',
+          ),
+          (['--stdin', '--from=secret', '--to=pem'], 'invalid-from'),
+          (['--file=secret-path', '--from=', '--to=pem'], 'invalid-from'),
+          (['--stdin'], 'invalid-to'),
+          (['--file=secret-path', '--to=auto'], 'invalid-to'),
+          (['--stdin', '--to='], 'invalid-to'),
+          (['--stdin', '--to=pem', '--unknown=secret'], 'invalid-options'),
+          (
+            ['--file=secret-path', '--to=pem', 'secret-argument'],
+            'invalid-options',
+          ),
+        ];
+        var ioCalls = 0;
+        for (final entry in cases) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exit = await runChimera(
+            [
+              'certificate',
+              'convert',
+              ...entry.$1,
+              '--output=secret-output',
+              '--json',
+            ],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: () async {
+              ioCalls++;
+              return der;
+            },
+            readFileBytes: (_) async {
+              ioCalls++;
+              return der;
+            },
+            writeOutputFile: (_, _) async {
+              ioCalls++;
+            },
+          );
+          expect(exit, 64, reason: entry.$1.toString());
+          expect(out.toString(), isEmpty);
+          expect(jsonDecode(err.toString()), {
+            'error': {
+              'kind': 'validation',
+              'code': 'certificate-convert.${entry.$2}',
+              'message': 'The certificate conversion request is invalid.',
+            },
+          });
+          expect(err.toString(), isNot(contains('secret')));
+        }
+        for (final source in ['--stdin', '--file=secret-path']) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          expect(
+            await runChimera(
+              ['certificate', 'convert', source, '--to=der'],
+              localeTag: 'en',
+              out: out,
+              err: err,
+              readStandardInputBytes: () async {
+                ioCalls++;
+                return der;
+              },
+              readFileBytes: (_) async {
+                ioCalls++;
+                return der;
+              },
+            ),
+            64,
+          );
+          expect(out.toString(), isEmpty);
+          expect(
+            err.toString(),
+            'The certificate conversion request is invalid.\n',
+          );
+        }
+        expect(ioCalls, 0);
+      },
+    );
+
+    test('GivenExplicitEmptyText_WhenCertificateConverted_ThenCertificateValidationReturns', () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exit = await runChimera(
+        ['certificate', 'convert', '--text=', '--to=pem', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+      expect(exit, 64);
+      expect(out.toString(), isEmpty);
+      expect(jsonDecode(err.toString()), {
+        'error': {
+          'kind': 'validation',
+          'code': 'certificate-convert.invalid-input',
+          'message': 'The certificate conversion request is invalid.',
+          'location': {'field': 'input', 'reason': 'malformed-certificate'},
+        },
+      });
+    });
+
+    test('GivenConversionHelp_WhenRequested_ThenLocalizedUsagePrecedesIo', () async {
+      for (final locale in ['en', 'pt-BR']) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'convert', '--help'],
+          localeTag: locale,
+          out: out,
+          err: err,
+          readStandardInputBytes: () async =>
+              throw StateError('Unexpected read'),
+        );
+        expect(exit, 0);
+        expect(err.toString(), isEmpty);
+        expect(
+          out.toString(),
+          '${locale == 'en' ? 'Usage' : 'Uso'}: chimera certificate convert '
+          '(--text=<${locale == 'en' ? 'value' : 'valor'}>|--stdin|--file=<${locale == 'en' ? 'path' : 'caminho'}>) '
+          '[--from=auto|pem|der|base64] --to=pem|der|base64 '
+          '[--output=<${locale == 'en' ? 'path' : 'caminho'}>] [--json]\n',
+        );
+      }
+    });
+
+    test('GivenInvalidCertificate_WhenConverted_ThenLocalizedValidationRedactsInput', () async {
+      for (final locale in ['en', 'pt-BR']) {
+        for (final entry in <(List<String>, List<int>, String)>[
+          (['--text=private secret-input'], der, 'malformed-certificate'),
+          (['--text=$pem', '--from=der'], der, 'unsupported-representation'),
+          (['--text=$pem$pem'], der, 'multiple-certificates'),
+          (['--stdin'], [256], 'byte-range'),
+        ]) {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          var writes = 0;
+          final exit = await runChimera(
+            [
+              'certificate',
+              'convert',
+              ...entry.$1,
+              '--to=der',
+              '--output=secret-path',
+              '--json',
+            ],
+            localeTag: locale,
+            out: out,
+            err: err,
+            readStandardInputBytes: () async => entry.$2,
+            writeOutputFile: (_, _) async {
+              writes++;
+            },
+          );
+          expect(exit, 64);
+          expect(writes, 0);
+          expect(out.toString(), isEmpty);
+          expect(jsonDecode(err.toString()), {
+            'error': {
+              'kind': 'validation',
+              'code': 'certificate-convert.invalid-input',
+              'message': locale == 'en'
+                  ? 'The certificate conversion request is invalid.'
+                  : 'A solicitação de conversão do certificado é inválida.',
+              'location': {'field': 'input', 'reason': entry.$3},
+            },
+          });
+          for (final secret in ['private', 'secret', 'example.test']) {
+            expect(err.toString(), isNot(contains(secret)));
+          }
+        }
+      }
+    });
+
+    test('GivenAdapterFailures_WhenCertificateConverted_ThenSafeTypedExitsReturn', () async {
+      for (final locale in ['en', 'pt-BR']) {
+        for (final json in [false, true]) {
+          for (final boundary in ['stdin', 'file', 'output']) {
+            for (final allocation in [false, true]) {
+              final out = StringBuffer();
+              final err = StringBuffer();
+              Never failAccess() => allocation
+                  ? throw OutOfMemoryError()
+                  : throw const FileSystemException(
+                      'private collaborator message',
+                      'secret-path',
+                    );
+              final exit = await runChimera(
+                [
+                  'certificate',
+                  'convert',
+                  if (boundary == 'stdin') '--stdin',
+                  if (boundary == 'file') '--file=secret-path',
+                  if (boundary == 'output') '--text=$pem',
+                  '--to=pem',
+                  if (boundary == 'output') '--output=secret-path',
+                  if (json) '--json',
+                ],
+                localeTag: locale,
+                out: out,
+                err: err,
+                readStandardInputBytes: () async => failAccess(),
+                readFileBytes: (_) async => failAccess(),
+                writeOutputFile: (_, _) async => failAccess(),
+              );
+              final message = allocation
+                  ? (locale == 'en'
+                        ? 'Certificate conversion exceeded its resource limit.'
+                        : 'A conversão do certificado excedeu o limite de recursos.')
+                  : switch (boundary) {
+                      'stdin' =>
+                        locale == 'en'
+                            ? 'The standard input could not be read.'
+                            : 'Não foi possível ler a entrada padrão.',
+                      'file' =>
+                        locale == 'en'
+                            ? 'The input file could not be read.'
+                            : 'Não foi possível ler o arquivo de entrada.',
+                      _ =>
+                        locale == 'en'
+                            ? 'The converted certificate could not be saved.'
+                            : 'Não foi possível salvar o certificado convertido.',
+                    };
+              expect(exit, allocation ? 75 : 74);
+              expect(out.toString(), isEmpty);
+              if (json) {
+                expect(jsonDecode(err.toString()), {
+                  'error': {
+                    'kind': allocation ? 'resource' : 'access',
+                    'code':
+                        'certificate-convert.${allocation
+                            ? 'resource-limit'
+                            : boundary == 'stdin'
+                            ? 'input-access'
+                            : '$boundary-access'}',
+                    'message': message,
+                    if (allocation)
+                      'location': {
+                        'field': boundary == 'output' ? 'output' : 'input',
+                        'reason': 'allocation-limit',
+                      },
+                  },
+                });
+              } else {
+                expect(err.toString(), '$message\n');
+              }
+              for (final secret in ['private', 'secret', 'example.test']) {
+                expect(err.toString(), isNot(contains(secret)));
+              }
+            }
+          }
+        }
+      }
+    });
+
+    test('GivenDeferredTextAllocationFailure_WhenCertificateConverted_ThenSaveAndStdoutStayEmpty', () async {
+      for (final json in [false, true]) {
+        var writes = 0;
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          [
+            'certificate',
+            'convert',
+            '--text=$pem',
+            '--to=pem',
+            if (json) '--output=secret-path',
+            if (json) '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          certificateConvertService: CertificateConvertService(
+            converter: CertificateConverter.forTesting(
+              decodeText: (_) => throw OutOfMemoryError(),
+            ),
+          ),
+          writeOutputFile: (_, _) async {
+            writes++;
+          },
+        );
+        expect(exit, 75);
+        expect(writes, 0);
+        expect(out.toString(), isEmpty);
+        if (json) {
+          expect(jsonDecode(err.toString()), {
+            'error': {
+              'kind': 'resource',
+              'code': 'certificate-convert.resource-limit',
+              'message': 'Certificate conversion exceeded its resource limit.',
+              'location': {'field': 'output', 'reason': 'allocation-limit'},
+            },
+          });
+        } else {
+          expect(
+            err.toString(),
+            'Certificate conversion exceeded its resource limit.\n',
+          );
+        }
+      }
+    });
+
+    test('GivenJsonAllocationFailure_WhenCertificateConverted_ThenSaveAndStdoutStayEmpty', () async {
+      var writes = 0;
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exit = await runChimera(
+        [
+          'certificate',
+          'convert',
+          '--text=$pem',
+          '--to=der',
+          '--output=secret-path',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        certificateConvertJsonEncoder: (_) => throw OutOfMemoryError(),
+        writeOutputFile: (_, _) async {
+          writes++;
+        },
+      );
+      expect(exit, 75);
+      expect(writes, 0);
+      expect(out.toString(), isEmpty);
+      expect(jsonDecode(err.toString()), {
+        'error': {
+          'kind': 'resource',
+          'code': 'certificate-convert.resource-limit',
+          'message': 'Certificate conversion exceeded its resource limit.',
+          'location': {'field': 'output', 'reason': 'allocation-limit'},
+        },
+      });
+    });
+
+    test('GivenStdoutAllocationFailure_WhenCertificateConverted_ThenSafeResourceReturns', () async {
+      for (final json in [false, true]) {
+        final out = _OutOfMemoryStringSink();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          [
+            'certificate',
+            'convert',
+            '--text=$pem',
+            '--to=pem',
+            if (json) '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+        );
+        expect(exit, 75);
+        expect(out.emissionCalls, 1);
+        expect(out.contents, isEmpty);
+        expect(
+          err.toString(),
+          contains('Certificate conversion exceeded its resource limit.'),
+        );
+      }
+    });
+
+    test('GivenServiceResourceFailures_WhenCertificateConverted_ThenSafeLocationsReturn', () async {
+      for (final entry in <(CertificateConverter, List<int>, String, String)>[
+        (
+          const CertificateConverter(
+            inspector: CertificateInspector(maxInputBytes: 0),
+          ),
+          der,
+          'input',
+          'input-limit',
+        ),
+        (
+          const CertificateConverter(
+            inspector: CertificateInspector(maxDecodedBytes: 0),
+          ),
+          der,
+          'input',
+          'decoded-limit',
+        ),
+        (
+          const CertificateConverter(maxOutputBytes: 0),
+          der,
+          'output',
+          'output-limit',
+        ),
+        (
+          const CertificateConverter(),
+          _CertificateAllocationFailureBytes(),
+          'input',
+          'allocation-limit',
+        ),
+        (
+          CertificateConverter.forTesting(
+            allocateOutput: (_) => throw OutOfMemoryError(),
+          ),
+          der,
+          'output',
+          'allocation-limit',
+        ),
+      ]) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exit = await runChimera(
+          ['certificate', 'convert', '--stdin', '--to=pem', '--json'],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: () async => entry.$2,
+          certificateConvertService: CertificateConvertService(
+            converter: entry.$1,
+          ),
+        );
+        expect(exit, 75);
+        expect(out.toString(), isEmpty);
+        expect(jsonDecode(err.toString()), {
+          'error': {
+            'kind': 'resource',
+            'code': 'certificate-convert.resource-limit',
+            'message': 'Certificate conversion exceeded its resource limit.',
+            'location': {'field': entry.$3, 'reason': entry.$4},
+          },
+        });
+      }
+    });
+
+    test('GivenTextJsonAndSave_WhenCertificateConverted_ThenOneImmutableOutputIsHandedOff', () async {
+      Uint8List? materializedBytes;
+      var allocations = 0;
+      var writes = 0;
+      final out = StringBuffer();
+      final exit = await runChimera(
+        [
+          'certificate',
+          'convert',
+          '--text=$pem',
+          '--to=base64',
+          '--output=secret-path',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        certificateConvertService: CertificateConvertService(
+          converter: CertificateConverter.forTesting(
+            allocateOutput: (length) {
+              allocations++;
+              return Uint8List(length);
+            },
+            decodeText: (bytes) {
+              materializedBytes = bytes;
+              return ascii.decode(bytes);
+            },
+          ),
+        ),
+        writeOutputFile: (path, bytes) async {
+          writes++;
+          expect(path, 'secret-path');
+          expect(out.toString(), isEmpty);
+          expect(bytes, same(materializedBytes));
+          expect(() => bytes[0] = 0, throwsUnsupportedError);
+          expect(bytes, orderedEquals(ascii.encode(encoded)));
+        },
+      );
+      expect(exit, 0);
+      expect(allocations, 1);
+      expect(writes, 1);
+      expect(jsonDecode(out.toString()), containsPair('text', encoded));
+    });
+
+    test('GivenTransactionalFailures_WhenCertificateSaved_ThenPriorTargetAndNoArtifactsRemain', () async {
+      for (final failure in [
+        'partial',
+        'reserve',
+        'copy',
+        'replace',
+        'cleanup',
+      ]) {
+        for (final allocation in [false, true]) {
+          for (final json in [false, true]) {
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-convert-failure-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final target = File('${directory.path}/secret-target');
+            await target.writeAsBytes([7, 8, 9]);
+            final out = StringBuffer();
+            final err = StringBuffer();
+            var cleanupFailed = false;
+            Never failAccess() => allocation
+                ? throw OutOfMemoryError()
+                : throw const FileSystemException(
+                    'private collaborator message',
+                    'secret-path',
+                  );
+            final exit = await runChimera(
+              [
+                'certificate',
+                'convert',
+                '--text=$pem',
+                '--to=der',
+                '--output=${target.path}',
+                if (json) '--json',
+              ],
+              localeTag: 'en',
+              out: out,
+              err: err,
+              writeOutputStage: failure == 'partial'
+                  ? (path, bytes) async {
+                      await File(path).writeAsBytes([bytes.first], flush: true);
+                      failAccess();
+                    }
+                  : null,
+              outputFileOperations: TransactionalFileOperations(
+                tryReserve: failure == 'reserve'
+                    ? (candidate) async {
+                        if (candidate.path.contains('.chimera-backup-')) {
+                          failAccess();
+                        }
+                        await candidate.create(exclusive: true);
+                        return true;
+                      }
+                    : null,
+                copy: failure == 'copy'
+                    ? (source, backup) async {
+                        await backup.writeAsBytes([7], flush: true);
+                        failAccess();
+                      }
+                    : null,
+                rename: failure == 'replace'
+                    ? (source, destination) async {
+                        if (source.path.contains('.chimera-stage-')) {
+                          failAccess();
+                        }
+                        await source.rename(destination);
+                      }
+                    : null,
+                delete: failure == 'cleanup'
+                    ? (file) async {
+                        if (file.path.contains('.chimera-backup-') &&
+                            !cleanupFailed) {
+                          cleanupFailed = true;
+                          failAccess();
+                        }
+                        await file.delete();
+                      }
+                    : null,
+              ),
+            );
+            expect(
+              exit,
+              allocation ? 75 : 74,
+              reason: '$failure allocation=$allocation json=$json',
+            );
+            expect(out.toString(), isEmpty);
+            expect(await target.readAsBytes(), [7, 8, 9]);
+            expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+            expect(
+              err.toString(),
+              contains(
+                allocation
+                    ? 'Certificate conversion exceeded its resource limit.'
+                    : 'The converted certificate could not be saved.',
+              ),
+            );
+            expect(err.toString(), isNot(contains('secret')));
+            expect(err.toString(), isNot(contains('private')));
+            if (json) {
+              expect(
+                (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+                containsPair(
+                  'code',
+                  allocation
+                      ? 'certificate-convert.resource-limit'
+                      : 'certificate-convert.output-access',
+                ),
+              );
+            }
+          }
+        }
+      }
+    });
+
+    test('GivenPartialSaveWithoutExistingTarget_WhenCertificateSaved_ThenNoCopyRemains', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-convert-new-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File('${directory.path}/secret-target');
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exit = await runChimera(
+        [
+          'certificate',
+          'convert',
+          '--text=$pem',
+          '--to=der',
+          '--output=${target.path}',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        writeOutputStage: (path, bytes) async {
+          await File(path).writeAsBytes([bytes.first]);
+          throw const FileSystemException('private detail', 'secret-path');
+        },
+      );
+      expect(exit, 74);
+      expect(out.toString(), isEmpty);
+      expect(await target.exists(), isFalse);
+      expect(await directory.list().toList(), isEmpty);
+      expect(jsonDecode(err.toString()), {
+        'error': {
+          'kind': 'access',
+          'code': 'certificate-convert.output-access',
+          'message': 'The converted certificate could not be saved.',
+        },
+      });
+    });
+
+    test('GivenTransactionNameCollisions_WhenCertificateSaved_ThenUnrelatedFilesStayIntact', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-convert-collision-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File('${directory.path}/converted.der');
+      await target.writeAsBytes([7, 8, 9]);
+      final collisions = <File>[];
+      final attempts = <String, int>{'stage': 0, 'backup': 0};
+      final exit = await runChimera(
+        [
+          'certificate',
+          'convert',
+          '--text=$pem',
+          '--to=der',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+        outputFileOperations: TransactionalFileOperations(
+          tryReserve: (candidate) async {
+            final role = candidate.path.contains('.chimera-stage-')
+                ? 'stage'
+                : 'backup';
+            final attempt = attempts[role]!;
+            attempts[role] = attempt + 1;
+            if (attempt == 0) {
+              await candidate.writeAsBytes([11], flush: true);
+              collisions.add(candidate);
+              return false;
+            }
+            await candidate.create(exclusive: true);
+            return true;
+          },
+        ),
+      );
+      expect(exit, 0);
+      expect(attempts, {'stage': 2, 'backup': 2});
+      expect(await target.readAsBytes(), orderedEquals(der));
+      for (final collision in collisions) {
+        expect(await collision.readAsBytes(), [11]);
+      }
+      expect(
+        (await _chimeraTransactionArtifacts(directory))
+            .map((file) => file.path)
+            .toSet(),
+        collisions.map((file) => file.path).toSet(),
+      );
+    });
+  });
+
   group('certificate inspect', () {
     final fixture = _certificateFixtureBase();
     final pem = File('$fixture.pem').readAsStringSync();
