@@ -21,8 +21,8 @@ final class JwtInspectResult {
     required Map<String, dynamic> header,
     required Map<String, dynamic> claims,
     required this.verification,
-  }) : header = Map<String, Object?>.unmodifiable(header),
-       claims = Map<String, Object?>.unmodifiable(claims);
+  }) : header = _freezeJsonObject(header),
+       claims = _freezeJsonObject(claims);
 
   final Map<String, Object?> header;
   final Map<String, Object?> claims;
@@ -54,22 +54,33 @@ typedef JwtVerifyFunction = bool Function(
 );
 
 final class JwtInspector {
-  const JwtInspector({this.maxInputCharacters, this.maxDecodedBytes})
-    : assert(maxInputCharacters == null || maxInputCharacters >= 0),
-      assert(maxDecodedBytes == null || maxDecodedBytes >= 0),
-      verify = _verifyWithJose;
+  const JwtInspector({
+    this.maxInputCharacters = defaultMaxInputCharacters,
+    this.maxDecodedBytes = defaultMaxDecodedBytes,
+    this.maxNestingDepth = defaultMaxNestingDepth,
+  }) : assert(maxInputCharacters == null || maxInputCharacters >= 0),
+       assert(maxDecodedBytes == null || maxDecodedBytes >= 0),
+       assert(maxNestingDepth == null || maxNestingDepth >= 0),
+       verify = _verifyWithJose;
 
   const JwtInspector.forTesting({
     this.maxInputCharacters,
     this.maxDecodedBytes,
+    this.maxNestingDepth,
     this.verify = _verifyWithJose,
   }) : assert(maxInputCharacters == null || maxInputCharacters >= 0),
-       assert(maxDecodedBytes == null || maxDecodedBytes >= 0);
+       assert(maxDecodedBytes == null || maxDecodedBytes >= 0),
+       assert(maxNestingDepth == null || maxNestingDepth >= 0);
 
   static const supportedAlgorithms = JwtCreator.supportedAlgorithms;
+  static const defaultMaxInputCharacters = 1024 * 1024;
+  static const defaultMaxInputBytes = 1024 * 1024;
+  static const defaultMaxDecodedBytes = 768 * 1024;
+  static const defaultMaxNestingDepth = 64;
 
   final int? maxInputCharacters;
   final int? maxDecodedBytes;
+  final int? maxNestingDepth;
   final JwtVerifyFunction verify;
 
   JwtInspectResult inspect(JwtInspectRequest request) {
@@ -118,7 +129,12 @@ final class JwtInspector {
         );
       }
 
-      final key = _parseKey(request.key!, algorithm, header);
+      final key = _parseKey(
+        request.key!,
+        algorithm,
+        header,
+        maxNestingDepth: maxNestingDepth,
+      );
       signingInput = utf8.encode('${parts[0]}.${parts[1]}');
       bool verified;
       try {
@@ -153,6 +169,13 @@ final class JwtInspector {
         code: 'jwt-inspect.resource-limit',
         field: 'token',
         reason: 'allocation-limit',
+      );
+    } on StackOverflowError {
+      throw const JwtInspectException(
+        kind: JwtInspectFailureKind.resource,
+        code: 'jwt-inspect.resource-limit',
+        field: 'token',
+        reason: 'nesting-limit',
       );
     } finally {
       headerBytes?.fillRange(0, headerBytes.length, 0);
@@ -215,10 +238,21 @@ final class JwtInspector {
     }
   }
 
-  static Map<String, dynamic> _decodeObject(List<int> bytes) {
+  Map<String, dynamic> _decodeObject(List<int> bytes) {
     try {
-      return decodeStrictJsonObject(utf8.decode(bytes));
+      return decodeStrictJsonObject(
+        utf8.decode(bytes),
+        maxNestingDepth: maxNestingDepth,
+      );
     } on StrictJsonObjectException catch (error) {
+      if (error.failure == StrictJsonObjectFailure.nestingLimit) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.resource,
+          code: 'jwt-inspect.resource-limit',
+          field: 'token',
+          reason: 'nesting-limit',
+        );
+      }
       throw JwtInspectException(
         kind: JwtInspectFailureKind.validation,
         code: 'jwt-inspect.invalid-token',
@@ -277,14 +311,16 @@ final class JwtInspector {
   static JsonWebKey _parseKey(
     String source,
     String algorithm,
-    Map<String, dynamic> header,
-  ) {
+    Map<String, dynamic> header, {
+    required int? maxNestingDepth,
+  }) {
     final trimmed = source.trim();
     late JsonWebKey key;
     Map<String, dynamic>? jwk;
     try {
       if (trimmed.startsWith('{')) {
-        jwk = decodeStrictJsonObject(trimmed);
+        jwk = decodeStrictJsonObject(trimmed, maxNestingDepth: maxNestingDepth);
+        _validateJwkMetadata(jwk, algorithm);
         key = JsonWebKey.fromJson(jwk);
       } else if (algorithm.startsWith('HS')) {
         final bytes = utf8.encode(source);
@@ -319,6 +355,14 @@ final class JwtInspector {
     } on JwtInspectException {
       rethrow;
     } on StrictJsonObjectException catch (error) {
+      if (error.failure == StrictJsonObjectFailure.nestingLimit) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.resource,
+          code: 'jwt-inspect.resource-limit',
+          field: 'key',
+          reason: 'nesting-limit',
+        );
+      }
       throw JwtInspectException(
         kind: JwtInspectFailureKind.validation,
         code: 'jwt-inspect.invalid-key',
@@ -331,6 +375,13 @@ final class JwtInspector {
         code: 'jwt-inspect.resource-limit',
         field: 'key',
         reason: 'allocation-limit',
+      );
+    } on StackOverflowError {
+      throw const JwtInspectException(
+        kind: JwtInspectFailureKind.resource,
+        code: 'jwt-inspect.resource-limit',
+        field: 'key',
+        reason: 'nesting-limit',
       );
     } catch (_) {
       throw const JwtInspectException(
@@ -346,46 +397,47 @@ final class JwtInspector {
         : algorithm.startsWith('RS')
         ? 'RSA'
         : 'EC';
-    if (key.keyType != expectedType || !key.usableForAlgorithm(algorithm)) {
+    try {
+      if (key.keyType != expectedType || !key.usableForAlgorithm(algorithm)) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.incompatible-key',
+          field: 'key',
+          reason: 'algorithm-mismatch',
+        );
+      }
+      if (!key.usableForOperation('verify')) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.incompatible-key',
+          field: 'key',
+          reason: 'operation-not-permitted',
+        );
+      }
+      if (header['kid'] case final String tokenKeyId
+          when key.keyId != null && key.keyId != tokenKeyId) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.incompatible-key',
+          field: 'key',
+          reason: 'key-id-mismatch',
+        );
+      }
+    } on JwtInspectException {
+      rethrow;
+    } on OutOfMemoryError {
       throw const JwtInspectException(
-        kind: JwtInspectFailureKind.validation,
-        code: 'jwt-inspect.incompatible-key',
+        kind: JwtInspectFailureKind.resource,
+        code: 'jwt-inspect.resource-limit',
         field: 'key',
-        reason: 'algorithm-mismatch',
+        reason: 'allocation-limit',
       );
-    }
-    if (key.publicKeyUse case final use? when use != 'sig') {
+    } catch (_) {
       throw const JwtInspectException(
         kind: JwtInspectFailureKind.validation,
-        code: 'jwt-inspect.incompatible-key',
+        code: 'jwt-inspect.invalid-key',
         field: 'key',
-        reason: 'operation-not-permitted',
-      );
-    }
-    if (key.keyOperations case final operations?
-        when !operations.contains('verify')) {
-      throw const JwtInspectException(
-        kind: JwtInspectFailureKind.validation,
-        code: 'jwt-inspect.incompatible-key',
-        field: 'key',
-        reason: 'operation-not-permitted',
-      );
-    }
-    if (!key.usableForOperation('verify')) {
-      throw const JwtInspectException(
-        kind: JwtInspectFailureKind.validation,
-        code: 'jwt-inspect.incompatible-key',
-        field: 'key',
-        reason: 'operation-not-permitted',
-      );
-    }
-    if (header['kid'] case final String tokenKeyId
-        when key.keyId != null && key.keyId != tokenKeyId) {
-      throw const JwtInspectException(
-        kind: JwtInspectFailureKind.validation,
-        code: 'jwt-inspect.incompatible-key',
-        field: 'key',
-        reason: 'key-id-mismatch',
+        reason: 'malformed-key',
       );
     }
     if (expectedType == 'oct' && jwk != null) {
@@ -442,6 +494,67 @@ final class JwtInspector {
     return key;
   }
 
+  static void _validateJwkMetadata(Map<String, dynamic> jwk, String algorithm) {
+    for (final name in const <String>['alg', 'use', 'kid']) {
+      if (jwk.containsKey(name) && jwk[name] is! String) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.invalid-key',
+          field: 'key',
+          reason: 'malformed-key',
+        );
+      }
+    }
+    if (jwk['alg'] case final String value when value != algorithm) {
+      throw const JwtInspectException(
+        kind: JwtInspectFailureKind.validation,
+        code: 'jwt-inspect.incompatible-key',
+        field: 'key',
+        reason: 'algorithm-mismatch',
+      );
+    }
+    if (jwk['use'] case final String value when value != 'sig') {
+      throw const JwtInspectException(
+        kind: JwtInspectFailureKind.validation,
+        code: 'jwt-inspect.incompatible-key',
+        field: 'key',
+        reason: 'operation-not-permitted',
+      );
+    }
+    if (jwk.containsKey('key_ops')) {
+      final operations = jwk['key_ops'];
+      const allowed = <String>{
+        'sign',
+        'verify',
+        'encrypt',
+        'decrypt',
+        'wrapKey',
+        'unwrapKey',
+        'deriveKey',
+        'deriveBits',
+      };
+      if (operations is! List<dynamic> ||
+          operations.any((value) => value is! String) ||
+          operations.toSet().length != operations.length ||
+          !operations.every(allowed.contains)) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.invalid-key',
+          field: 'key',
+          reason: 'malformed-key',
+        );
+      }
+      if (!operations.contains('verify')) {
+        throw const JwtInspectException(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.incompatible-key',
+          field: 'key',
+          reason: 'operation-not-permitted',
+        );
+      }
+    }
+  }
+
   static int _minimumHmacLength(String algorithm) => switch (algorithm) {
     'HS256' => 32,
     'HS384' => 48,
@@ -454,6 +567,8 @@ final class JwtInspector {
         StrictJsonObjectFailure.invalidJson => 'invalid-json',
         StrictJsonObjectFailure.objectRequired => 'object-required',
         StrictJsonObjectFailure.invalidUnicode => 'invalid-unicode',
+        StrictJsonObjectFailure.nonFiniteNumber => 'invalid-json',
+        StrictJsonObjectFailure.nestingLimit => 'nesting-limit',
       };
 
   static bool _verifyWithJose(
@@ -462,4 +577,19 @@ final class JwtInspector {
     String algorithm,
     JsonWebKey key,
   ) => key.verify(signingInput, signature, algorithm: algorithm);
+}
+
+Map<String, Object?> _freezeJsonObject(Map<String, dynamic> source) =>
+    Map<String, Object?>.unmodifiable(
+      source.map(
+        (key, value) => MapEntry<String, Object?>(key, _freezeJsonValue(value)),
+      ),
+    );
+
+Object? _freezeJsonValue(Object? value) {
+  if (value is Map<String, dynamic>) return _freezeJsonObject(value);
+  if (value is List<dynamic>) {
+    return List<Object?>.unmodifiable(value.map(_freezeJsonValue));
+  }
+  return value;
 }

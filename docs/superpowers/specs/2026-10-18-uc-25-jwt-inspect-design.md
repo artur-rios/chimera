@@ -15,7 +15,8 @@ The shared inspector accepts compact JWT text and an optional local key. It
 requires exactly three non-empty, unpadded, canonical Base64url segments. The
 protected header and payload must be UTF-8 JSON objects; arrays, scalars,
 duplicate object members at any depth, malformed text, and invalid Unicode are
-rejected. The signature must decode as non-empty bytes.
+rejected. Numbers must be finite so every successful result remains valid JSON.
+The signature must decode as non-empty bytes.
 
 The protected `alg` member must be a string and one of `HS256`, `HS384`,
 `HS512`, `RS256`, `RS384`, `RS512`, `ES256`, `ES256K`, `ES384`, or `ES512`.
@@ -59,7 +60,8 @@ result.
 Mutable Base64, signing-input, signature, and raw-secret byte copies are
 cleared in `finally` blocks. Dart strings and immutable maps cannot be reliably
 overwritten, so interface adapters clear controllers, undo history, and
-results at lifecycle boundaries and never persist or log them.
+results at lifecycle boundaries and never persist or log them. Returned JSON
+maps and lists are recursively immutable.
 
 Stable failures use field `token` or `key`:
 
@@ -73,8 +75,11 @@ Stable failures use field `token` or `key`:
 - `jwt-inspect.resource-limit` is a resource failure.
 
 No diagnostic contains input, output, dependency messages, or key metadata.
-Injected byte budgets and a verification seam provide deterministic resource
-and processing tests without imposing a production size ceiling.
+Production inspection limits each token or key source to 1 MiB, total decoded
+JWT material to 768 KiB, and JSON nesting to 64 containers. CLI streams and
+files and GUI files reject oversized sources before parsing; all adapters also
+enforce the byte boundary after a collaborator returns. Injected budgets and a
+verification seam provide deterministic resource and processing tests.
 
 ## Shared implementation
 
@@ -138,7 +143,8 @@ Known-answer HMAC tests and independently signed RSA/ECDSA fixtures cover every
 supported family. Negative tests cover malformed/corrupt segments, duplicate
 members, invalid Unicode, reserved headers, `none`, weak HMAC and
 wrong/restricted keys,
-signature mismatch, allocation failure, dependency failure, redaction,
+non-finite numbers, excessive nesting, signature mismatch, allocation failure,
+dependency failure, redaction,
 repeated calls, and absence of partial results. Core, CLI, widget, native,
 Chromium, Firefox, WebKit, and native Safari tests cover decode-only, verified,
 explicitly failed/untrusted, source variants, discard, accessibility, and zero

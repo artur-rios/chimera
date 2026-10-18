@@ -61,6 +61,23 @@ void main() {
     expect(failed.claims['sub'], '1234567890');
   });
 
+  test('GivenNestedOutput_WhenConstructed_ThenEntireJsonIsImmutable', () {
+    final output = JwtInspectOutput(
+      header: const <String, Object?>{'alg': 'HS256'},
+      claims: <String, Object?>{
+        'nested': <String, Object?>{
+          'items': <Object?>[1],
+        },
+      },
+      verification: JwtVerificationStatus.notRequested,
+    );
+
+    final nested = output.claims['nested']! as Map<String, Object?>;
+    final items = nested['items']! as List<Object?>;
+    expect(() => nested['changed'] = true, throwsUnsupportedError);
+    expect(() => items.add(2), throwsUnsupportedError);
+  });
+
   test(
     'GivenInjectedInspector_WhenInspected_ThenDelegatesExactlyOnce',
     () async {
@@ -111,6 +128,18 @@ void main() {
             code: 'jwt-inspect.invalid-token',
             field: 'token',
             reason: 'malformed-structure',
+            messageKey: 'error.jwtInspect.validation',
+          ),
+          (
+            name: 'NonFiniteClaim',
+            request: JwtInspectOperationRequest(
+              token: _unsignedToken('{"alg":"HS256"}', '{"value":1e400}'),
+            ),
+            inspector: const JwtInspector(),
+            kind: FailureKind.validation,
+            code: 'jwt-inspect.invalid-token',
+            field: 'token',
+            reason: 'invalid-json',
             messageKey: 'error.jwtInspect.validation',
           ),
           (
@@ -170,3 +199,7 @@ JwtInspectOutput _success(ChimeraResult<JwtInspectOutput> result) =>
     );
 
 String _segment(List<int> value) => base64Url.encode(value).replaceAll('=', '');
+
+String _unsignedToken(String header, String claims) =>
+    '${_segment(utf8.encode(header))}.${_segment(utf8.encode(claims))}.'
+    '${_segment(<int>[1])}';

@@ -97,6 +97,26 @@ void main() {
       expect(result.verification, JwtVerificationStatus.verified);
     });
 
+    test('GivenNestedClaims_WhenInspected_ThenEntireResultIsImmutable', () {
+      final result = inspector.inspect(
+        JwtInspectRequest(
+          token: _unsignedToken(
+            '{"alg":"HS256"}',
+            '{"nested":{"items":[{"value":1}]}}',
+          ),
+        ),
+      );
+
+      final nested = result.claims['nested']! as Map<String, dynamic>;
+      final items = nested['items']! as List<dynamic>;
+      expect(() => nested['other'] = true, throwsUnsupportedError);
+      expect(() => items.add(false), throwsUnsupportedError);
+      expect(
+        () => (items.single as Map<String, dynamic>)['value'] = 2,
+        throwsUnsupportedError,
+      );
+    });
+
     test(
       'GivenMutableVerificationCopies_WhenInspected_ThenCopiesAreCleared',
       () {
@@ -161,6 +181,41 @@ void main() {
           code: 'jwt-inspect.invalid-token',
           field: 'token',
           reason: 'invalid-encoding',
+        ),
+      );
+    });
+
+    test('GivenNonFiniteClaim_WhenInspected_ThenTokenFails', () {
+      expect(
+        () => inspector.inspect(
+          JwtInspectRequest(
+            token: _unsignedToken('{"alg":"HS256"}', '{"value":1e400}'),
+          ),
+        ),
+        _failure(
+          kind: JwtInspectFailureKind.validation,
+          code: 'jwt-inspect.invalid-token',
+          field: 'token',
+          reason: 'invalid-json',
+        ),
+      );
+    });
+
+    test('GivenExcessiveJsonNesting_WhenInspected_ThenResourceFails', () {
+      final depth = JwtInspector.defaultMaxNestingDepth + 1;
+      final claims =
+          '${List<String>.filled(depth, '{"x":').join()}0'
+          '${List<String>.filled(depth, '}').join()}';
+
+      expect(
+        () => inspector.inspect(
+          JwtInspectRequest(token: _unsignedToken('{"alg":"HS256"}', claims)),
+        ),
+        _failure(
+          kind: JwtInspectFailureKind.resource,
+          code: 'jwt-inspect.resource-limit',
+          field: 'token',
+          reason: 'nesting-limit',
         ),
       );
     });
@@ -332,6 +387,60 @@ void main() {
         );
       });
     }
+
+    for (final fixture in <({String name, Map<String, Object?> changes})>[
+      (name: 'NullAlgorithm', changes: <String, Object?>{'alg': null}),
+      (name: 'NumericAlgorithm', changes: <String, Object?>{'alg': 1}),
+      (name: 'NullUse', changes: <String, Object?>{'use': null}),
+      (name: 'ListUse', changes: <String, Object?>{'use': <Object?>[]}),
+      (name: 'NullOperations', changes: <String, Object?>{'key_ops': null}),
+      (
+        name: 'ScalarOperations',
+        changes: <String, Object?>{'key_ops': 'verify'},
+      ),
+      (
+        name: 'NonStringOperation',
+        changes: <String, Object?>{
+          'key_ops': <Object?>['verify', 1],
+        },
+      ),
+      (name: 'NumericKeyId', changes: <String, Object?>{'kid': 1}),
+    ]) {
+      test('Given${fixture.name}Jwk_WhenInspected_ThenKeyFails', () {
+        expect(
+          () => inspector.inspect(
+            JwtInspectRequest(
+              token: _knownToken,
+              key: _octJwk(changes: fixture.changes),
+            ),
+          ),
+          _failure(
+            kind: JwtInspectFailureKind.validation,
+            code: 'jwt-inspect.invalid-key',
+            field: 'key',
+            reason: 'malformed-key',
+          ),
+        );
+      });
+    }
+
+    test('GivenValidOptionalJwkMetadata_WhenInspected_ThenKeyVerifies', () {
+      final result = inspector.inspect(
+        JwtInspectRequest(
+          token: _knownToken,
+          key: _octJwk(
+            changes: const <String, Object?>{
+              'alg': 'HS256',
+              'use': 'sig',
+              'key_ops': <String>['verify'],
+              'kid': 'rotation-1',
+            },
+          ),
+        ),
+      );
+
+      expect(result.verification, JwtVerificationStatus.verified);
+    });
 
     test('GivenConflictingKeyIds_WhenInspected_ThenCompatibilityFails', () {
       final token = const JwtCreator()

@@ -150,8 +150,8 @@ Future<int> runChimera(
         out: out,
         err: err,
         readStandardInputBytes:
-            readStandardInputBytes ?? _readStandardInputBytes,
-        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+            readStandardInputBytes ?? _readJwtInspectStandardInputBytes,
+        readFileBytes: readFileBytes ?? _readJwtInspectFileBytes,
         service: jwtInspectService,
         encodeJson: jwtInspectJsonEncoder ?? jsonEncode,
       );
@@ -1685,6 +1685,9 @@ Future<int> _runJwtInspect(
     try {
       final bytes = await read();
       try {
+        if (bytes.length > JwtInspector.defaultMaxInputBytes) {
+          throw const _JwtInspectInputLimit();
+        }
         return utf8.decode(bytes, allowMalformed: false);
       } finally {
         try {
@@ -1693,6 +1696,14 @@ Future<int> _runJwtInspect(
           // Immutable collaborator bytes are released when this scope ends.
         }
       }
+    } on _JwtInspectInputLimit {
+      throw _JwtInspectAdapterFailure(
+        exitCode: 75,
+        kind: 'resource',
+        code: 'jwt-inspect.resource-limit',
+        messageKey: 'error.jwtInspect.resource',
+        details: <String, Object?>{'field': field, 'reason': 'input-limit'},
+      );
     } on FormatException {
       throw _JwtInspectAdapterFailure(
         exitCode: 64,
@@ -2741,6 +2752,33 @@ void _writeBase64ResourceFailure(
 
 Future<List<int>> _readStandardInputBytes() =>
     stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+
+final class _JwtInspectInputLimit implements Exception {
+  const _JwtInspectInputLimit();
+}
+
+Future<List<int>> _readJwtInspectFileBytes(String path) async {
+  final file = File(path);
+  if (await file.length() > JwtInspector.defaultMaxInputBytes) {
+    throw const _JwtInspectInputLimit();
+  }
+  final bytes = await file.readAsBytes();
+  if (bytes.length <= JwtInspector.defaultMaxInputBytes) return bytes;
+  bytes.fillRange(0, bytes.length, 0);
+  throw const _JwtInspectInputLimit();
+}
+
+Future<List<int>> _readJwtInspectStandardInputBytes() async {
+  final bytes = <int>[];
+  await for (final chunk in stdin) {
+    if (bytes.length + chunk.length > JwtInspector.defaultMaxInputBytes) {
+      bytes.fillRange(0, bytes.length, 0);
+      throw const _JwtInspectInputLimit();
+    }
+    bytes.addAll(chunk);
+  }
+  return bytes;
+}
 
 Future<int> _runTextAnalyze(
   ArgResults parsed, {

@@ -14,8 +14,18 @@ typedef JwtInspectFilePicker = Future<List<int>?> Function(String field);
 typedef JwtInspectClipboardReader = Future<String?> Function(String field);
 typedef JwtInspectClipboardWriter = Future<void> Function(String value);
 
-Future<List<int>?> pickJwtInspectFile(String _) async =>
-    (await FilePicker.pickFile())?.readAsBytes();
+Future<List<int>?> pickJwtInspectFile(String _) async {
+  final file = await FilePicker.pickFile();
+  if (file == null) return null;
+  final length = await file.length();
+  if (length != null && length > JwtInspector.defaultMaxInputBytes) {
+    throw const _JwtInspectInputLimit();
+  }
+  final bytes = await file.readAsBytes();
+  if (bytes.length <= JwtInspector.defaultMaxInputBytes) return bytes;
+  bytes.fillRange(0, bytes.length, 0);
+  throw const _JwtInspectInputLimit();
+}
 
 Future<String?> readJwtInspectClipboard(String _) async =>
     (await Clipboard.getData(Clipboard.kTextPlain))?.text;
@@ -111,6 +121,9 @@ final class _JwtInspectPageState extends State<JwtInspectPage> {
       bytes = await widget.filePicker(field);
       if (!_current(generation)) return;
       if (bytes != null) {
+        if (bytes.length > JwtInspector.defaultMaxInputBytes) {
+          throw const _JwtInspectInputLimit();
+        }
         final text = utf8.decode(bytes, allowMalformed: false);
         setState(() {
           _output = null;
@@ -121,6 +134,8 @@ final class _JwtInspectPageState extends State<JwtInspectPage> {
         });
       }
       if (_current(generation)) setState(() => _busy = false);
+    } on _JwtInspectInputLimit {
+      _fail(generation, 'resource');
     } on FormatException {
       _fail(generation, 'validation');
     } on OutOfMemoryError {
@@ -377,4 +392,8 @@ final class _JwtInspectPageState extends State<JwtInspectPage> {
       ),
     ),
   );
+}
+
+final class _JwtInspectInputLimit implements Exception {
+  const _JwtInspectInputLimit();
 }

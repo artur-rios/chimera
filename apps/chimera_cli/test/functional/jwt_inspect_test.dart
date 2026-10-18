@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
@@ -212,6 +213,61 @@ void main() {
     expect(err.toString(), 'JWT inspection exceeded its resource limit.\n');
   });
 
+  test('GivenNonFiniteClaim_WhenRun_ThenTypedValidationReturns', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final token = _unsignedToken('{"alg":"HS256"}', '{"value":1e400}');
+
+    final exitCode = await runChimera(
+      <String>['jwt', 'inspect', '--token=$token', '--json'],
+      localeTag: 'en',
+      out: out,
+      err: err,
+    );
+
+    expect(exitCode, 64);
+    expect(out.toString(), isEmpty);
+    expect(jsonDecode(err.toString()), <String, Object?>{
+      'error': <String, Object?>{
+        'kind': 'validation',
+        'code': 'jwt-inspect.invalid-token',
+        'message': 'The JWT inspection request is invalid.',
+        'location': <String, Object?>{
+          'field': 'token',
+          'reason': 'invalid-json',
+        },
+      },
+    });
+  });
+
+  test(
+    'GivenOversizedTokenFile_WhenRun_ThenReadIsRejectedAsResource',
+    () async {
+      final directory = await Directory.systemTemp.createTemp('chimera-jwt-');
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/oversized.jwt');
+      final handle = file.openSync(mode: FileMode.write);
+      try {
+        handle.truncateSync(JwtInspector.defaultMaxInputBytes + 1);
+      } finally {
+        handle.closeSync();
+      }
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>['jwt', 'inspect', '--token-file=${file.path}'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+
+      expect(exitCode, 75);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'JWT inspection exceeded its resource limit.\n');
+    },
+  );
+
   test('GivenHelp_WhenRunInBothLocales_ThenJwtInspectUsageReturns', () async {
     for (final locale in <String>['en', 'pt-BR']) {
       final out = StringBuffer();
@@ -230,3 +286,7 @@ void main() {
 }
 
 String _segment(List<int> value) => base64Url.encode(value).replaceAll('=', '');
+
+String _unsignedToken(String header, String claims) =>
+    '${_segment(utf8.encode(header))}.${_segment(utf8.encode(claims))}.'
+    '${_segment(<int>[1])}';

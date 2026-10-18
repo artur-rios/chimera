@@ -117,6 +117,20 @@ void main() {
     },
   );
 
+  testWidgets('GivenNonFiniteClaim_WhenInspected_ThenSafeValidationRenders', (
+    tester,
+  ) async {
+    final token = _unsignedToken('{"alg":"HS256"}', '{"value":1e400}');
+    await tester.pumpWidget(const ChimeraApp(initialLocation: '/jwt/inspect'));
+    await tester.enterText(find.byKey(const Key('jwt-inspect-token')), token);
+    await tester.tap(find.byKey(const Key('jwt-inspect-submit')));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('The JWT inspection request is invalid.'), findsOneWidget);
+    expect(find.byKey(const Key('jwt-inspect-output')), findsNothing);
+  });
+
   testWidgets('GivenFileAndClipboardSources_WhenLoaded_ThenTheyCanInspect', (
     tester,
   ) async {
@@ -151,6 +165,33 @@ void main() {
 
     expect(loaded, <String>['file:token', 'paste:token', 'file:key']);
     expect(find.byKey(const Key('jwt-inspect-output')), findsOneWidget);
+  });
+
+  testWidgets('GivenOversizedFile_WhenLoaded_ThenResourceFailureClearsSource', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ChimeraApp(
+        initialLocation: '/jwt/inspect',
+        jwtInspectFilePicker: (_) async =>
+            List<int>.filled(JwtInspector.defaultMaxInputBytes + 1, 0x61),
+      ),
+    );
+    await tester.tap(find.byKey(const Key('jwt-inspect-token-file')));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('JWT inspection exceeded its resource limit.'),
+      findsOneWidget,
+    );
+    expect(
+      tester
+          .widget<TextField>(find.byKey(const Key('jwt-inspect-token')))
+          .controller!
+          .text,
+      isEmpty,
+    );
+    expect(find.byKey(const Key('jwt-inspect-output')), findsNothing);
   });
 
   testWidgets('GivenResult_WhenCopied_ThenStableJsonIsHandedOff', (
@@ -440,3 +481,9 @@ void main() {
     },
   );
 }
+
+String _unsignedToken(String header, String claims) =>
+    '${_segment(utf8.encode(header))}.${_segment(utf8.encode(claims))}.'
+    '${_segment(<int>[1])}';
+
+String _segment(List<int> value) => base64Url.encode(value).replaceAll('=', '');

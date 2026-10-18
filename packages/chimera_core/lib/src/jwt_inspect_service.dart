@@ -19,8 +19,8 @@ final class JwtInspectOutput {
     required Map<String, Object?> header,
     required Map<String, Object?> claims,
     required this.verification,
-  }) : header = Map<String, Object?>.unmodifiable(header),
-       claims = Map<String, Object?>.unmodifiable(claims);
+  }) : header = _freezeJsonObject(header),
+       claims = _freezeJsonObject(claims);
 
   final Map<String, Object?> header;
   final Map<String, Object?> claims;
@@ -35,6 +35,21 @@ final class JwtInspectOutput {
       JwtVerificationStatus.failed => 'failed',
     },
   };
+}
+
+Map<String, Object?> _freezeJsonObject(Map<String, Object?> source) =>
+    Map<String, Object?>.unmodifiable(
+      source.map(
+        (key, value) => MapEntry<String, Object?>(key, _freezeJsonValue(value)),
+      ),
+    );
+
+Object? _freezeJsonValue(Object? value) {
+  if (value is Map<String, Object?>) return _freezeJsonObject(value);
+  if (value is List<Object?>) {
+    return List<Object?>.unmodifiable(value.map(_freezeJsonValue));
+  }
+  return value;
 }
 
 final class JwtInspectService

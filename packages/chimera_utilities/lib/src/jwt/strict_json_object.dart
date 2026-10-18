@@ -1,6 +1,12 @@
 import 'dart:convert';
 
-enum StrictJsonObjectFailure { invalidJson, objectRequired, invalidUnicode }
+enum StrictJsonObjectFailure {
+  invalidJson,
+  objectRequired,
+  invalidUnicode,
+  nonFiniteNumber,
+  nestingLimit,
+}
 
 final class StrictJsonObjectException implements Exception {
   const StrictJsonObjectException(this.failure);
@@ -8,11 +14,20 @@ final class StrictJsonObjectException implements Exception {
   final StrictJsonObjectFailure failure;
 }
 
-Map<String, dynamic> decodeStrictJsonObject(String source) {
+Map<String, dynamic> decodeStrictJsonObject(
+  String source, {
+  int? maxNestingDepth,
+}) {
+  assert(maxNestingDepth == null || maxNestingDepth >= 0);
   dynamic decoded;
   try {
-    _DuplicateJsonMemberScanner(source).validate();
+    _DuplicateJsonMemberScanner(
+      source,
+      maxNestingDepth: maxNestingDepth,
+    ).validate();
     decoded = jsonDecode(source);
+  } on StrictJsonObjectException {
+    rethrow;
   } on FormatException {
     throw const StrictJsonObjectException(StrictJsonObjectFailure.invalidJson);
   }
@@ -21,15 +36,13 @@ Map<String, dynamic> decodeStrictJsonObject(String source) {
       StrictJsonObjectFailure.objectRequired,
     );
   }
-  if (!_containsOnlyScalars(decoded)) {
-    throw const StrictJsonObjectException(
-      StrictJsonObjectFailure.invalidUnicode,
-    );
+  if (_decodedValueFailure(decoded) case final failure?) {
+    throw StrictJsonObjectException(failure);
   }
   return decoded;
 }
 
-bool _containsOnlyScalars(Object? value) {
+StrictJsonObjectFailure? _decodedValueFailure(Object? value) {
   if (value is String) {
     final units = value.codeUnits;
     for (var index = 0; index < units.length; index++) {
@@ -38,29 +51,39 @@ bool _containsOnlyScalars(Object? value) {
         if (++index >= units.length ||
             units[index] < 0xdc00 ||
             units[index] > 0xdfff) {
-          return false;
+          return StrictJsonObjectFailure.invalidUnicode;
         }
       } else if (unit >= 0xdc00 && unit <= 0xdfff) {
-        return false;
+        return StrictJsonObjectFailure.invalidUnicode;
       }
     }
-    return true;
+    return null;
   }
-  if (value is List<Object?>) return value.every(_containsOnlyScalars);
+  if (value is num && !value.isFinite) {
+    return StrictJsonObjectFailure.nonFiniteNumber;
+  }
+  if (value is List<Object?>) {
+    for (final item in value) {
+      if (_decodedValueFailure(item) case final failure?) return failure;
+    }
+    return null;
+  }
   if (value is Map<String, dynamic>) {
-    return value.entries.every(
-      (entry) =>
-          _containsOnlyScalars(entry.key) && _containsOnlyScalars(entry.value),
-    );
+    for (final entry in value.entries) {
+      if (_decodedValueFailure(entry.key) case final failure?) return failure;
+      if (_decodedValueFailure(entry.value) case final failure?) return failure;
+    }
   }
-  return true;
+  return null;
 }
 
 final class _DuplicateJsonMemberScanner {
-  _DuplicateJsonMemberScanner(this.source);
+  _DuplicateJsonMemberScanner(this.source, {required this.maxNestingDepth});
 
   final String source;
+  final int? maxNestingDepth;
   var _index = 0;
+  var _depth = 0;
 
   void validate() {
     _skipWhitespace();
@@ -91,9 +114,13 @@ final class _DuplicateJsonMemberScanner {
   }
 
   void _scanObject() {
+    _enterContainer();
     _index++;
     _skipWhitespace();
-    if (_consume(0x7d)) return;
+    if (_consume(0x7d)) {
+      _depth--;
+      return;
+    }
     final names = <String>{};
     while (true) {
       _skipWhitespace();
@@ -105,20 +132,39 @@ final class _DuplicateJsonMemberScanner {
       if (!_consume(0x3a)) throw const FormatException();
       _scanValue();
       _skipWhitespace();
-      if (_consume(0x7d)) return;
+      if (_consume(0x7d)) {
+        _depth--;
+        return;
+      }
       if (!_consume(0x2c)) throw const FormatException();
     }
   }
 
   void _scanArray() {
+    _enterContainer();
     _index++;
     _skipWhitespace();
-    if (_consume(0x5d)) return;
+    if (_consume(0x5d)) {
+      _depth--;
+      return;
+    }
     while (true) {
       _scanValue();
       _skipWhitespace();
-      if (_consume(0x5d)) return;
+      if (_consume(0x5d)) {
+        _depth--;
+        return;
+      }
       if (!_consume(0x2c)) throw const FormatException();
+    }
+  }
+
+  void _enterContainer() {
+    _depth++;
+    if (maxNestingDepth case final maximum? when _depth > maximum) {
+      throw const StrictJsonObjectException(
+        StrictJsonObjectFailure.nestingLimit,
+      );
     }
   }
 

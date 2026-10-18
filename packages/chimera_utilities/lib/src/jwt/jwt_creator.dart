@@ -205,6 +205,8 @@ final class JwtCreator {
           StrictJsonObjectFailure.invalidJson => 'invalid-json',
           StrictJsonObjectFailure.objectRequired => 'object-required',
           StrictJsonObjectFailure.invalidUnicode => 'invalid-unicode',
+          StrictJsonObjectFailure.nonFiniteNumber => 'invalid-json',
+          StrictJsonObjectFailure.nestingLimit => 'invalid-json',
         },
       );
     }

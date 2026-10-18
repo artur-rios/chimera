@@ -1834,6 +1834,23 @@ test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures l
       page.getByRole('textbox', { name: 'Optional verification key', exact: true }),
     ).toHaveValue('');
   }
+  const nonFiniteToken = compact(
+    'HS256',
+    'unused',
+    input => createHmac('sha256', hmacKey).update(input).digest(),
+  ).replace(
+    Buffer.from(JSON.stringify({ browserInspect: 'unused' })).toString('base64url'),
+    Buffer.from('{"value":1e400}').toString('base64url'),
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'JWT', exact: true }),
+    nonFiniteToken,
+  );
+  await page.getByRole('button', { name: 'Inspect and verify', exact: true }).click();
+  await expect(page.locator('span', {
+    hasText: /^The JWT inspection request is invalid\.$/,
+  })).toBeVisible();
+  await expect(page.getByRole('region', { name: /JWT inspection result/ })).toHaveCount(0);
   expect(interactionRequests.filter(
     url => !new URL(url).pathname.startsWith('/font-fallback/'),
   )).toEqual([]);
