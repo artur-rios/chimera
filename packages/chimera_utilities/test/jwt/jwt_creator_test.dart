@@ -169,6 +169,71 @@ void main() {
       );
     });
 
+    for (final fixture in <({String name, String header, String claims})>[
+      (
+        name: 'Header',
+        header: '{"alg":"HS256","\\u0061lg":"HS256"}',
+        claims: '{}',
+      ),
+      (
+        name: 'NestedClaims',
+        header: '{}',
+        claims: '{"profile":{"role":"user","role":"admin"}}',
+      ),
+    ]) {
+      test('GivenDuplicate${fixture.name}Member_WhenCreated_ThenJsonFails', () {
+        expect(
+          () => creator.create(
+            JwtCreateRequest(
+              headerJson: fixture.header,
+              claimsJson: fixture.claims,
+              algorithm: 'HS256',
+              key: '0123456789abcdef0123456789abcdef',
+            ),
+          ),
+          throwsA(
+            isA<JwtCreateException>()
+                .having(
+                  (error) => error.code,
+                  'code',
+                  fixture.name == 'Header'
+                      ? 'jwt-create.invalid-header'
+                      : 'jwt-create.invalid-claims',
+                )
+                .having((error) => error.reason, 'reason', 'invalid-json'),
+          ),
+        );
+      });
+    }
+
+    for (final name in <String>{
+      'jwk',
+      'jku',
+      'x5u',
+      'x5c',
+      'x5t',
+      'x5t#S256',
+    }) {
+      test('GivenProtected${name}Header_WhenCreated_ThenHeaderFails', () {
+        expect(
+          () => creator.create(
+            JwtCreateRequest(
+              headerJson: jsonEncode(<String, Object?>{name: 'private-marker'}),
+              claimsJson: '{}',
+              algorithm: 'HS256',
+              key: '0123456789abcdef0123456789abcdef',
+            ),
+          ),
+          _failure(
+            kind: JwtCreateFailureKind.validation,
+            code: 'jwt-create.invalid-header',
+            field: 'header',
+            reason: 'unsupported-key-selection-header',
+          ),
+        );
+      });
+    }
+
     for (final claims in <String>['[]', 'null', 'true', '"private"', '{']) {
       test('GivenInvalidClaims${claims}_WhenCreated_ThenClaimsFail', () {
         expect(
@@ -208,6 +273,27 @@ void main() {
           code: 'jwt-create.invalid-key',
           field: 'key',
           reason: 'insufficient-key-length',
+        ),
+      );
+    });
+
+    test('GivenDuplicateNestedJwkMember_WhenCreated_ThenKeyFails', () {
+      expect(
+        () => creator.create(
+          const JwtCreateRequest(
+            headerJson: '{}',
+            claimsJson: '{}',
+            algorithm: 'HS256',
+            key:
+                '{"kty":"oct","k":"MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY",'
+                '"meta":{"owner":"first","owner":"second"}}',
+          ),
+        ),
+        _failure(
+          kind: JwtCreateFailureKind.validation,
+          code: 'jwt-create.invalid-key',
+          field: 'key',
+          reason: 'invalid-json',
         ),
       );
     });

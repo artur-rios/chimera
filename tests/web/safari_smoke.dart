@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:webdriver/async_io.dart';
 
+import '../fixtures/jwt_signing_keys.dart';
+
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
 const _certificatePem = '''-----BEGIN CERTIFICATE-----
 MIICEjCCAXugAwIBAgICAaswDQYJKoZIhvcNAQELBQAwMDETMBEGA1UEAwwKRXhh
@@ -1191,6 +1193,116 @@ Future<void> _createJwt(WebDriver driver) async {
     'JWT key was not discarded',
   );
   await _assertNoExternalRequests(driver, flow: 'JWT creation');
+  await _createAsymmetricJwt(driver, 'RS256', rsaPrivateJwk);
+  await _createAsymmetricJwt(driver, 'ES256', ecPrivateJwk);
+}
+
+Future<void> _createAsymmetricJwt(
+  WebDriver driver,
+  String algorithm,
+  String key,
+) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    '$algorithm JWT semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Create JWT');
+  await _waitUntil(
+    () => _pageContains(driver, 'Claims JSON'),
+    '$algorithm JWT page did not open',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(r'''
+    const normalize = value => value.replace(/\s+/g, ' ').trim();
+    const selector = [...document.querySelectorAll('[role="button"]')]
+      .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'Signing algorithm HS256');
+    if (!selector) return false;
+    selector.click();
+    return true;
+  ''', const <Object?>[]) ==
+        true,
+    '$algorithm JWT algorithm selector was unavailable',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          '''
+    const option = [...document.querySelectorAll('[role="menuitem"]')]
+      .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+        element.getAttribute('aria-disabled') !== 'true');
+    if (!option) return false;
+    option.click();
+    return true;
+  ''',
+          <Object?>[algorithm],
+        ) ==
+        true,
+    '$algorithm JWT algorithm could not be selected',
+  );
+  await _fillTextBox(
+    driver,
+    'Claims JSON',
+    '{"safari":true,"family":"$algorithm"}',
+  );
+  await _fillTextBox(driver, 'Private signing key', key);
+  await driver.execute('''
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  ''', const <Object?>[]);
+  await _clickButton(driver, 'Create and sign');
+  await _clickButton(driver, 'Copy JWT');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+    const token = window.__chimeraCopiedText;
+    if (typeof token !== 'string') return false;
+    const segments = token.split('.');
+    if (segments.length !== 3 || segments.some(segment => segment.length === 0)) return false;
+    const decode = segment => {
+      const padded = segment.replace(/-/g, '+').replace(/_/g, '/')
+        .padEnd(Math.ceil(segment.length / 4) * 4, '=');
+      return JSON.parse(new TextDecoder().decode(
+        Uint8Array.from(atob(padded), character => character.charCodeAt(0)),
+      ));
+    };
+    const header = decode(segments[0]);
+    const claims = decode(segments[1]);
+    return header.alg === arguments[0] && header.typ === 'JWT' &&
+      claims.safari === true && claims.family === arguments[0];
+  ''',
+          <Object?>[algorithm],
+        ) ==
+        true,
+    '$algorithm JWT compact result was invalid',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Claims JSON', ''),
+    '$algorithm JWT claims were not discarded',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Private signing key', ''),
+    '$algorithm JWT key was not discarded',
+  );
+  await _assertNoExternalRequests(driver, flow: '$algorithm JWT creation');
 }
 
 Future<void> _encodeHtml(WebDriver driver) async {

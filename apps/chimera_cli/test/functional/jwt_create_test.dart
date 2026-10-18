@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:chimera_cli/chimera_cli.dart';
+import 'package:chimera_core/chimera_core.dart';
+import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 const _secret = '0123456789abcdef0123456789abcdef';
@@ -100,6 +102,81 @@ void main() {
     expect(utf8.decode(bytes!).split('.'), hasLength(3));
     expect(out.toString(), 'JWT salvo.\n');
     expect(err.toString(), isEmpty);
+  });
+
+  test('GivenCryptographicFailure_WhenRun_ThenExit70IsRedacted', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final exitCode = await runChimera(
+      <String>[
+        'jwt',
+        'create',
+        '--algorithm=HS256',
+        '--claims={"secret":"private-claims-marker"}',
+        '--key=$_secret',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+      jwtCreateService: JwtCreateService(
+        creator: JwtCreator.forTesting(
+          sign: (_, _, _, _) => throw StateError('dependency-private-marker'),
+        ),
+      ),
+    );
+
+    expect(exitCode, 70);
+    expect(out.toString(), isEmpty);
+    expect(err.toString(), 'The JWT could not be signed.\n');
+    expect(err.toString(), isNot(contains('private-claims-marker')));
+    expect(err.toString(), isNot(contains('dependency-private-marker')));
+  });
+
+  test('GivenInputFileAccessFailure_WhenRun_ThenExit74HasNoOutput', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final exitCode = await runChimera(
+      <String>[
+        'jwt',
+        'create',
+        '--algorithm=HS256',
+        '--claims-file=private-claims.json',
+        '--key=$_secret',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+      readFileBytes: (_) async => throw StateError('private-read-marker'),
+    );
+
+    expect(exitCode, 74);
+    expect(out.toString(), isEmpty);
+    expect(err.toString(), 'The claims file could not be read.\n');
+    expect(err.toString(), isNot(contains('private-read-marker')));
+  });
+
+  test('GivenOutputAccessFailure_WhenRun_ThenExit74HasNoSuccess', () async {
+    final out = StringBuffer();
+    final err = StringBuffer();
+    final exitCode = await runChimera(
+      <String>[
+        'jwt',
+        'create',
+        '--algorithm=HS256',
+        '--claims={}',
+        '--key=$_secret',
+        '--output=token.jwt',
+      ],
+      localeTag: 'en',
+      out: out,
+      err: err,
+      writeOutputFile: (_, _) async => throw StateError('private-write-marker'),
+    );
+
+    expect(exitCode, 74);
+    expect(out.toString(), isEmpty);
+    expect(err.toString(), 'The JWT could not be saved.\n');
+    expect(err.toString(), isNot(contains('private-write-marker')));
   });
 
   test('GivenConflictingSources_WhenRun_ThenValidationPrecedesIo', () async {

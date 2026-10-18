@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
+import '../../../tests/fixtures/jwt_signing_keys.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -1457,56 +1458,78 @@ void main() {
 
   for (final locale in <String>['en', 'pt-BR']) {
     testWidgets(
-      'Given${locale}JwtInputs_WhenSignedCopiedAndSaved_ThenExactTokenTransfersOffline',
+      'Given${locale}JwtAlgorithmFamilies_WhenSignedCopiedAndSaved_ThenExactTokenTransfersOffline',
       (tester) async {
         final network = _RejectConversionNetwork();
         final previous = HttpOverrides.current;
         HttpOverrides.global = network;
         addTearDown(() => HttpOverrides.global = previous);
-        String? copied;
-        List<int>? saved;
-        await tester.pumpWidget(
-          ChimeraApp(
-            localeTag: locale,
-            initialLocation: '/jwt/create',
-            jwtCreateClipboardWriter: (value) async => copied = value,
-            jwtCreateFileSaver: (name, bytes, mime) async {
-              expect(name, 'chimera-jwt.txt');
-              expect(mime, 'application/jwt');
-              saved = List<int>.of(bytes);
-              return true;
-            },
-          ),
-        );
-        await tester.pumpAndSettle();
-        await tester.enterText(
-          find.byKey(const Key('jwt-create-claims')),
-          '{"native":true}',
-        );
-        await tester.enterText(
-          find.byKey(const Key('jwt-create-key')),
-          '0123456789abcdef0123456789abcdef',
-        );
-        await tester.ensureVisible(find.byKey(const Key('jwt-create-submit')));
-        await tester.tap(find.byKey(const Key('jwt-create-submit')));
-        await tester.pumpAndSettle();
-        final token = tester
-            .widget<SelectableText>(find.byKey(const Key('jwt-create-output')))
-            .data!;
-        expect(token.split('.'), hasLength(3));
-        await tester.ensureVisible(find.byKey(const Key('jwt-create-copy')));
-        await tester.tap(find.byKey(const Key('jwt-create-copy')));
-        await tester.pumpAndSettle();
-        await tester.ensureVisible(find.byKey(const Key('jwt-create-save')));
-        await tester.tap(find.byKey(const Key('jwt-create-save')));
-        await tester.pumpAndSettle();
-        expect(copied, token);
-        expect(utf8.decode(saved!), token);
+        for (final (algorithm, key) in <(String, String)>[
+          ('HS256', '0123456789abcdef0123456789abcdef'),
+          ('RS256', rsaPrivateJwk),
+          ('ES256', ecPrivateJwk),
+        ]) {
+          String? copied;
+          List<int>? saved;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/jwt/create',
+              jwtCreateClipboardWriter: (value) async => copied = value,
+              jwtCreateFileSaver: (name, bytes, mime) async {
+                expect(name, 'chimera-jwt.txt');
+                expect(mime, 'application/jwt');
+                saved = List<int>.of(bytes);
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          tester
+              .widget<DropdownButtonFormField<String>>(
+                find.byKey(const Key('jwt-create-algorithm')),
+              )
+              .onChanged!(algorithm);
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.byKey(const Key('jwt-create-claims')),
+            '{"native":true}',
+          );
+          await tester.enterText(find.byKey(const Key('jwt-create-key')), key);
+          await tester.ensureVisible(
+            find.byKey(const Key('jwt-create-submit')),
+          );
+          await tester.tap(find.byKey(const Key('jwt-create-submit')));
+          await tester.pumpAndSettle();
+          final token = tester
+              .widget<SelectableText>(
+                find.byKey(const Key('jwt-create-output')),
+              )
+              .data!;
+          final segments = token.split('.');
+          expect(segments, hasLength(3));
+          expect(_jwtJson(segments[0])['alg'], algorithm);
+          expect(_jwtJson(segments[1]), <String, Object?>{'native': true});
+          await tester.ensureVisible(find.byKey(const Key('jwt-create-copy')));
+          await tester.tap(find.byKey(const Key('jwt-create-copy')));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.byKey(const Key('jwt-create-save')));
+          await tester.tap(find.byKey(const Key('jwt-create-save')));
+          await tester.pumpAndSettle();
+          expect(copied, token);
+          expect(utf8.decode(saved!), token);
+        }
         expect(network.attempts, 0);
       },
     );
   }
 }
+
+Map<String, Object?> _jwtJson(String segment) => (jsonDecode(
+  utf8.decode(base64Url.decode(base64Url.normalize(segment))),
+) as Map<String, dynamic>).cast<String, Object?>();
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
 // Embedded so native runner working directories cannot alter the input.
