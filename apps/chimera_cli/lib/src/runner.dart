@@ -61,6 +61,8 @@ Future<int> runChimera(
   CertificateConvertService certificateConvertService =
       const CertificateConvertService(),
   JsonObjectEncoder? certificateConvertJsonEncoder,
+  JwtCreateService jwtCreateService = const JwtCreateService(),
+  JsonObjectEncoder? jwtCreateJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -85,8 +87,11 @@ Future<int> runChimera(
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       final key =
-          parsed.command?.name == 'html' &&
-              parsed.command?.command?.name == 'decode'
+          parsed.command?.name == 'jwt' &&
+              parsed.command?.command?.name == 'create'
+          ? 'cli.jwtCreateUsage'
+          : parsed.command?.name == 'html' &&
+                parsed.command?.command?.name == 'decode'
           ? 'cli.htmlDecodeUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'encode'
@@ -107,6 +112,29 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'jwt' &&
+        parsed.command!.command?.name == 'create') {
+      return await _runJwtCreate(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: jwtCreateService,
+        encodeJson: jwtCreateJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'html' &&
         parsed.command!.command?.name == 'decode') {
@@ -503,6 +531,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isJwtCreate =
+        args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
     final isHtmlDecode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'decode';
     final isHtmlEncode =
@@ -553,7 +583,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isHtmlDecode ||
+          (isJwtCreate ||
+              isHtmlDecode ||
               isHtmlEncode ||
               isBase64Encode ||
               isGzipCompress ||
@@ -578,7 +609,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isHtmlDecode
+      code: isJwtCreate
+          ? 'jwt-create.invalid-options'
+          : isHtmlDecode
           ? 'html-decode.invalid-options'
           : isHtmlEncode
           ? 'html-encode.invalid-options'
@@ -625,7 +658,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isHtmlDecode
+      messageKey: isJwtCreate
+          ? 'error.jwtCreate.validation'
+          : isHtmlDecode
           ? 'error.htmlDecode.validation'
           : isHtmlEncode
           ? 'error.htmlEncode.validation'
@@ -678,6 +713,18 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final jwtCreate = ArgParser()
+    ..addOption('algorithm', abbr: 'a')
+    ..addOption('header')
+    ..addOption('header-file')
+    ..addOption('claims')
+    ..addOption('claims-file')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('key')
+    ..addOption('key-file')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final jwt = ArgParser()..addCommand('create', jwtCreate);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -877,6 +924,7 @@ ArgParser _buildParser() {
     ..addCommand('gzip', gzip)
     ..addCommand('html', html)
     ..addCommand('json', json)
+    ..addCommand('jwt', jwt)
     ..addCommand('list', list)
     ..addCommand('number', number)
     ..addCommand('sql', sql)
@@ -1532,6 +1580,245 @@ Future<int> _runGzipDecompress(
       return _exitCodeFor(failure.kind);
     },
   );
+}
+
+Future<int> _runJwtCreate(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required JwtCreateService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final algorithm = parsed.option('algorithm');
+  final header = parsed.option('header');
+  final headerFile = parsed.option('header-file');
+  final claims = parsed.option('claims');
+  final claimsFile = parsed.option('claims-file');
+  final useStandardInput = parsed.flag('stdin');
+  final key = parsed.option('key');
+  final keyFile = parsed.option('key-file');
+  final outputPath = parsed.option('output');
+  final json = parsed.flag('json');
+  final headerCount = (header == null ? 0 : 1) + (headerFile == null ? 0 : 1);
+  final claimsCount =
+      (claims == null ? 0 : 1) +
+      (claimsFile == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final keyCount = (key == null ? 0 : 1) + (keyFile == null ? 0 : 1);
+  final invalid =
+      parsed.rest.isNotEmpty ||
+          algorithm == null ||
+          algorithm.isEmpty ||
+          outputPath == '' ||
+          headerFile == '' ||
+          claimsFile == '' ||
+          keyFile == ''
+      ? 'invalid-options'
+      : headerCount > 1 || claimsCount > 1 || keyCount > 1
+      ? 'conflicting-sources'
+      : claimsCount == 0 || keyCount == 0
+      ? 'missing-source'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'jwt-create.$invalid',
+      messageKey: 'error.jwtCreate.validation',
+    );
+    return 64;
+  }
+
+  void writeAdapterFailure({
+    required String kind,
+    required String code,
+    required String messageKey,
+    Map<String, Object?> details = const <String, Object?>{},
+  }) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+
+  Future<String> readUtf8(
+    Future<List<int>> Function() read, {
+    required String field,
+    required String accessCode,
+    required String accessMessageKey,
+  }) async {
+    try {
+      final bytes = await read();
+      try {
+        return utf8.decode(bytes, allowMalformed: false);
+      } finally {
+        try {
+          bytes.fillRange(0, bytes.length, 0);
+        } on Object {
+          // Immutable collaborator bytes are released when this scope ends.
+        }
+      }
+    } on FormatException {
+      throw _JwtCreateAdapterFailure(
+        exitCode: 64,
+        kind: 'validation',
+        code: 'jwt-create.invalid-utf8',
+        messageKey: 'error.jwtCreate.validation',
+        details: <String, Object?>{'field': field, 'reason': 'invalid-utf8'},
+      );
+    } on OutOfMemoryError {
+      throw _JwtCreateAdapterFailure(
+        exitCode: 75,
+        kind: 'resource',
+        code: 'jwt-create.resource-limit',
+        messageKey: 'error.jwtCreate.resource',
+        details: <String, Object?>{
+          'field': field,
+          'reason': 'allocation-limit',
+        },
+      );
+    } on _JwtCreateAdapterFailure {
+      rethrow;
+    } on Object {
+      throw _JwtCreateAdapterFailure(
+        exitCode: 74,
+        kind: 'access',
+        code: accessCode,
+        messageKey: accessMessageKey,
+      );
+    }
+  }
+
+  late String headerJson;
+  late String claimsJson;
+  late String keyText;
+  try {
+    headerJson =
+        header ??
+        (headerFile == null
+            ? '{}'
+            : await readUtf8(
+                () => readFileBytes(headerFile),
+                field: 'header',
+                accessCode: 'jwt-create.header-access',
+                accessMessageKey: 'error.jwtCreate.headerAccess',
+              ));
+    claimsJson =
+        claims ??
+        await readUtf8(
+          useStandardInput
+              ? readStandardInputBytes
+              : () => readFileBytes(claimsFile!),
+          field: 'claims',
+          accessCode: useStandardInput
+              ? 'jwt-create.input-access'
+              : 'jwt-create.claims-access',
+          accessMessageKey: useStandardInput
+              ? 'error.jwtCreate.inputAccess'
+              : 'error.jwtCreate.claimsAccess',
+        );
+    keyText =
+        key ??
+        await readUtf8(
+          () => readFileBytes(keyFile!),
+          field: 'key',
+          accessCode: 'jwt-create.key-access',
+          accessMessageKey: 'error.jwtCreate.keyAccess',
+        );
+  } on _JwtCreateAdapterFailure catch (failure) {
+    writeAdapterFailure(
+      kind: failure.kind,
+      code: failure.code,
+      messageKey: failure.messageKey,
+      details: failure.details,
+    );
+    return failure.exitCode;
+  }
+
+  final result = await service.execute(
+    JwtCreateOperationRequest(
+      headerJson: headerJson,
+      claimsJson: claimsJson,
+      algorithm: algorithm!,
+      key: keyText,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        if (outputPath != null) {
+          await writeOutputFile(outputPath, utf8.encode(value.token));
+        }
+        out.write(
+          json
+              ? '${encodeJson(value.toJson())}\n'
+              : outputPath != null
+              ? '${catalog.lookup(localeTag, 'jwtCreate.savedResult')}\n'
+              : value.token,
+        );
+        return 0;
+      } on OutOfMemoryError {
+        writeAdapterFailure(
+          kind: 'resource',
+          code: 'jwt-create.resource-limit',
+          messageKey: 'error.jwtCreate.resource',
+          details: const <String, Object?>{
+            'field': 'token',
+            'reason': 'allocation-limit',
+          },
+        );
+        return 75;
+      } on Object {
+        writeAdapterFailure(
+          kind: 'access',
+          code: 'jwt-create.output-access',
+          messageKey: 'error.jwtCreate.outputAccess',
+        );
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+final class _JwtCreateAdapterFailure implements Exception {
+  const _JwtCreateAdapterFailure({
+    required this.exitCode,
+    required this.kind,
+    required this.code,
+    required this.messageKey,
+    this.details = const <String, Object?>{},
+  });
+
+  final int exitCode;
+  final String kind;
+  final String code;
+  final String messageKey;
+  final Map<String, Object?> details;
 }
 
 Future<int> _runHtmlDecode(
