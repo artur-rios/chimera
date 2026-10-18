@@ -1195,6 +1195,7 @@ Future<void> _createJwt(WebDriver driver) async {
   await _assertNoExternalRequests(driver, flow: 'JWT creation');
   final rsaToken = await _createAsymmetricJwt(driver, 'RS256', rsaPrivateJwk);
   final ecToken = await _createAsymmetricJwt(driver, 'ES256', ecPrivateJwk);
+  await _openJwtInspectPage(driver);
   await _inspectJwt(
     driver,
     token: expectedToken,
@@ -1352,14 +1353,7 @@ Future<String> _createAsymmetricJwt(
   return token;
 }
 
-Future<void> _inspectJwt(
-  WebDriver driver, {
-  required String token,
-  required String algorithm,
-  required String claimsJson,
-  required String status,
-  String? key,
-}) async {
+Future<void> _openJwtInspectPage(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
   await _waitUntil(
     () async =>
@@ -1368,7 +1362,7 @@ Future<void> _inspectJwt(
           const <Object?>[],
         ) ==
         true,
-    '$algorithm JWT inspection semantics placeholder did not load',
+    'JWT inspection semantics placeholder did not load',
   );
   await driver.execute(
     "document.querySelector('flt-semantics-placeholder').click();",
@@ -1377,12 +1371,8 @@ Future<void> _inspectJwt(
   await _clickButton(driver, 'Inspect JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Optional verification key'),
-    '$algorithm JWT inspection page did not open',
+    'JWT inspection page did not open',
   );
-  await _fillTextBox(driver, 'JWT', token);
-  if (key != null) {
-    await _fillTextBox(driver, 'Optional verification key', key);
-  }
   await driver.execute('''
     window.__chimeraCopiedText = null;
     Object.defineProperty(navigator, 'clipboard', {
@@ -1394,6 +1384,20 @@ Future<void> _inspectJwt(
       },
     });
   ''', const <Object?>[]);
+}
+
+Future<void> _inspectJwt(
+  WebDriver driver, {
+  required String token,
+  required String algorithm,
+  required String claimsJson,
+  required String status,
+  String? key,
+}) async {
+  await _fillTextBox(driver, 'JWT', token);
+  if (key != null) {
+    await _fillTextBox(driver, 'Optional verification key', key);
+  }
   await _clickButton(driver, 'Inspect and verify');
   final statusLabel = switch (status) {
     'not-requested' => 'Not requested',
