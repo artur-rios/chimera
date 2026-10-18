@@ -8,7 +8,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'gzip_decompress_empty_file_save.dart';
+import 'empty_file_save.dart';
 
 typedef GzipDecompressOperationService =
     OperationService<GzipDecompressOperationRequest, GzipDecompressOutput>;
@@ -33,11 +33,7 @@ Future<bool> saveGzipDecompressFile(
   Uint8List bytes,
   String mimeType,
 ) async {
-  final emptyWebSave = await trySaveEmptyGzipDecompressFile(
-    name,
-    bytes,
-    mimeType,
-  );
+  final emptyWebSave = await trySaveEmptyFile(name, bytes, mimeType);
   if (emptyWebSave != null) return emptyWebSave;
 
   final result = await FilePicker.saveFile(

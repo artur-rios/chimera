@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
 
-Future<bool?> trySaveEmptyGzipDecompressFile(
+Future<bool?> trySaveEmptyFile(
   String name,
   Uint8List bytes,
   String mimeType,

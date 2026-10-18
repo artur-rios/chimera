@@ -3,6 +3,42 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'htmlEncode.pageTitle': 'Encode HTML',
+    'htmlEncode.openAction': 'Encode HTML',
+    'htmlEncode.inputLabel': 'Text to encode',
+    'htmlEncode.fileAction': 'Load UTF-8 file',
+    'htmlEncode.pasteAction': 'Paste text',
+    'htmlEncode.contextLabel': 'HTML context',
+    'htmlEncode.contextAll': 'All characters',
+    'htmlEncode.contextElement': 'Element text',
+    'htmlEncode.contextDoubleQuotedAttribute': 'Double-quoted attribute',
+    'htmlEncode.contextSingleQuotedAttribute': 'Single-quoted attribute',
+    'htmlEncode.submitAction': 'Encode',
+    'htmlEncode.outputLabel': 'HTML encoded result',
+    'htmlEncode.resultSuccess': 'HTML encoding succeeded.',
+    'htmlEncode.copyAction': 'Copy encoded text',
+    'htmlEncode.saveAction': 'Save encoded text',
+    'htmlEncode.copiedResult': 'HTML encoded text copied.',
+    'htmlEncode.fileSaved': 'HTML encoded text saved.',
+    'error.htmlEncode.clipboardRead': 'The clipboard text could not be read.',
+    'error.htmlEncode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.htmlEncode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.htmlEncodeUsage':
+        'Usage: chimera html encode (--input=<text>|--stdin|--file=<path>) '
+        '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '
+        '[--output=<path>] [--json]\n'
+        'Default context: all. Human stdout is exact text without a newline. '
+        'Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 74 access, 75 resource.',
+    'htmlEncode.savedResult': 'HTML encoded text saved.',
+    'error.htmlEncode.validation': 'The HTML encoding request is invalid.',
+    'error.htmlEncode.inputAccess': 'The standard input could not be read.',
+    'error.htmlEncode.fileAccess': 'The input file could not be read.',
+    'error.htmlEncode.outputAccess':
+        'The HTML encoded text could not be saved.',
+    'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
     'gzipCompress.pageTitle': 'Compress GZIP',
     'gzipCompress.openAction': 'Compress to GZIP',
     'gzipCompress.inputLabel': 'Text to compress',
@@ -602,6 +638,45 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'htmlEncode.pageTitle': 'Codificar HTML',
+    'htmlEncode.openAction': 'Codificar HTML',
+    'htmlEncode.inputLabel': 'Texto para codificar',
+    'htmlEncode.fileAction': 'Carregar arquivo UTF-8',
+    'htmlEncode.pasteAction': 'Colar texto',
+    'htmlEncode.contextLabel': 'Contexto HTML',
+    'htmlEncode.contextAll': 'Todos os caracteres',
+    'htmlEncode.contextElement': 'Texto de elemento',
+    'htmlEncode.contextDoubleQuotedAttribute': 'Atributo com aspas duplas',
+    'htmlEncode.contextSingleQuotedAttribute': 'Atributo com aspas simples',
+    'htmlEncode.submitAction': 'Codificar',
+    'htmlEncode.outputLabel': 'Resultado codificado em HTML',
+    'htmlEncode.resultSuccess': 'Codificação HTML concluída.',
+    'htmlEncode.copyAction': 'Copiar texto codificado',
+    'htmlEncode.saveAction': 'Salvar texto codificado',
+    'htmlEncode.copiedResult': 'Texto codificado em HTML copiado.',
+    'htmlEncode.fileSaved': 'Texto codificado em HTML salvo.',
+    'error.htmlEncode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.htmlEncode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.htmlEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.htmlEncodeUsage':
+        'Uso: chimera html encode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '
+        '[--output=<caminho>] [--json]\n'
+        'Contexto padrão: all. A saída de texto é exata, sem nova linha. '
+        'O arquivo salva texto UTF-8; JSON emite o resultado após salvar. '
+        'Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'htmlEncode.savedResult': 'Texto codificado em HTML salvo.',
+    'error.htmlEncode.validation':
+        'A solicitação de codificação HTML é inválida.',
+    'error.htmlEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.htmlEncode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.htmlEncode.outputAccess':
+        'Não foi possível salvar o texto codificado em HTML.',
+    'error.htmlEncode.resource':
+        'A codificação HTML excedeu o limite de recursos.',
     'gzipCompress.pageTitle': 'Comprimir GZIP',
     'gzipCompress.openAction': 'Comprimir para GZIP',
     'gzipCompress.inputLabel': 'Texto para comprimir',

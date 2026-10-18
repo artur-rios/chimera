@@ -9,6 +9,659 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
+  group('html encode', () {
+    for (final locale in ['en', 'pt-BR']) {
+      for (final json in [false, true]) {
+        for (final boundary in ['json', 'stdout']) {
+          if (boundary == 'json' && !json) continue;
+          for (final error in <Object>[
+            const FormatException('private dependency private/path'),
+            StateError('private dependency private/path'),
+          ]) {
+            for (final save in [false, true]) {
+              test(
+                'GivenHtmlOutput$boundary${error.runtimeType}$locale$json${save}_WhenDenied_ThenRedactedAccessFailureReturns',
+                () async {
+                  final deniedOut = _HtmlDeniedStringSink(error);
+                  final out = boundary == 'stdout' ? deniedOut : StringBuffer();
+                  final err = StringBuffer();
+                  var saves = 0;
+                  final exit = await runChimera(
+                    [
+                      'html',
+                      'encode',
+                      '--input=<private>',
+                      if (save) '--output=private/output',
+                      if (json) '--json',
+                    ],
+                    localeTag: locale,
+                    out: out,
+                    err: err,
+                    htmlEncodeJsonEncoder: boundary == 'json'
+                        ? (_) => throw error
+                        : null,
+                    writeOutputFile: (_, _) async {
+                      saves++;
+                    },
+                  );
+                  expect(exit, 74);
+                  expect(saves, boundary == 'json' || !save ? 0 : 1);
+                  if (boundary == 'stdout') {
+                    expect(deniedOut.emissionCalls, 1);
+                  } else {
+                    expect(out.toString(), isEmpty);
+                  }
+                  final message = locale == 'en'
+                      ? 'The HTML encoded text could not be saved.'
+                      : 'Não foi possível salvar o texto codificado em HTML.';
+                  expect(
+                    err.toString(),
+                    json
+                        ? '${jsonEncode({
+                            'error': {'kind': 'access', 'code': 'html-encode.output-access', 'message': message},
+                          })}\n'
+                        : '$message\n',
+                  );
+                  for (final secret in [
+                    'private',
+                    'FormatException',
+                    'StateError',
+                    '.chimera-',
+                  ]) {
+                    expect(err.toString(), isNot(contains(secret)));
+                  }
+                },
+              );
+            }
+          }
+        }
+        test(
+          'GivenEmptyHtmlSave$locale${json}_WhenSaved_ThenPriorBytesAreReplacedBeforeSuccess',
+          () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-html-empty-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final target = File('${directory.path}/result.txt');
+            await target.writeAsString('prior nonempty bytes', flush: true);
+            final out = StringBuffer();
+            final err = StringBuffer();
+            var stageWritten = false;
+            final exit = await runChimera(
+              [
+                'html',
+                'encode',
+                '--input=',
+                '--output=${target.path}',
+                if (json) '--json',
+              ],
+              localeTag: locale,
+              out: out,
+              err: err,
+              writeOutputStage: (path, bytes) async {
+                expect(out.toString(), isEmpty);
+                expect(await target.readAsString(), 'prior nonempty bytes');
+                expect(bytes, isEmpty);
+                await File(path).writeAsBytes(bytes, flush: true);
+                stageWritten = true;
+              },
+            );
+            expect(exit, 0);
+            expect(stageWritten, isTrue);
+            expect(await target.exists(), isTrue);
+            expect(await target.readAsBytes(), isEmpty);
+            expect(
+              out.toString(),
+              json
+                  ? '{"encoded":"","context":"all"}\n'
+                  : locale == 'en'
+                  ? 'HTML encoded text saved.\n'
+                  : 'Texto codificado em HTML salvo.\n',
+            );
+            expect(err.toString(), isEmpty);
+            expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+          },
+        );
+      }
+    }
+    for (final locale in ['en', 'pt-BR']) {
+      for (final json in [false, true]) {
+        for (final boundary in ['stdin', 'file', 'writer', 'json', 'stdout']) {
+          for (final allocation in [false, true]) {
+            if (!allocation && ['json', 'stdout'].contains(boundary)) continue;
+            if (boundary == 'json' && !json) continue;
+            test(
+              'GivenHtml${locale}Failure$boundary$allocation${json}_WhenExecuted_ThenSafeFailureAndNoSuccessReturn',
+              () async {
+                Never fail() => allocation
+                    ? throw OutOfMemoryError()
+                    : throw StateError('private dependency private/path');
+                final out = boundary == 'stdout'
+                    ? _OutOfMemoryStringSink()
+                    : StringBuffer();
+                final err = StringBuffer();
+                var saves = 0;
+                final exit = await runChimera(
+                  [
+                    'html',
+                    'encode',
+                    if (boundary == 'stdin')
+                      '--stdin'
+                    else if (boundary == 'file')
+                      '--file=private/path'
+                    else
+                      '--input=<private>',
+                    '--output=private/output',
+                    if (json) '--json',
+                  ],
+                  localeTag: locale,
+                  out: out,
+                  err: err,
+                  readStandardInputBytes: () async => fail(),
+                  readFileBytes: (_) async => fail(),
+                  writeOutputFile: (_, _) async {
+                    saves++;
+                    if (boundary == 'writer') fail();
+                  },
+                  htmlEncodeJsonEncoder: boundary == 'json'
+                      ? (_) => fail()
+                      : null,
+                );
+                expect(exit, allocation ? 75 : 74);
+                expect(
+                  out is _OutOfMemoryStringSink ? out.contents : out.toString(),
+                  isEmpty,
+                );
+                expect(
+                  saves,
+                  ['stdin', 'file', 'json'].contains(boundary) ? 0 : 1,
+                );
+                final field = ['stdin', 'file'].contains(boundary)
+                    ? 'input'
+                    : 'encoded';
+                final code = allocation
+                    ? 'resource-limit'
+                    : boundary == 'stdin'
+                    ? 'input-access'
+                    : boundary == 'file'
+                    ? 'file-access'
+                    : 'output-access';
+                if (json) {
+                  final error =
+                      (jsonDecode(err.toString()) as Map)['error'] as Map;
+                  expect(error['kind'], allocation ? 'resource' : 'access');
+                  expect(error['code'], 'html-encode.$code');
+                  if (allocation) {
+                    expect(error['location'], {
+                      'field': field,
+                      'reason': 'allocation-limit',
+                    });
+                  }
+                } else {
+                  final message = allocation
+                      ? locale == 'en'
+                            ? 'HTML encoding exceeded its resource limit.'
+                            : 'A codificação HTML excedeu o limite de recursos.'
+                      : boundary == 'stdin'
+                      ? locale == 'en'
+                            ? 'The standard input could not be read.'
+                            : 'Não foi possível ler a entrada padrão.'
+                      : boundary == 'file'
+                      ? locale == 'en'
+                            ? 'The input file could not be read.'
+                            : 'Não foi possível ler o arquivo de entrada.'
+                      : locale == 'en'
+                      ? 'The HTML encoded text could not be saved.'
+                      : 'Não foi possível salvar o texto codificado em HTML.';
+                  expect(err.toString(), '$message\n');
+                }
+                for (final secret in [
+                  'private',
+                  'StateError',
+                  'OutOfMemory',
+                  '.chimera-',
+                ]) {
+                  expect(err.toString(), isNot(contains(secret)));
+                }
+              },
+            );
+          }
+        }
+      }
+    }
+    for (final fixture in <(HtmlEntityEncoder, String, String)>[
+      (const HtmlEntityEncoder(maxInputCharacters: 1), 'input', 'input-limit'),
+      (
+        const HtmlEntityEncoder(maxOutputCharacters: 1),
+        'encoded',
+        'output-limit',
+      ),
+    ]) {
+      test(
+        'GivenHtmlService${fixture.$3}_WhenExecuted_ThenStableFailureAndNoSaveReturn',
+        () async {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          var saves = 0;
+          final exit = await runChimera(
+            [
+              'html',
+              'encode',
+              '--input=<private>',
+              '--output=private/path',
+              '--json',
+            ],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            htmlEncodeService: HtmlEncodeService(encoder: fixture.$1),
+            writeOutputFile: (_, _) async {
+              saves++;
+            },
+          );
+          expect(exit, 75);
+          expect(saves, 0);
+          expect(out.toString(), isEmpty);
+          expect((jsonDecode(err.toString()) as Map)['error'], {
+            'kind': 'resource',
+            'code': 'html-encode.resource-limit',
+            'message': 'HTML encoding exceeded its resource limit.',
+            'location': {'field': fixture.$2, 'reason': fixture.$3},
+          });
+        },
+      );
+    }
+    for (final failure in [
+      'reserve',
+      'partial',
+      'backup-reserve',
+      'copy',
+      'delete-target',
+      'replace',
+      'restore',
+      'cleanup',
+    ]) {
+      for (final allocation in [false, true]) {
+        for (final existing in [false, true]) {
+          if (!existing &&
+              [
+                'backup-reserve',
+                'copy',
+                'delete-target',
+                'restore',
+                'cleanup',
+              ].contains(failure)) {
+            continue;
+          }
+          for (final json in [false, true]) {
+            test(
+              'GivenHtmlTransaction$failure$allocation$existing${json}_WhenSaved_ThenPriorStateAndNoArtifactsRemain',
+              () async {
+                final directory = await Directory.systemTemp.createTemp(
+                  'chimera-html-transaction-',
+                );
+                addTearDown(() => directory.delete(recursive: true));
+                final target = File('${directory.path}/private.txt');
+                if (existing) await target.writeAsBytes([7, 8, 9], flush: true);
+                final out = StringBuffer();
+                final err = StringBuffer();
+                Never fail() => allocation
+                    ? throw OutOfMemoryError()
+                    : throw const FileSystemException(
+                        'private dependency',
+                        'private/path',
+                      );
+                var triggered = false;
+                var restoreFailed = false;
+                final exit = await runChimera(
+                  [
+                    'html',
+                    'encode',
+                    '--input=<private>',
+                    '--output=${target.path}',
+                    if (json) '--json',
+                  ],
+                  localeTag: 'en',
+                  out: out,
+                  err: err,
+                  writeOutputStage: failure == 'partial'
+                      ? (path, bytes) async {
+                          await File(path)
+                              .writeAsBytes([bytes.first], flush: true);
+                          triggered = true;
+                          fail();
+                        }
+                      : null,
+                  outputFileOperations: TransactionalFileOperations(
+                    tryReserve: (candidate) async {
+                      if (failure == 'reserve' ||
+                          (failure == 'backup-reserve' &&
+                              candidate.path.contains('.chimera-backup-'))) {
+                        triggered = true;
+                        fail();
+                      }
+                      await candidate.create(exclusive: true);
+                      return true;
+                    },
+                    copy: (source, destination) async {
+                      if (failure == 'copy') {
+                        triggered = true;
+                        fail();
+                      }
+                      await source.copy(destination.path);
+                    },
+                    rename: (source, path) async {
+                      if (['replace', 'restore'].contains(failure) &&
+                          source.path.contains('.chimera-stage-')) {
+                        triggered = true;
+                        fail();
+                      }
+                      if (failure == 'restore' &&
+                          !restoreFailed &&
+                          source.path.contains('.chimera-backup-')) {
+                        restoreFailed = true;
+                        fail();
+                      }
+                      await source.rename(path);
+                    },
+                    delete: (file) async {
+                      if (!triggered &&
+                          ((failure == 'cleanup' &&
+                                  file.path.contains('.chimera-backup-')) ||
+                              (failure == 'delete-target' &&
+                                  file.path == target.path))) {
+                        triggered = true;
+                        fail();
+                      }
+                      await file.delete();
+                    },
+                  ),
+                );
+                expect(triggered, isTrue);
+                if (failure == 'restore') expect(restoreFailed, isTrue);
+                expect(exit, allocation ? 75 : 74);
+                expect(out.toString(), isEmpty);
+                expect(err.toString(), isNot(contains('private')));
+                expect(err.toString(), isNot(contains('.chimera-')));
+                if (json) {
+                  final error =
+                      (jsonDecode(err.toString()) as Map)['error'] as Map;
+                  expect(
+                    error['code'],
+                    'html-encode.${allocation ? 'resource-limit' : 'output-access'}',
+                  );
+                  if (allocation) {
+                    expect(error['location'], {
+                      'field': 'encoded',
+                      'reason': 'allocation-limit',
+                    });
+                  }
+                }
+                if (existing) {
+                  expect(await target.readAsBytes(), [7, 8, 9]);
+                } else {
+                  expect(await target.exists(), isFalse);
+                }
+                expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+              },
+            );
+          }
+        }
+      }
+    }
+    const source = '&<>"\'/ ação 😀\r\n\u0000e\u0301';
+    const expected = <String, String>{
+      'all': '&amp;&lt;&gt;&quot;&#39;&#47; ação 😀\r\n\u0000e\u0301',
+      'element': '&amp;&lt;&gt;"\'/ ação 😀\r\n\u0000e\u0301',
+      'double-quoted-attribute':
+          '&amp;&lt;&gt;&quot;\'/ ação 😀\r\n\u0000e\u0301',
+      'single-quoted-attribute':
+          '&amp;&lt;&gt;"&#39;/ ação 😀\r\n\u0000e\u0301',
+    };
+    for (final locale in ['en', 'pt-BR']) {
+      for (final context in <String?>[null, ...expected.keys]) {
+        for (final sourceKind in ['direct', 'stdin', 'file']) {
+          for (final json in [false, true]) {
+            test(
+              'Given${locale}Source$sourceKind$context${json}_WhenHtmlEncoded_ThenExactOutputReturns',
+              () async {
+                final out = StringBuffer();
+                final err = StringBuffer();
+                final exit = await runChimera(
+                  [
+                    'html',
+                    'encode',
+                    if (sourceKind == 'direct') ...['-i', source],
+                    if (sourceKind == 'stdin') '--stdin',
+                    if (sourceKind == 'file') ...['-f', 'private/path'],
+                    if (context != null) '--context=$context',
+                    if (json) '--json',
+                  ],
+                  localeTag: locale,
+                  out: out,
+                  err: err,
+                  readStandardInputBytes: () async => utf8.encode(source),
+                  readFileBytes: (path) async {
+                    expect(path, 'private/path');
+                    return utf8.encode(source);
+                  },
+                  readStandardInput: () async =>
+                      throw StateError('wrong reader'),
+                  readFile: (_) async => throw StateError('wrong reader'),
+                );
+                expect(exit, 0);
+                final encoded = expected[context ?? 'all']!;
+                expect(
+                  out.toString(),
+                  json
+                      ? '${jsonEncode({'encoded': encoded, 'context': context ?? 'all'})}\n'
+                      : encoded,
+                );
+                expect(err.toString(), isEmpty);
+              },
+            );
+          }
+        }
+      }
+      for (final sourceKind in ['direct', 'stdin', 'file']) {
+        test(
+          'GivenEmpty$sourceKind${locale}_WhenHtmlEncoded_ThenEmptyStdoutIsSuccess',
+          () async {
+            final out = StringBuffer();
+            final err = StringBuffer();
+            final exit = await runChimera(
+              [
+                'html',
+                'encode',
+                if (sourceKind == 'direct') '--input=',
+                if (sourceKind == 'stdin') '--stdin',
+                if (sourceKind == 'file') '--file=private/path',
+              ],
+              localeTag: locale,
+              out: out,
+              err: err,
+              readStandardInputBytes: () async => [],
+              readFileBytes: (_) async => [],
+            );
+            expect(exit, 0);
+            expect(out.toString(), isEmpty);
+            expect(err.toString(), isEmpty);
+          },
+        );
+      }
+      for (final json in [false, true]) {
+        test(
+          'GivenSave$json${locale}_WhenHtmlEncoded_ThenExactUtf8ReplacesTargetBeforeSuccess',
+          () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-html-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final target = File('${directory.path}/result.txt');
+            await target.writeAsString('prior');
+            final out = StringBuffer();
+            final err = StringBuffer();
+            final exit = await runChimera(
+              [
+                'html',
+                'encode',
+                '--input=<é>\r\n',
+                '-o',
+                target.path,
+                if (json) '--json',
+              ],
+              localeTag: locale,
+              out: out,
+              err: err,
+              writeOutputStage: (path, bytes) async {
+                expect(out.toString(), isEmpty);
+                expect(await target.readAsString(), 'prior');
+                await File(path).writeAsBytes(bytes, flush: true);
+              },
+            );
+            expect(exit, 0);
+            expect(await target.readAsBytes(), [
+              38,
+              108,
+              116,
+              59,
+              195,
+              169,
+              38,
+              103,
+              116,
+              59,
+              13,
+              10,
+            ]);
+            expect(
+              out.toString(),
+              json
+                  ? '{"encoded":"&lt;é&gt;\\r\\n","context":"all"}\n'
+                  : locale == 'en'
+                  ? 'HTML encoded text saved.\n'
+                  : 'Texto codificado em HTML salvo.\n',
+            );
+            expect(err.toString(), isEmpty);
+            expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+          },
+        );
+      }
+      test(
+        'GivenHtmlHelp${locale}_WhenRequested_ThenLocalizedContractReturns',
+        () async {
+          final out = StringBuffer();
+          final exit = await runChimera(
+            ['--help', 'html', 'encode'],
+            localeTag: locale,
+            out: out,
+            err: StringBuffer(),
+          );
+          expect(exit, 0);
+          expect(
+            out.toString(),
+            locale == 'en'
+                ? 'Usage: chimera html encode (--input=<text>|--stdin|--file=<path>) [--context=all|element|double-quoted-attribute|single-quoted-attribute] [--output=<path>] [--json]\nDefault context: all. Human stdout is exact text without a newline. Output saves UTF-8 text; JSON emits the result after saving. Exit codes: 64 validation, 74 access, 75 resource.\n'
+                : 'Uso: chimera html encode (--input=<texto>|--stdin|--file=<caminho>) [--context=all|element|double-quoted-attribute|single-quoted-attribute] [--output=<caminho>] [--json]\nContexto padrão: all. A saída de texto é exata, sem nova linha. O arquivo salva texto UTF-8; JSON emite o resultado após salvar. Códigos de saída: 64 validação, 74 acesso, 75 recursos.\n',
+          );
+        },
+      );
+    }
+    for (final fixture in <(List<String>, String)>[
+      ([], 'missing-source'),
+      (['--input=', '--stdin'], 'conflicting-sources'),
+      (['--file=private/path', '--stdin'], 'conflicting-sources'),
+      (['--input=x', '--file=private/path'], 'conflicting-sources'),
+      (['--stdin', '--unknown=private'], 'invalid-options'),
+      (['--stdin', 'private'], 'invalid-options'),
+      (['--stdin', '--output='], 'invalid-options'),
+      (['--file='], 'invalid-options'),
+      for (final context in ['', 'ALL', 'attribute', 'unknown', 'private'])
+        (['--stdin', '--context=$context'], 'invalid-context'),
+    ]) {
+      test(
+        'GivenInvalidHtml${fixture.$1}_WhenParsed_ThenValidationPrecedesIo',
+        () async {
+          var reads = 0;
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exit = await runChimera(
+            ['html', 'encode', ...fixture.$1, '--json'],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: () async {
+              reads++;
+              return [];
+            },
+            readFileBytes: (_) async {
+              reads++;
+              return [];
+            },
+          );
+          expect(exit, 64);
+          expect(reads, 0);
+          expect(out.toString(), isEmpty);
+          final error = (jsonDecode(err.toString()) as Map)['error'] as Map;
+          expect(error['kind'], 'validation');
+          expect(error['code'], 'html-encode.${fixture.$2}');
+          if (fixture.$2 == 'invalid-context') {
+            expect(error['location'], {
+              'field': 'context',
+              'reason': 'unsupported-context',
+            });
+          }
+          expect(err.toString(), isNot(contains('private')));
+        },
+      );
+    }
+    for (final fixture in <(List<String>, List<int>, String)>[
+      (['--input=\uD800private'], [], 'invalid-unicode'),
+      (['--input=private\uDC00'], [], 'invalid-unicode'),
+      (['--stdin'], [0xc3, 0x28], 'invalid-utf8'),
+      (['--file=private/path'], [0xed, 0xa0, 0x80], 'invalid-utf8'),
+    ]) {
+      test(
+        'GivenMalformedHtml${fixture.$3}${fixture.$1}_WhenEncoded_ThenRedactedValidationReturns',
+        () async {
+          final out = StringBuffer();
+          final err = StringBuffer();
+          final exit = await runChimera(
+            ['html', 'encode', ...fixture.$1, '--json'],
+            localeTag: 'en',
+            out: out,
+            err: err,
+            readStandardInputBytes: () async => fixture.$2,
+            readFileBytes: (_) async => fixture.$2,
+          );
+          expect(exit, 64);
+          expect(out.toString(), isEmpty);
+          expect((jsonDecode(err.toString()) as Map)['error'], {
+            'kind': 'validation',
+            'code': 'html-encode.invalid-input',
+            'message': 'The HTML encoding request is invalid.',
+            'location': {'field': 'input', 'reason': fixture.$3},
+          });
+          expect(err.toString(), isNot(contains('private')));
+        },
+      );
+    }
+    test(
+      'GivenBomAndEntityText_WhenHtmlEncodedFromBytes_ThenSourceIsPreserved',
+      () async {
+        final out = StringBuffer();
+        final exit = await runChimera(
+          ['html', 'encode', '--stdin'],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          readStandardInputBytes: () async => [239, 187, 191, 38, 108, 116, 59],
+        );
+        expect(exit, 0);
+        expect(out.toString(), '\uFEFF&amp;lt;');
+      },
+    );
+  });
   group('gzip compress', () {
     const helloMember = <int>[
       31,
@@ -6996,6 +7649,27 @@ final class _CertificateAllocationFailureBytes extends ListBase<int> {
   @override
   void operator []=(int index, int value) =>
       throw UnsupportedError('Read only');
+}
+
+final class _HtmlDeniedStringSink implements StringSink {
+  _HtmlDeniedStringSink(this.error);
+
+  final Object error;
+  var emissionCalls = 0;
+
+  Never _fail() {
+    emissionCalls++;
+    throw error;
+  }
+
+  @override
+  void write(Object? object) => _fail();
+  @override
+  void writeAll(Iterable<Object?> objects, [String separator = '']) => _fail();
+  @override
+  void writeCharCode(int charCode) => _fail();
+  @override
+  void writeln([Object? object = '']) => _fail();
 }
 
 final class _OutOfMemoryStringSink implements StringSink {

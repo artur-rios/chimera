@@ -1,6 +1,6 @@
 import 'dart:typed_data';
 
-Future<bool?> trySaveEmptyGzipDecompressFile(
+Future<bool?> trySaveEmptyFile(
   String name,
   Uint8List bytes,
   String mimeType,

@@ -4,6 +4,71 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test(
+    'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final name in [
+          'pageTitle',
+          'openAction',
+          'inputLabel',
+          'fileAction',
+          'pasteAction',
+          'contextLabel',
+          'contextAll',
+          'contextElement',
+          'contextDoubleQuotedAttribute',
+          'contextSingleQuotedAttribute',
+          'submitAction',
+          'outputLabel',
+          'resultSuccess',
+          'copyAction',
+          'saveAction',
+          'copiedResult',
+          'fileSaved',
+        ]) {
+          final key = 'htmlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        for (final name in [
+          'clipboardRead',
+          'clipboardWrite',
+          'interactiveInputAccess',
+        ]) {
+          final key = 'error.htmlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test(
+    'GivenHtmlEncodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.htmlEncodeUsage',
+        'htmlEncode.savedResult',
+        'error.htmlEncode.validation',
+        'error.htmlEncode.inputAccess',
+        'error.htmlEncode.fileAccess',
+        'error.htmlEncode.outputAccess',
+        'error.htmlEncode.resource',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+      expect(
+        catalog.lookup('pt-BR', 'error.htmlEncode.resource'),
+        'A codificação HTML excedeu o limite de recursos.',
+      );
+    },
+  );
+
   test('GivenGzipInteractiveMessages_WhenLookedUp_ThenBothLocalesHaveCompleteLabels', () {
     for (final locale in supportedLocaleTags) {
       for (final name in [
@@ -408,6 +473,33 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'htmlEncode.pageTitle',
+      'htmlEncode.openAction',
+      'htmlEncode.inputLabel',
+      'htmlEncode.fileAction',
+      'htmlEncode.pasteAction',
+      'htmlEncode.contextLabel',
+      'htmlEncode.contextAll',
+      'htmlEncode.contextElement',
+      'htmlEncode.contextDoubleQuotedAttribute',
+      'htmlEncode.contextSingleQuotedAttribute',
+      'htmlEncode.submitAction',
+      'htmlEncode.outputLabel',
+      'htmlEncode.resultSuccess',
+      'htmlEncode.copyAction',
+      'htmlEncode.saveAction',
+      'htmlEncode.copiedResult',
+      'htmlEncode.fileSaved',
+      'error.htmlEncode.clipboardRead',
+      'error.htmlEncode.clipboardWrite',
+      'error.htmlEncode.interactiveInputAccess',
+      'cli.htmlEncodeUsage',
+      'htmlEncode.savedResult',
+      'error.htmlEncode.validation',
+      'error.htmlEncode.inputAccess',
+      'error.htmlEncode.fileAccess',
+      'error.htmlEncode.outputAccess',
+      'error.htmlEncode.resource',
       for (final name in [
         'pageTitle',
         'openAction',
