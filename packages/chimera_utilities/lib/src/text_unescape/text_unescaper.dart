@@ -1,5 +1,9 @@
 import 'dart:convert';
 
+import 'package:meta/meta.dart';
+
+import '../html/html_entity_decoder.dart';
+
 enum TextUnescapeFailureKind { validation, resource }
 
 final class TextUnescapeException implements Exception {
@@ -34,7 +38,8 @@ final class TextUnescapeResult {
 
 final class TextUnescaper {
   const TextUnescaper({this.maxInputCharacters, this.maxOutputCharacters})
-    : assert(
+    : _htmlDecoder = null,
+      assert(
         maxInputCharacters == null || maxInputCharacters >= 0,
         'maxInputCharacters must not be negative',
       ),
@@ -42,6 +47,20 @@ final class TextUnescaper {
         maxOutputCharacters == null || maxOutputCharacters >= 0,
         'maxOutputCharacters must not be negative',
       );
+
+  @visibleForTesting
+  const TextUnescaper.forTesting({
+    this.maxInputCharacters,
+    this.maxOutputCharacters,
+    required this._htmlDecoder,
+  }) : assert(
+         maxInputCharacters == null || maxInputCharacters >= 0,
+         'maxInputCharacters must not be negative',
+       ),
+       assert(
+         maxOutputCharacters == null || maxOutputCharacters >= 0,
+         'maxOutputCharacters must not be negative',
+       );
 
   static const List<String> supportedModes = <String>[
     'json',
@@ -53,6 +72,7 @@ final class TextUnescaper {
 
   final int? maxInputCharacters;
   final int? maxOutputCharacters;
+  final HtmlEntityDecoder? _htmlDecoder;
 
   TextUnescapeResult unescape(TextUnescapeRequest request) {
     if (!supportedModes.contains(request.mode)) {
@@ -78,7 +98,7 @@ final class TextUnescaper {
         case 'c':
           _unescapeC(request.input, writer);
         case 'html':
-          _unescapeHtml(request.input, writer);
+          return _unescapeHtml(request);
         case 'url':
           _unescapeUrl(request.input, writer);
       }
@@ -87,6 +107,34 @@ final class TextUnescaper {
       rethrow;
     } on OutOfMemoryError {
       _throwResourceLimit(field: 'unescaped', reason: 'output-limit');
+    }
+  }
+
+  TextUnescapeResult _unescapeHtml(TextUnescapeRequest request) {
+    final decoder =
+        _htmlDecoder ??
+        HtmlEntityDecoder(maxOutputCharacters: maxOutputCharacters);
+    try {
+      final result = decoder.decodeText(
+        HtmlEntityDecodeRequest(input: request.input),
+      );
+      return TextUnescapeResult(unescaped: result.decoded, mode: request.mode);
+    } on HtmlEntityDecodeException catch (error) {
+      switch (error.kind) {
+        case HtmlEntityDecodeFailureKind.validation:
+          throw TextUnescapeException(
+            kind: TextUnescapeFailureKind.validation,
+            code: 'text-unescape.malformed-input',
+            field: 'input',
+            reason: error.reason,
+            offset: error.offset,
+          );
+        case HtmlEntityDecodeFailureKind.resource:
+          _throwResourceLimit(
+            field: error.field == 'decoded' ? 'unescaped' : error.field,
+            reason: error.reason,
+          );
+      }
     }
   }
 
@@ -228,54 +276,6 @@ final class TextUnescaper {
         default:
           _throwMalformed(reason: 'unknown-escape', offset: start);
       }
-    }
-  }
-
-  void _unescapeHtml(String input, _UnescapeWriter writer) {
-    var offset = 0;
-    while (offset < input.length) {
-      if (input.codeUnitAt(offset) != 0x26) {
-        offset = _writeLiteralAt(input, offset, writer);
-        continue;
-      }
-
-      final start = offset;
-      final end = input.indexOf(';', offset + 1);
-      if (end < 0) {
-        _throwMalformed(reason: 'unterminated-entity', offset: start);
-      }
-      final body = input.substring(offset + 1, end);
-      final named = switch (body) {
-        'amp' => 0x26,
-        'lt' => 0x3C,
-        'gt' => 0x3E,
-        'quot' => 0x22,
-        'apos' => 0x27,
-        _ => null,
-      };
-      if (named != null) {
-        writer.writeCharCode(named);
-      } else if (body.startsWith('#')) {
-        final hexadecimal =
-            body.length > 1 &&
-            (body.codeUnitAt(1) == 0x78 || body.codeUnitAt(1) == 0x58);
-        final digits = body.substring(hexadecimal ? 2 : 1);
-        final validDigits =
-            digits.isNotEmpty &&
-            digits.codeUnits.every(hexadecimal ? _isHexDigit : _isDecimalDigit);
-        if (!validDigits) {
-          _throwMalformed(reason: 'invalid-number', offset: start);
-        }
-        final scalar = int.tryParse(digits, radix: hexadecimal ? 16 : 10);
-        if (scalar == null) {
-          _throwMalformed(reason: 'out-of-range', offset: start);
-        }
-        _validateScalar(scalar, start);
-        writer.writeRune(scalar);
-      } else {
-        _throwMalformed(reason: 'unknown-entity', offset: start);
-      }
-      offset = end + 1;
     }
   }
 
@@ -432,8 +432,6 @@ final class TextUnescaper {
       codeUnit >= 0x30 && codeUnit <= 0x39 ||
       codeUnit >= 0x41 && codeUnit <= 0x46 ||
       codeUnit >= 0x61 && codeUnit <= 0x66;
-
-  bool _isDecimalDigit(int codeUnit) => codeUnit >= 0x30 && codeUnit <= 0x39;
 
   bool _isHighSurrogate(int codeUnit) =>
       codeUnit >= 0xD800 && codeUnit <= 0xDBFF;
