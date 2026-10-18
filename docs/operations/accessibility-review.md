@@ -420,5 +420,10 @@ safe redaction, cancellation, stale completion, disposal, source/history
 discard, keyboard traversal, live semantics, target sizes, contrast, large
 text, exact UTF-8 copy/save data, zero-byte output, filename, and MIME type.
 
-Compiled-browser and native platform evidence belongs to Task 5. No automated
-UC-23 Task 4 accessibility finding remains open.
+Task 5 adds 62 passing Windows native integration tests and 183 passing
+compiled-browser tests across Chromium, Firefox, and WebKit. The native Safari
+driver validates all 16 embedded HTML helpers before its mandatory macOS CI run.
+The platform coverage exercises real keyboard submission, exact localized
+results, copy/save bytes (including empty output), URL cleanup, malformed UTF-8
+recovery, and zero external requests. No automated UC-23 accessibility finding
+remains open.

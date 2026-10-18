@@ -122,6 +122,67 @@ const _htmlNoResultScript = r'''
     !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
 ''';
 
+const _htmlDecodeSetupScript = r'''
+  window.__chimeraHtmlDecodeCopiedText = null;
+  window.__chimeraHtmlDecodeCopies = 0;
+  window.__chimeraHtmlDecodeReads = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraHtmlDecodeReads++;
+        return '&lt;&amp;&#65;&#x1F642;&amp;lt;';
+      },
+      writeText: async value => {
+        window.__chimeraHtmlDecodeCopies++;
+        window.__chimeraHtmlDecodeCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _htmlDecodeSubmitScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Decode' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _htmlDecodeResultScript = r'''
+  return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .some(element => element.getAttribute('aria-label') ===
+      'HTML decoded result HTML decoding succeeded.');
+''';
+const _htmlDecodeCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy decoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _htmlDecodeCopiedScript = r'''
+  return window.__chimeraHtmlDecodeCopies === arguments[1] &&
+    window.__chimeraHtmlDecodeCopiedText === arguments[0];
+''';
+const _htmlDecodeSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-html-decoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _htmlDecodeNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('HTML decoded result')) &&
+    !buttons.includes('Copy decoded text') && !buttons.includes('Save decoded text');
+''';
+
 Future<void> main(List<String> arguments) async {
   // Exercise the same source loader without needing a SafariDriver session.
   if (arguments case ['--verify-gzip-save-observer']) {
@@ -142,13 +203,20 @@ Future<void> main(List<String> arguments) async {
       _htmlSaveScript,
       _htmlFileScript,
       _htmlNoResultScript,
+      _htmlDecodeSetupScript,
+      _htmlDecodeSubmitScript,
+      _htmlDecodeResultScript,
+      _htmlDecodeCopyScript,
+      _htmlDecodeCopiedScript,
+      _htmlDecodeSaveScript,
+      _htmlDecodeNoResultScript,
     ];
     if (!observer.contains('function observeGzipSaves') ||
         helpers.any((source) => source.isEmpty)) {
       throw StateError('HTML helper or save observer source is missing');
     }
     stdout.writeln(
-      'HTML helpers (9) and save observer source loaded successfully.',
+      'HTML helpers (16) and save observer source loaded successfully.',
     );
     return;
   }
@@ -1051,9 +1119,10 @@ Future<void> main(List<String> arguments) async {
 
     await _decompressGzip(driver);
     await _encodeHtml(driver);
+    await _decodeHtml(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -1218,6 +1287,163 @@ Future<void> _encodeHtml(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'HTML context/copy/save/validation',
+  );
+}
+
+Future<void> _decodeHtml(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'HTML Decode semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Decode HTML');
+  await _waitUntil(
+    () => _pageContains(driver, 'HTML entities to decode'),
+    'HTML Decode page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'HTML Decode startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_htmlDecodeSetupScript, const <Object?>[]);
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '<&A🙂&lt;';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'HTML entities to decode',
+      '&lt;&amp;&#65;&#x1F642;&amp;lt;',
+      focus: true,
+    ),
+    'HTML Decode clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeSubmitScript, const <Object?>[]) ==
+        true,
+    'HTML Decode submit was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeResultScript, const <Object?>[]) ==
+        true,
+    'HTML Decode result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'HTML entities to decode', '', focus: true),
+    'HTML Decode source was retained',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeCopyScript, const <Object?>[]) == true,
+    'HTML Decode copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeCopiedScript, const <Object?>[
+          expected,
+          1,
+        ]) ==
+        true,
+    'HTML Decode clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'HTML Decode non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'HTML decoded text saved.'),
+    'HTML Decode non-empty save did not finish',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeResultScript, const <Object?>[]) ==
+        true,
+    'HTML Decode empty result did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeCopyScript, const <Object?>[]) == true,
+    'HTML Decode empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeCopiedScript, const <Object?>['', 2]) ==
+        true,
+    'HTML Decode empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeSaveScript, const <Object?>[
+          <int>[],
+          2,
+        ]) ==
+        true,
+    'HTML Decode empty save/URL cleanup was not exact',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'HTML Decode malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'HTML Decode file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The HTML decoding request is invalid.'),
+    'HTML Decode UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_htmlDecodeNoResultScript, const <Object?>[]) !=
+      true) {
+    throw StateError('HTML Decode validation retained an output action');
+  }
+  final reads = await driver.execute(
+    'return window.__chimeraHtmlDecodeReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) {
+    throw StateError('HTML Decode clipboard source was not read once');
+  }
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'HTML Decode copy/save/validation',
   );
 }
 
