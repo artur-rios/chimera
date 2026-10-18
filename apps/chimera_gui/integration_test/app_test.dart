@@ -1454,6 +1454,58 @@ void main() {
       },
     );
   }
+
+  for (final locale in <String>['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}JwtInputs_WhenSignedCopiedAndSaved_ThenExactTokenTransfersOffline',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        String? copied;
+        List<int>? saved;
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: locale,
+            initialLocation: '/jwt/create',
+            jwtCreateClipboardWriter: (value) async => copied = value,
+            jwtCreateFileSaver: (name, bytes, mime) async {
+              expect(name, 'chimera-jwt.txt');
+              expect(mime, 'application/jwt');
+              saved = List<int>.of(bytes);
+              return true;
+            },
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('jwt-create-claims')),
+          '{"native":true}',
+        );
+        await tester.enterText(
+          find.byKey(const Key('jwt-create-key')),
+          '0123456789abcdef0123456789abcdef',
+        );
+        await tester.ensureVisible(find.byKey(const Key('jwt-create-submit')));
+        await tester.tap(find.byKey(const Key('jwt-create-submit')));
+        await tester.pumpAndSettle();
+        final token = tester
+            .widget<SelectableText>(find.byKey(const Key('jwt-create-output')))
+            .data!;
+        expect(token.split('.'), hasLength(3));
+        await tester.ensureVisible(find.byKey(const Key('jwt-create-copy')));
+        await tester.tap(find.byKey(const Key('jwt-create-copy')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('jwt-create-save')));
+        await tester.tap(find.byKey(const Key('jwt-create-save')));
+        await tester.pumpAndSettle();
+        expect(copied, token);
+        expect(utf8.decode(saved!), token);
+        expect(network.attempts, 0);
+      },
+    );
+  }
 }
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.

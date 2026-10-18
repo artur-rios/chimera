@@ -1120,13 +1120,61 @@ Future<void> main(List<String> arguments) async {
     await _decompressGzip(driver);
     await _encodeHtml(driver);
     await _decodeHtml(driver);
+    await _createJwt(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
   }
+}
+
+Future<void> _createJwt(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'JWT semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Create JWT');
+  await _waitUntil(
+    () => _pageContains(driver, 'Claims JSON'),
+    'JWT page did not open',
+  );
+  await _fillTextBox(driver, 'Claims JSON', '{"safari":true}');
+  await _fillTextBox(
+    driver,
+    'Private signing key',
+    '0123456789abcdef0123456789abcdef',
+  );
+  await _clickButton(driver, 'Create and sign');
+  await _waitUntil(
+    () => _pageContains(
+      driver,
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
+      'eyJzYWZhcmkiOnRydWV9.'
+      'MEYOeS9ebNwKFUoNzAC__7ZTq6-xRIwmnqdgsvx4oBg',
+    ),
+    'JWT compact result was incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Claims JSON', '{}'),
+    'JWT claims were not discarded',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Private signing key', ''),
+    'JWT key was not discarded',
+  );
+  await _assertNoExternalRequests(driver, flow: 'JWT creation');
 }
 
 Future<void> _encodeHtml(WebDriver driver) async {

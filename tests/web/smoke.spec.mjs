@@ -1591,3 +1591,27 @@ test('Base64 PNG decode previews and downloads exact bytes without requests', as
   ).toEqual([]);
   expect(externalRequests).toEqual([]);
 });
+
+test('JWT HMAC creation signs exact compact token locally without requests', async ({ page }) => {
+  const externalRequests = [];
+  const interactionRequests = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Create JWT', exact: true }).click();
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  await fillFlutterTextBox(page.getByRole('textbox', { name: 'Claims JSON' }), '{"browser":true}');
+  await fillFlutterTextBox(page.getByRole('textbox', { name: 'Private signing key' }), '0123456789abcdef0123456789abcdef');
+  await page.getByRole('button', { name: 'Create and sign', exact: true }).click();
+  const result = page.getByRole('region', { name: 'Signed JWT JWT creation succeeded.', exact: true });
+  await expect(result).toBeVisible();
+  await expect(page.getByText(/^eyJ[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/)).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Claims JSON' })).toHaveValue('{}');
+  await expect(page.getByRole('textbox', { name: 'Private signing key' })).toHaveValue('');
+  expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
