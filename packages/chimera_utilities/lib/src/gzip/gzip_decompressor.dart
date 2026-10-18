@@ -176,10 +176,10 @@ final class GzipDecompressor {
     try {
       while (inflate.inflateBlock()) {}
     } on ArchiveException {
-      if (input.isEOS) _throwMalformed();
+      if (input.length < 8) _throwMalformed();
       _throwCorrupt();
     } on RangeError {
-      if (input.isEOS) _throwMalformed();
+      if (input.length < 8) _throwMalformed();
       _throwCorrupt();
     }
     if (input.invalidStoredBlock) _throwCorrupt();
