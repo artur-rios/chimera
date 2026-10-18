@@ -70,7 +70,7 @@ void main() {
         () => exhausted.unescape(
           const TextUnescapeRequest(input: 'private-source', mode: 'html'),
         ),
-        _resourceFailure('unescaped', 'allocation-limit'),
+        _resourceFailure('unescaped', 'output-limit'),
       );
     });
 

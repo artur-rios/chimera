@@ -132,7 +132,9 @@ final class TextUnescaper {
         case HtmlEntityDecodeFailureKind.resource:
           _throwResourceLimit(
             field: error.field == 'decoded' ? 'unescaped' : error.field,
-            reason: error.reason,
+            reason: error.reason == 'allocation-limit'
+                ? 'output-limit'
+                : error.reason,
           );
       }
     }
