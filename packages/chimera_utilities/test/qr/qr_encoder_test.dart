@@ -21,6 +21,7 @@ void main() {
       expect(first.background, '#FFFFFF');
       expect(first.version, inInclusiveRange(1, 40));
       expect(first.moduleCount, 17 + first.version * 4);
+      expect(() => first.pngBytes[0] = 0, throwsUnsupportedError);
     });
 
     for (final level in QrErrorCorrection.values) {
@@ -144,6 +145,16 @@ void main() {
         ),
       );
     });
+
+    test(
+      'GivenClipboardText_WhenPrechecked_ThenUtf8BudgetIsAllocationFree',
+      () {
+        expect(QrEncoder.inputExceedsByteLimit('é', limit: 2), isFalse);
+        expect(QrEncoder.inputExceedsByteLimit('éé', limit: 3), isTrue);
+        expect(QrEncoder.inputExceedsByteLimit('👋', limit: 4), isFalse);
+        expect(QrEncoder.inputExceedsByteLimit('👋a', limit: 4), isTrue);
+      },
+    );
   });
 }
 

@@ -32,7 +32,7 @@ final class QrEncodeResult {
     required this.foreground,
     required this.background,
     required this.inputByteCount,
-  }) : pngBytes = Uint8List.fromList(pngBytes);
+  }) : pngBytes = Uint8List.fromList(pngBytes).asUnmodifiableView();
 
   final Uint8List pngBytes;
   final int size;
@@ -62,6 +62,31 @@ final class QrEncoder {
 
   final int? maxInputBytes;
   final int? maxOutputBytes;
+
+  static bool inputExceedsByteLimit(
+    String value, {
+    int limit = defaultMaxInputBytes,
+  }) {
+    assert(limit >= 0);
+    var length = 0;
+    for (var index = 0; index < value.length; index++) {
+      final unit = value.codeUnitAt(index);
+      final width = switch (unit) {
+        <= 0x7F => 1,
+        <= 0x7FF => 2,
+        >= 0xD800 && <= 0xDBFF
+            when index + 1 < value.length &&
+                value.codeUnitAt(index + 1) >= 0xDC00 &&
+                value.codeUnitAt(index + 1) <= 0xDFFF =>
+          4,
+        _ => 3,
+      };
+      if (width == 4) index++;
+      if (length > limit - width) return true;
+      length += width;
+    }
+    return false;
+  }
 
   QrEncodeResult encode(
     String input, {
