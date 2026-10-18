@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
@@ -428,6 +429,8 @@ final class _JwtCreatePageState extends State<JwtCreatePage> {
                       container: true,
                       focusable: true,
                       liveRegion: true,
+                      excludeSemantics: true,
+                      role: SemanticsRole.region,
                       label: _label('outputLabel'),
                       value: _label('resultSuccess'),
                       child: SelectableText(

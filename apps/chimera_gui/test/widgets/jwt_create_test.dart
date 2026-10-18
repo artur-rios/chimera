@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_gui/app.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +36,11 @@ void main() {
       find.byKey(const Key('jwt-create-output')),
     );
     expect(output.data!.split('.'), hasLength(3));
+    final semantics = tester.widget<Semantics>(
+      find.byKey(const Key('jwt-create-result')),
+    );
+    expect(semantics.properties.role, SemanticsRole.region);
+    expect(semantics.excludeSemantics, isTrue);
     expect(
       tester
           .widget<TextField>(find.byKey(const Key('jwt-create-header')))

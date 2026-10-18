@@ -1156,18 +1156,34 @@ Future<void> _createJwt(WebDriver driver) async {
     'Private signing key',
     '0123456789abcdef0123456789abcdef',
   );
+  await driver.execute('''
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  ''', const <Object?>[]);
   await _clickButton(driver, 'Create and sign');
-  await _waitUntil(
-    () => _pageContains(
-      driver,
+  const expectedToken =
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.'
       'eyJzYWZhcmkiOnRydWV9.'
-      'MEYOeS9ebNwKFUoNzAC__7ZTq6-xRIwmnqdgsvx4oBg',
-    ),
-    'JWT compact result was incorrect',
+      'MEYOeS9ebNwKFUoNzAC__7ZTq6-xRIwmnqdgsvx4oBg';
+  await _clickButton(driver, 'Copy JWT');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          'return window.__chimeraCopiedText === arguments[0];',
+          const <Object?>[expectedToken],
+        ) ==
+        true,
+    'JWT compact result copy was incorrect',
   );
   await _waitUntil(
-    () => _inputHasValue(driver, 'Claims JSON', '{}'),
+    () => _inputHasValue(driver, 'Claims JSON', ''),
     'JWT claims were not discarded',
   );
   await _waitUntil(
