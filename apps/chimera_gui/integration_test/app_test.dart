@@ -242,6 +242,166 @@ void main() {
   }
 
   for (final locale in ['en', 'pt-BR']) {
+    for (final (source, input, expected) in [
+      ('typed', '&lt;&amp;&#65;&#x1F642;&amp;lt;', '<&A🙂&lt;'),
+      ('file', '&#60;&#38;&#x41;&#x1F642;', '<&A🙂'),
+      ('clipboard', '&quot;offline&quot;', '"offline"'),
+      ('empty', '', ''),
+    ]) {
+      testWidgets('Given${locale}HtmlDecode$source'
+          '_WhenActivatedCopiedAndSaved_ThenExactTextTransfersOffline', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          final directory = await Directory.systemTemp.createTemp(
+            'chimera-html-decode-',
+          );
+          addTearDown(() => directory.delete(recursive: true));
+          String? copied;
+          var copies = 0;
+          var saves = 0;
+          final saved = File('${directory.path}/chimera-html-decoded.txt');
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/html/decode',
+              htmlDecodeFilePicker: () async => utf8.encode(input),
+              htmlDecodeClipboardReader: () async => input,
+              htmlDecodeClipboardWriter: (value) async {
+                copies++;
+                copied = value;
+              },
+              htmlDecodeFileSaver: (name, bytes, mime) async {
+                saves++;
+                expect(name, 'chimera-html-decoded.txt');
+                expect(mime, 'text/plain; charset=utf-8');
+                await saved.writeAsBytes(bytes, flush: true);
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final editor = find.byKey(const Key('html-decode-input'));
+          if (source == 'typed') {
+            await tester.enterText(editor, input);
+          } else if (source == 'file') {
+            await tester.tap(find.byKey(const Key('html-decode-file')));
+            await tester.pumpAndSettle();
+          } else if (source == 'clipboard') {
+            await tester.tap(find.byKey(const Key('html-decode-paste')));
+            await tester.pumpAndSettle();
+          }
+          await tester.tap(editor);
+          await tester.pumpAndSettle();
+          for (final name in ['file', 'paste', 'submit']) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pumpAndSettle();
+            expect(
+              find.ancestor(
+                of: find.byWidget(
+                  FocusManager.instance.primaryFocus!.context!.widget,
+                ),
+                matching: find.byKey(Key('html-decode-$name')),
+              ),
+              findsOneWidget,
+              reason: name,
+            );
+          }
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(
+            FocusManager.instance.primaryFocus!.debugLabel,
+            'HTML decoding result',
+          );
+          final result = find.byKey(const Key('html-decode-result'));
+          final data = tester.getSemantics(result).getSemanticsData();
+          expect(
+            data.label,
+            locale == 'en'
+                ? 'HTML decoded result'
+                : 'Resultado decodificado de HTML',
+          );
+          expect(
+            data.value,
+            locale == 'en'
+                ? 'HTML decoding succeeded.'
+                : 'Decodificação HTML concluída.',
+          );
+          expect(
+            tester.widget<Semantics>(result).properties.liveRegion,
+            isTrue,
+          );
+          expect(
+            tester
+                .widget<SelectableText>(
+                  find.byKey(const Key('html-decode-output')),
+                )
+                .data,
+            expected,
+          );
+          expect(tester.widget<TextField>(editor).controller!.text, '');
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(copied, expected);
+          expect(copies, 1);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(saves, 1);
+          expect(await saved.readAsBytes(), utf8.encode(expected));
+          expect(network.attempts, 0);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+
+    testWidgets(
+      'Given${locale}MalformedHtmlFile_WhenDecoded_ThenSourceAndResultAreDiscardedOffline',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: locale,
+            initialLocation: '/html/decode',
+            htmlDecodeFilePicker: () async => [0xc3, 0x28],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final editor = find.byKey(const Key('html-decode-input'));
+        await tester.enterText(editor, '&lt;private&gt;');
+        await tester.tap(find.byKey(const Key('html-decode-file')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('html-decode-submit')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            locale == 'en'
+                ? 'The HTML decoding request is invalid.'
+                : 'A solicitação de decodificação HTML é inválida.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('html-decode-result')), findsNothing);
+        expect(find.byKey(const Key('html-decode-copy')), findsNothing);
+        expect(find.byKey(const Key('html-decode-save')), findsNothing);
+        expect(find.textContaining('private'), findsNothing);
+        expect(tester.widget<TextField>(editor).controller!.text, '');
+        expect(network.attempts, 0);
+      },
+    );
+  }
+
+  for (final locale in ['en', 'pt-BR']) {
     for (final source in ['text', 'binary']) {
       testWidgets(
         'Given${locale}Gzip${source}_WhenLevelSelectedCompressedAndSaved_ThenExactMemberRoundTripsOffline',

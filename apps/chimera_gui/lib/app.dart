@@ -14,6 +14,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
@@ -32,6 +33,12 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.htmlDecodeService = const HtmlDecodeService(),
+    this.htmlDecodeFilePicker,
+    this.htmlDecodeClipboardReader,
+    this.htmlDecodeClipboardWriter,
+    this.htmlDecodeFileSaver,
+    this.htmlDecodeOutputEncoder,
     this.htmlEncodeService = const HtmlEncodeService(),
     this.htmlEncodeFilePicker,
     this.htmlEncodeClipboardReader,
@@ -146,6 +153,12 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final HtmlDecodeOperationService htmlDecodeService;
+  final HtmlDecodeFilePicker? htmlDecodeFilePicker;
+  final HtmlDecodeClipboardReader? htmlDecodeClipboardReader;
+  final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
+  final HtmlDecodeFileSaver? htmlDecodeFileSaver;
+  final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
@@ -254,6 +267,12 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        htmlDecodeService: htmlDecodeService,
+        htmlDecodeFilePicker: htmlDecodeFilePicker,
+        htmlDecodeClipboardReader: htmlDecodeClipboardReader,
+        htmlDecodeClipboardWriter: htmlDecodeClipboardWriter,
+        htmlDecodeFileSaver: htmlDecodeFileSaver,
+        htmlDecodeOutputEncoder: htmlDecodeOutputEncoder,
         htmlEncodeService: htmlEncodeService,
         htmlEncodeFilePicker: htmlEncodeFilePicker,
         htmlEncodeClipboardReader: htmlEncodeClipboardReader,
@@ -365,6 +384,12 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.htmlDecodeService,
+    required this.htmlDecodeFilePicker,
+    required this.htmlDecodeClipboardReader,
+    required this.htmlDecodeClipboardWriter,
+    required this.htmlDecodeFileSaver,
+    required this.htmlDecodeOutputEncoder,
     required this.htmlEncodeService,
     required this.htmlEncodeFilePicker,
     required this.htmlEncodeClipboardReader,
@@ -565,6 +590,13 @@ final class _RoutedChimeraApp extends StatefulWidget {
   @override
   State<_RoutedChimeraApp> createState() => _RoutedChimeraAppState();
 
+  final HtmlDecodeOperationService htmlDecodeService;
+  final HtmlDecodeFilePicker? htmlDecodeFilePicker;
+  final HtmlDecodeClipboardReader? htmlDecodeClipboardReader;
+  final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
+  final HtmlDecodeFileSaver? htmlDecodeFileSaver;
+  final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
@@ -590,6 +622,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      htmlDecodeService: widget.htmlDecodeService,
+      htmlDecodeFilePicker: widget.htmlDecodeFilePicker ?? pickHtmlDecodeFile,
+      htmlDecodeClipboardReader:
+          widget.htmlDecodeClipboardReader ?? readHtmlDecodeClipboard,
+      htmlDecodeClipboardWriter:
+          widget.htmlDecodeClipboardWriter ?? writeHtmlDecodeClipboard,
+      htmlDecodeFileSaver: widget.htmlDecodeFileSaver ?? saveHtmlDecodeFile,
+      htmlDecodeOutputEncoder:
+          widget.htmlDecodeOutputEncoder ?? encodeHtmlDecodeOutput,
       htmlEncodeService: widget.htmlEncodeService,
       htmlEncodeFilePicker: widget.htmlEncodeFilePicker ?? pickHtmlEncodeFile,
       htmlEncodeClipboardReader:

@@ -132,6 +132,153 @@ for (const scenario of [
   });
 }
 
+for (const scenario of [
+  { source: 'typed', input: '&lt;&amp;&#65;&#x1F642;&amp;lt;', expected: '<&A🙂&lt;' },
+  { source: 'file', input: '&#60;&#38;&#x41;&#x1F642;', expected: '<&A🙂' },
+  { source: 'clipboard', input: '&quot;offline&quot;', expected: '"offline"' },
+  { source: 'empty', input: '', expected: '' },
+]) {
+  test(`GivenHtmlDecode${scenario.source}_WhenCopiedAndSaved_ThenExactTextTransfersOffline`, async ({ page }) => {
+    const externalRequests = [];
+    const interactionRequests = [];
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    page.on('request', request => {
+      if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+        externalRequests.push(request.url());
+      }
+    });
+    await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+    await page.addInitScript(input => {
+      window.__chimeraHtmlDecodeReads = 0;
+      window.__chimeraHtmlDecodeWrites = 0;
+      window.__chimeraHtmlDecodeCopied = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          readText: async () => {
+            window.__chimeraHtmlDecodeReads++;
+            return input;
+          },
+          writeText: async value => {
+            window.__chimeraHtmlDecodeWrites++;
+            window.__chimeraHtmlDecodeCopied = value;
+          },
+        },
+      });
+    }, scenario.input);
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Decode HTML', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'HTML entities to decode', exact: true });
+    await expect(editor).toBeVisible();
+    page.on('request', request => recordHttpRequest(request, interactionRequests));
+    if (scenario.source === 'typed') {
+      await fillFlutterTextBox(editor, scenario.input);
+    } else if (scenario.source === 'clipboard') {
+      await page.getByRole('button', { name: 'Paste text', exact: true }).click();
+      await expect.poll(() => page.evaluate(() => window.__chimeraHtmlDecodeReads)).toBe(1);
+      await expect.poll(() => page.evaluate(
+        ({ source, input }) => new Function(source)(
+          'HTML entities to decode', input, true,
+        ),
+        { source: safariInputObservation, input: scenario.input },
+      )).toBe(true);
+    } else if (scenario.source === 'file') {
+      const pendingChooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+      await (await pendingChooser).setFiles({
+        name: 'entities.txt', mimeType: 'text/plain',
+        buffer: Buffer.from(scenario.input, 'utf8'),
+      });
+      await expect(page.getByRole('button', { name: 'Decode', exact: true })).toBeEnabled();
+    }
+    await page.getByRole('button', { name: 'Decode', exact: true }).click();
+    const result = page.getByRole('region', {
+      name: 'HTML decoded result HTML decoding succeeded.', exact: true,
+    });
+    await expect(result).toBeVisible();
+    await expect(result).toHaveAttribute('tabindex', '0');
+    await expect(editor).toHaveValue('');
+    await page.getByRole('button', { name: 'Copy decoded text', exact: true }).press('Enter');
+    await expect.poll(() => page.evaluate(() => ({
+      count: window.__chimeraHtmlDecodeWrites,
+      text: window.__chimeraHtmlDecodeCopied,
+    }))).toEqual({ count: 1, text: scenario.expected });
+    const pendingDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save decoded text', exact: true }).press('Enter');
+    const download = await pendingDownload;
+    expect(download.suggestedFilename()).toBe('chimera-html-decoded.txt');
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    const expectedBytes = Buffer.from(scenario.expected, 'utf8');
+    expect(Buffer.concat(chunks)).toEqual(expectedBytes);
+    await expect.poll(() => page.evaluate(() => ({
+      count: window.__chimeraSaveCount,
+      name: window.__chimeraSavedName,
+      mime: window.__chimeraSavedMime,
+      bytes: window.__chimeraSavedBytes,
+      liveUrls: window.__chimeraLiveDownloadUrlCount,
+      errors: window.__chimeraGzipSaveErrors,
+    }))).toEqual({
+      count: 1,
+      name: 'chimera-html-decoded.txt',
+      mime: 'text/plain; charset=utf-8',
+      bytes: [...expectedBytes],
+      liveUrls: 0,
+      errors: [],
+    });
+    expect(downloads).toHaveLength(1);
+    expect(interactionRequests).toEqual([]);
+    expect(externalRequests).toEqual([]);
+  });
+}
+
+test('GivenHtmlDecodeEditorFocus_WhenTabbingToDecodeAndPressingEnter_ThenOneResultAppears', async ({ page }) => {
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decode HTML', exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'HTML entities to decode', exact: true });
+  await fillFlutterTextBox(editor, '&lt;&amp;');
+  await expect(page.getByRole('button', { name: 'Load UTF-8 file', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('button', { name: 'Paste text', exact: true })).toBeFocused();
+  await page.keyboard.press('Tab');
+  const decode = page.getByRole('button', { name: 'Decode', exact: true });
+  await expect(decode).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('region', {
+    name: 'HTML decoded result HTML decoding succeeded.', exact: true,
+  })).toBeVisible();
+});
+
+test('GivenMalformedHtmlDecodeFile_WhenSubmitted_ThenNoResultOrExternalRequestRemains', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      requests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decode HTML', exact: true }).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await (await chooser).setFiles({
+    name: 'invalid.txt', mimeType: 'text/plain', buffer: Buffer.from([0xc3, 0x28]),
+  });
+  await page.getByRole('button', { name: 'Decode', exact: true }).click();
+  await expect(page.locator('span', {
+    hasText: /^The HTML decoding request is invalid\.$/,
+  })).toBeVisible();
+  await expect(page.getByRole('region', {
+    name: 'HTML decoded result HTML decoding succeeded.', exact: true,
+  })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Copy decoded text', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save decoded text', exact: true })).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
 test('GivenHtmlEditorFocus_WhenTabbingToEncodeAndPressingEnter_ThenOneResultAppears', async ({ page }) => {
   await page.goto('/');
   await enableFlutterSemantics(page);

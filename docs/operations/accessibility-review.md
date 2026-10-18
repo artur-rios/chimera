@@ -375,3 +375,55 @@ adapter dependency check; it does not replace HTML-specific Task 6 coverage.
 These findings are automated GUI evidence. HTML-specific compiled browser,
 native platform, and screen-reader evidence belongs to Task 6. No automated
 UC-22 accessibility finding remains open.
+
+## UC-23 HTML Decode
+
+- Release version: UC-23 candidate
+- Branch: `feature/uc-23-html-decode`
+- Reviewer: Chimera UC-23 GUI implementation self-review
+- Date: 2026-10-18
+- Target: shared Flutter web, Windows, and Linux decoding surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Focus follows typed input, file, paste, decode, result, copy, and save.
+  Keyboard activation works and successful decoding focuses the result region.
+- [x] The home action, title, input, source actions, result actions, notices,
+  and safe failure messages are localized in both locales.
+- [x] Exact decoded output is selectable in a scrolling region bounded to 240
+  logical pixels. The live result region announces a localized label and
+  success summary without exposing source or output contents.
+- [x] File, clipboard, service, copy, save, and output-buffer access or
+  allocation failures clear source, result, and notices and publish only a
+  localized live-region category.
+- [x] Competing controls disable during asynchronous work. Generation and
+  disposal guards prevent stale completion from publishing; canceled file and
+  clipboard selection preserves an existing completed result.
+- [x] File and clipboard sources replace typed input exclusively. Completion
+  discards raw source and editor history so Undo/Redo cannot recover it.
+- [x] Every action target measures at least 48 by 48 logical pixels. Android
+  tap-target, labeled-target, and text-contrast guidelines pass in both locales.
+- [x] At 320 logical pixels and 200% text scale, output, copy, and save remain
+  reachable by scrolling without overflow.
+
+### Evidence and Findings
+
+The focused HTML Decode suite passes 40 tests. Combined focused Decode and app
+navigation suites pass 196 tests, with strict GUI analysis reporting no issues.
+The complete GUI suite passes 604 tests, and the complete localization suite
+passes 23 tests with exact English/PT-BR key parity and clean analysis.
+Coverage includes typed/file/clipboard/empty input, named and decimal/hex
+numeric entities, decode-once behavior, strict malformed entities, invalid
+UTF-8 and Unicode scalars, typed service categories, access/allocation failures,
+safe redaction, cancellation, stale completion, disposal, source/history
+discard, keyboard traversal, live semantics, target sizes, contrast, large
+text, exact UTF-8 copy/save data, zero-byte output, filename, and MIME type.
+
+Task 5 adds 62 passing Windows native integration tests and 183 passing
+compiled-browser tests across Chromium, Firefox, and WebKit. The native Safari
+driver validates all 16 embedded HTML helpers before its mandatory macOS CI run.
+The platform coverage exercises real keyboard submission, exact localized
+results, copy/save bytes (including empty output), URL cleanup, malformed UTF-8
+recovery, and zero external requests. No automated UC-23 accessibility finding
+remains open.

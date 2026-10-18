@@ -39,6 +39,36 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlEncode.outputAccess':
         'The HTML encoded text could not be saved.',
     'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
+    'htmlDecode.pageTitle': 'Decode HTML',
+    'htmlDecode.openAction': 'Decode HTML',
+    'htmlDecode.inputLabel': 'HTML entities to decode',
+    'htmlDecode.fileAction': 'Load UTF-8 file',
+    'htmlDecode.pasteAction': 'Paste text',
+    'htmlDecode.submitAction': 'Decode',
+    'htmlDecode.outputLabel': 'HTML decoded result',
+    'htmlDecode.resultSuccess': 'HTML decoding succeeded.',
+    'htmlDecode.copyAction': 'Copy decoded text',
+    'htmlDecode.saveAction': 'Save decoded text',
+    'htmlDecode.copiedResult': 'HTML decoded text copied.',
+    'htmlDecode.fileSaved': 'HTML decoded text saved.',
+    'error.htmlDecode.clipboardRead': 'The clipboard text could not be read.',
+    'error.htmlDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.htmlDecode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.htmlDecodeUsage':
+        'Usage: chimera html decode (--input=<text>|--stdin|--file=<path>) '
+        '[--output=<path>] [--json]\n'
+        'Human stdout is exact text without a newline. Output saves UTF-8 '
+        'text; JSON emits the result after saving. Exit codes: 64 validation, '
+        '74 access, 75 resource.',
+    'htmlDecode.savedResult': 'HTML decoded text saved.',
+    'error.htmlDecode.validation': 'The HTML decoding request is invalid.',
+    'error.htmlDecode.inputAccess': 'The standard input could not be read.',
+    'error.htmlDecode.fileAccess': 'The input file could not be read.',
+    'error.htmlDecode.outputAccess':
+        'The HTML decoded text could not be saved.',
+    'error.htmlDecode.resource': 'HTML decoding exceeded its resource limit.',
     'gzipCompress.pageTitle': 'Compress GZIP',
     'gzipCompress.openAction': 'Compress to GZIP',
     'gzipCompress.inputLabel': 'Text to compress',
@@ -677,6 +707,39 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto codificado em HTML.',
     'error.htmlEncode.resource':
         'A codificação HTML excedeu o limite de recursos.',
+    'htmlDecode.pageTitle': 'Decodificar HTML',
+    'htmlDecode.openAction': 'Decodificar HTML',
+    'htmlDecode.inputLabel': 'Entidades HTML para decodificar',
+    'htmlDecode.fileAction': 'Carregar arquivo UTF-8',
+    'htmlDecode.pasteAction': 'Colar texto',
+    'htmlDecode.submitAction': 'Decodificar',
+    'htmlDecode.outputLabel': 'Resultado decodificado de HTML',
+    'htmlDecode.resultSuccess': 'Decodificação HTML concluída.',
+    'htmlDecode.copyAction': 'Copiar texto decodificado',
+    'htmlDecode.saveAction': 'Salvar texto decodificado',
+    'htmlDecode.copiedResult': 'Texto decodificado de HTML copiado.',
+    'htmlDecode.fileSaved': 'Texto decodificado de HTML salvo.',
+    'error.htmlDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.htmlDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.htmlDecode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.htmlDecodeUsage':
+        'Uso: chimera html decode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--output=<caminho>] [--json]\n'
+        'A saída de texto é exata, sem nova linha. O arquivo salva texto UTF-8; '
+        'JSON emite o resultado após salvar. Códigos de saída: 64 validação, '
+        '74 acesso, 75 recursos.',
+    'htmlDecode.savedResult': 'Texto decodificado de HTML salvo.',
+    'error.htmlDecode.validation':
+        'A solicitação de decodificação HTML é inválida.',
+    'error.htmlDecode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.htmlDecode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.htmlDecode.outputAccess':
+        'Não foi possível salvar o texto decodificado de HTML.',
+    'error.htmlDecode.resource':
+        'A decodificação HTML excedeu o limite de recursos.',
     'gzipCompress.pageTitle': 'Comprimir GZIP',
     'gzipCompress.openAction': 'Comprimir para GZIP',
     'gzipCompress.inputLabel': 'Texto para comprimir',

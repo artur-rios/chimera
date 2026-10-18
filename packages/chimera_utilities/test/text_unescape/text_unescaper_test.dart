@@ -47,6 +47,33 @@ void main() {
       expect(result.unescaped, '&<>"\'\'é😀');
     });
 
+    test(
+      'GivenNestedAndUppercaseHtml_WhenUnescaped_ThenCompatibilityHolds',
+      () {
+        final result = unescaper.unescape(
+          const TextUnescapeRequest(input: '&amp;lt;&#X1F600;', mode: 'html'),
+        );
+
+        expect(result.unescaped, '&lt;😀');
+        expect(result.mode, 'html');
+      },
+    );
+
+    test('GivenHtmlDecoderAllocationFailure_WhenUnescaped_ThenItIsMapped', () {
+      final exhausted = TextUnescaper.forTesting(
+        htmlDecoder: HtmlEntityDecoder.forTesting(
+          convert: (_) => throw OutOfMemoryError(),
+        ),
+      );
+
+      expect(
+        () => exhausted.unescape(
+          const TextUnescapeRequest(input: 'private-source', mode: 'html'),
+        ),
+        _resourceFailure('unescaped', 'output-limit'),
+      );
+    });
+
     test('GivenUrlOctets_WhenUnescaped_ThenStrictUtf8ComponentDecodes', () {
       final result = unescaper.unescape(
         const TextUnescapeRequest(
