@@ -96,6 +96,36 @@ void main() {
     },
   );
 
+  test('GivenHtmlDecodeInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    for (final locale in supportedLocaleTags) {
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'inputLabel',
+        'fileAction',
+        'pasteAction',
+        'submitAction',
+        'outputLabel',
+        'resultSuccess',
+        'copyAction',
+        'saveAction',
+        'copiedResult',
+        'fileSaved',
+      ]) {
+        final key = 'htmlDecode.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+      for (final name in [
+        'clipboardRead',
+        'clipboardWrite',
+        'interactiveInputAccess',
+      ]) {
+        final key = 'error.htmlDecode.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenGzipInteractiveMessages_WhenLookedUp_ThenBothLocalesHaveCompleteLabels', () {
     for (final locale in supportedLocaleTags) {
       for (final name in [
@@ -527,6 +557,21 @@ void main() {
       'error.htmlEncode.fileAccess',
       'error.htmlEncode.outputAccess',
       'error.htmlEncode.resource',
+      'htmlDecode.pageTitle',
+      'htmlDecode.openAction',
+      'htmlDecode.inputLabel',
+      'htmlDecode.fileAction',
+      'htmlDecode.pasteAction',
+      'htmlDecode.submitAction',
+      'htmlDecode.outputLabel',
+      'htmlDecode.resultSuccess',
+      'htmlDecode.copyAction',
+      'htmlDecode.saveAction',
+      'htmlDecode.copiedResult',
+      'htmlDecode.fileSaved',
+      'error.htmlDecode.clipboardRead',
+      'error.htmlDecode.clipboardWrite',
+      'error.htmlDecode.interactiveInputAccess',
       'cli.htmlDecodeUsage',
       'htmlDecode.savedResult',
       'error.htmlDecode.validation',

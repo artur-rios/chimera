@@ -33,6 +33,25 @@ void main() {
   }
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
+      'Given${locale}HtmlDecodeHomeAction_WhenActivated_ThenDecodeRouteOpens',
+      (tester) async {
+        await tester.pumpWidget(ChimeraApp(localeTag: locale));
+        await tester.pumpAndSettle();
+        final action = find.byKey(const Key('open-html-decode'));
+        expect(action, findsOneWidget);
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('html-decode-input')), findsOneWidget);
+        expect(
+          find.text(locale == 'en' ? 'Decode HTML' : 'Decodificar HTML'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
       'Given${locale}GzipDecompressHomeAction_WhenActivated_ThenDecompressionRouteOpens',
       (tester) async {
         await tester.pumpWidget(ChimeraApp(localeTag: locale));

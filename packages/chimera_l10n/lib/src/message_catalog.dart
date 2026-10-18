@@ -39,6 +39,23 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlEncode.outputAccess':
         'The HTML encoded text could not be saved.',
     'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
+    'htmlDecode.pageTitle': 'Decode HTML',
+    'htmlDecode.openAction': 'Decode HTML',
+    'htmlDecode.inputLabel': 'HTML entities to decode',
+    'htmlDecode.fileAction': 'Load UTF-8 file',
+    'htmlDecode.pasteAction': 'Paste text',
+    'htmlDecode.submitAction': 'Decode',
+    'htmlDecode.outputLabel': 'HTML decoded result',
+    'htmlDecode.resultSuccess': 'HTML decoding succeeded.',
+    'htmlDecode.copyAction': 'Copy decoded text',
+    'htmlDecode.saveAction': 'Save decoded text',
+    'htmlDecode.copiedResult': 'HTML decoded text copied.',
+    'htmlDecode.fileSaved': 'HTML decoded text saved.',
+    'error.htmlDecode.clipboardRead': 'The clipboard text could not be read.',
+    'error.htmlDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.htmlDecode.interactiveInputAccess':
+        'The input could not be processed.',
     'cli.htmlDecodeUsage':
         'Usage: chimera html decode (--input=<text>|--stdin|--file=<path>) '
         '[--output=<path>] [--json]\n'
@@ -690,6 +707,24 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto codificado em HTML.',
     'error.htmlEncode.resource':
         'A codificação HTML excedeu o limite de recursos.',
+    'htmlDecode.pageTitle': 'Decodificar HTML',
+    'htmlDecode.openAction': 'Decodificar HTML',
+    'htmlDecode.inputLabel': 'Entidades HTML para decodificar',
+    'htmlDecode.fileAction': 'Carregar arquivo UTF-8',
+    'htmlDecode.pasteAction': 'Colar texto',
+    'htmlDecode.submitAction': 'Decodificar',
+    'htmlDecode.outputLabel': 'Resultado decodificado de HTML',
+    'htmlDecode.resultSuccess': 'Decodificação HTML concluída.',
+    'htmlDecode.copyAction': 'Copiar texto decodificado',
+    'htmlDecode.saveAction': 'Salvar texto decodificado',
+    'htmlDecode.copiedResult': 'Texto decodificado de HTML copiado.',
+    'htmlDecode.fileSaved': 'Texto decodificado de HTML salvo.',
+    'error.htmlDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.htmlDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.htmlDecode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
     'cli.htmlDecodeUsage':
         'Uso: chimera html decode (--input=<texto>|--stdin|--file=<caminho>) '
         '[--output=<caminho>] [--json]\n'

@@ -11,6 +11,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
@@ -27,6 +28,12 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required HtmlDecodeOperationService htmlDecodeService,
+  required HtmlDecodeFilePicker htmlDecodeFilePicker,
+  required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
+  required HtmlDecodeClipboardWriter htmlDecodeClipboardWriter,
+  required HtmlDecodeFileSaver htmlDecodeFileSaver,
+  required HtmlDecodeOutputEncoder htmlDecodeOutputEncoder,
   required HtmlEncodeOperationService htmlEncodeService,
   required HtmlEncodeFilePicker htmlEncodeFilePicker,
   required HtmlEncodeClipboardReader htmlEncodeClipboardReader,
@@ -136,6 +143,19 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/html/decode',
+        builder: (context, state) => HtmlDecodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: htmlDecodeService,
+          filePicker: htmlDecodeFilePicker,
+          clipboardReader: htmlDecodeClipboardReader,
+          clipboardWriter: htmlDecodeClipboardWriter,
+          fileSaver: htmlDecodeFileSaver,
+          outputEncoder: htmlDecodeOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/html/encode',
         builder: (context, state) => HtmlEncodePage(
@@ -372,6 +392,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/html/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'htmlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-html-decode'),
+                        onPressed: () => context.go('/html/decode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'htmlDecode.openAction'),
                         ),
                       ),
                     ],
