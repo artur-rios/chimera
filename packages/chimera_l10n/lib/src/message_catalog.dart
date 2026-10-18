@@ -3,6 +3,46 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'jwtCreate.pageTitle': 'Create JWT',
+    'jwtCreate.openAction': 'Create JWT',
+    'jwtCreate.algorithmLabel': 'Signing algorithm',
+    'jwtCreate.headerLabel': 'Protected header JSON',
+    'jwtCreate.claimsLabel': 'Claims JSON',
+    'jwtCreate.keyLabel': 'Private signing key',
+    'jwtCreate.submitAction': 'Create and sign',
+    'jwtCreate.outputLabel': 'Signed JWT',
+    'jwtCreate.resultSuccess': 'JWT creation succeeded.',
+    'jwtCreate.copyAction': 'Copy JWT',
+    'jwtCreate.saveAction': 'Save JWT',
+    'jwtCreate.copiedResult': 'JWT copied.',
+    'jwtCreate.fileSaved': 'JWT saved.',
+    'jwtCreate.headerFileAction': 'Load header file',
+    'jwtCreate.claimsFileAction': 'Load claims file',
+    'jwtCreate.keyFileAction': 'Load key file',
+    'jwtCreate.headerPasteAction': 'Paste header',
+    'jwtCreate.claimsPasteAction': 'Paste claims',
+    'jwtCreate.keyPasteAction': 'Paste key',
+    'cli.jwtCreateUsage':
+        'Usage: chimera jwt create --algorithm=<name> '
+        '[--header=<json>|--header-file=<path>] '
+        '(--claims=<json>|--claims-file=<path>|--stdin) '
+        '(--key=<text>|--key-file=<path>) [--output=<path>] [--json]\n'
+        'Signed algorithms: HS256/384/512, RS256/384/512, '
+        'ES256/256K/384/512. Exit codes: 64 validation, 70 processing, '
+        '74 access, 75 resource.',
+    'jwtCreate.savedResult': 'JWT saved.',
+    'error.jwtCreate.validation': 'The JWT creation request is invalid.',
+    'error.jwtCreate.processing': 'The JWT could not be signed.',
+    'error.jwtCreate.resource': 'JWT creation exceeded its resource limit.',
+    'error.jwtCreate.inputAccess': 'The standard input could not be read.',
+    'error.jwtCreate.headerAccess': 'The header file could not be read.',
+    'error.jwtCreate.claimsAccess': 'The claims file could not be read.',
+    'error.jwtCreate.keyAccess': 'The key file could not be read.',
+    'error.jwtCreate.outputAccess': 'The JWT could not be saved.',
+    'error.jwtCreate.clipboardRead': 'The clipboard text could not be read.',
+    'error.jwtCreate.clipboardWrite': 'The JWT could not be copied.',
+    'error.jwtCreate.interactiveInputAccess':
+        'The local input could not be processed.',
     'htmlEncode.pageTitle': 'Encode HTML',
     'htmlEncode.openAction': 'Encode HTML',
     'htmlEncode.inputLabel': 'Text to encode',
@@ -668,6 +708,50 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'jwtCreate.pageTitle': 'Criar JWT',
+    'jwtCreate.openAction': 'Criar JWT',
+    'jwtCreate.algorithmLabel': 'Algoritmo de assinatura',
+    'jwtCreate.headerLabel': 'JSON do cabeçalho protegido',
+    'jwtCreate.claimsLabel': 'JSON das declarações',
+    'jwtCreate.keyLabel': 'Chave privada de assinatura',
+    'jwtCreate.submitAction': 'Criar e assinar',
+    'jwtCreate.outputLabel': 'JWT assinado',
+    'jwtCreate.resultSuccess': 'Criação do JWT concluída.',
+    'jwtCreate.copyAction': 'Copiar JWT',
+    'jwtCreate.saveAction': 'Salvar JWT',
+    'jwtCreate.copiedResult': 'JWT copiado.',
+    'jwtCreate.fileSaved': 'JWT salvo.',
+    'jwtCreate.headerFileAction': 'Carregar arquivo de cabeçalho',
+    'jwtCreate.claimsFileAction': 'Carregar arquivo de declarações',
+    'jwtCreate.keyFileAction': 'Carregar arquivo de chave',
+    'jwtCreate.headerPasteAction': 'Colar cabeçalho',
+    'jwtCreate.claimsPasteAction': 'Colar declarações',
+    'jwtCreate.keyPasteAction': 'Colar chave',
+    'cli.jwtCreateUsage':
+        'Uso: chimera jwt create --algorithm=<nome> '
+        '[--header=<json>|--header-file=<caminho>] '
+        '(--claims=<json>|--claims-file=<caminho>|--stdin) '
+        '(--key=<texto>|--key-file=<caminho>) [--output=<caminho>] [--json]\n'
+        'Algoritmos assinados: HS256/384/512, RS256/384/512, '
+        'ES256/256K/384/512. Códigos de saída: 64 validação, '
+        '70 processamento, 74 acesso, 75 recursos.',
+    'jwtCreate.savedResult': 'JWT salvo.',
+    'error.jwtCreate.validation': 'A solicitação de criação do JWT é inválida.',
+    'error.jwtCreate.processing': 'Não foi possível assinar o JWT.',
+    'error.jwtCreate.resource':
+        'A criação do JWT excedeu o limite de recursos.',
+    'error.jwtCreate.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.jwtCreate.headerAccess':
+        'Não foi possível ler o arquivo de cabeçalho.',
+    'error.jwtCreate.claimsAccess':
+        'Não foi possível ler o arquivo de declarações.',
+    'error.jwtCreate.keyAccess': 'Não foi possível ler o arquivo de chave.',
+    'error.jwtCreate.outputAccess': 'Não foi possível salvar o JWT.',
+    'error.jwtCreate.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.jwtCreate.clipboardWrite': 'Não foi possível copiar o JWT.',
+    'error.jwtCreate.interactiveInputAccess':
+        'Não foi possível processar a entrada local.',
     'htmlEncode.pageTitle': 'Codificar HTML',
     'htmlEncode.openAction': 'Codificar HTML',
     'htmlEncode.inputLabel': 'Texto para codificar',

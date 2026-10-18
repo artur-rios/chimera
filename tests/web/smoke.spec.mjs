@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { generateKeyPairSync, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
@@ -1589,5 +1590,129 @@ test('Base64 PNG decode previews and downloads exact bytes without requests', as
   expect(
     interactionRequests.filter((url) => /^https?:/.test(url)),
   ).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
+
+test('JWT HMAC creation signs exact compact token locally without requests', async ({ page }) => {
+  const expectedToken =
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.' +
+    'eyJicm93c2VyIjp0cnVlfQ.' +
+    '0dUDVWt8or9ruXzLa8i7tl0xCUaIVBGl_V-bWrFtgpA';
+  const externalRequests = [];
+  const interactionRequests = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.addInitScript(() => {
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Create JWT', exact: true }).click();
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  await fillFlutterTextBox(page.getByRole('textbox', { name: 'Claims JSON' }), '{"browser":true}');
+  await fillFlutterTextBox(page.getByRole('textbox', { name: 'Private signing key' }), '0123456789abcdef0123456789abcdef');
+  await page.getByRole('button', { name: 'Create and sign', exact: true }).click();
+  const result = page.getByRole('region', { name: 'Signed JWT JWT creation succeeded.', exact: true });
+  await expect(result).toBeVisible();
+  await page.getByRole('button', { name: 'Copy JWT', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => window.__chimeraCopiedText))
+    .toBe(expectedToken);
+  await expect(page.getByRole('textbox', { name: 'Claims JSON' })).toHaveValue('');
+  await expect(page.getByRole('textbox', { name: 'Private signing key' })).toHaveValue('');
+  expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
+
+test('JWT asymmetric creation signs RSA and ECDSA tokens locally', async ({ page }) => {
+  const externalRequests = [];
+  const interactionRequests = [];
+  let recordInteractions = false;
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+    if (recordInteractions) recordHttpRequest(request, interactionRequests);
+  });
+  await page.addInitScript(() => {
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  });
+  const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  for (const scenario of [
+    {
+      algorithm: 'RS256',
+      key: rsa.privateKey,
+      verifyOptions: rsa.publicKey,
+    },
+    {
+      algorithm: 'ES256',
+      key: ec.privateKey,
+      verifyOptions: { key: ec.publicKey, dsaEncoding: 'ieee-p1363' },
+    },
+  ]) {
+    recordInteractions = false;
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Create JWT', exact: true }).click();
+    recordInteractions = true;
+    await page.getByRole('button', { name: 'Signing algorithm HS256', exact: true }).click();
+    await page.getByRole('menuitem', { name: scenario.algorithm, exact: true }).click();
+    await fillFlutterTextBox(
+      page.getByRole('textbox', { name: 'Claims JSON' }),
+      JSON.stringify({ browser: true, family: scenario.algorithm }),
+    );
+    await fillFlutterTextBox(
+      page.getByRole('textbox', { name: 'Private signing key' }),
+      JSON.stringify(scenario.key.export({ format: 'jwk' })),
+    );
+    await page.getByRole('button', { name: 'Create and sign', exact: true }).click();
+    await expect(page.getByRole('region', {
+      name: 'Signed JWT JWT creation succeeded.',
+      exact: true,
+    })).toBeVisible();
+    await page.getByRole('button', { name: 'Copy JWT', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).not.toBeNull();
+    const token = await page.evaluate(() => window.__chimeraCopiedText);
+    const segments = token.split('.');
+    expect(segments).toHaveLength(3);
+    expect(JSON.parse(Buffer.from(segments[0], 'base64url').toString('utf8'))).toMatchObject({
+      alg: scenario.algorithm,
+      typ: 'JWT',
+    });
+    expect(JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8'))).toEqual({
+      browser: true,
+      family: scenario.algorithm,
+    });
+    expect(verify(
+      'sha256',
+      Buffer.from(`${segments[0]}.${segments[1]}`),
+      scenario.verifyOptions,
+      Buffer.from(segments[2], 'base64url'),
+    )).toBe(true);
+    await expect(page.getByRole('textbox', { name: 'Claims JSON' })).toHaveValue('');
+    await expect(page.getByRole('textbox', { name: 'Private signing key' })).toHaveValue('');
+    recordInteractions = false;
+  }
+  expect(interactionRequests).toEqual([]);
   expect(externalRequests).toEqual([]);
 });

@@ -427,3 +427,38 @@ The platform coverage exercises real keyboard submission, exact localized
 results, copy/save bytes (including empty output), URL cleanup, malformed UTF-8
 recovery, and zero external requests. No automated UC-23 accessibility finding
 remains open.
+
+## UC-24 JWT Create
+
+- Release version: UC-24 candidate
+- Branch: `feature/uc-24-jwt-create`
+- Reviewer: Chimera UC-24 GUI implementation self-review
+- Date: 2026-10-18
+- Target: shared Flutter web, Windows, and Linux JWT creation surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Algorithm, header, claims, key, submit, result, copy, and save controls
+  follow document order and remain keyboard operable.
+- [x] The private key editor obscures content and disables suggestions and
+  autocorrection. Header, claims, key, and editor history are discarded when a
+  signing attempt begins and again on failure or disposal.
+- [x] Result, notice, and error regions use localized accessible labels and live
+  announcements without including claims or key material.
+- [x] File and clipboard loading is local, cancellation is neutral, competing
+  controls disable while busy, and generation guards reject stale completion.
+- [x] The responsive scrolling layout keeps all actions reachable at narrow
+  widths and large text. Material buttons retain minimum accessible targets and
+  theme-derived contrast.
+- [x] Copy and save hand off one exact compact token; failures clear stale
+  output and publish only localized safe categories.
+
+### Evidence and Findings
+
+Focused widget coverage exercises home routing, direct/file/clipboard sources,
+source discard, key obscuring, HMAC signing, redacted validation, both locales,
+and exact copy/save filename, MIME, and bytes. The complete GUI suite and
+fatal-info analysis are mandatory delivery gates. Native and compiled-browser
+coverage is recorded with Task 5. No automated UC-24 accessibility finding is
+open.

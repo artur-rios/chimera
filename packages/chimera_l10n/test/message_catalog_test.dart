@@ -4,6 +4,50 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test('GivenJwtCreateMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'jwtCreate.pageTitle',
+      'jwtCreate.openAction',
+      'jwtCreate.algorithmLabel',
+      'jwtCreate.headerLabel',
+      'jwtCreate.claimsLabel',
+      'jwtCreate.keyLabel',
+      'jwtCreate.submitAction',
+      'jwtCreate.outputLabel',
+      'jwtCreate.resultSuccess',
+      'jwtCreate.copyAction',
+      'jwtCreate.saveAction',
+      'jwtCreate.copiedResult',
+      'jwtCreate.fileSaved',
+      'jwtCreate.headerFileAction',
+      'jwtCreate.claimsFileAction',
+      'jwtCreate.keyFileAction',
+      'jwtCreate.headerPasteAction',
+      'jwtCreate.claimsPasteAction',
+      'jwtCreate.keyPasteAction',
+      'cli.jwtCreateUsage',
+      'jwtCreate.savedResult',
+      'error.jwtCreate.validation',
+      'error.jwtCreate.processing',
+      'error.jwtCreate.resource',
+      'error.jwtCreate.inputAccess',
+      'error.jwtCreate.headerAccess',
+      'error.jwtCreate.claimsAccess',
+      'error.jwtCreate.keyAccess',
+      'error.jwtCreate.outputAccess',
+      'error.jwtCreate.clipboardRead',
+      'error.jwtCreate.clipboardWrite',
+      'error.jwtCreate.interactiveInputAccess',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test(
     'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -530,6 +574,38 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'jwtCreate.pageTitle',
+      'jwtCreate.openAction',
+      'jwtCreate.algorithmLabel',
+      'jwtCreate.headerLabel',
+      'jwtCreate.claimsLabel',
+      'jwtCreate.keyLabel',
+      'jwtCreate.submitAction',
+      'jwtCreate.outputLabel',
+      'jwtCreate.resultSuccess',
+      'jwtCreate.copyAction',
+      'jwtCreate.saveAction',
+      'jwtCreate.copiedResult',
+      'jwtCreate.fileSaved',
+      'jwtCreate.headerFileAction',
+      'jwtCreate.claimsFileAction',
+      'jwtCreate.keyFileAction',
+      'jwtCreate.headerPasteAction',
+      'jwtCreate.claimsPasteAction',
+      'jwtCreate.keyPasteAction',
+      'cli.jwtCreateUsage',
+      'jwtCreate.savedResult',
+      'error.jwtCreate.validation',
+      'error.jwtCreate.processing',
+      'error.jwtCreate.resource',
+      'error.jwtCreate.inputAccess',
+      'error.jwtCreate.headerAccess',
+      'error.jwtCreate.claimsAccess',
+      'error.jwtCreate.keyAccess',
+      'error.jwtCreate.outputAccess',
+      'error.jwtCreate.clipboardRead',
+      'error.jwtCreate.clipboardWrite',
+      'error.jwtCreate.interactiveInputAccess',
       'htmlEncode.pageTitle',
       'htmlEncode.openAction',
       'htmlEncode.inputLabel',
