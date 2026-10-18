@@ -3,6 +3,22 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'jwtInspect.headerLabel': 'Header',
+    'jwtInspect.claimsLabel': 'Claims',
+    'jwtInspect.verificationLabel': 'Verification',
+    'jwtInspect.statusNotRequested': 'Not requested',
+    'jwtInspect.statusVerified': 'Verified',
+    'jwtInspect.statusFailed': 'Failed — decoded data is untrusted',
+    'cli.jwtInspectUsage':
+        'Usage: chimera jwt inspect '
+        '(--token=<jwt>|--token-file=<path>|--stdin) '
+        '[--key=<text>|--key-file=<path>] [--json]',
+    'error.jwtInspect.validation': 'The JWT inspection request is invalid.',
+    'error.jwtInspect.processing': 'The JWT signature could not be verified.',
+    'error.jwtInspect.resource': 'JWT inspection exceeded its resource limit.',
+    'error.jwtInspect.inputAccess': 'The standard input could not be read.',
+    'error.jwtInspect.tokenAccess': 'The JWT file could not be read.',
+    'error.jwtInspect.keyAccess': 'The key file could not be read.',
     'jwtCreate.pageTitle': 'Create JWT',
     'jwtCreate.openAction': 'Create JWT',
     'jwtCreate.algorithmLabel': 'Signing algorithm',
@@ -708,6 +724,26 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'jwtInspect.headerLabel': 'Cabeçalho',
+    'jwtInspect.claimsLabel': 'Declarações',
+    'jwtInspect.verificationLabel': 'Verificação',
+    'jwtInspect.statusNotRequested': 'Não solicitada',
+    'jwtInspect.statusVerified': 'Verificada',
+    'jwtInspect.statusFailed':
+        'Falhou — os dados decodificados não são confiáveis',
+    'cli.jwtInspectUsage':
+        'Uso: chimera jwt inspect '
+        '(--token=<jwt>|--token-file=<caminho>|--stdin) '
+        '[--key=<texto>|--key-file=<caminho>] [--json]',
+    'error.jwtInspect.validation':
+        'A solicitação de inspeção do JWT é inválida.',
+    'error.jwtInspect.processing':
+        'Não foi possível verificar a assinatura do JWT.',
+    'error.jwtInspect.resource':
+        'A inspeção do JWT excedeu o limite de recursos.',
+    'error.jwtInspect.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.jwtInspect.tokenAccess': 'Não foi possível ler o arquivo JWT.',
+    'error.jwtInspect.keyAccess': 'Não foi possível ler o arquivo de chave.',
     'jwtCreate.pageTitle': 'Criar JWT',
     'jwtCreate.openAction': 'Criar JWT',
     'jwtCreate.algorithmLabel': 'Algoritmo de assinatura',

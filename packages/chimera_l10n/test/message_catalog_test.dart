@@ -4,8 +4,21 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
-  test('GivenJwtCreateMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+  test('GivenJwtMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
+      'jwtInspect.headerLabel',
+      'jwtInspect.claimsLabel',
+      'jwtInspect.verificationLabel',
+      'jwtInspect.statusNotRequested',
+      'jwtInspect.statusVerified',
+      'jwtInspect.statusFailed',
+      'cli.jwtInspectUsage',
+      'error.jwtInspect.validation',
+      'error.jwtInspect.processing',
+      'error.jwtInspect.resource',
+      'error.jwtInspect.inputAccess',
+      'error.jwtInspect.tokenAccess',
+      'error.jwtInspect.keyAccess',
       'jwtCreate.pageTitle',
       'jwtCreate.openAction',
       'jwtCreate.algorithmLabel',
@@ -574,6 +587,19 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'jwtInspect.headerLabel',
+      'jwtInspect.claimsLabel',
+      'jwtInspect.verificationLabel',
+      'jwtInspect.statusNotRequested',
+      'jwtInspect.statusVerified',
+      'jwtInspect.statusFailed',
+      'cli.jwtInspectUsage',
+      'error.jwtInspect.validation',
+      'error.jwtInspect.processing',
+      'error.jwtInspect.resource',
+      'error.jwtInspect.inputAccess',
+      'error.jwtInspect.tokenAccess',
+      'error.jwtInspect.keyAccess',
       'jwtCreate.pageTitle',
       'jwtCreate.openAction',
       'jwtCreate.algorithmLabel',
