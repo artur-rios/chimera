@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_gui/app.dart';
+import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -1525,7 +1526,132 @@ void main() {
       },
     );
   }
+
+  for (final locale in <String>['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}JwtInspectionScenarios_WhenInspectedAndCopied_ThenStatusesTransferOffline',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        const hmacKey = '0123456789abcdef0123456789abcdef';
+        final scenarios =
+            <({String name, String token, String? key, String status})>[
+              (
+                name: 'decode-only',
+                token: _jwtToken('HS256', hmacKey, 'decode-only'),
+                key: null,
+                status: 'not-requested',
+              ),
+              (
+                name: 'hmac',
+                token: _jwtToken('HS256', hmacKey, 'hmac'),
+                key: hmacKey,
+                status: 'verified',
+              ),
+              (
+                name: 'rsa',
+                token: _jwtToken('RS256', rsaPrivateJwk, 'rsa'),
+                key: rsaPrivateJwk,
+                status: 'verified',
+              ),
+              (
+                name: 'ecdsa',
+                token: _jwtToken('ES256', ecPrivateJwk, 'ecdsa'),
+                key: ecPrivateJwk,
+                status: 'verified',
+              ),
+              (
+                name: 'failed',
+                token: _jwtToken('HS256', hmacKey, 'failed'),
+                key: 'fedcba9876543210fedcba9876543210',
+                status: 'failed',
+              ),
+            ];
+        for (final scenario in scenarios) {
+          String? copied;
+          await tester.pumpWidget(const SizedBox.shrink());
+          await tester.pumpAndSettle();
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/jwt/inspect',
+              jwtInspectClipboardWriter: (value) async => copied = value,
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.enterText(
+            find.byKey(const Key('jwt-inspect-token')),
+            scenario.token,
+          );
+          if (scenario.key case final key?) {
+            await tester.enterText(
+              find.byKey(const Key('jwt-inspect-key')),
+              key,
+            );
+          }
+          await tester.ensureVisible(
+            find.byKey(const Key('jwt-inspect-submit')),
+          );
+          await tester.tap(find.byKey(const Key('jwt-inspect-submit')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('jwt-inspect-output')), findsOneWidget);
+          if (scenario.status == 'failed') {
+            expect(
+              find.byKey(const Key('jwt-inspect-untrusted')),
+              findsOneWidget,
+            );
+          }
+          await tester.ensureVisible(find.byKey(const Key('jwt-inspect-copy')));
+          await tester.tap(find.byKey(const Key('jwt-inspect-copy')));
+          await tester.pumpAndSettle();
+          expect(jsonDecode(copied!) as Map<String, dynamic>, <String, Object?>{
+            'header': <String, Object?>{
+              'alg': scenario.name == 'rsa'
+                  ? 'RS256'
+                  : scenario.name == 'ecdsa'
+                  ? 'ES256'
+                  : 'HS256',
+              'typ': 'JWT',
+            },
+            'claims': <String, Object?>{'nativeInspect': scenario.name},
+            'verification': scenario.status,
+          });
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('jwt-inspect-token')))
+                .controller!
+                .text,
+            isEmpty,
+          );
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('jwt-inspect-key')))
+                .controller!
+                .text,
+            isEmpty,
+          );
+        }
+        expect(network.attempts, 0);
+      },
+    );
+  }
 }
+
+String _jwtToken(String algorithm, String key, String scenario) =>
+    const JwtCreator()
+        .create(
+          JwtCreateRequest(
+            headerJson: '{}',
+            claimsJson: jsonEncode(<String, Object?>{
+              'nativeInspect': scenario,
+            }),
+            algorithm: algorithm,
+            key: key,
+          ),
+        )
+        .token;
 
 Map<String, Object?> _jwtJson(String segment) => (jsonDecode(
   utf8.decode(base64Url.decode(base64Url.normalize(segment))),

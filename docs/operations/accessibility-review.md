@@ -504,5 +504,11 @@ invalidation, late completion, live semantics, target sizes, contrast, and
 narrow large-text layouts in both locales. All 14 focused widget tests pass;
 the complete GUI suite passes 630 tests, and the localization suite passes 24
 tests with exact locale parity. Fatal-info analysis reports no GUI or
-localization issues. Native and compiled-browser coverage is recorded with
-Task 5. No automated UC-25 accessibility finding is open.
+localization issues. The Windows native suite passes 66 integration tests,
+including both locale matrices for decode-only, verified HMAC/RSA/ECDSA, and
+failed/untrusted results with exact copy and zero network. The focused compiled
+web scenario passes Chromium and WebKit locally; the same Firefox scenario is
+committed for the Linux/Docker CI runner because the installed Windows Firefox
+binary fails before launch. The analyzed native Safari harness exercises the
+same five scenarios in its mandatory macOS CI job. No automated UC-25
+accessibility finding is open.

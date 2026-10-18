@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { generateKeyPairSync, verify } from 'node:crypto';
+import { createHmac, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 
@@ -1714,5 +1714,126 @@ test('JWT asymmetric creation signs RSA and ECDSA tokens locally', async ({ page
     recordInteractions = false;
   }
   expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
+
+test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures locally', async ({ page }) => {
+  const externalRequests = [];
+  const interactionRequests = [];
+  let recordInteractions = false;
+  page.on('request', request => {
+    if (
+      recordInteractions &&
+      /^https?:/.test(request.url()) &&
+      new URL(request.url()).hostname !== '127.0.0.1'
+    ) {
+      externalRequests.push(request.url());
+    }
+    if (recordInteractions) recordHttpRequest(request, interactionRequests);
+  });
+  await page.addInitScript(() => {
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  });
+
+  const hmacKey = '0123456789abcdef0123456789abcdef';
+  const rsa = generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const ec = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const compact = (algorithm, name, signer) => {
+    const header = Buffer.from(JSON.stringify({ alg: algorithm, typ: 'JWT' })).toString('base64url');
+    const claims = Buffer.from(JSON.stringify({ browserInspect: name })).toString('base64url');
+    return `${header}.${claims}.${signer(`${header}.${claims}`).toString('base64url')}`;
+  };
+  const hmacToken = name => compact(
+    'HS256',
+    name,
+    input => createHmac('sha256', hmacKey).update(input).digest(),
+  );
+  const scenarios = [
+    { name: 'decode-only', token: hmacToken('decode-only'), key: null, status: 'not-requested' },
+    { name: 'hmac', token: hmacToken('hmac'), key: hmacKey, status: 'verified' },
+    {
+      name: 'rsa',
+      token: compact('RS256', 'rsa', input => sign('sha256', Buffer.from(input), rsa.privateKey)),
+      key: JSON.stringify(rsa.publicKey.export({ format: 'jwk' })),
+      status: 'verified',
+    },
+    {
+      name: 'ecdsa',
+      token: compact(
+        'ES256',
+        'ecdsa',
+        input => sign('sha256', Buffer.from(input), {
+          key: ec.privateKey,
+          dsaEncoding: 'ieee-p1363',
+        }),
+      ),
+      key: JSON.stringify(ec.publicKey.export({ format: 'jwk' })),
+      status: 'verified',
+    },
+    {
+      name: 'failed',
+      token: hmacToken('failed'),
+      key: 'fedcba9876543210fedcba9876543210',
+      status: 'failed',
+    },
+  ];
+
+  for (const scenario of scenarios) {
+    recordInteractions = false;
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Inspect JWT', exact: true }).click();
+    recordInteractions = true;
+    await fillFlutterTextBox(
+      page.getByRole('textbox', { name: 'JWT', exact: true }),
+      scenario.token,
+    );
+    if (scenario.key !== null) {
+      await fillFlutterTextBox(
+        page.getByRole('textbox', { name: 'Optional verification key', exact: true }),
+        scenario.key,
+      );
+    }
+    await page.getByRole('button', { name: 'Inspect and verify', exact: true }).click();
+    const status = {
+      'not-requested': 'Not requested',
+      verified: 'Verified',
+      failed: 'Failed — decoded data is untrusted',
+    }[scenario.status];
+    const result = page.getByRole('region', {
+      name: new RegExp(`JWT inspection result.*${status}`),
+    });
+    await expect(result).toBeVisible();
+    if (scenario.status === 'failed') {
+      await expect(result.getByText(
+        'Signature verification failed. Decoded data is untrusted.',
+        { exact: true },
+      )).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Copy inspection result', exact: true }).click();
+    await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).not.toBeNull();
+    const copied = JSON.parse(await page.evaluate(() => window.__chimeraCopiedText));
+    expect(copied).toEqual({
+      header: { alg: scenario.name === 'rsa' ? 'RS256' : scenario.name === 'ecdsa' ? 'ES256' : 'HS256', typ: 'JWT' },
+      claims: { browserInspect: scenario.name },
+      verification: scenario.status,
+    });
+    await expect(page.getByRole('textbox', { name: 'JWT', exact: true })).toHaveValue('');
+    await expect(
+      page.getByRole('textbox', { name: 'Optional verification key', exact: true }),
+    ).toHaveValue('');
+    recordInteractions = false;
+  }
+  expect(interactionRequests.filter(
+    url => !new URL(url).pathname.startsWith('/font-fallback/'),
+  )).toEqual([]);
   expect(externalRequests).toEqual([]);
 });
