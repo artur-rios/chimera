@@ -18,6 +18,7 @@ export 'src/jwt_inspect_service.dart';
 export 'src/list_compare_service.dart';
 export 'src/number_base_service.dart';
 export 'src/operation_service.dart';
+export 'src/qr_encode_service.dart';
 export 'src/result.dart';
 export 'src/sql_format_service.dart';
 export 'src/text_analyze_service.dart';
