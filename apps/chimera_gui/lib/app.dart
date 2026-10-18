@@ -21,6 +21,7 @@ import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'jwt_create_page.dart';
+import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'router.dart';
@@ -39,6 +40,10 @@ final class ChimeraApp extends StatelessWidget {
     this.jwtCreateClipboardReader,
     this.jwtCreateClipboardWriter,
     this.jwtCreateFileSaver,
+    this.jwtInspectService = const JwtInspectService(),
+    this.jwtInspectFilePicker,
+    this.jwtInspectClipboardReader,
+    this.jwtInspectClipboardWriter,
     this.htmlDecodeService = const HtmlDecodeService(),
     this.htmlDecodeFilePicker,
     this.htmlDecodeClipboardReader,
@@ -164,6 +169,10 @@ final class ChimeraApp extends StatelessWidget {
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
   final JwtCreateClipboardWriter? jwtCreateClipboardWriter;
   final JwtCreateFileSaver? jwtCreateFileSaver;
+  final JwtInspectOperationService jwtInspectService;
+  final JwtInspectFilePicker? jwtInspectFilePicker;
+  final JwtInspectClipboardReader? jwtInspectClipboardReader;
+  final JwtInspectClipboardWriter? jwtInspectClipboardWriter;
   final HtmlDecodeOperationService htmlDecodeService;
   final HtmlDecodeFilePicker? htmlDecodeFilePicker;
   final HtmlDecodeClipboardReader? htmlDecodeClipboardReader;
@@ -283,6 +292,10 @@ final class ChimeraApp extends StatelessWidget {
         jwtCreateClipboardReader: jwtCreateClipboardReader,
         jwtCreateClipboardWriter: jwtCreateClipboardWriter,
         jwtCreateFileSaver: jwtCreateFileSaver,
+        jwtInspectService: jwtInspectService,
+        jwtInspectFilePicker: jwtInspectFilePicker,
+        jwtInspectClipboardReader: jwtInspectClipboardReader,
+        jwtInspectClipboardWriter: jwtInspectClipboardWriter,
         htmlDecodeService: htmlDecodeService,
         htmlDecodeFilePicker: htmlDecodeFilePicker,
         htmlDecodeClipboardReader: htmlDecodeClipboardReader,
@@ -405,6 +418,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jwtCreateClipboardReader,
     required this.jwtCreateClipboardWriter,
     required this.jwtCreateFileSaver,
+    required this.jwtInspectService,
+    required this.jwtInspectFilePicker,
+    required this.jwtInspectClipboardReader,
+    required this.jwtInspectClipboardWriter,
     required this.htmlDecodeService,
     required this.htmlDecodeFilePicker,
     required this.htmlDecodeClipboardReader,
@@ -523,6 +540,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
   final JwtCreateClipboardWriter? jwtCreateClipboardWriter;
   final JwtCreateFileSaver? jwtCreateFileSaver;
+  final JwtInspectOperationService jwtInspectService;
+  final JwtInspectFilePicker? jwtInspectFilePicker;
+  final JwtInspectClipboardReader? jwtInspectClipboardReader;
+  final JwtInspectClipboardWriter? jwtInspectClipboardWriter;
   final Base64DecodeService base64DecodeService;
   final CertificateConvertOperationService certificateConvertService;
   final CertificateConvertFilePicker? certificateConvertFilePicker;
@@ -655,6 +676,12 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       jwtCreateClipboardWriter:
           widget.jwtCreateClipboardWriter ?? writeJwtCreateClipboard,
       jwtCreateFileSaver: widget.jwtCreateFileSaver ?? saveJwtCreateFile,
+      jwtInspectService: widget.jwtInspectService,
+      jwtInspectFilePicker: widget.jwtInspectFilePicker ?? pickJwtInspectFile,
+      jwtInspectClipboardReader:
+          widget.jwtInspectClipboardReader ?? readJwtInspectClipboard,
+      jwtInspectClipboardWriter:
+          widget.jwtInspectClipboardWriter ?? writeJwtInspectClipboard,
       htmlDecodeService: widget.htmlDecodeService,
       htmlDecodeFilePicker: widget.htmlDecodeFilePicker ?? pickHtmlDecodeFile,
       htmlDecodeClipboardReader:

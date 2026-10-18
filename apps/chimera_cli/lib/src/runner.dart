@@ -63,6 +63,8 @@ Future<int> runChimera(
   JsonObjectEncoder? certificateConvertJsonEncoder,
   JwtCreateService jwtCreateService = const JwtCreateService(),
   JsonObjectEncoder? jwtCreateJsonEncoder,
+  JwtInspectService jwtInspectService = const JwtInspectService(),
+  JsonObjectEncoder? jwtInspectJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -88,7 +90,10 @@ Future<int> runChimera(
     if (parsed.flag('help')) {
       final key =
           parsed.command?.name == 'jwt' &&
-              parsed.command?.command?.name == 'create'
+              parsed.command?.command?.name == 'inspect'
+          ? 'cli.jwtInspectUsage'
+          : parsed.command?.name == 'jwt' &&
+                parsed.command?.command?.name == 'create'
           ? 'cli.jwtCreateUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'decode'
@@ -134,6 +139,21 @@ Future<int> runChimera(
             ),
         service: jwtCreateService,
         encodeJson: jwtCreateJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'jwt' &&
+        parsed.command!.command?.name == 'inspect') {
+      return await _runJwtInspect(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readJwtInspectStandardInputBytes,
+        readFileBytes: readFileBytes ?? _readJwtInspectFileBytes,
+        service: jwtInspectService,
+        encodeJson: jwtInspectJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'html' &&
@@ -531,6 +551,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isJwtInspect =
+        args.length >= 2 && args[0] == 'jwt' && args[1] == 'inspect';
     final isJwtCreate =
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
     final isHtmlDecode =
@@ -583,7 +605,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isJwtCreate ||
+          (isJwtInspect ||
+              isJwtCreate ||
               isHtmlDecode ||
               isHtmlEncode ||
               isBase64Encode ||
@@ -609,7 +632,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isJwtCreate
+      code: isJwtInspect
+          ? 'jwt-inspect.invalid-options'
+          : isJwtCreate
           ? 'jwt-create.invalid-options'
           : isHtmlDecode
           ? 'html-decode.invalid-options'
@@ -658,7 +683,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isJwtCreate
+      messageKey: isJwtInspect
+          ? 'error.jwtInspect.validation'
+          : isJwtCreate
           ? 'error.jwtCreate.validation'
           : isHtmlDecode
           ? 'error.htmlDecode.validation'
@@ -724,7 +751,16 @@ ArgParser _buildParser() {
     ..addOption('key-file')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
-  final jwt = ArgParser()..addCommand('create', jwtCreate);
+  final jwtInspect = ArgParser()
+    ..addOption('token')
+    ..addOption('token-file')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('key')
+    ..addOption('key-file')
+    ..addFlag('json', negatable: false);
+  final jwt = ArgParser()
+    ..addCommand('create', jwtCreate)
+    ..addCommand('inspect', jwtInspect);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -1580,6 +1616,224 @@ Future<int> _runGzipDecompress(
       return _exitCodeFor(failure.kind);
     },
   );
+}
+
+Future<int> _runJwtInspect(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required JwtInspectService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final token = parsed.option('token');
+  final tokenFile = parsed.option('token-file');
+  final useStandardInput = parsed.flag('stdin');
+  final key = parsed.option('key');
+  final keyFile = parsed.option('key-file');
+  final json = parsed.flag('json');
+  final tokenCount =
+      (token == null ? 0 : 1) +
+      (tokenFile == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final keyCount = (key == null ? 0 : 1) + (keyFile == null ? 0 : 1);
+  final invalid =
+      parsed.rest.isNotEmpty ||
+          token == '' ||
+          tokenFile == '' ||
+          key == '' ||
+          keyFile == ''
+      ? 'invalid-options'
+      : tokenCount > 1 || keyCount > 1
+      ? 'conflicting-sources'
+      : tokenCount == 0
+      ? 'missing-source'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'jwt-inspect.$invalid',
+      messageKey: 'error.jwtInspect.validation',
+    );
+    return 64;
+  }
+
+  void writeAdapterFailure(_JwtInspectAdapterFailure failure) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: failure.kind,
+    code: failure.code,
+    messageKey: failure.messageKey,
+    details: failure.details,
+  );
+
+  Future<String> readUtf8(
+    Future<List<int>> Function() read, {
+    required String field,
+    required String accessCode,
+    required String accessMessageKey,
+  }) async {
+    try {
+      final bytes = await read();
+      try {
+        if (bytes.length > JwtInspector.defaultMaxInputBytes) {
+          throw const _JwtInspectInputLimit();
+        }
+        return utf8.decode(bytes, allowMalformed: false);
+      } finally {
+        try {
+          bytes.fillRange(0, bytes.length, 0);
+        } on Object {
+          // Immutable collaborator bytes are released when this scope ends.
+        }
+      }
+    } on _JwtInspectInputLimit {
+      throw _JwtInspectAdapterFailure(
+        exitCode: 75,
+        kind: 'resource',
+        code: 'jwt-inspect.resource-limit',
+        messageKey: 'error.jwtInspect.resource',
+        details: <String, Object?>{'field': field, 'reason': 'input-limit'},
+      );
+    } on FormatException {
+      throw _JwtInspectAdapterFailure(
+        exitCode: 64,
+        kind: 'validation',
+        code: 'jwt-inspect.invalid-utf8',
+        messageKey: 'error.jwtInspect.validation',
+        details: <String, Object?>{'field': field, 'reason': 'invalid-utf8'},
+      );
+    } on OutOfMemoryError {
+      throw _JwtInspectAdapterFailure(
+        exitCode: 75,
+        kind: 'resource',
+        code: 'jwt-inspect.resource-limit',
+        messageKey: 'error.jwtInspect.resource',
+        details: <String, Object?>{
+          'field': field,
+          'reason': 'allocation-limit',
+        },
+      );
+    } on _JwtInspectAdapterFailure {
+      rethrow;
+    } on Object {
+      throw _JwtInspectAdapterFailure(
+        exitCode: 74,
+        kind: 'access',
+        code: accessCode,
+        messageKey: accessMessageKey,
+      );
+    }
+  }
+
+  late String tokenText;
+  String? keyText;
+  try {
+    tokenText =
+        token ??
+        await readUtf8(
+          useStandardInput
+              ? readStandardInputBytes
+              : () => readFileBytes(tokenFile!),
+          field: 'token',
+          accessCode: useStandardInput
+              ? 'jwt-inspect.input-access'
+              : 'jwt-inspect.token-access',
+          accessMessageKey: useStandardInput
+              ? 'error.jwtInspect.inputAccess'
+              : 'error.jwtInspect.tokenAccess',
+        );
+    keyText =
+        key ??
+        (keyFile == null
+            ? null
+            : await readUtf8(
+                () => readFileBytes(keyFile),
+                field: 'key',
+                accessCode: 'jwt-inspect.key-access',
+                accessMessageKey: 'error.jwtInspect.keyAccess',
+              ));
+  } on _JwtInspectAdapterFailure catch (failure) {
+    writeAdapterFailure(failure);
+    return failure.exitCode;
+  }
+
+  final result = await service.execute(
+    JwtInspectOperationRequest(token: tokenText, key: keyText),
+  );
+  return result.fold(
+    onSuccess: (value) {
+      try {
+        final output = json
+            ? '${encodeJson(value.toJson())}\n'
+            : '${catalog.lookup(localeTag, 'jwtInspect.headerLabel')}: '
+                  '${jsonEncode(value.header)}\n'
+                  '${catalog.lookup(localeTag, 'jwtInspect.claimsLabel')}: '
+                  '${jsonEncode(value.claims)}\n'
+                  '${catalog.lookup(localeTag, 'jwtInspect.verificationLabel')}: '
+                  '${catalog.lookup(localeTag, switch (value.verification) {
+                    JwtVerificationStatus.notRequested => 'jwtInspect.statusNotRequested',
+                    JwtVerificationStatus.verified => 'jwtInspect.statusVerified',
+                    JwtVerificationStatus.failed => 'jwtInspect.statusFailed',
+                  })}\n';
+        out.write(output);
+        return 0;
+      } on OutOfMemoryError {
+        _writeFailure(
+          err,
+          catalog: catalog,
+          localeTag: localeTag,
+          json: json,
+          kind: 'resource',
+          code: 'jwt-inspect.resource-limit',
+          messageKey: 'error.jwtInspect.resource',
+          details: const <String, Object?>{
+            'field': 'output',
+            'reason': 'allocation-limit',
+          },
+        );
+        return 75;
+      }
+    },
+    onFailure: (failure) {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+final class _JwtInspectAdapterFailure implements Exception {
+  const _JwtInspectAdapterFailure({
+    required this.exitCode,
+    required this.kind,
+    required this.code,
+    required this.messageKey,
+    this.details = const <String, Object?>{},
+  });
+
+  final int exitCode;
+  final String kind;
+  final String code;
+  final String messageKey;
+  final Map<String, Object?> details;
 }
 
 Future<int> _runJwtCreate(
@@ -2498,6 +2752,33 @@ void _writeBase64ResourceFailure(
 
 Future<List<int>> _readStandardInputBytes() =>
     stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+
+final class _JwtInspectInputLimit implements Exception {
+  const _JwtInspectInputLimit();
+}
+
+Future<List<int>> _readJwtInspectFileBytes(String path) async {
+  final file = File(path);
+  if (await file.length() > JwtInspector.defaultMaxInputBytes) {
+    throw const _JwtInspectInputLimit();
+  }
+  final bytes = await file.readAsBytes();
+  if (bytes.length <= JwtInspector.defaultMaxInputBytes) return bytes;
+  bytes.fillRange(0, bytes.length, 0);
+  throw const _JwtInspectInputLimit();
+}
+
+Future<List<int>> _readJwtInspectStandardInputBytes() async {
+  final bytes = <int>[];
+  await for (final chunk in stdin) {
+    if (bytes.length + chunk.length > JwtInspector.defaultMaxInputBytes) {
+      bytes.fillRange(0, bytes.length, 0);
+      throw const _JwtInspectInputLimit();
+    }
+    bytes.addAll(chunk);
+  }
+  return bytes;
+}
 
 Future<int> _runTextAnalyze(
   ArgResults parsed, {

@@ -1125,7 +1125,7 @@ Future<void> main(List<String> arguments) async {
     await _createJwt(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -1193,11 +1193,51 @@ Future<void> _createJwt(WebDriver driver) async {
     'JWT key was not discarded',
   );
   await _assertNoExternalRequests(driver, flow: 'JWT creation');
-  await _createAsymmetricJwt(driver, 'RS256', rsaPrivateJwk);
-  await _createAsymmetricJwt(driver, 'ES256', ecPrivateJwk);
+  final rsaToken = await _createAsymmetricJwt(driver, 'RS256', rsaPrivateJwk);
+  final ecToken = await _createAsymmetricJwt(driver, 'ES256', ecPrivateJwk);
+  await _openJwtInspectPage(driver);
+  await _inspectJwt(
+    driver,
+    token: expectedToken,
+    algorithm: 'HS256',
+    claimsJson: '{"safari":true}',
+    status: 'not-requested',
+  );
+  await _inspectJwt(
+    driver,
+    token: expectedToken,
+    key: '0123456789abcdef0123456789abcdef',
+    algorithm: 'HS256',
+    claimsJson: '{"safari":true}',
+    status: 'verified',
+  );
+  await _inspectJwt(
+    driver,
+    token: expectedToken,
+    key: 'fedcba9876543210fedcba9876543210',
+    algorithm: 'HS256',
+    claimsJson: '{"safari":true}',
+    status: 'failed',
+  );
+  await _inspectJwt(
+    driver,
+    token: rsaToken,
+    key: rsaPrivateJwk,
+    algorithm: 'RS256',
+    claimsJson: '{"safari":true,"family":"RS256"}',
+    status: 'verified',
+  );
+  await _inspectJwt(
+    driver,
+    token: ecToken,
+    key: ecPrivateJwk,
+    algorithm: 'ES256',
+    claimsJson: '{"safari":true,"family":"ES256"}',
+    status: 'verified',
+  );
 }
 
-Future<void> _createAsymmetricJwt(
+Future<String> _createAsymmetricJwt(
   WebDriver driver,
   String algorithm,
   String key,
@@ -1303,6 +1343,103 @@ Future<void> _createAsymmetricJwt(
     '$algorithm JWT key was not discarded',
   );
   await _assertNoExternalRequests(driver, flow: '$algorithm JWT creation');
+  final token = await driver.execute(
+    'return window.__chimeraCopiedText;',
+    const <Object?>[],
+  );
+  if (token is! String) {
+    throw StateError('$algorithm JWT token was not available for inspection');
+  }
+  return token;
+}
+
+Future<void> _openJwtInspectPage(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'JWT inspection semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Inspect JWT');
+  await _waitUntil(
+    () => _pageContains(driver, 'Optional verification key'),
+    'JWT inspection page did not open',
+  );
+  await driver.execute('''
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCopiedText = value;
+        },
+      },
+    });
+  ''', const <Object?>[]);
+}
+
+Future<void> _inspectJwt(
+  WebDriver driver, {
+  required String token,
+  required String algorithm,
+  required String claimsJson,
+  required String status,
+  String? key,
+}) async {
+  await _fillTextBox(driver, 'JWT', token);
+  if (key != null) {
+    await _fillTextBox(driver, 'Optional verification key', key);
+  }
+  await _clickButton(driver, 'Inspect and verify');
+  final statusLabel = switch (status) {
+    'not-requested' => 'Not requested',
+    'verified' => 'Verified',
+    'failed' => 'Failed — decoded data is untrusted',
+    _ => throw StateError('Unknown JWT inspection status: $status'),
+  };
+  await _waitUntil(
+    () => _pageContains(driver, statusLabel),
+    '$algorithm JWT inspection status was not $status',
+  );
+  if (status == 'failed') {
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        'Signature verification failed. Decoded data is untrusted.',
+      ),
+      'JWT inspection did not expose the untrusted-data warning',
+    );
+  }
+  await _clickButton(driver, 'Copy inspection result');
+  final expected =
+      '{"header":{"alg":"$algorithm","typ":"JWT"},'
+      '"claims":$claimsJson,"verification":"$status"}';
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          'return window.__chimeraCopiedText === arguments[0];',
+          <Object?>[expected],
+        ) ==
+        true,
+    '$algorithm JWT inspection JSON was not exact',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'JWT', ''),
+    '$algorithm JWT inspection token was not discarded',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Optional verification key', ''),
+    '$algorithm JWT inspection key was not discarded',
+  );
+  await _assertNoExternalRequests(driver, flow: '$algorithm JWT inspection');
 }
 
 Future<void> _encodeHtml(WebDriver driver) async {

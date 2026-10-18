@@ -18,6 +18,7 @@ import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'jwt_create_page.dart';
+import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
@@ -34,6 +35,10 @@ GoRouter buildRouter({
   required JwtCreateClipboardReader jwtCreateClipboardReader,
   required JwtCreateClipboardWriter jwtCreateClipboardWriter,
   required JwtCreateFileSaver jwtCreateFileSaver,
+  required JwtInspectOperationService jwtInspectService,
+  required JwtInspectFilePicker jwtInspectFilePicker,
+  required JwtInspectClipboardReader jwtInspectClipboardReader,
+  required JwtInspectClipboardWriter jwtInspectClipboardWriter,
   required HtmlDecodeOperationService htmlDecodeService,
   required HtmlDecodeFilePicker htmlDecodeFilePicker,
   required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
@@ -159,6 +164,17 @@ GoRouter buildRouter({
           clipboardReader: jwtCreateClipboardReader,
           clipboardWriter: jwtCreateClipboardWriter,
           fileSaver: jwtCreateFileSaver,
+        ),
+      ),
+      GoRoute(
+        path: '/jwt/inspect',
+        builder: (context, state) => JwtInspectPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jwtInspectService,
+          filePicker: jwtInspectFilePicker,
+          clipboardReader: jwtInspectClipboardReader,
+          clipboardWriter: jwtInspectClipboardWriter,
         ),
       ),
       GoRoute(
@@ -426,6 +442,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/jwt/create'),
                         child: Text(
                           catalog.lookup(localeTag, 'jwtCreate.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-jwt-inspect'),
+                        onPressed: () => context.go('/jwt/inspect'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jwtInspect.openAction'),
                         ),
                       ),
                     ],

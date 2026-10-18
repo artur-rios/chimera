@@ -71,6 +71,27 @@ void main() {
     expect(safariSmoke, isNot(contains('fileInput!.sendKeys')));
   });
 
+  test('GivenSafariJwtMatrix_WhenInspectionRepeats_ThenOneBootstrappedPageIsReused', () {
+    final createJwt = safariSmoke
+        .split('Future<void> _createJwt(')
+        .elementAt(1)
+        .split('Future<String> _createAsymmetricJwt(')
+        .first;
+    final inspectJwt = safariSmoke
+        .split('Future<void> _inspectJwt(')
+        .elementAt(1)
+        .split('Future<void> _encodeHtml(')
+        .first;
+
+    expect(safariSmoke, contains('Future<void> _openJwtInspectPage('));
+    expect(
+      RegExp(r'await _openJwtInspectPage\(driver\);').allMatches(createJwt),
+      hasLength(1),
+    );
+    expect(inspectJwt, isNot(contains('driver.get(')));
+    expect(inspectJwt, isNot(contains('_openJwtInspectPage(')));
+  });
+
   test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {
     expect(continuousIntegration, contains('os: windows-latest'));
     expect(continuousIntegration, contains('target: windows'));
