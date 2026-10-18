@@ -14,6 +14,12 @@ const safariGzipScripts = [...safariHarness.split('Future<void> _compressGzip(')
   .split('Future<void> _convertCertificate(')[0].matchAll(/r?'''([\s\S]*?)'''/g)].map(match => match[1]);
 const safariLevelOpening = safariGzipScripts.find(source => source.includes('Compression level 6'));
 const safariLevelSelection = safariGzipScripts.find(source => source.includes('[role="menuitem"]'));
+const safariGzipCopyActivation = safariHarness
+  .split('Future<void> _activateGzipCopyButton(')[1]
+  ?.match(/driver\.execute\(\s*'''([\s\S]*?)'''/)?.[1] ?? '';
+const safariCopiedTextObservation = safariHarness
+  .split('Future<List<int>?> _copiedTextCodeUnits(')[1]
+  ?.match(/driver\.execute\(\s*'''([\s\S]*?)'''/)?.[1] ?? '';
 
 test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservationAndExactDownloadSucceed', async ({ page }) => {
   const requests = [];
@@ -279,8 +285,15 @@ test('GivenBomGzipFile_WhenTextDecompressedCopiedAndDownloaded_ThenExactBytesTra
   });
   await expect(result).toBeVisible();
   await expect(result).toHaveAttribute('tabindex', '0');
-  await page.getByRole('button', { name: 'Copy decompressed text', exact: true }).click();
-  await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).toBe('\uFEFFa\r\n ');
+  await expect.poll(() => page.evaluate(
+    source => new Function(source)('Copy decompressed text'),
+    safariGzipCopyActivation,
+  )).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(
+    source => new Function(source)(),
+    safariCopiedTextObservation,
+  )).toEqual([0xfeff, 0x61, 0x0d, 0x0a, 0x20]);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save decompressed bytes', exact: true }).press('Enter');

@@ -1230,16 +1230,16 @@ Future<void> _decompressGzip(WebDriver driver) async {
         true,
     'GZIP decompression success semantics/counts were incorrect',
   );
-  await _clickButton(driver, 'Copy decompressed text');
-  await _waitUntil(
-    () async =>
-        await driver.execute(
-          'return window.__chimeraCopiedText === arguments[0];',
-          const <Object?>['\uFEFFa\r\n '],
-        ) ==
-        true,
-    'GZIP BOM text was not copied exactly',
-  );
+  await _activateGzipCopyButton(driver);
+  const expectedCopyCodeUnits = <int>[0xfeff, 0x61, 0x0d, 0x0a, 0x20];
+  await _waitUntil(() async {
+    final actual = await _copiedTextCodeUnits(driver);
+    return actual != null &&
+        actual.length == expectedCopyCodeUnits.length &&
+        actual.indexed.every(
+          (entry) => entry.$2 == expectedCopyCodeUnits[entry.$1],
+        );
+  }, 'GZIP BOM text was not copied exactly');
   await _clickButton(driver, 'Save decompressed bytes');
   await _waitUntil(
     () async =>
@@ -1512,6 +1512,35 @@ Future<void> _clickButton(WebDriver driver, String text) async {
     );
     return result == true;
   }, 'Button did not become available: $text');
+}
+
+Future<void> _activateGzipCopyButton(WebDriver driver) async {
+  await _waitUntil(() async {
+    final result = await driver.execute(
+      '''
+        const expected = arguments[0];
+        const button = [...document.querySelectorAll('[role="button"]')]
+          .find(element => element.textContent.trim() === expected &&
+            element.getAttribute('aria-disabled') !== 'true');
+        if (!button) return false;
+        button.focus();
+        return document.activeElement === button;
+      ''',
+      const <Object?>['Copy decompressed text'],
+    );
+    return result == true;
+  }, 'GZIP copy button did not become keyboard-active');
+  await driver.keyboard.sendKeys(Keyboard.enter);
+}
+
+Future<List<int>?> _copiedTextCodeUnits(WebDriver driver) async {
+  final result = await driver.execute('''
+      const value = window.__chimeraCopiedText;
+      if (typeof value !== 'string') return null;
+      return Array.from(value, character => character.charCodeAt(0));
+    ''', const <Object?>[]);
+  if (result is! List) return null;
+  return result.cast<num>().map((value) => value.toInt()).toList();
 }
 
 Future<void> _clickCheckbox(WebDriver driver, String text) async {
