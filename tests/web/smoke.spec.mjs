@@ -1786,12 +1786,12 @@ test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures l
     },
   ];
 
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Inspect JWT', exact: true }).click();
+  recordInteractions = true;
+
   for (const scenario of scenarios) {
-    recordInteractions = false;
-    await page.goto('/');
-    await enableFlutterSemantics(page);
-    await page.getByRole('button', { name: 'Inspect JWT', exact: true }).click();
-    recordInteractions = true;
     await fillFlutterTextBox(
       page.getByRole('textbox', { name: 'JWT', exact: true }),
       scenario.token,
@@ -1818,6 +1818,9 @@ test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures l
         { exact: true },
       )).toBeVisible();
     }
+    await page.evaluate(() => {
+      window.__chimeraCopiedText = null;
+    });
     await page.getByRole('button', { name: 'Copy inspection result', exact: true }).click();
     await expect.poll(() => page.evaluate(() => window.__chimeraCopiedText)).not.toBeNull();
     const copied = JSON.parse(await page.evaluate(() => window.__chimeraCopiedText));
@@ -1830,7 +1833,6 @@ test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures l
     await expect(
       page.getByRole('textbox', { name: 'Optional verification key', exact: true }),
     ).toHaveValue('');
-    recordInteractions = false;
   }
   expect(interactionRequests.filter(
     url => !new URL(url).pathname.startsWith('/font-fallback/'),
