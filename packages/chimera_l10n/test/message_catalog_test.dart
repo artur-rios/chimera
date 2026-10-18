@@ -69,6 +69,33 @@ void main() {
     },
   );
 
+  test(
+    'GivenHtmlDecodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.htmlDecodeUsage',
+        'htmlDecode.savedResult',
+        'error.htmlDecode.validation',
+        'error.htmlDecode.inputAccess',
+        'error.htmlDecode.fileAccess',
+        'error.htmlDecode.outputAccess',
+        'error.htmlDecode.resource',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+      expect(
+        catalog.lookup('pt-BR', 'error.htmlDecode.resource'),
+        'A decodificação HTML excedeu o limite de recursos.',
+      );
+    },
+  );
+
   test('GivenGzipInteractiveMessages_WhenLookedUp_ThenBothLocalesHaveCompleteLabels', () {
     for (final locale in supportedLocaleTags) {
       for (final name in [
@@ -500,6 +527,13 @@ void main() {
       'error.htmlEncode.fileAccess',
       'error.htmlEncode.outputAccess',
       'error.htmlEncode.resource',
+      'cli.htmlDecodeUsage',
+      'htmlDecode.savedResult',
+      'error.htmlDecode.validation',
+      'error.htmlDecode.inputAccess',
+      'error.htmlDecode.fileAccess',
+      'error.htmlDecode.outputAccess',
+      'error.htmlDecode.resource',
       for (final name in [
         'pageTitle',
         'openAction',
