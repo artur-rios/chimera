@@ -32,6 +32,20 @@ _catalogs = <String, Map<String, String>>{
     'error.gzipCompress.outputAccess': 'The GZIP bytes could not be saved.',
     'error.gzipCompress.resource':
         'GZIP compression exceeded its resource limit.',
+    'cli.gzipDecompressUsage':
+        'Usage: chimera gzip decompress (--stdin|--file=<path>) '
+        '--mode=text|binary [--output=<path>] [--json]\n'
+        'Binary human output requires --output. Exit codes: '
+        '64 validation, 74 access, 75 resource.',
+    'gzipDecompress.savedResult': 'Decompressed bytes saved.',
+    'error.gzipDecompress.validation':
+        'The GZIP decompression request is invalid.',
+    'error.gzipDecompress.inputAccess': 'The standard input could not be read.',
+    'error.gzipDecompress.fileAccess': 'The input file could not be read.',
+    'error.gzipDecompress.outputAccess':
+        'The decompressed bytes could not be saved.',
+    'error.gzipDecompress.resource':
+        'GZIP decompression exceeded its resource limit.',
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
     'cli.certificateConvertUsage':
@@ -601,6 +615,22 @@ _catalogs = <String, Map<String, String>>{
     'error.gzipCompress.outputAccess': 'Não foi possível salvar os bytes GZIP.',
     'error.gzipCompress.resource':
         'A compressão GZIP excedeu o limite de recursos.',
+    'cli.gzipDecompressUsage':
+        'Uso: chimera gzip decompress (--stdin|--file=<caminho>) '
+        '--mode=text|binary [--output=<caminho>] [--json]\n'
+        'A saída binária legível requer --output. Códigos de saída: '
+        '64 validação, 74 acesso, 75 recursos.',
+    'gzipDecompress.savedResult': 'Bytes descomprimidos salvos.',
+    'error.gzipDecompress.validation':
+        'A solicitação de descompressão GZIP é inválida.',
+    'error.gzipDecompress.inputAccess':
+        'Não foi possível ler a entrada padrão.',
+    'error.gzipDecompress.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.gzipDecompress.outputAccess':
+        'Não foi possível salvar os bytes descomprimidos.',
+    'error.gzipDecompress.resource':
+        'A descompressão GZIP excedeu o limite de recursos.',
     'cli.certificateConvertUsage':
         'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
         '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',

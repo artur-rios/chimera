@@ -74,6 +74,42 @@ void main() {
     );
   });
 
+  test('GivenGzipDecompressCliMessages_WhenLookedUp_ThenBothLocalesHaveExactParity', () {
+    final keys = <String>{
+      'cli.gzipDecompressUsage',
+      'gzipDecompress.savedResult',
+      'error.gzipDecompress.validation',
+      'error.gzipDecompress.inputAccess',
+      'error.gzipDecompress.fileAccess',
+      'error.gzipDecompress.outputAccess',
+      'error.gzipDecompress.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+      expect(
+        catalog.lookup(locale, 'cli.gzipDecompressUsage'),
+        contains('--mode=text|binary'),
+      );
+    }
+    expect(
+      catalog.lookup('en', 'gzipDecompress.savedResult'),
+      'Decompressed bytes saved.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'gzipDecompress.savedResult'),
+      'Bytes descomprimidos salvos.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.gzipDecompress.resource'),
+      'A descompressão GZIP excedeu o limite de recursos.',
+    );
+  });
+
   test(
     'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -367,6 +403,13 @@ void main() {
       'error.gzipCompress.fileAccess',
       'error.gzipCompress.outputAccess',
       'error.gzipCompress.resource',
+      'cli.gzipDecompressUsage',
+      'gzipDecompress.savedResult',
+      'error.gzipDecompress.validation',
+      'error.gzipDecompress.inputAccess',
+      'error.gzipDecompress.fileAccess',
+      'error.gzipDecompress.outputAccess',
+      'error.gzipDecompress.resource',
       'cli.certificateConvertUsage',
       'certificateConvert.savedResult',
       'certificateConvert.pageTitle',
