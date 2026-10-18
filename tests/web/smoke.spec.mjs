@@ -88,10 +88,11 @@ test('GivenLoopbackHttpRequest_WhenInteractionWindowIsObserved_ThenRequestIsReco
   await page.goto('/');
   const interactionRequests = [];
   page.on('request', request => recordHttpRequest(request, interactionRequests));
+  await page.evaluate(() => fetch('/manifest.json?late-startup-request=1'));
   await page.evaluate(() => fetch('/manifest.json?gzip-interaction-probe=1'));
-  expect(interactionRequests).toEqual([
-    'http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1',
-  ]);
+  expect(interactionRequests.filter(
+    url => url === 'http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1',
+  )).toEqual(['http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1']);
 });
 
 for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {

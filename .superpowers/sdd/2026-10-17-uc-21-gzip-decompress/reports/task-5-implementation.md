@@ -25,6 +25,15 @@ network boundaries.
   `externalRequests` retains its separate non-loopback filter. The explicit
   loopback probe and four focused UC-21 cases passed 5/5 on both Chromium and
   WebKit.
+- FULL-SUITE REVIEW RED: Task 6's 139/141 run exposed Firefox requesting
+  CanvasKit after `page.goto()` and after the controlled listener was attached.
+  A deterministic pinned-container reproduction added a valid late startup
+  request before the loopback probe; exact-array equality then failed with both
+  requests recorded.
+- FULL-SUITE REVIEW GREEN: the controlled regression requires the exact
+  loopback probe URL to be present exactly once while permitting unrelated late
+  startup traffic. The all-HTTP(S) listener is unchanged, and the three real
+  UC-21 interaction flows retain their strict empty-request assertions.
 
 ## Coverage matrix
 
@@ -57,6 +66,10 @@ offline happy path.
 - Full Windows integration: 38/38 passed.
 - Focused Chromium: 4/4 passed initially; review regression set 5/5 passed.
 - Focused WebKit: 4/4 passed initially; review regression set 5/5 passed.
+- Pinned Playwright container focused loopback regression: 3/3 passed across
+  Chromium, Firefox, and WebKit.
+- Pinned Playwright container complete web suite: 141/141 passed at the
+  unchanged default 16 workers.
 - Safari observer source verification: passed.
 - Dart analysis for integration and Safari harness: passed.
 - Node syntax checks, formatting, and `git diff --check`: passed.
