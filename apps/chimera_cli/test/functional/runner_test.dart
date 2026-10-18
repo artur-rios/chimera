@@ -12,6 +12,120 @@ void main() {
   group('html encode', () {
     for (final locale in ['en', 'pt-BR']) {
       for (final json in [false, true]) {
+        for (final boundary in ['json', 'stdout']) {
+          if (boundary == 'json' && !json) continue;
+          for (final error in <Object>[
+            const FormatException('private dependency private/path'),
+            StateError('private dependency private/path'),
+          ]) {
+            for (final save in [false, true]) {
+              test(
+                'GivenHtmlOutput$boundary${error.runtimeType}$locale$json${save}_WhenDenied_ThenRedactedAccessFailureReturns',
+                () async {
+                  final deniedOut = _HtmlDeniedStringSink(error);
+                  final out = boundary == 'stdout' ? deniedOut : StringBuffer();
+                  final err = StringBuffer();
+                  var saves = 0;
+                  final exit = await runChimera(
+                    [
+                      'html',
+                      'encode',
+                      '--input=<private>',
+                      if (save) '--output=private/output',
+                      if (json) '--json',
+                    ],
+                    localeTag: locale,
+                    out: out,
+                    err: err,
+                    htmlEncodeJsonEncoder: boundary == 'json'
+                        ? (_) => throw error
+                        : null,
+                    writeOutputFile: (_, _) async {
+                      saves++;
+                    },
+                  );
+                  expect(exit, 74);
+                  expect(saves, boundary == 'json' || !save ? 0 : 1);
+                  if (boundary == 'stdout') {
+                    expect(deniedOut.emissionCalls, 1);
+                  } else {
+                    expect(out.toString(), isEmpty);
+                  }
+                  final message = locale == 'en'
+                      ? 'The HTML encoded text could not be saved.'
+                      : 'Não foi possível salvar o texto codificado em HTML.';
+                  expect(
+                    err.toString(),
+                    json
+                        ? '${jsonEncode({
+                            'error': {'kind': 'access', 'code': 'html-encode.output-access', 'message': message},
+                          })}\n'
+                        : '$message\n',
+                  );
+                  for (final secret in [
+                    'private',
+                    'FormatException',
+                    'StateError',
+                    '.chimera-',
+                  ]) {
+                    expect(err.toString(), isNot(contains(secret)));
+                  }
+                },
+              );
+            }
+          }
+        }
+        test(
+          'GivenEmptyHtmlSave$locale${json}_WhenSaved_ThenPriorBytesAreReplacedBeforeSuccess',
+          () async {
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-html-empty-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            final target = File('${directory.path}/result.txt');
+            await target.writeAsString('prior nonempty bytes', flush: true);
+            final out = StringBuffer();
+            final err = StringBuffer();
+            var stageWritten = false;
+            final exit = await runChimera(
+              [
+                'html',
+                'encode',
+                '--input=',
+                '--output=${target.path}',
+                if (json) '--json',
+              ],
+              localeTag: locale,
+              out: out,
+              err: err,
+              writeOutputStage: (path, bytes) async {
+                expect(out.toString(), isEmpty);
+                expect(await target.readAsString(), 'prior nonempty bytes');
+                expect(bytes, isEmpty);
+                await File(path).writeAsBytes(bytes, flush: true);
+                stageWritten = true;
+              },
+            );
+            expect(exit, 0);
+            expect(stageWritten, isTrue);
+            expect(await target.exists(), isTrue);
+            expect(await target.readAsBytes(), isEmpty);
+            expect(
+              out.toString(),
+              json
+                  ? '{"encoded":"","context":"all"}\n'
+                  : locale == 'en'
+                  ? 'HTML encoded text saved.\n'
+                  : 'Texto codificado em HTML salvo.\n',
+            );
+            expect(err.toString(), isEmpty);
+            expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+          },
+        );
+      }
+    }
+    for (final locale in ['en', 'pt-BR']) {
+      for (final json in [false, true]) {
         for (final boundary in ['stdin', 'file', 'writer', 'json', 'stdout']) {
           for (final allocation in [false, true]) {
             if (!allocation && ['json', 'stdout'].contains(boundary)) continue;
@@ -7535,6 +7649,27 @@ final class _CertificateAllocationFailureBytes extends ListBase<int> {
   @override
   void operator []=(int index, int value) =>
       throw UnsupportedError('Read only');
+}
+
+final class _HtmlDeniedStringSink implements StringSink {
+  _HtmlDeniedStringSink(this.error);
+
+  final Object error;
+  var emissionCalls = 0;
+
+  Never _fail() {
+    emissionCalls++;
+    throw error;
+  }
+
+  @override
+  void write(Object? object) => _fail();
+  @override
+  void writeAll(Iterable<Object?> objects, [String separator = '']) => _fail();
+  @override
+  void writeCharCode(int charCode) => _fail();
+  @override
+  void writeln([Object? object = '']) => _fail();
 }
 
 final class _OutOfMemoryStringSink implements StringSink {

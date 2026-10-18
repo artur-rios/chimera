@@ -1554,6 +1554,16 @@ Future<int> _runHtmlEncode(
     details: {'field': field, 'reason': 'allocation-limit'},
   );
 
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'html-encode.output-access',
+    messageKey: 'error.htmlEncode.outputAccess',
+  );
+
   late HtmlEncodeOperationRequest request;
   try {
     request = text != null
@@ -1596,6 +1606,9 @@ Future<int> _runHtmlEncode(
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
       }
       if (outputPath != null) {
         try {
@@ -1604,15 +1617,7 @@ Future<int> _runHtmlEncode(
           resourceFailure('encoded');
           return 75;
         } on Object {
-          _writeFailure(
-            err,
-            catalog: catalog,
-            localeTag: localeTag,
-            json: json,
-            kind: 'access',
-            code: 'html-encode.output-access',
-            messageKey: 'error.htmlEncode.outputAccess',
-          );
+          outputAccessFailure();
           return 74;
         }
       }
@@ -1621,6 +1626,9 @@ Future<int> _runHtmlEncode(
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
       }
       return 0;
     },
