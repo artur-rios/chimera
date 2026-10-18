@@ -72,6 +72,11 @@ void main() {
   });
 
   test('GivenSafariJwtMatrix_WhenInspectionRepeats_ThenOneBootstrappedPageIsReused', () {
+    final createJwt = safariSmoke
+        .split('Future<void> _createJwt(')
+        .elementAt(1)
+        .split('Future<String> _createAsymmetricJwt(')
+        .first;
     final inspectJwt = safariSmoke
         .split('Future<void> _inspectJwt(')
         .elementAt(1)
@@ -79,8 +84,12 @@ void main() {
         .first;
 
     expect(safariSmoke, contains('Future<void> _openJwtInspectPage('));
-    expect(safariSmoke, contains('await _openJwtInspectPage(driver);'));
-    expect(inspectJwt, isNot(contains("driver.get('http://127.0.0.1:4173')")));
+    expect(
+      RegExp(r'await _openJwtInspectPage\(driver\);').allMatches(createJwt),
+      hasLength(1),
+    );
+    expect(inspectJwt, isNot(contains('driver.get(')));
+    expect(inspectJwt, isNot(contains('_openJwtInspectPage(')));
   });
 
   test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {
