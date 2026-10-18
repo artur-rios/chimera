@@ -1637,6 +1637,84 @@ void main() {
       },
     );
   }
+
+  for (final locale in <String>['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}QrOptions_WhenGeneratedSavedThenInvalidated_ThenExactPngTransfersOffline',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          List<int>? saved;
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/qr/encode',
+              qrEncodeFileSaver: (name, bytes, mime) async {
+                expect(name, 'chimera-qr.png');
+                expect(mime, 'image/png');
+                saved = List<int>.of(bytes);
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+
+          await tester.enterText(
+            find.byKey(const Key('qr-encode-input')),
+            'native Olá 🌍',
+          );
+          tester
+              .widget<DropdownButtonFormField<QrErrorCorrection>>(
+                find.byKey(const Key('qr-encode-correction')),
+              )
+              .onChanged!(QrErrorCorrection.high);
+          await tester.enterText(
+            find.byKey(const Key('qr-encode-size')),
+            '256',
+          );
+          await tester.tap(find.byKey(const Key('qr-encode-submit')));
+          await tester.pumpAndSettle();
+
+          final preview = tester.widget<Image>(
+            find.byKey(const Key('qr-encode-preview')),
+          );
+          final previewBytes = (preview.image as MemoryImage).bytes;
+          expect(previewBytes.take(8), <int>[137, 80, 78, 71, 13, 10, 26, 10]);
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('qr-encode-input')))
+                .controller!
+                .text,
+            isEmpty,
+          );
+          await tester.ensureVisible(find.byKey(const Key('qr-encode-save')));
+          await tester.tap(find.byKey(const Key('qr-encode-save')));
+          await tester.pumpAndSettle();
+          expect(saved, previewBytes);
+
+          await tester.enterText(
+            find.byKey(const Key('qr-encode-input')),
+            'invalidated source',
+          );
+          await tester.enterText(find.byKey(const Key('qr-encode-size')), '10');
+          await tester.ensureVisible(find.byKey(const Key('qr-encode-submit')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('qr-encode-submit')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('qr-encode-error')), findsOneWidget);
+          expect(find.byKey(const Key('qr-encode-preview')), findsNothing);
+          expect(find.textContaining('invalidated source'), findsNothing);
+          expect(network.attempts, 0);
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+  }
 }
 
 String _jwtToken(String algorithm, String key, String scenario) =>

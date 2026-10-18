@@ -512,3 +512,43 @@ committed for the Linux/Docker CI runner because the installed Windows Firefox
 binary fails before launch. The analyzed native Safari harness exercises the
 same five scenarios in its mandatory macOS CI job. No automated UC-25
 accessibility finding is open.
+
+## UC-26 QR Encode
+
+- Release version: UC-26 candidate
+- Branch: `feature/uc-26-qr-encode`
+- Reviewer: Chimera UC-26 GUI implementation self-review
+- Date: 2026-10-18
+- Target: shared Flutter web, Windows, and Linux QR encoding surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Text, file, paste, correction, size, margin, color, generate, preview,
+  metadata, and save controls follow document order and remain keyboard
+  operable.
+- [x] The generated preview has a localized image label. The result is a
+  focusable live region with bounded localized size, version, and correction
+  metadata; focus moves to it after generation.
+- [x] Source text and editor undo history are discarded after success or
+  failure. Source changes invalidate stale output, and adapter failures expose
+  only localized safe categories.
+- [x] File and clipboard loading stays local, cancellation is neutral, and
+  controls disable while an operation is busy.
+- [x] File, paste, generate, and save controls measure at least 48 by 48
+  logical pixels. Both locales remain free of overflow at 320 logical pixels
+  and 200% text scale and satisfy labeled-target and contrast guidance.
+- [x] Preview and save consume the same unmodifiable PNG byte buffer without a
+  presentation-layer re-encode.
+
+### Evidence and Findings
+
+Focused widget coverage exercises home routing, typed/file/clipboard sources,
+every configurable option, exact preview/save bytes, source and undo-history
+discard, stale-result invalidation, safe adapter failures, focus, live
+semantics, localization, target sizes, contrast, and narrow large-text layouts
+in both locales. Focused Windows integration covers both locales with exact PNG
+transfer, invalidation, and zero network access. The compiled Playwright matrix
+and native Safari harness cover local generation, PNG download, validation,
+source discard, and zero external requests. No automated UC-26 accessibility
+finding remains open.

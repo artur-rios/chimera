@@ -250,9 +250,9 @@ final class _QrEncodePageState extends State<QrEncodePage> {
       child: Semantics(
         key: const Key('qr-encode-result-semantics'),
         container: true,
+        explicitChildNodes: true,
         focusable: true,
         liveRegion: true,
-        excludeSemantics: true,
         role: SemanticsRole.region,
         label: _label('resultLabel'),
         value:
@@ -274,14 +274,22 @@ final class _QrEncodePageState extends State<QrEncodePage> {
               ),
             ),
             const SizedBox(height: 12),
-            Text('${output.size} x ${output.size}'),
-            Text('${_label('versionLabel')}: ${output.version}'),
-            Text(
-              '${_label('correctionLabel')}: '
-              '${_correctionLabel(output.errorCorrection)}',
-            ),
-            Text(
-              '${_label('outputByteCountLabel')}: ${output.outputByteCount}',
+            ExcludeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  Text('${output.size} x ${output.size}'),
+                  Text('${_label('versionLabel')}: ${output.version}'),
+                  Text(
+                    '${_label('correctionLabel')}: '
+                    '${_correctionLabel(output.errorCorrection)}',
+                  ),
+                  Text(
+                    '${_label('outputByteCountLabel')}: '
+                    '${output.outputByteCount}',
+                  ),
+                ],
+              ),
             ),
           ],
         ),
