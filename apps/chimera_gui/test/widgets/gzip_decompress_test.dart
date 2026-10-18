@@ -95,16 +95,24 @@ void main() {
   test('GivenNativeSaveCancellation_WhenPickerReturnsNull_ThenAdapterReportsCancellation', () async {
     final original = FilePickerPlatform.instance;
     addTearDown(() => FilePickerPlatform.instance = original);
-    FilePickerPlatform.instance = _SavePlatform((_, _, _) async => null);
+    var calls = 0;
+    FilePickerPlatform.instance = _SavePlatform((name, bytes, mime) async {
+      calls++;
+      expect(name, 'chimera-decompressed.bin');
+      expect(bytes, isEmpty);
+      expect(mime, 'application/octet-stream');
+      return null;
+    });
 
     expect(
       await saveGzipDecompressFile(
         'chimera-decompressed.bin',
-        Uint8List.fromList([0, 255]),
+        Uint8List(0),
         'application/octet-stream',
       ),
       isFalse,
     );
+    expect(calls, 1);
   });
 
   test(
