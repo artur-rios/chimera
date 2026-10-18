@@ -18,6 +18,13 @@ network boundaries.
   separately, so input-platform ownership cannot produce a false leak.
 - GREEN: the focused cleanup test passed, followed by the complete UC-21
   focused Chromium and WebKit flows.
+- REVIEW RED: a controlled loopback fetch during the interaction window failed
+  its recording assertion because the GZIP listeners excluded `127.0.0.1`,
+  making interaction policing equivalent to startup/CDN policing.
+- REVIEW GREEN: `interactionRequests` now records every HTTP(S) request while
+  `externalRequests` retains its separate non-loopback filter. The explicit
+  loopback probe and four focused UC-21 cases passed 5/5 on both Chromium and
+  WebKit.
 
 ## Coverage matrix
 
@@ -48,8 +55,8 @@ offline happy path.
 - Focused Windows text/binary: 4/4 passed.
 - Focused Windows AF-01: 2/2 passed.
 - Full Windows integration: 38/38 passed.
-- Focused Chromium: 4/4 passed.
-- Focused WebKit: 4/4 passed.
+- Focused Chromium: 4/4 passed initially; review regression set 5/5 passed.
+- Focused WebKit: 4/4 passed initially; review regression set 5/5 passed.
 - Safari observer source verification: passed.
 - Dart analysis for integration and Safari harness: passed.
 - Node syntax checks, formatting, and `git diff --check`: passed.

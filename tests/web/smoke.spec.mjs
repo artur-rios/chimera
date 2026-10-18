@@ -84,6 +84,16 @@ test('GivenObservedDownloadObjectUrl_WhenRevokedAfterActivation_ThenNoLiveDownlo
   expect(await page.evaluate(() => window.__chimeraLiveDownloadUrlCount)).toBe(0);
 });
 
+test('GivenLoopbackHttpRequest_WhenInteractionWindowIsObserved_ThenRequestIsRecorded', async ({ page }) => {
+  await page.goto('/');
+  const interactionRequests = [];
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  await page.evaluate(() => fetch('/manifest.json?gzip-interaction-probe=1'));
+  expect(interactionRequests).toEqual([
+    'http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1',
+  ]);
+});
+
 for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {
   test(`GivenGzipSaveBoundary_When${scenario}_ThenOnlyOneMatchingLiveBlobIsAccepted`, async ({ page }) => {
     await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves({suppressDownloads: true});`);
@@ -222,6 +232,10 @@ function assertGzipMember(actual, expectedHex, source) {
   expect(gunzipSync(actual)).toEqual(source);
 }
 
+function recordHttpRequest(request, requests) {
+  if (/^https?:/.test(request.url())) requests.push(request.url());
+}
+
 test('GivenBomGzipFile_WhenTextDecompressedCopiedAndDownloaded_ThenExactBytesTransferOffline', async ({ page }) => {
   const archive = Buffer.from('1f8b08000000000002ff7bbf7b7f222f97020084beddc007000000', 'hex');
   const expected = Buffer.from('efbbbf610d0a20', 'hex');
@@ -248,12 +262,7 @@ test('GivenBomGzipFile_WhenTextDecompressedCopiedAndDownloaded_ThenExactBytesTra
   await enableFlutterSemantics(page);
   await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
   await expect(page.getByText('Decompress GZIP').first()).toBeVisible();
-  page.on('request', request => {
-    const url = new URL(request.url());
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
-      interactionRequests.push(request.url());
-    }
-  });
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
   await (await chooserPromise).setFiles({
@@ -314,12 +323,7 @@ test('GivenArbitraryBinaryGzipFile_WhenBinaryDecompressedAndDownloaded_ThenExact
   await page.goto('/');
   await enableFlutterSemantics(page);
   await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
-  page.on('request', request => {
-    const url = new URL(request.url());
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
-      interactionRequests.push(request.url());
-    }
-  });
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
   await (await chooserPromise).setFiles({
@@ -371,12 +375,7 @@ test('GivenCorruptGzipFile_WhenDecompressionIsAttempted_ThenRedactedFailurePubli
   await page.goto('/');
   await enableFlutterSemantics(page);
   await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
-  page.on('request', request => {
-    const url = new URL(request.url());
-    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
-      interactionRequests.push(request.url());
-    }
-  });
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
   const chooserPromise = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
   await (await chooserPromise).setFiles({
