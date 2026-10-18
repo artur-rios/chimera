@@ -14,6 +14,24 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
+      'Given${locale}GzipDecompressHomeAction_WhenActivated_ThenDecompressionRouteOpens',
+      (tester) async {
+        await tester.pumpWidget(ChimeraApp(localeTag: locale));
+        await tester.pumpAndSettle();
+        final action = find.byKey(const Key('open-gzip-decompress'));
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('gzip-decompress-file')), findsOneWidget);
+        expect(
+          find.text(locale == 'en' ? 'Decompress GZIP' : 'Descomprimir GZIP'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
       'Given${locale}GzipHomeAction_WhenActivated_ThenCompressionRouteOpens',
       (tester) async {
         await tester.pumpWidget(ChimeraApp(localeTag: locale));

@@ -49,6 +49,8 @@ Future<int> runChimera(
   JsonObjectEncoder? base64DecodeJsonEncoder,
   GzipCompressService gzipCompressService = const GzipCompressService(),
   JsonObjectEncoder? gzipCompressJsonEncoder,
+  GzipDecompressService gzipDecompressService = const GzipDecompressService(),
+  JsonObjectEncoder? gzipDecompressJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -82,6 +84,9 @@ Future<int> runChimera(
           parsed.command?.name == 'gzip' &&
               parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
+          : parsed.command?.name == 'gzip' &&
+                parsed.command?.command?.name == 'decompress'
+          ? 'cli.gzipDecompressUsage'
           : parsed.command?.name == 'certificate' &&
                 parsed.command?.command?.name == 'convert'
           ? 'cli.certificateConvertUsage'
@@ -114,6 +119,29 @@ Future<int> runChimera(
             ),
         service: gzipCompressService,
         encodeJson: gzipCompressJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'gzip' &&
+        parsed.command!.command?.name == 'decompress') {
+      return await _runGzipDecompress(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: gzipDecompressService,
+        encodeJson: gzipDecompressJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'certificate' &&
@@ -421,6 +449,8 @@ Future<int> runChimera(
   } on FormatException {
     final isGzipCompress =
         args.length >= 2 && args[0] == 'gzip' && args[1] == 'compress';
+    final isGzipDecompress =
+        args.length >= 2 && args[0] == 'gzip' && args[1] == 'decompress';
     final isBase64Encode =
         args.length >= 2 && args[0] == 'base64' && args[1] == 'encode';
     final isCertificateInspect =
@@ -465,6 +495,7 @@ Future<int> runChimera(
       json:
           (isBase64Encode ||
               isGzipCompress ||
+              isGzipDecompress ||
               isCertificateInspect ||
               isCertificateConvert ||
               isBase64Decode ||
@@ -487,6 +518,8 @@ Future<int> runChimera(
       kind: 'validation',
       code: isGzipCompress
           ? 'gzip-compress.invalid-options'
+          : isGzipDecompress
+          ? 'gzip-decompress.invalid-options'
           : isCertificateConvert
           ? 'certificate-convert.invalid-options'
           : isCertificateInspect
@@ -528,6 +561,8 @@ Future<int> runChimera(
           : 'cli.invalid-options',
       messageKey: isGzipCompress
           ? 'error.gzipCompress.validation'
+          : isGzipDecompress
+          ? 'error.gzipDecompress.validation'
           : isCertificateConvert
           ? 'error.certificateConvert.validation'
           : isCertificateInspect
@@ -580,7 +615,15 @@ ArgParser _buildParser() {
     ..addOption('level', defaultsTo: '6')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
-  final gzip = ArgParser()..addCommand('compress', gzipCompress);
+  final gzipDecompress = ArgParser()
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('mode')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final gzip = ArgParser()
+    ..addCommand('compress', gzipCompress)
+    ..addCommand('decompress', gzipDecompress);
   final certificateInspect = ArgParser()
     ..addOption('text')
     ..addFlag('stdin', negatable: false)
@@ -1228,6 +1271,172 @@ Future<int> _runBase64Encode(
         catalog: catalog,
         localeTag: localeTag,
         json: parsed.flag('json'),
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runGzipDecompress(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required GzipDecompressService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount = (file == null ? 0 : 1) + (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'gzip-decompress.$invalid',
+      messageKey: 'error.gzipDecompress.validation',
+    );
+    return 64;
+  }
+
+  final mode = switch (parsed.option('mode')) {
+    'text' => GzipDecompressMode.text,
+    'binary' => GzipDecompressMode.binary,
+    _ => null,
+  };
+  if (mode == null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'gzip-decompress.invalid-mode',
+      messageKey: 'error.gzipDecompress.validation',
+    );
+    return 64;
+  }
+  if (mode == GzipDecompressMode.binary && outputPath == null && !json) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: false,
+      kind: 'validation',
+      code: 'gzip-decompress.binary-destination-required',
+      messageKey: 'error.gzipDecompress.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'gzip-decompress.resource-limit',
+    messageKey: 'error.gzipDecompress.resource',
+    details: <String, Object?>{'field': field, 'reason': 'allocation-limit'},
+  );
+
+  late GzipDecompressOperationRequest request;
+  try {
+    final bytes = useStandardInput
+        ? await readStandardInputBytes()
+        : await readFileBytes(file!);
+    request = GzipDecompressOperationRequest.bytes(bytes, mode: mode);
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'gzip-decompress.input-access'
+          : 'gzip-decompress.file-access',
+      messageKey: useStandardInput
+          ? 'error.gzipDecompress.inputAccess'
+          : 'error.gzipDecompress.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        if (json) {
+          stdoutPayload = '${encodeJson(value.toJson())}\n';
+        } else if (outputPath == null) {
+          stdoutPayload = value.text!;
+        } else {
+          stdoutPayload =
+              '${catalog.lookup(localeTag, 'gzipDecompress.savedResult')}\n';
+        }
+      } on OutOfMemoryError {
+        resourceFailure('output');
+        return 75;
+      }
+
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, value.bytes);
+        } on OutOfMemoryError {
+          resourceFailure('output');
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'gzip-decompress.output-access',
+            messageKey: 'error.gzipDecompress.outputAccess',
+          );
+          return 74;
+        }
+      }
+
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('output');
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
         kind: failure.kind.name,
         code: failure.code,
         messageKey: failure.messageKey,

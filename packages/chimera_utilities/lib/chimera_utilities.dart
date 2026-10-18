@@ -7,6 +7,7 @@ export 'src/certificate/certificate_inspector.dart';
 export 'src/cron/cron_evaluator.dart';
 export 'src/date/date_converter.dart';
 export 'src/gzip/gzip_compressor.dart';
+export 'src/gzip/gzip_decompressor.dart';
 export 'src/json_csv/json_csv_converter.dart';
 export 'src/json_format/json_formatter.dart';
 export 'src/json_table/json_table_converter.dart';

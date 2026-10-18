@@ -14,6 +14,12 @@ const safariGzipScripts = [...safariHarness.split('Future<void> _compressGzip(')
   .split('Future<void> _convertCertificate(')[0].matchAll(/r?'''([\s\S]*?)'''/g)].map(match => match[1]);
 const safariLevelOpening = safariGzipScripts.find(source => source.includes('Compression level 6'));
 const safariLevelSelection = safariGzipScripts.find(source => source.includes('[role="menuitem"]'));
+const safariGzipCopyActivation = safariHarness
+  .split('Future<void> _activateGzipCopyButton(')[1]
+  ?.match(/driver\.execute\(\s*'''([\s\S]*?)'''/)?.[1] ?? '';
+const safariCopiedTextObservation = safariHarness
+  .split('Future<List<int>?> _copiedTextCodeUnits(')[1]
+  ?.match(/driver\.execute\(\s*'''([\s\S]*?)'''/)?.[1] ?? '';
 
 test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservationAndExactDownloadSucceed', async ({ page }) => {
   const requests = [];
@@ -66,6 +72,33 @@ test('GivenGzipClipboardSource_WhenPastedWithRecreatedEditor_ThenSafariObservati
   }))).toEqual({ count: 1, mime: 'application/gzip', bytes: [...actual], errors: [] });
   expect(downloads).toHaveLength(1);
   expect(requests).toEqual([]);
+});
+
+test('GivenObservedDownloadObjectUrl_WhenRevokedAfterActivation_ThenNoLiveDownloadUrlRemains', async ({ page }) => {
+  await page.evaluate(`${gzipSaveObserver}\nobserveGzipSaves({suppressDownloads: true});`);
+  await page.evaluate(() => {
+    const anchor = document.createElement('a');
+    anchor.download = 'chimera-decompressed.bin';
+    const url = URL.createObjectURL(new Blob([new Uint8Array([0, 255, 128, 1])], {
+      type: 'application/octet-stream',
+    }));
+    anchor.href = url;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  });
+  await expect.poll(() => page.evaluate(() => window.__chimeraSavedBytes)).toEqual([0, 255, 128, 1]);
+  expect(await page.evaluate(() => window.__chimeraLiveDownloadUrlCount)).toBe(0);
+});
+
+test('GivenLoopbackHttpRequest_WhenInteractionWindowIsObserved_ThenRequestIsRecorded', async ({ page }) => {
+  await page.goto('/');
+  const interactionRequests = [];
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  await page.evaluate(() => fetch('/manifest.json?late-startup-request=1'));
+  await page.evaluate(() => fetch('/manifest.json?gzip-interaction-probe=1'));
+  expect(interactionRequests.filter(
+    url => url === 'http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1',
+  )).toEqual(['http://127.0.0.1:41731/manifest.json?gzip-interaction-probe=1']);
 });
 
 for (const scenario of ['unknown-href', 'revoked-href', 'wrong-mime', 'duplicate-click', 'revoke-after-click']) {
@@ -205,6 +238,243 @@ function assertGzipMember(actual, expectedHex, source) {
   // Node's platform zlib decoder is independent of the Dart archive encoder.
   expect(gunzipSync(actual)).toEqual(source);
 }
+
+function recordHttpRequest(request, requests) {
+  if (/^https?:/.test(request.url())) requests.push(request.url());
+}
+
+test('GivenBomGzipFile_WhenTextDecompressedCopiedAndDownloaded_ThenExactBytesTransferOffline', async ({ page }) => {
+  const archive = Buffer.from('1f8b08000000000002ff7bbf7b7f222f97020084beddc007000000', 'hex');
+  const expected = Buffer.from('efbbbf610d0a20', 'hex');
+  const externalRequests = [];
+  const interactionRequests = [];
+  const downloads = [];
+  page.on('download', download => downloads.push(download));
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+  await page.addInitScript(() => {
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {writeText: async value => { window.__chimeraCopiedText = value; }},
+    });
+  });
+
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
+  await expect(page.getByText('Decompress GZIP').first()).toBeVisible();
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
+  await (await chooserPromise).setFiles({
+    name: 'extension-independent.data',
+    mimeType: 'application/octet-stream',
+    buffer: archive,
+  });
+  await expect(page.getByText(`Input bytes: ${archive.length}`, { exact: true }).last()).toBeVisible();
+  await page.getByRole('button', { name: 'Decompress', exact: true }).click();
+  const result = page.getByRole('region', {
+    name: `Decompressed result Decompression succeeded. Input bytes: ${archive.length} Output bytes: ${expected.length}`,
+    exact: true,
+  });
+  await expect(result).toBeVisible();
+  await expect(result).toHaveAttribute('tabindex', '0');
+  await expect.poll(() => page.evaluate(
+    source => new Function(source)('Copy decompressed text'),
+    safariGzipCopyActivation,
+  )).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(
+    source => new Function(source)(),
+    safariCopiedTextObservation,
+  )).toEqual([0xfeff, 0x61, 0x0d, 0x0a, 0x20]);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save decompressed bytes', exact: true }).press('Enter');
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('chimera-decompressed.txt');
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks)).toEqual(expected);
+  await expect.poll(() => page.evaluate(() => ({
+    name: window.__chimeraSavedName,
+    count: window.__chimeraSaveCount,
+    mime: window.__chimeraSavedMime,
+    bytes: window.__chimeraSavedBytes,
+    liveUrls: window.__chimeraLiveDownloadUrlCount,
+    errors: window.__chimeraGzipSaveErrors,
+  }))).toEqual({
+    name: 'chimera-decompressed.txt', count: 1, mime: 'text/plain; charset=utf-8',
+    bytes: [...expected], liveUrls: 0, errors: [],
+  });
+  await expect(page.locator('span', {
+    hasText: /^Decompressed bytes saved\.$/,
+  })).toBeVisible();
+  expect(downloads).toHaveLength(1);
+  await expect(result).toBeVisible();
+  expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
+
+for (const emptyOutput of [
+  { mode: 'text', fileName: 'chimera-decompressed.txt', mime: 'text/plain; charset=utf-8' },
+  { mode: 'binary', fileName: 'chimera-decompressed.bin', mime: 'application/octet-stream' },
+]) {
+  test(`GivenEmptyGzipFile_When${emptyOutput.mode}DecompressedAndSaved_ThenExactEmptyFileTransfersOffline`, async ({ page }) => {
+    const archive = Buffer.from('1f8b08000000000002ff03000000000000000000', 'hex');
+    const expected = Buffer.alloc(0);
+    const externalRequests = [];
+    const interactionRequests = [];
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    page.on('request', request => {
+      const url = new URL(request.url());
+      if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
+        externalRequests.push(request.url());
+      }
+    });
+    await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
+    page.on('request', request => recordHttpRequest(request, interactionRequests));
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
+    await (await chooserPromise).setFiles({
+      name: 'empty.gzip',
+      mimeType: 'application/gzip',
+      buffer: archive,
+    });
+    if (emptyOutput.mode === 'binary') {
+      await page.getByText('Binary', { exact: true }).click();
+    }
+    await page.getByRole('button', { name: 'Decompress', exact: true }).click();
+    const result = page.getByRole('region', {
+      name: `Decompressed result Decompression succeeded. Input bytes: ${archive.length} Output bytes: 0`,
+      exact: true,
+    });
+    await expect(result).toBeVisible();
+
+    await page.getByRole('button', { name: 'Save decompressed bytes', exact: true }).press('Enter');
+    await expect.poll(() => downloads.length).toBe(1);
+    const [download] = downloads;
+    expect(download.suggestedFilename()).toBe(emptyOutput.fileName);
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    expect(Buffer.concat(chunks)).toEqual(expected);
+    await expect.poll(() => page.evaluate(() => ({
+      name: window.__chimeraSavedName,
+      count: window.__chimeraSaveCount,
+      mime: window.__chimeraSavedMime,
+      bytes: window.__chimeraSavedBytes,
+      liveUrls: window.__chimeraLiveDownloadUrlCount,
+      errors: window.__chimeraGzipSaveErrors,
+    }))).toEqual({
+      name: emptyOutput.fileName, count: 1, mime: emptyOutput.mime,
+      bytes: [], liveUrls: 0, errors: [],
+    });
+    await expect(page.locator('span', {
+      hasText: /^Decompressed bytes saved\.$/,
+    })).toBeVisible();
+    expect(downloads).toHaveLength(1);
+    await expect(result).toBeVisible();
+    expect(interactionRequests).toEqual([]);
+    expect(externalRequests).toEqual([]);
+  });
+}
+
+test('GivenArbitraryBinaryGzipFile_WhenBinaryDecompressedAndDownloaded_ThenExactBytesTransferOffline', async ({ page }) => {
+  const archive = Buffer.from('1f8b08000000000002ff63f8dfc0f88f81970b00f65e06e708000000', 'hex');
+  const expected = Buffer.from('00ff8001fe000d0a', 'hex');
+  const externalRequests = [];
+  const interactionRequests = [];
+  const downloads = [];
+  page.on('download', download => downloads.push(download));
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
+  await (await chooserPromise).setFiles({
+    name: 'archive.not-gz',
+    mimeType: 'application/octet-stream',
+    buffer: archive,
+  });
+  await page.getByText('Binary', { exact: true }).click();
+  await page.getByRole('button', { name: 'Decompress', exact: true }).click();
+  const result = page.getByRole('region', {
+    name: `Decompressed result Decompression succeeded. Input bytes: ${archive.length} Output bytes: ${expected.length}`,
+    exact: true,
+  });
+  await expect(result).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Copy decompressed text', exact: true })).toHaveCount(0);
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save decompressed bytes', exact: true }).press('Enter');
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('chimera-decompressed.bin');
+  const chunks = [];
+  for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks)).toEqual(expected);
+  await expect.poll(() => page.evaluate(() => ({
+    name: window.__chimeraSavedName,
+    count: window.__chimeraSaveCount,
+    mime: window.__chimeraSavedMime,
+    bytes: window.__chimeraSavedBytes,
+    liveUrls: window.__chimeraLiveDownloadUrlCount,
+    errors: window.__chimeraGzipSaveErrors,
+  }))).toEqual({
+    name: 'chimera-decompressed.bin', count: 1, mime: 'application/octet-stream',
+    bytes: [...expected], liveUrls: 0, errors: [],
+  });
+  expect(downloads).toHaveLength(1);
+  expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
+
+test('GivenCorruptGzipFile_WhenDecompressionIsAttempted_ThenRedactedFailurePublishesNoOutputOffline', async ({ page }) => {
+  const externalRequests = [];
+  const interactionRequests = [];
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:') && url.hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decompress GZIP', exact: true }).click();
+  page.on('request', request => recordHttpRequest(request, interactionRequests));
+  const chooserPromise = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load GZIP file', exact: true }).click();
+  await (await chooserPromise).setFiles({
+    name: 'corrupt.bin',
+    mimeType: 'application/octet-stream',
+    buffer: Buffer.from([31, 139, 8, 0, 1]),
+  });
+  await page.getByRole('button', { name: 'Decompress', exact: true }).click();
+  await expect(page.getByText('The GZIP data could not be decompressed.', { exact: true }).last()).toBeVisible();
+  await expect(page.getByRole('region', { name: /Decompressed result/ })).toHaveCount(0);
+  await expect(page.getByText('Input bytes: 5', { exact: true })).toHaveCount(0);
+  expect(interactionRequests).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
 
 // Literal public metadata, independent of the parser and serializer under test.
 const certificateJsonFields =

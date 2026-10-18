@@ -27,3 +27,5 @@ Versioning and use tags in the form `vX.Y.Z`.
 - Dialect-aware PostgreSQL, MySQL, SQL Server, and SQLite formatting with
   selectable indentation and keyword case across the shared library, CLI, and
   localized file/clipboard GUI flows.
+- Strict concatenated-member GZIP decompression with text and binary modes,
+  typed validation and resource limits, and localized CLI and GUI flows.

@@ -74,6 +74,72 @@ void main() {
     );
   });
 
+  test('GivenGzipDecompressCliMessages_WhenLookedUp_ThenBothLocalesHaveExactParity', () {
+    final keys = <String>{
+      'cli.gzipDecompressUsage',
+      'gzipDecompress.savedResult',
+      'error.gzipDecompress.validation',
+      'error.gzipDecompress.inputAccess',
+      'error.gzipDecompress.fileAccess',
+      'error.gzipDecompress.outputAccess',
+      'error.gzipDecompress.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+      expect(
+        catalog.lookup(locale, 'cli.gzipDecompressUsage'),
+        contains('--mode=text|binary'),
+      );
+    }
+    expect(
+      catalog.lookup('en', 'gzipDecompress.savedResult'),
+      'Decompressed bytes saved.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'gzipDecompress.savedResult'),
+      'Bytes descomprimidos salvos.',
+    );
+    expect(
+      catalog.lookup('pt-BR', 'error.gzipDecompress.resource'),
+      'A descompressão GZIP excedeu o limite de recursos.',
+    );
+  });
+
+  test('GivenGzipDecompressInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    for (final locale in supportedLocaleTags) {
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'fileAction',
+        'modeLabel',
+        'textMode',
+        'binaryMode',
+        'submitAction',
+        'copyAction',
+        'saveAction',
+        'copiedResult',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ]) {
+        final key = 'gzipDecompress.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      for (final name in ['interactiveInputAccess', 'clipboardWrite']) {
+        final key = 'error.gzipDecompress.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test(
     'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -367,6 +433,33 @@ void main() {
       'error.gzipCompress.fileAccess',
       'error.gzipCompress.outputAccess',
       'error.gzipCompress.resource',
+      'cli.gzipDecompressUsage',
+      'gzipDecompress.savedResult',
+      'error.gzipDecompress.validation',
+      'error.gzipDecompress.inputAccess',
+      'error.gzipDecompress.fileAccess',
+      'error.gzipDecompress.outputAccess',
+      'error.gzipDecompress.resource',
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'fileAction',
+        'modeLabel',
+        'textMode',
+        'binaryMode',
+        'submitAction',
+        'copyAction',
+        'saveAction',
+        'copiedResult',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ])
+        'gzipDecompress.$name',
+      'error.gzipDecompress.interactiveInputAccess',
+      'error.gzipDecompress.clipboardWrite',
       'cli.certificateConvertUsage',
       'certificateConvert.savedResult',
       'certificateConvert.pageTitle',

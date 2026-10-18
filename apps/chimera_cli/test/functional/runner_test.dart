@@ -6302,7 +6302,649 @@ void main() {
       expect(await _chimeraTransactionArtifacts(directory), isEmpty);
     });
   });
+
+  group('gzip decompress', () {
+    test('GivenStdinOrFileTextArchive_WhenDecompressed_ThenExactTextHasNoAddedNewline', () async {
+      final cases = <(List<String>, BytesReader?, FileBytesReader?, String)>[
+        (
+          const <String>['--stdin', '--mode=text'],
+          () async => _gzipHello,
+          null,
+          'hello',
+        ),
+        (
+          const <String>['--file=input.gz', '--mode=text'],
+          null,
+          (path) async {
+            expect(path, 'input.gz');
+            return _gzipEmpty;
+          },
+          '',
+        ),
+        (
+          const <String>['--stdin', '--mode=text'],
+          () async => _gzipBom,
+          null,
+          '\uFEFFa\r\n ',
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['gzip', 'decompress', ...testCase.$1],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: testCase.$2,
+          readFileBytes: testCase.$3,
+        );
+
+        expect(exitCode, 0, reason: testCase.$1.toString());
+        expect(out.toString(), testCase.$4, reason: testCase.$1.toString());
+        expect(err.toString(), isEmpty, reason: testCase.$1.toString());
+      }
+    });
+
+    test('GivenBothModesWithJson_WhenDecompressed_ThenStableOrderedJsonHasOneNewline', () async {
+      final cases = <(List<int>, String, String)>[
+        (
+          _gzipHello,
+          'text',
+          '{"mode":"text","text":"hello","bytes":null,'
+              '"inputByteCount":25,"outputByteCount":5}\n',
+        ),
+        (
+          _gzipBinary,
+          'binary',
+          '{"mode":"binary","text":null,'
+              '"bytes":[0,255,128,1,254,0,13,10],'
+              '"inputByteCount":28,"outputByteCount":8}\n',
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'gzip',
+            'decompress',
+            '--stdin',
+            '--mode=${testCase.$2}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: StringBuffer(),
+          readStandardInputBytes: () async => testCase.$1,
+        );
+
+        expect(exitCode, 0, reason: testCase.$2);
+        expect(out.toString(), testCase.$3, reason: testCase.$2);
+      }
+    });
+
+    test('GivenOutputPath_WhenDecompressed_ThenExactBytesAreSavedBeforeLocalizedSuccess', () async {
+      for (final testCase in <(String, String)>[
+        ('en', 'Decompressed bytes saved.\n'),
+        ('pt-BR', 'Bytes descomprimidos salvos.\n'),
+      ]) {
+        final out = StringBuffer();
+        late String savedPath;
+        late List<int> savedBytes;
+        final exitCode = await runChimera(
+          const <String>[
+            'gzip',
+            'decompress',
+            '--stdin',
+            '--mode=binary',
+            '--output=decoded.bin',
+          ],
+          localeTag: testCase.$1,
+          out: out,
+          err: StringBuffer(),
+          readStandardInputBytes: () async => _gzipBinary,
+          writeOutputFile: (path, bytes) async {
+            expect(out.toString(), isEmpty);
+            savedPath = path;
+            savedBytes = bytes;
+          },
+        );
+
+        expect(exitCode, 0);
+        expect(savedPath, 'decoded.bin');
+        expect(savedBytes, <int>[0, 255, 128, 1, 254, 0, 13, 10]);
+        expect(out.toString(), testCase.$2);
+      }
+    });
+
+    test('GivenJsonAndOutputPath_WhenDecompressed_ThenSaveCompletesBeforeJsonOnlyStdout', () async {
+      final out = StringBuffer();
+      final exitCode = await runChimera(
+        const <String>[
+          'gzip',
+          'decompress',
+          '--stdin',
+          '--mode=text',
+          '--output=decoded.txt',
+          '--json',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInputBytes: () async => _gzipHello,
+        writeOutputFile: (_, bytes) async {
+          expect(out.toString(), isEmpty);
+          expect(bytes, utf8.encode('hello'));
+        },
+      );
+
+      expect(exitCode, 0);
+      expect(
+        out.toString(),
+        '{"mode":"text","text":"hello","bytes":null,'
+        '"inputByteCount":25,"outputByteCount":5}\n',
+      );
+    });
+
+    test('GivenInvalidStructure_WhenDecompressRuns_ThenValidationPrecedesEveryRead', () async {
+      var reads = 0;
+      final cases = <(List<String>, String)>[
+        (
+          const <String>['--mode=text', '--json'],
+          'gzip-decompress.missing-source',
+        ),
+        (
+          const <String>[
+            '--stdin',
+            '--file=secret-path',
+            '--mode=text',
+            '--json',
+          ],
+          'gzip-decompress.conflicting-sources',
+        ),
+        (const <String>['--stdin', '--json'], 'gzip-decompress.invalid-mode'),
+        (
+          const <String>['--stdin', '--mode=words', '--json'],
+          'gzip-decompress.invalid-mode',
+        ),
+        (
+          const <String>['--stdin', '--mode=binary'],
+          'gzip-decompress.binary-destination-required',
+        ),
+        (
+          const <String>['--file=', '--mode=text', '--json'],
+          'gzip-decompress.invalid-options',
+        ),
+        (
+          const <String>['--stdin', '--mode=text', '--output=', '--json'],
+          'gzip-decompress.invalid-options',
+        ),
+      ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['gzip', 'decompress', ...testCase.$1],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: () async {
+            reads++;
+            return _gzipHello;
+          },
+          readFileBytes: (_) async {
+            reads++;
+            return _gzipHello;
+          },
+        );
+
+        expect(exitCode, 64, reason: testCase.$1.toString());
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('secret-path')));
+        if (testCase.$1.contains('--json')) {
+          expect(
+            (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+            containsPair('code', testCase.$2),
+          );
+        } else {
+          expect(
+            err.toString(),
+            'The GZIP decompression request is invalid.\n',
+          );
+        }
+      }
+      expect(reads, 0);
+    });
+
+    test(
+      'GivenUnknownOption_WhenParsed_ThenTypedValidationIsRedactedBeforeRead',
+      () async {
+        var reads = 0;
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          const <String>[
+            'gzip',
+            'decompress',
+            '--stdin',
+            '--mode=text',
+            '--private=secret',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+          readStandardInputBytes: () async {
+            reads++;
+            return _gzipHello;
+          },
+        );
+
+        expect(exitCode, 64);
+        expect(reads, 0);
+        expect(err.toString(), isNot(contains('secret')));
+        expect(jsonDecode(err.toString()), <String, Object?>{
+          'error': <String, Object?>{
+            'kind': 'validation',
+            'code': 'gzip-decompress.invalid-options',
+            'message': 'The GZIP decompression request is invalid.',
+          },
+        });
+      },
+    );
+
+    test('GivenMalformedCorruptOrInvalidText_WhenDecompressed_ThenValidationIsRedacted', () async {
+      final corrupt = List<int>.of(_gzipHello)..[17] ^= 1;
+      final cases = <(List<int>, String, String)>[
+        (const <int>[], 'binary', 'gzip-decompress.invalid-archive'),
+        (corrupt, 'binary', 'gzip-decompress.invalid-archive'),
+        (_gzipBinary, 'text', 'gzip-decompress.invalid-text'),
+      ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>[
+            'gzip',
+            'decompress',
+            '--stdin',
+            '--mode=${testCase.$2}',
+            '--json',
+          ],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: () async => testCase.$1,
+        );
+
+        expect(exitCode, 64);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('ArchiveException')));
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          containsPair('code', testCase.$3),
+        );
+      }
+    });
+
+    test('GivenAdapterOrAllocationFailures_WhenDecompressed_ThenTypedExitHasNoSuccessOrPrivateDetail', () async {
+      final cases =
+          <
+            ({
+              List<String> args,
+              BytesReader? reader,
+              FileBytesReader? fileReader,
+              FileBytesWriter? writer,
+              GzipDecompressService service,
+              JsonObjectEncoder? encoder,
+              int exitCode,
+              String code,
+            })
+          >[
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              reader: () async => throw Exception('private stdin detail'),
+              fileReader: null,
+              writer: null,
+              service: const GzipDecompressService(),
+              encoder: null,
+              exitCode: 74,
+              code: 'gzip-decompress.input-access',
+            ),
+            (
+              args: const <String>[
+                '--file=secret-path',
+                '--mode=text',
+                '--json',
+              ],
+              reader: null,
+              fileReader: (_) async => throw Exception('private file detail'),
+              writer: null,
+              service: const GzipDecompressService(),
+              encoder: null,
+              exitCode: 74,
+              code: 'gzip-decompress.file-access',
+            ),
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              reader: () async => throw OutOfMemoryError(),
+              fileReader: null,
+              writer: null,
+              service: const GzipDecompressService(),
+              encoder: null,
+              exitCode: 75,
+              code: 'gzip-decompress.resource-limit',
+            ),
+            (
+              args: const <String>[
+                '--stdin',
+                '--mode=text',
+                '--output=secret-path',
+                '--json',
+              ],
+              reader: () async => _gzipHello,
+              fileReader: null,
+              writer: (_, _) async => throw Exception('private write detail'),
+              service: const GzipDecompressService(),
+              encoder: null,
+              exitCode: 74,
+              code: 'gzip-decompress.output-access',
+            ),
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              reader: () async => _gzipHello,
+              fileReader: null,
+              writer: null,
+              service: const GzipDecompressService(
+                decompressor: GzipDecompressor(maxOutputBytes: 4),
+              ),
+              encoder: null,
+              exitCode: 75,
+              code: 'gzip-decompress.resource-limit',
+            ),
+            (
+              args: const <String>['--stdin', '--mode=text', '--json'],
+              reader: () async => _gzipHello,
+              fileReader: null,
+              writer: null,
+              service: const GzipDecompressService(),
+              encoder: (_) => throw OutOfMemoryError(),
+              exitCode: 75,
+              code: 'gzip-decompress.resource-limit',
+            ),
+          ];
+
+      for (final testCase in cases) {
+        final out = StringBuffer();
+        final err = StringBuffer();
+        final exitCode = await runChimera(
+          <String>['gzip', 'decompress', ...testCase.args],
+          localeTag: 'en',
+          out: out,
+          err: err,
+          readStandardInputBytes: testCase.reader,
+          readFileBytes: testCase.fileReader,
+          writeOutputFile: testCase.writer,
+          gzipDecompressService: testCase.service,
+          gzipDecompressJsonEncoder: testCase.encoder,
+        );
+
+        expect(exitCode, testCase.exitCode);
+        expect(out.toString(), isEmpty);
+        expect(err.toString(), isNot(contains('private')));
+        expect(err.toString(), isNot(contains('secret-path')));
+        expect(
+          (jsonDecode(err.toString()) as Map<String, dynamic>)['error'],
+          containsPair('code', testCase.code),
+        );
+      }
+    });
+
+    test('GivenPartialStageFailure_WhenSaved_ThenPriorTargetAndNoSuccessArePreserved', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-gzip-decompress-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'gzip',
+          'decompress',
+          '--stdin',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        readStandardInputBytes: () async => _gzipBinary,
+        writeOutputStage: (path, bytes) async {
+          await File(path).writeAsBytes(<int>[bytes.first], flush: true);
+          throw const FileSystemException('private partial failure');
+        },
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), 'The decompressed bytes could not be saved.\n');
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+
+    test('GivenStageAndBackupCollisions_WhenSaved_ThenUnrelatedFilesRemainAndExactOutputInstalls', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-gzip-collision-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final collisions = <File>[];
+      final attempts = <String, int>{'stage': 0, 'backup': 0};
+
+      final exitCode = await runChimera(
+        <String>[
+          'gzip',
+          'decompress',
+          '--stdin',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: StringBuffer(),
+        err: StringBuffer(),
+        readStandardInputBytes: () async => _gzipBinary,
+        outputFileOperations: TransactionalFileOperations(
+          tryReserve: (candidate) async {
+            final role = candidate.path.contains('.chimera-stage-')
+                ? 'stage'
+                : 'backup';
+            final attempt = attempts[role]!;
+            attempts[role] = attempt + 1;
+            if (attempt == 0) {
+              await candidate.writeAsBytes(
+                role == 'stage' ? <int>[11] : <int>[22],
+                flush: true,
+              );
+              collisions.add(candidate);
+              return false;
+            }
+            await candidate.create(exclusive: true);
+            return true;
+          },
+        ),
+      );
+
+      expect(exitCode, 0);
+      expect(attempts, <String, int>{'stage': 2, 'backup': 2});
+      expect(await target.readAsBytes(), <int>[0, 255, 128, 1, 254, 0, 13, 10]);
+      expect(await collisions[0].readAsBytes(), <int>[11]);
+      expect(await collisions[1].readAsBytes(), <int>[22]);
+    });
+
+    test('GivenReplacementFailure_WhenSaved_ThenOriginalTargetIsRestoredWithoutArtifacts', () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-gzip-restore-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final target = File(
+        '${directory.path}${Platform.pathSeparator}decoded.bin',
+      );
+      await target.writeAsBytes(<int>[7, 8, 9], flush: true);
+      final out = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>[
+          'gzip',
+          'decompress',
+          '--stdin',
+          '--mode=binary',
+          '--output=${target.path}',
+        ],
+        localeTag: 'en',
+        out: out,
+        err: StringBuffer(),
+        readStandardInputBytes: () async => _gzipBinary,
+        outputFileOperations: TransactionalFileOperations(
+          rename: (source, destinationPath) async {
+            if (source.path.contains('.chimera-stage-') &&
+                destinationPath == target.path) {
+              throw const FileSystemException('private replacement failure');
+            }
+            await source.rename(destinationPath);
+          },
+        ),
+      );
+
+      expect(exitCode, 74);
+      expect(out.toString(), isEmpty);
+      expect(await target.readAsBytes(), <int>[7, 8, 9]);
+      expect(await _chimeraTransactionArtifacts(directory), isEmpty);
+    });
+  });
 }
+
+const _gzipEmpty = <int>[
+  31,
+  139,
+  8,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  255,
+  3,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+  0,
+];
+
+const _gzipHello = <int>[
+  31,
+  139,
+  8,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  255,
+  203,
+  72,
+  205,
+  201,
+  201,
+  7,
+  0,
+  134,
+  166,
+  16,
+  54,
+  5,
+  0,
+  0,
+  0,
+];
+
+const _gzipBom = <int>[
+  31,
+  139,
+  8,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  255,
+  123,
+  191,
+  123,
+  127,
+  34,
+  47,
+  151,
+  2,
+  0,
+  132,
+  190,
+  221,
+  192,
+  7,
+  0,
+  0,
+  0,
+];
+
+const _gzipBinary = <int>[
+  31,
+  139,
+  8,
+  0,
+  0,
+  0,
+  0,
+  0,
+  2,
+  255,
+  99,
+  248,
+  223,
+  192,
+  248,
+  143,
+  129,
+  151,
+  11,
+  0,
+  246,
+  94,
+  6,
+  231,
+  8,
+  0,
+  0,
+  0,
+];
 
 String _certificateFixtureBase() {
   var directory = Directory.current.absolute;

@@ -6,6 +6,7 @@ export 'src/cron_service.dart';
 export 'src/date_service.dart';
 export 'src/diagnostics.dart';
 export 'src/gzip_compress_service.dart';
+export 'src/gzip_decompress_service.dart';
 export 'src/json_csv_service.dart';
 export 'src/json_format_service.dart';
 export 'src/json_table_service.dart';
