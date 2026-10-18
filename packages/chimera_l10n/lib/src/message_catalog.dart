@@ -9,6 +9,21 @@ _catalogs = <String, Map<String, String>>{
     'jwtInspect.statusNotRequested': 'Not requested',
     'jwtInspect.statusVerified': 'Verified',
     'jwtInspect.statusFailed': 'Failed — decoded data is untrusted',
+    'jwtInspect.pageTitle': 'Inspect JWT',
+    'jwtInspect.openAction': 'Inspect JWT',
+    'jwtInspect.tokenLabel': 'JWT',
+    'jwtInspect.keyLabel': 'Optional verification key',
+    'jwtInspect.submitAction': 'Inspect and verify',
+    'jwtInspect.outputLabel': 'JWT inspection result',
+    'jwtInspect.resultSuccess': 'JWT inspection succeeded.',
+    'jwtInspect.copyAction': 'Copy inspection result',
+    'jwtInspect.copiedResult': 'Inspection result copied.',
+    'jwtInspect.tokenFileAction': 'Load JWT file',
+    'jwtInspect.keyFileAction': 'Load key file',
+    'jwtInspect.tokenPasteAction': 'Paste JWT',
+    'jwtInspect.keyPasteAction': 'Paste key',
+    'jwtInspect.untrustedWarning':
+        'Signature verification failed. Decoded data is untrusted.',
     'cli.jwtInspectUsage':
         'Usage: chimera jwt inspect '
         '(--token=<jwt>|--token-file=<path>|--stdin) '
@@ -19,6 +34,11 @@ _catalogs = <String, Map<String, String>>{
     'error.jwtInspect.inputAccess': 'The standard input could not be read.',
     'error.jwtInspect.tokenAccess': 'The JWT file could not be read.',
     'error.jwtInspect.keyAccess': 'The key file could not be read.',
+    'error.jwtInspect.clipboardRead': 'The clipboard text could not be read.',
+    'error.jwtInspect.clipboardWrite':
+        'The inspection result could not be copied.',
+    'error.jwtInspect.interactiveInputAccess':
+        'The local input could not be processed.',
     'jwtCreate.pageTitle': 'Create JWT',
     'jwtCreate.openAction': 'Create JWT',
     'jwtCreate.algorithmLabel': 'Signing algorithm',
@@ -731,6 +751,22 @@ _catalogs = <String, Map<String, String>>{
     'jwtInspect.statusVerified': 'Verificada',
     'jwtInspect.statusFailed':
         'Falhou — os dados decodificados não são confiáveis',
+    'jwtInspect.pageTitle': 'Inspecionar JWT',
+    'jwtInspect.openAction': 'Inspecionar JWT',
+    'jwtInspect.tokenLabel': 'JWT',
+    'jwtInspect.keyLabel': 'Chave de verificação opcional',
+    'jwtInspect.submitAction': 'Inspecionar e verificar',
+    'jwtInspect.outputLabel': 'Resultado da inspeção do JWT',
+    'jwtInspect.resultSuccess': 'Inspeção do JWT concluída.',
+    'jwtInspect.copyAction': 'Copiar resultado da inspeção',
+    'jwtInspect.copiedResult': 'Resultado da inspeção copiado.',
+    'jwtInspect.tokenFileAction': 'Carregar arquivo JWT',
+    'jwtInspect.keyFileAction': 'Carregar arquivo de chave',
+    'jwtInspect.tokenPasteAction': 'Colar JWT',
+    'jwtInspect.keyPasteAction': 'Colar chave',
+    'jwtInspect.untrustedWarning':
+        'A verificação da assinatura falhou. '
+        'Os dados decodificados não são confiáveis.',
     'cli.jwtInspectUsage':
         'Uso: chimera jwt inspect '
         '(--token=<jwt>|--token-file=<caminho>|--stdin) '
@@ -744,6 +780,12 @@ _catalogs = <String, Map<String, String>>{
     'error.jwtInspect.inputAccess': 'Não foi possível ler a entrada padrão.',
     'error.jwtInspect.tokenAccess': 'Não foi possível ler o arquivo JWT.',
     'error.jwtInspect.keyAccess': 'Não foi possível ler o arquivo de chave.',
+    'error.jwtInspect.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.jwtInspect.clipboardWrite':
+        'Não foi possível copiar o resultado da inspeção.',
+    'error.jwtInspect.interactiveInputAccess':
+        'Não foi possível processar a entrada local.',
     'jwtCreate.pageTitle': 'Criar JWT',
     'jwtCreate.openAction': 'Criar JWT',
     'jwtCreate.algorithmLabel': 'Algoritmo de assinatura',

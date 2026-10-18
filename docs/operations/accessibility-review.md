@@ -462,3 +462,47 @@ and exact copy/save filename, MIME, and bytes. The complete GUI suite and
 fatal-info analysis are mandatory delivery gates. Native and compiled-browser
 coverage is recorded with Task 5. No automated UC-24 accessibility finding is
 open.
+
+## UC-25 JWT Inspect
+
+- Release version: UC-25 candidate
+- Branch: `feature/uc-25-jwt-inspect`
+- Reviewer: Chimera UC-25 GUI implementation self-review
+- Date: 2026-10-18
+- Target: shared Flutter web, Windows, and Linux JWT inspection surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Token, optional key, submit, result, and copy controls follow document
+  order, remain keyboard operable, and use localized labels in both locales.
+- [x] The optional key editor obscures content and disables suggestions and
+  autocorrection. Token, key, and editor history are discarded when an
+  inspection attempt begins and again on failure or disposal.
+- [x] The result is a focusable live region with bounded localized semantics.
+  A signature mismatch keeps decoded data visible while an additional live
+  warning explicitly identifies that data as untrusted.
+- [x] File and clipboard loading remains local, cancellation is neutral,
+  competing controls disable while busy, and generation guards reject stale
+  completion after source changes or disposal.
+- [x] File, paste, submit, and copy actions measure at least 48 by 48 logical
+  pixels and satisfy labeled-target and theme-derived contrast guidance.
+- [x] At 320 logical pixels and 200% text scale, both locales keep every source,
+  submit, result, warning, and copy action reachable through scrolling without
+  overflow.
+- [x] Copy hands off one stable JSON result. Service, file, clipboard, copy,
+  decoding, and allocation failures clear sensitive sources and stale output
+  while publishing only a localized safe category.
+
+### Evidence and Findings
+
+Focused widget coverage exercises home and direct routing, typed/file/clipboard
+sources, optional-key obscuring, verified and failed statuses, explicit
+untrusted-state presentation, source/history discard, exact stable JSON copy,
+safe redaction, access and allocation boundaries, cancellation, source-change
+invalidation, late completion, live semantics, target sizes, contrast, and
+narrow large-text layouts in both locales. All 14 focused widget tests pass;
+the complete GUI suite passes 630 tests, and the localization suite passes 24
+tests with exact locale parity. Fatal-info analysis reports no GUI or
+localization issues. Native and compiled-browser coverage is recorded with
+Task 5. No automated UC-25 accessibility finding is open.
