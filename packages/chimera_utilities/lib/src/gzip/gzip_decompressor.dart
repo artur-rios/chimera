@@ -173,14 +173,17 @@ final class GzipDecompressor {
       onLimit: () => _throwResource(field: 'output', reason: 'byte-limit'),
     );
     final inflate = Inflate.lazy(input, output: output);
+    input.inspectDeflateStructure = true;
     try {
       while (inflate.inflateBlock()) {}
     } on ArchiveException {
-      if (input.length < 8) _throwMalformed();
+      if (input.truncatedStoredBlock) _throwMalformed();
       _throwCorrupt();
     } on RangeError {
-      if (input.length < 8) _throwMalformed();
+      if (input.truncatedStoredBlock) _throwMalformed();
       _throwCorrupt();
+    } finally {
+      input.inspectDeflateStructure = false;
     }
     if (input.invalidStoredBlock) _throwCorrupt();
 
@@ -248,6 +251,26 @@ final class _StrictDeflateInput extends InputMemoryStream {
   _StrictDeflateInput(super.bytes);
 
   bool invalidStoredBlock = false;
+  bool inspectDeflateStructure = false;
+  bool truncatedStoredBlock = false;
+
+  @override
+  int get length {
+    final remaining = super.length;
+    // Inflate reads LEN and NLEN immediately before checking the remaining
+    // input length for a stored block. Capture that structural check so an
+    // early end is distinguishable from damaged Huffman or checksum data.
+    if (inspectDeflateStructure && position >= 4) {
+      final data = buffer!;
+      final declaredLength = data[position - 4] | data[position - 3] << 8;
+      final complement = data[position - 2] | data[position - 1] << 8;
+      if (complement == (declaredLength ^ 0xffff) &&
+          declaredLength > remaining) {
+        truncatedStoredBlock = true;
+      }
+    }
+    return remaining;
+  }
 
   @override
   InputStream readBytes(int count) {

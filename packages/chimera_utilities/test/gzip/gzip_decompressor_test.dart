@@ -173,6 +173,25 @@ void main() {
       );
     });
 
+    test('GivenLongStoredBlockPayloadEndsEarly_WhenDecoded_ThenMalformedFailureReturns', () {
+      final truncatedStoredBlock = _hex(
+        '1f8b08000000000000ff011400ebff00010203040506070809',
+      );
+
+      expect(
+        () => decompressor.decompressBytes(
+          truncatedStoredBlock,
+          mode: GzipDecompressMode.binary,
+        ),
+        _failure(
+          GzipDecompressFailureKind.validation,
+          'gzip-decompress.invalid-archive',
+          'input',
+          'malformed-gzip',
+        ),
+      );
+    });
+
     test('GivenUnsupportedMethodOrFlags_WhenDecoded_ThenUnsupportedFails', () {
       final valid = _fixture('ascii.gzip.hex');
       final method = List<int>.of(valid)..[2] = 7;
