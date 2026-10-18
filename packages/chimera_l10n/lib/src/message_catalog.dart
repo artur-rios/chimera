@@ -3,6 +3,19 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.qrEncodeUsage':
+        'Usage: chimera qr encode (--text=<value>|--stdin|--file=<path>) '
+        '[--error-correction=low|medium|quartile|high] [--size=64..4096] '
+        '[--margin=0..32] [--foreground=#RRGGBB] '
+        '[--background=#RRGGBB] [--output=<path>] [--json]',
+    'qrEncode.savedResult':
+        'QR PNG saved: {size}x{size}, version {version}, '
+        '{errorCorrection} correction, {outputByteCount} bytes.',
+    'error.qrEncode.validation': 'The QR encoding request is invalid.',
+    'error.qrEncode.resource': 'QR encoding exceeded its resource limit.',
+    'error.qrEncode.inputAccess': 'The standard input could not be read.',
+    'error.qrEncode.fileAccess': 'The QR input file could not be read.',
+    'error.qrEncode.outputAccess': 'The QR PNG could not be saved.',
     'jwtInspect.headerLabel': 'Header',
     'jwtInspect.claimsLabel': 'Claims',
     'jwtInspect.verificationLabel': 'Verification',
@@ -744,6 +757,20 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.qrEncodeUsage':
+        'Uso: chimera qr encode (--text=<valor>|--stdin|--file=<caminho>) '
+        '[--error-correction=low|medium|quartile|high] [--size=64..4096] '
+        '[--margin=0..32] [--foreground=#RRGGBB] '
+        '[--background=#RRGGBB] [--output=<caminho>] [--json]',
+    'qrEncode.savedResult':
+        'PNG QR salvo: {size}x{size}, versão {version}, correção '
+        '{errorCorrection}, {outputByteCount} bytes.',
+    'error.qrEncode.validation': 'A solicitação de codificação QR é inválida.',
+    'error.qrEncode.resource': 'A codificação QR excedeu o limite de recursos.',
+    'error.qrEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.qrEncode.fileAccess':
+        'Não foi possível ler o arquivo de entrada QR.',
+    'error.qrEncode.outputAccess': 'Não foi possível salvar o PNG QR.',
     'jwtInspect.headerLabel': 'Cabeçalho',
     'jwtInspect.claimsLabel': 'Declarações',
     'jwtInspect.verificationLabel': 'Verificação',

@@ -4,6 +4,27 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test('GivenQrEncodeCliMessages_WhenLookedUp_ThenLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.qrEncodeUsage',
+      'qrEncode.savedResult',
+      'error.qrEncode.validation',
+      'error.qrEncode.resource',
+      'error.qrEncode.inputAccess',
+      'error.qrEncode.fileAccess',
+      'error.qrEncode.outputAccess',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      expect(
+        catalog.lookup(locale, 'cli.qrEncodeUsage'),
+        contains('chimera qr encode'),
+      );
+    }
+  });
+
   test('GivenJwtMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'jwtInspect.headerLabel',
@@ -604,6 +625,13 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.qrEncodeUsage',
+      'qrEncode.savedResult',
+      'error.qrEncode.validation',
+      'error.qrEncode.resource',
+      'error.qrEncode.inputAccess',
+      'error.qrEncode.fileAccess',
+      'error.qrEncode.outputAccess',
       'jwtInspect.headerLabel',
       'jwtInspect.claimsLabel',
       'jwtInspect.verificationLabel',
