@@ -92,6 +92,42 @@ void main() {
     expect(calls, 1);
   });
 
+  test('GivenNativeSaveCancellation_WhenPickerReturnsNull_ThenAdapterReportsCancellation', () async {
+    final original = FilePickerPlatform.instance;
+    addTearDown(() => FilePickerPlatform.instance = original);
+    FilePickerPlatform.instance = _SavePlatform((_, _, _) async => null);
+
+    expect(
+      await saveGzipDecompressFile(
+        'chimera-decompressed.bin',
+        Uint8List.fromList([0, 255]),
+        'application/octet-stream',
+      ),
+      isFalse,
+    );
+  });
+
+  test(
+    'GivenPlatformSaveFailure_WhenPickerThrows_ThenAdapterPropagatesFailure',
+    () async {
+      final original = FilePickerPlatform.instance;
+      addTearDown(() => FilePickerPlatform.instance = original);
+      final failure = StateError('save failed');
+      FilePickerPlatform.instance = _SavePlatform((_, _, _) async {
+        throw failure;
+      });
+
+      await expectLater(
+        saveGzipDecompressFile(
+          'chimera-decompressed.bin',
+          Uint8List.fromList([0, 255]),
+          'application/octet-stream',
+        ),
+        throwsA(same(failure)),
+      );
+    },
+  );
+
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
       'Given${locale}TextFile_WhenDecompressed_ThenExactTextCanBeCopiedAndSaved',

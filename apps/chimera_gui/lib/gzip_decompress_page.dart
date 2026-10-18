@@ -4,6 +4,7 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,15 +30,16 @@ Future<bool> saveGzipDecompressFile(
   String name,
   Uint8List bytes,
   String mimeType,
-) async =>
-    await FilePicker.saveFile(
-      fileName: name,
-      bytes: bytes,
-      mimeType: mimeType,
-      type: FileType.custom,
-      allowedExtensions: [name.split('.').last],
-    ) !=
-    null;
+) async {
+  final result = await FilePicker.saveFile(
+    fileName: name,
+    bytes: bytes,
+    mimeType: mimeType,
+    type: FileType.custom,
+    allowedExtensions: [name.split('.').last],
+  );
+  return kIsWeb || result != null;
+}
 
 final class GzipDecompressPage extends StatefulWidget {
   const GzipDecompressPage({

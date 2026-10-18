@@ -313,6 +313,9 @@ test('GivenBomGzipFile_WhenTextDecompressedCopiedAndDownloaded_ThenExactBytesTra
     name: 'chimera-decompressed.txt', count: 1, mime: 'text/plain; charset=utf-8',
     bytes: [...expected], liveUrls: 0, errors: [],
   });
+  await expect(page.locator('span', {
+    hasText: /^Decompressed bytes saved\.$/,
+  })).toBeVisible();
   expect(downloads).toHaveLength(1);
   await expect(result).toBeVisible();
   expect(interactionRequests).toEqual([]);
