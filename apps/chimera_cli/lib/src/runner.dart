@@ -51,6 +51,8 @@ Future<int> runChimera(
   JsonObjectEncoder? gzipCompressJsonEncoder,
   GzipDecompressService gzipDecompressService = const GzipDecompressService(),
   JsonObjectEncoder? gzipDecompressJsonEncoder,
+  HtmlEncodeService htmlEncodeService = const HtmlEncodeService(),
+  JsonObjectEncoder? htmlEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -81,8 +83,11 @@ Future<int> runChimera(
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       final key =
-          parsed.command?.name == 'gzip' &&
-              parsed.command?.command?.name == 'compress'
+          parsed.command?.name == 'html' &&
+              parsed.command?.command?.name == 'encode'
+          ? 'cli.htmlEncodeUsage'
+          : parsed.command?.name == 'gzip' &&
+                parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'decompress'
@@ -97,6 +102,29 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'html' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runHtmlEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: htmlEncodeService,
+        encodeJson: htmlEncodeJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'gzip' &&
         parsed.command!.command?.name == 'compress') {
@@ -447,6 +475,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isHtmlEncode =
+        args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
         args.length >= 2 && args[0] == 'gzip' && args[1] == 'compress';
     final isGzipDecompress =
@@ -493,7 +523,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isBase64Encode ||
+          (isHtmlEncode ||
+              isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
               isCertificateInspect ||
@@ -516,7 +547,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isGzipCompress
+      code: isHtmlEncode
+          ? 'html-encode.invalid-options'
+          : isGzipCompress
           ? 'gzip-compress.invalid-options'
           : isGzipDecompress
           ? 'gzip-decompress.invalid-options'
@@ -559,7 +592,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isGzipCompress
+      messageKey: isHtmlEncode
+          ? 'error.htmlEncode.validation'
+          : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
           ? 'error.gzipDecompress.validation'
@@ -608,6 +643,14 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final htmlEncode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('context', defaultsTo: 'all')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final html = ArgParser()..addCommand('encode', htmlEncode);
   final gzipCompress = ArgParser()
     ..addOption('text')
     ..addFlag('stdin', negatable: false)
@@ -789,6 +832,7 @@ ArgParser _buildParser() {
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('gzip', gzip)
+    ..addCommand('html', html)
     ..addCommand('json', json)
     ..addCommand('list', list)
     ..addCommand('number', number)
@@ -1427,6 +1471,155 @@ Future<int> _runGzipDecompress(
         out.write(stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('output');
+        return 75;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runHtmlEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required HtmlEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final context = parsed.option('context')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !const [
+          'all',
+          'element',
+          'double-quoted-attribute',
+          'single-quoted-attribute',
+        ].contains(context)
+      ? 'invalid-context'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'html-encode.$invalid',
+      messageKey: 'error.htmlEncode.validation',
+      details: invalid == 'invalid-context'
+          ? {'field': 'context', 'reason': 'unsupported-context'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'html-encode.resource-limit',
+    messageKey: 'error.htmlEncode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  late HtmlEncodeOperationRequest request;
+  try {
+    request = text != null
+        ? HtmlEncodeOperationRequest.text(text, context: context)
+        : HtmlEncodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            context: context,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'html-encode.input-access'
+          : 'html-encode.file-access',
+      messageKey: useStandardInput
+          ? 'error.htmlEncode.inputAccess'
+          : 'error.htmlEncode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'htmlEncode.savedResult')}\n'
+            : value.encoded;
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.encoded));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'html-encode.output-access',
+            messageKey: 'error.htmlEncode.outputAccess',
+          );
+          return 74;
+        }
+      }
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
         return 75;
       }
       return 0;

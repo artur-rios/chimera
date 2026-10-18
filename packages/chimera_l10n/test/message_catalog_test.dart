@@ -4,6 +4,33 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test(
+    'GivenHtmlEncodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.htmlEncodeUsage',
+        'htmlEncode.savedResult',
+        'error.htmlEncode.validation',
+        'error.htmlEncode.inputAccess',
+        'error.htmlEncode.fileAccess',
+        'error.htmlEncode.outputAccess',
+        'error.htmlEncode.resource',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+      expect(
+        catalog.lookup('pt-BR', 'error.htmlEncode.resource'),
+        'A codificação HTML excedeu o limite de recursos.',
+      );
+    },
+  );
+
   test('GivenGzipInteractiveMessages_WhenLookedUp_ThenBothLocalesHaveCompleteLabels', () {
     for (final locale in supportedLocaleTags) {
       for (final name in [
@@ -408,6 +435,13 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.htmlEncodeUsage',
+      'htmlEncode.savedResult',
+      'error.htmlEncode.validation',
+      'error.htmlEncode.inputAccess',
+      'error.htmlEncode.fileAccess',
+      'error.htmlEncode.outputAccess',
+      'error.htmlEncode.resource',
       for (final name in [
         'pageTitle',
         'openAction',

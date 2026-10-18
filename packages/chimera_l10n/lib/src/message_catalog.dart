@@ -3,6 +3,20 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.htmlEncodeUsage':
+        'Usage: chimera html encode (--input=<text>|--stdin|--file=<path>) '
+        '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '
+        '[--output=<path>] [--json]\n'
+        'Default context: all. Human stdout is exact text without a newline. '
+        'Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 74 access, 75 resource.',
+    'htmlEncode.savedResult': 'HTML encoded text saved.',
+    'error.htmlEncode.validation': 'The HTML encoding request is invalid.',
+    'error.htmlEncode.inputAccess': 'The standard input could not be read.',
+    'error.htmlEncode.fileAccess': 'The input file could not be read.',
+    'error.htmlEncode.outputAccess':
+        'The HTML encoded text could not be saved.',
+    'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
     'gzipCompress.pageTitle': 'Compress GZIP',
     'gzipCompress.openAction': 'Compress to GZIP',
     'gzipCompress.inputLabel': 'Text to compress',
@@ -602,6 +616,22 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.htmlEncodeUsage':
+        'Uso: chimera html encode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '
+        '[--output=<caminho>] [--json]\n'
+        'Contexto padrão: all. A saída de texto é exata, sem nova linha. '
+        'O arquivo salva texto UTF-8; JSON emite o resultado após salvar. '
+        'Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'htmlEncode.savedResult': 'Texto codificado em HTML salvo.',
+    'error.htmlEncode.validation':
+        'A solicitação de codificação HTML é inválida.',
+    'error.htmlEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.htmlEncode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.htmlEncode.outputAccess':
+        'Não foi possível salvar o texto codificado em HTML.',
+    'error.htmlEncode.resource':
+        'A codificação HTML excedeu o limite de recursos.',
     'gzipCompress.pageTitle': 'Comprimir GZIP',
     'gzipCompress.openAction': 'Comprimir para GZIP',
     'gzipCompress.inputLabel': 'Texto para comprimir',
