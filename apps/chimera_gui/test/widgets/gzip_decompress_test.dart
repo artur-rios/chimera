@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
+import 'package:chimera_gui/empty_file_save.dart';
 import 'package:chimera_gui/gzip_decompress_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
@@ -64,6 +65,25 @@ Future<void> _tap(WidgetTester tester, String name) async {
 Uint8List _gzip(List<int> bytes) => Uint8List.fromList(gzip.encode(bytes));
 
 void main() {
+  for (final payload in [
+    Uint8List(0),
+    Uint8List.fromList([0, 255]),
+  ]) {
+    test(
+      'GivenNative${payload.isEmpty ? 'Empty' : 'NonEmpty'}Bytes_WhenGenericEmptySaveRuns_ThenNormalPickerCanHandlePayload',
+      () async {
+        expect(
+          await trySaveEmptyFile(
+            'generic-output.txt',
+            payload,
+            'text/plain; charset=utf-8',
+          ),
+          isNull,
+        );
+      },
+    );
+  }
+
   test('GivenImmutableTextOutput_WhenPlatformSaveRuns_ThenSamePayloadNameAndMimeReachPickerOnce', () async {
     final original = FilePickerPlatform.instance;
     addTearDown(() => FilePickerPlatform.instance = original);
