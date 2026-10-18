@@ -40,12 +40,116 @@ Future<String> _loadGzipSaveObserver() =>
     File.fromUri(Platform.script.resolve('gzip_save_observer.js'))
         .readAsString();
 
+// These exact helper bodies also run in the compiled Playwright matrix.
+const _htmlSetupScript = r'''
+  window.__chimeraHtmlCopiedText = null;
+  window.__chimeraHtmlCopies = 0;
+  window.__chimeraHtmlReads = 0;
+  window.__chimeraHtmlClipboardSource = '&<>"\'/ &amp; Olá 🌍';
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraHtmlReads++;
+        return window.__chimeraHtmlClipboardSource;
+      },
+      writeText: async value => {
+        window.__chimeraHtmlCopies++;
+        window.__chimeraHtmlCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _htmlContextOpenScript = r'''
+  const normalize = value => value.replace(/\s+/g, ' ').trim();
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'HTML context All characters' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.click();
+  return true;
+''';
+const _htmlContextSelectScript = r'''
+  const option = [...document.querySelectorAll('[role="menuitem"]')]
+    .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!option) return false;
+  option.click();
+  return true;
+''';
+const _htmlResultScript = r'''
+  const result = [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .find(element => element.getAttribute('aria-label') === 'HTML encoded result HTML encoding succeeded.');
+  return result !== undefined;
+''';
+const _htmlCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy encoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _htmlCopiedScript = r'''
+  return window.__chimeraHtmlCopies === arguments[1] &&
+    window.__chimeraHtmlCopiedText === arguments[0];
+''';
+const _htmlSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-html-encoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _htmlFileScript = r'''
+  const picker = document.querySelector('input[type="file"]');
+  if (!picker) return false;
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([new Uint8Array(arguments[0])],
+    'source.txt', {type: 'text/plain'}));
+  picker.files = transfer.files;
+  picker.dispatchEvent(new Event('change', {bubbles: true}));
+  return true;
+''';
+const _htmlNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('HTML encoded result')) &&
+    !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
+''';
+
 Future<void> main(List<String> arguments) async {
   // Exercise the same source loader without needing a SafariDriver session.
   if (arguments case ['--verify-gzip-save-observer']) {
     final observer = await _loadGzipSaveObserver();
     if (observer.isEmpty) throw StateError('GZIP save observer is empty');
     stdout.writeln('GZIP save observer source loaded successfully.');
+    return;
+  }
+  if (arguments case ['--verify-html-helpers']) {
+    final observer = await _loadGzipSaveObserver();
+    final helpers = [
+      _htmlSetupScript,
+      _htmlContextOpenScript,
+      _htmlContextSelectScript,
+      _htmlResultScript,
+      _htmlCopyScript,
+      _htmlCopiedScript,
+      _htmlSaveScript,
+      _htmlFileScript,
+      _htmlNoResultScript,
+    ];
+    if (!observer.contains('function observeGzipSaves') ||
+        helpers.any((source) => source.isEmpty)) {
+      throw StateError('HTML helper or save observer source is missing');
+    }
+    stdout.writeln(
+      'HTML helpers (9) and save observer source loaded successfully.',
+    );
     return;
   }
   WebDriver? createdDriver;
@@ -946,13 +1050,175 @@ Future<void> main(List<String> arguments) async {
     }
 
     await _decompressGzip(driver);
+    await _encodeHtml(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
   }
+}
+
+Future<void> _encodeHtml(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'HTML semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Encode HTML');
+  await _waitUntil(
+    () => _pageContains(driver, 'Text to encode'),
+    'HTML page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'HTML startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_htmlSetupScript, const <Object?>[]);
+  // SafariDriver has no upload endpoint; use its existing real File dispatch.
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '&amp;&lt;&gt;&quot;\'/ &amp;amp; Olá 🌍';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Text to encode',
+      '&<>"\'/ &amp; Olá 🌍',
+      focus: true,
+    ),
+    'HTML clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlContextOpenScript, const <Object?>[]) == true,
+    'HTML default context was unavailable',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlContextSelectScript, const <Object?>[
+          'Double-quoted attribute',
+        ]) ==
+        true,
+    'HTML double-quoted context was unavailable',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlResultScript, const <Object?>[]) == true,
+    'HTML result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'HTML source was retained',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlCopyScript, const <Object?>[]) == true,
+    'HTML copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlCopiedScript, const <Object?>[expected, 1]) ==
+        true,
+    'HTML clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'HTML non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'HTML encoded text saved.'),
+    'HTML non-empty save did not finish',
+  );
+  // A second encode has no retained source: it must copy/save exactly zero bytes.
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlResultScript, const <Object?>[]) == true,
+    'HTML empty result did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlCopyScript, const <Object?>[]) == true,
+    'HTML empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlCopiedScript, const <Object?>['', 2]) == true,
+    'HTML empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlSaveScript, const <Object?>[<int>[], 2]) ==
+        true,
+    'HTML empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'HTML encoded text saved.'),
+    'HTML empty save did not finish',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'HTML malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlNoResultScript, const <Object?>[]) == true,
+    'HTML file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The HTML encoding request is invalid.'),
+    'HTML UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_htmlNoResultScript, const <Object?>[]) != true) {
+    throw StateError('HTML validation retained an output action or result');
+  }
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'HTML validation retained source text',
+  );
+  final reads = await driver.execute(
+    'return window.__chimeraHtmlReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) throw StateError('HTML clipboard source was not read once');
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'HTML context/copy/save/validation',
+  );
 }
 
 Future<void> _compressGzip(WebDriver driver, String source) async {

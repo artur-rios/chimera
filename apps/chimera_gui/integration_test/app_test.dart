@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:chimera_gui/app.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
@@ -10,6 +11,235 @@ import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  for (final locale in ['en', 'pt-BR']) {
+    for (final (context, source, expected) in [
+      ('all', 'typed', '&amp;&lt;&gt;&quot;&#39;&#47; &amp;amp; Olá 🌍'),
+      ('element', 'file', '&amp;&lt;&gt;"\'/ &amp;amp; Olá 🌍'),
+      (
+        'double-quoted-attribute',
+        'clipboard',
+        '&amp;&lt;&gt;&quot;\'/ &amp;amp; Olá 🌍',
+      ),
+      (
+        'single-quoted-attribute',
+        'typed',
+        '&amp;&lt;&gt;"&#39;/ &amp;amp; Olá 🌍',
+      ),
+      ('all', 'empty', ''),
+    ]) {
+      testWidgets(
+        'Given${locale}Html$context${source}_WhenEncodedCopiedAndSaved_ThenExactEntitiesTransferOffline',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            final network = _RejectConversionNetwork();
+            final previous = HttpOverrides.current;
+            HttpOverrides.global = network;
+            addTearDown(() => HttpOverrides.global = previous);
+            final directory = await Directory.systemTemp.createTemp(
+              'chimera-html-',
+            );
+            addTearDown(() => directory.delete(recursive: true));
+            const input = '&<>"\'/ &amp; Olá 🌍';
+            String? copied;
+            var copies = 0;
+            var saves = 0;
+            final saved = File('${directory.path}/chimera-html-encoded.txt');
+            await tester.pumpWidget(
+              ChimeraApp(
+                localeTag: locale,
+                initialLocation: '/html/encode',
+                htmlEncodeFilePicker: () async => utf8.encode(input),
+                htmlEncodeClipboardReader: () async => input,
+                htmlEncodeClipboardWriter: (value) async {
+                  copies++;
+                  copied = value;
+                },
+                htmlEncodeFileSaver: (name, bytes, mime) async {
+                  saves++;
+                  expect(name, 'chimera-html-encoded.txt');
+                  expect(mime, 'text/plain; charset=utf-8');
+                  await saved.writeAsBytes(bytes, flush: true);
+                  return true;
+                },
+              ),
+            );
+            await tester.pumpAndSettle();
+            final editor = find.byKey(const Key('html-encode-input'));
+            if (source == 'typed') {
+              await tester.enterText(editor, input);
+            } else if (source != 'empty') {
+              await tester.tap(
+                find.byKey(
+                  Key('html-encode-${source == 'file' ? 'file' : 'paste'}'),
+                ),
+              );
+              await tester.pumpAndSettle();
+            }
+            final selector = find.byKey(const Key('html-encode-context'));
+            if (context == 'all') {
+              expect(
+                find.text(
+                  locale == 'en' ? 'All characters' : 'Todos os caracteres',
+                ),
+                findsOneWidget,
+              );
+            } else {
+              await tester.tap(selector);
+              await tester.pumpAndSettle();
+              final label = switch (context) {
+                'element' =>
+                  locale == 'en' ? 'Element text' : 'Texto de elemento',
+                'double-quoted-attribute' =>
+                  locale == 'en'
+                      ? 'Double-quoted attribute'
+                      : 'Atributo com aspas duplas',
+                _ =>
+                  locale == 'en'
+                      ? 'Single-quoted attribute'
+                      : 'Atributo com aspas simples',
+              };
+              await tester.tap(find.text(label).last);
+              await tester.pumpAndSettle();
+            }
+            // Traverse the native controls in their published keyboard order.
+            await tester.tap(editor);
+            await tester.pumpAndSettle();
+            for (final name in ['file', 'paste', 'context', 'submit']) {
+              await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+              await tester.pumpAndSettle();
+              expect(
+                find.ancestor(
+                  of: find.byWidget(
+                    FocusManager.instance.primaryFocus!.context!.widget,
+                  ),
+                  matching: find.byKey(Key('html-encode-$name')),
+                ),
+                findsOneWidget,
+                reason: name,
+              );
+            }
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            expect(
+              FocusManager.instance.primaryFocus!.debugLabel,
+              'HTML encoding result',
+            );
+            final result = find.byKey(const Key('html-encode-result'));
+            final data = tester.getSemantics(result).getSemanticsData();
+            expect(
+              data.label,
+              locale == 'en'
+                  ? 'HTML encoded result'
+                  : 'Resultado codificado em HTML',
+            );
+            expect(
+              data.value,
+              locale == 'en'
+                  ? 'HTML encoding succeeded.'
+                  : 'Codificação HTML concluída.',
+            );
+            expect(
+              tester.widget<Semantics>(result).properties.liveRegion,
+              isTrue,
+            );
+            expect(
+              tester
+                  .widget<SelectableText>(
+                    find.byKey(const Key('html-encode-output')),
+                  )
+                  .data,
+              expected,
+            );
+            expect(tester.widget<TextField>(editor).controller!.text, '');
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            expect(copied, expected);
+            expect(copies, 1);
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+            await tester.pumpAndSettle();
+            expect(saves, 1);
+            expect(await saved.readAsBytes(), utf8.encode(expected));
+            expect(network.attempts, 0);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+    for (final action in ['copy', 'save']) {
+      testWidgets(
+        'Given${locale}HtmlResult_When${action}FailsThenMalformedFileLoaded_ThenSourceAndResultAreDiscardedOffline',
+        (tester) async {
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          var handoffs = 0;
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/html/encode',
+              htmlEncodeFilePicker: () async => [0xc3, 0x28],
+              htmlEncodeClipboardWriter: (_) async {
+                handoffs++;
+                throw StateError('private output denial');
+              },
+              htmlEncodeFileSaver: (_, _, _) async {
+                handoffs++;
+                throw StateError('private output denial');
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final editor = find.byKey(const Key('html-encode-input'));
+          await tester.enterText(editor, '<private-source>');
+          await tester.tap(find.byKey(const Key('html-encode-submit')));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.byKey(Key('html-encode-$action')));
+          await tester.tap(find.byKey(Key('html-encode-$action')));
+          await tester.pumpAndSettle();
+          expect(handoffs, 1);
+          expect(find.byKey(const Key('html-encode-result')), findsNothing);
+          expect(find.byKey(const Key('html-encode-output')), findsNothing);
+          expect(tester.widget<TextField>(editor).controller!.text, '');
+          expect(
+            find.text(
+              action == 'copy'
+                  ? (locale == 'en'
+                        ? 'The clipboard text could not be written.'
+                        : 'Não foi possível gravar o texto na área de transferência.')
+                  : (locale == 'en'
+                        ? 'The HTML encoded text could not be saved.'
+                        : 'Não foi possível salvar o texto codificado em HTML.'),
+            ),
+            findsOneWidget,
+          );
+          await tester.tap(find.byKey(const Key('html-encode-file')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('html-encode-submit')));
+          await tester.pumpAndSettle();
+          expect(
+            find.text(
+              locale == 'en'
+                  ? 'The HTML encoding request is invalid.'
+                  : 'A solicitação de codificação HTML é inválida.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.byKey(const Key('html-encode-result')), findsNothing);
+          expect(find.byKey(const Key('html-encode-copy')), findsNothing);
+          expect(find.byKey(const Key('html-encode-save')), findsNothing);
+          expect(find.textContaining('private'), findsNothing);
+          expect(tester.widget<TextField>(editor).controller!.text, '');
+          expect(network.attempts, 0);
+        },
+      );
+    }
+  }
 
   for (final locale in ['en', 'pt-BR']) {
     for (final source in ['text', 'binary']) {
