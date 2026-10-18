@@ -14,6 +14,25 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
+      'Given${locale}HtmlHomeAction_WhenActivated_ThenEncodeRouteOpens',
+      (tester) async {
+        await tester.pumpWidget(ChimeraApp(localeTag: locale));
+        await tester.pumpAndSettle();
+        final action = find.byKey(const Key('open-html-encode'));
+        expect(action, findsOneWidget);
+        await tester.ensureVisible(action);
+        await tester.tap(action);
+        await tester.pumpAndSettle();
+        expect(find.byKey(const Key('html-encode-input')), findsOneWidget);
+        expect(
+          find.text(locale == 'en' ? 'Encode HTML' : 'Codificar HTML'),
+          findsOneWidget,
+        );
+      },
+    );
+  }
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
       'Given${locale}GzipDecompressHomeAction_WhenActivated_ThenDecompressionRouteOpens',
       (tester) async {
         await tester.pumpWidget(ChimeraApp(localeTag: locale));

@@ -3,6 +3,28 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'htmlEncode.pageTitle': 'Encode HTML',
+    'htmlEncode.openAction': 'Encode HTML',
+    'htmlEncode.inputLabel': 'Text to encode',
+    'htmlEncode.fileAction': 'Load UTF-8 file',
+    'htmlEncode.pasteAction': 'Paste text',
+    'htmlEncode.contextLabel': 'HTML context',
+    'htmlEncode.contextAll': 'All characters',
+    'htmlEncode.contextElement': 'Element text',
+    'htmlEncode.contextDoubleQuotedAttribute': 'Double-quoted attribute',
+    'htmlEncode.contextSingleQuotedAttribute': 'Single-quoted attribute',
+    'htmlEncode.submitAction': 'Encode',
+    'htmlEncode.outputLabel': 'HTML encoded result',
+    'htmlEncode.resultSuccess': 'HTML encoding succeeded.',
+    'htmlEncode.copyAction': 'Copy encoded text',
+    'htmlEncode.saveAction': 'Save encoded text',
+    'htmlEncode.copiedResult': 'HTML encoded text copied.',
+    'htmlEncode.fileSaved': 'HTML encoded text saved.',
+    'error.htmlEncode.clipboardRead': 'The clipboard text could not be read.',
+    'error.htmlEncode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.htmlEncode.interactiveInputAccess':
+        'The input could not be processed.',
     'cli.htmlEncodeUsage':
         'Usage: chimera html encode (--input=<text>|--stdin|--file=<path>) '
         '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '
@@ -616,6 +638,29 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'htmlEncode.pageTitle': 'Codificar HTML',
+    'htmlEncode.openAction': 'Codificar HTML',
+    'htmlEncode.inputLabel': 'Texto para codificar',
+    'htmlEncode.fileAction': 'Carregar arquivo UTF-8',
+    'htmlEncode.pasteAction': 'Colar texto',
+    'htmlEncode.contextLabel': 'Contexto HTML',
+    'htmlEncode.contextAll': 'Todos os caracteres',
+    'htmlEncode.contextElement': 'Texto de elemento',
+    'htmlEncode.contextDoubleQuotedAttribute': 'Atributo com aspas duplas',
+    'htmlEncode.contextSingleQuotedAttribute': 'Atributo com aspas simples',
+    'htmlEncode.submitAction': 'Codificar',
+    'htmlEncode.outputLabel': 'Resultado codificado em HTML',
+    'htmlEncode.resultSuccess': 'Codificação HTML concluída.',
+    'htmlEncode.copyAction': 'Copiar texto codificado',
+    'htmlEncode.saveAction': 'Salvar texto codificado',
+    'htmlEncode.copiedResult': 'Texto codificado em HTML copiado.',
+    'htmlEncode.fileSaved': 'Texto codificado em HTML salvo.',
+    'error.htmlEncode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.htmlEncode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.htmlEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
     'cli.htmlEncodeUsage':
         'Uso: chimera html encode (--input=<texto>|--stdin|--file=<caminho>) '
         '[--context=all|element|double-quoted-attribute|single-quoted-attribute] '

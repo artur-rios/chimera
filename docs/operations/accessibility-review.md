@@ -314,3 +314,64 @@ focus order, bounded live semantics, target sizes, contrast, and narrow large
 text layouts. Platform adapters own their save transaction; native screen-reader
 and compiled browser/platform evidence belongs to Task 5. No automated UC-21
 accessibility findings remain open.
+
+## UC-22 HTML Encode
+
+- Release version: UC-22 candidate
+- Branch: `feature/uc-22-html-encode`
+- Reviewer: Chimera UC-22 GUI implementation self-review
+- Date: 2026-10-18
+- Target: shared Flutter web, Windows, and Linux encoding surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Focus follows typed input, file, paste, context, encode, result, copy,
+  and save. Keyboard activation works and success focuses the result.
+- [x] The home action, title, input, sources, four contexts, actions, result,
+  notices, and failures are localized in both locales.
+- [x] Exact output is selectable in a scrolling region bounded to 240 logical
+  pixels. The live result semantics announce only the localized result label
+  and success summary; long source/output text is excluded from announcements.
+- [x] Copy/save success and safe failures use localized live semantics. File,
+  clipboard, service, copy, save, and output-buffer failures distinguish access,
+  validation, and resource categories and clear source, result, and notices.
+- [x] All competing controls disable during asynchronous actions. Thirty
+  success/failure paths verify generation guards after source/context changes
+  or disposal. File, clipboard, and save cancellation preserve completed output.
+- [x] File and clipboard sources replace typed input exclusively. Successful
+  encoding discards the editor history and raw source; Undo/Redo cannot restore
+  discarded text. Disposal clears the source and invalidates pending work.
+- [x] The six source/context/encode/copy/save controls measure at least 48 by 48
+  logical pixels. Android tap-target, labeled-target, and text-contrast
+  guidelines pass with completed results in both locales.
+- [x] At 320 logical pixels and 200% text scale, both locales support opening
+  the actual selector and choosing every context without overflow. Output,
+  copy, and save remain reachable by scrolling.
+
+### Evidence and Findings
+
+The focused HTML suite passes 134 tests. App navigation plus both existing GZIP
+regression files pass 285 tests. The complete GUI suite passes 559 tests,
+including all existing widgets and startup performance. The complete
+localization suite passes 21 tests with exact English/PT-BR key parity. Strict
+GUI and localization analysis and formatting checks pass.
+
+Coverage includes every context and typed/file/clipboard/empty source, strict
+malformed UTF-8 and Unicode failures, clipboard rejection before invalid UTF-16
+can reach Flutter's renderer, BOM/CRLF/NUL preservation, existing entity-looking
+text, source exclusivity and Undo-history disposal, safe typed service
+categories, access/allocation failures in both locales, neutral cancellation,
+all asynchronous lifecycle guards, exact one-time copy/save handoffs, empty
+output, `.txt` filename/MIME, and native default-picker fallthrough.
+
+The current release web build succeeds. The unchanged compiled generic-adapter
+regressions pass all four empty text/binary scenarios across Chromium and
+WebKit: exact zero bytes, one download, expected MIME/filename, zero live object
+URLs after activation, zero observer errors, and no interaction/external HTTP
+requests. This repeats Task 4's empty Blob/one click/revocation proof as a shared
+adapter dependency check; it does not replace HTML-specific Task 6 coverage.
+
+These findings are automated GUI evidence. HTML-specific compiled browser,
+native platform, and screen-reader evidence belongs to Task 6. No automated
+UC-22 accessibility finding remains open.

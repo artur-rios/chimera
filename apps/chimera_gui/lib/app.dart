@@ -14,6 +14,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'html_encode_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -31,6 +32,12 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.htmlEncodeService = const HtmlEncodeService(),
+    this.htmlEncodeFilePicker,
+    this.htmlEncodeClipboardReader,
+    this.htmlEncodeClipboardWriter,
+    this.htmlEncodeFileSaver,
+    this.htmlEncodeOutputEncoder,
     this.gzipCompressService = const GzipCompressService(),
     this.gzipCompressFilePicker,
     this.gzipCompressClipboardReader,
@@ -139,6 +146,12 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final HtmlEncodeOperationService htmlEncodeService;
+  final HtmlEncodeFilePicker? htmlEncodeFilePicker;
+  final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
+  final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
+  final HtmlEncodeFileSaver? htmlEncodeFileSaver;
+  final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
   final GzipCompressClipboardReader? gzipCompressClipboardReader;
@@ -241,6 +254,12 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        htmlEncodeService: htmlEncodeService,
+        htmlEncodeFilePicker: htmlEncodeFilePicker,
+        htmlEncodeClipboardReader: htmlEncodeClipboardReader,
+        htmlEncodeClipboardWriter: htmlEncodeClipboardWriter,
+        htmlEncodeFileSaver: htmlEncodeFileSaver,
+        htmlEncodeOutputEncoder: htmlEncodeOutputEncoder,
         gzipCompressService: gzipCompressService,
         gzipCompressFilePicker: gzipCompressFilePicker,
         gzipCompressClipboardReader: gzipCompressClipboardReader,
@@ -346,6 +365,12 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.htmlEncodeService,
+    required this.htmlEncodeFilePicker,
+    required this.htmlEncodeClipboardReader,
+    required this.htmlEncodeClipboardWriter,
+    required this.htmlEncodeFileSaver,
+    required this.htmlEncodeOutputEncoder,
     required this.gzipCompressService,
     required this.gzipCompressFilePicker,
     required this.gzipCompressClipboardReader,
@@ -540,6 +565,13 @@ final class _RoutedChimeraApp extends StatefulWidget {
   @override
   State<_RoutedChimeraApp> createState() => _RoutedChimeraAppState();
 
+  final HtmlEncodeOperationService htmlEncodeService;
+  final HtmlEncodeFilePicker? htmlEncodeFilePicker;
+  final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
+  final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
+  final HtmlEncodeFileSaver? htmlEncodeFileSaver;
+  final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
+
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
   final GzipCompressClipboardReader? gzipCompressClipboardReader;
@@ -558,6 +590,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      htmlEncodeService: widget.htmlEncodeService,
+      htmlEncodeFilePicker: widget.htmlEncodeFilePicker ?? pickHtmlEncodeFile,
+      htmlEncodeClipboardReader:
+          widget.htmlEncodeClipboardReader ?? readHtmlEncodeClipboard,
+      htmlEncodeClipboardWriter:
+          widget.htmlEncodeClipboardWriter ?? writeHtmlEncodeClipboard,
+      htmlEncodeFileSaver: widget.htmlEncodeFileSaver ?? saveHtmlEncodeFile,
+      htmlEncodeOutputEncoder:
+          widget.htmlEncodeOutputEncoder ?? encodeHtmlEncodeOutput,
       gzipCompressService: widget.gzipCompressService,
       gzipCompressFilePicker:
           widget.gzipCompressFilePicker ?? pickGzipCompressFile,

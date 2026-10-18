@@ -5,6 +5,44 @@ void main() {
   const catalog = MessageCatalog();
 
   test(
+    'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final name in [
+          'pageTitle',
+          'openAction',
+          'inputLabel',
+          'fileAction',
+          'pasteAction',
+          'contextLabel',
+          'contextAll',
+          'contextElement',
+          'contextDoubleQuotedAttribute',
+          'contextSingleQuotedAttribute',
+          'submitAction',
+          'outputLabel',
+          'resultSuccess',
+          'copyAction',
+          'saveAction',
+          'copiedResult',
+          'fileSaved',
+        ]) {
+          final key = 'htmlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        for (final name in [
+          'clipboardRead',
+          'clipboardWrite',
+          'interactiveInputAccess',
+        ]) {
+          final key = 'error.htmlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test(
     'GivenHtmlEncodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       const keys = {
@@ -435,6 +473,26 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'htmlEncode.pageTitle',
+      'htmlEncode.openAction',
+      'htmlEncode.inputLabel',
+      'htmlEncode.fileAction',
+      'htmlEncode.pasteAction',
+      'htmlEncode.contextLabel',
+      'htmlEncode.contextAll',
+      'htmlEncode.contextElement',
+      'htmlEncode.contextDoubleQuotedAttribute',
+      'htmlEncode.contextSingleQuotedAttribute',
+      'htmlEncode.submitAction',
+      'htmlEncode.outputLabel',
+      'htmlEncode.resultSuccess',
+      'htmlEncode.copyAction',
+      'htmlEncode.saveAction',
+      'htmlEncode.copiedResult',
+      'htmlEncode.fileSaved',
+      'error.htmlEncode.clipboardRead',
+      'error.htmlEncode.clipboardWrite',
+      'error.htmlEncode.interactiveInputAccess',
       'cli.htmlEncodeUsage',
       'htmlEncode.savedResult',
       'error.htmlEncode.validation',

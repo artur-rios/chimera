@@ -11,6 +11,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'html_encode_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -26,6 +27,12 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required HtmlEncodeOperationService htmlEncodeService,
+  required HtmlEncodeFilePicker htmlEncodeFilePicker,
+  required HtmlEncodeClipboardReader htmlEncodeClipboardReader,
+  required HtmlEncodeClipboardWriter htmlEncodeClipboardWriter,
+  required HtmlEncodeFileSaver htmlEncodeFileSaver,
+  required HtmlEncodeOutputEncoder htmlEncodeOutputEncoder,
   required GzipCompressOperationService gzipCompressService,
   required GzipCompressFilePicker gzipCompressFilePicker,
   required GzipCompressClipboardReader gzipCompressClipboardReader,
@@ -129,6 +136,19 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/html/encode',
+        builder: (context, state) => HtmlEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: htmlEncodeService,
+          filePicker: htmlEncodeFilePicker,
+          clipboardReader: htmlEncodeClipboardReader,
+          clipboardWriter: htmlEncodeClipboardWriter,
+          fileSaver: htmlEncodeFileSaver,
+          outputEncoder: htmlEncodeOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/gzip/compress',
         builder: (context, state) => GzipCompressPage(
@@ -344,6 +364,14 @@ GoRouter buildRouter({
                             localeTag,
                             'gzipDecompress.openAction',
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-html-encode'),
+                        onPressed: () => context.go('/html/encode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'htmlEncode.openAction'),
                         ),
                       ),
                     ],
