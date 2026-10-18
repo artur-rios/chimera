@@ -2,6 +2,7 @@
 // Creating an unrelated Blob must never supply a clicked anchor's payload.
 function observeGzipSaves({ suppressDownloads = false } = {}) {
   const blobs = new Map();
+  const downloadUrls = new Set();
   const create = URL.createObjectURL.bind(URL);
   const revoke = URL.revokeObjectURL.bind(URL);
   const click = HTMLAnchorElement.prototype.click;
@@ -10,6 +11,7 @@ function observeGzipSaves({ suppressDownloads = false } = {}) {
   window.__chimeraSavedMime = null;
   window.__chimeraSavedBytes = null;
   window.__chimeraSaveCount = 0;
+  window.__chimeraLiveDownloadUrlCount = 0;
   window.__chimeraGzipSaveErrors = [];
   URL.createObjectURL = function(blob) {
     const url = create(blob);
@@ -18,6 +20,8 @@ function observeGzipSaves({ suppressDownloads = false } = {}) {
   };
   URL.revokeObjectURL = function(url) {
     blobs.delete(String(url));
+    downloadUrls.delete(String(url));
+    window.__chimeraLiveDownloadUrlCount = downloadUrls.size;
     return revoke(url);
   };
   HTMLAnchorElement.prototype.click = function() {
@@ -31,6 +35,8 @@ function observeGzipSaves({ suppressDownloads = false } = {}) {
       if (!blob || typeof blob.arrayBuffer !== 'function') {
         window.__chimeraGzipSaveErrors.push('unknown-or-revoked-download-url');
       } else {
+        downloadUrls.add(this.href);
+        window.__chimeraLiveDownloadUrlCount = downloadUrls.size;
         // Retain the clicked Blob while reading: revocation after activation
         // is valid and must not destroy the payload already being downloaded.
         window.__chimeraSavedMime = blob.type;

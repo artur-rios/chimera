@@ -119,6 +119,174 @@ void main() {
   }
 
   for (final locale in ['en', 'pt-BR']) {
+    for (final mode in ['text', 'binary']) {
+      testWidgets(
+        'Given${locale}Gzip${mode}_WhenDecompressedCopiedAndSaved_ThenExactPayloadTransfersOffline',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          final directory = await Directory.systemTemp.createTemp(
+            'chimera-gzip-decompress-',
+          );
+          addTearDown(() => directory.delete(recursive: true));
+          final textMode = mode == 'text';
+          final source = _hex(
+            textMode
+                ? '1f8b08000000000002ff7bbf7b7f222f97020084beddc007000000'
+                : '1f8b08000000000002ff63f8dfc0f88f81970b00f65e06e708000000',
+          );
+          final expected = _hex(
+            textMode ? 'efbbbf610d0a20' : '00ff8001fe000d0a',
+          );
+          String? copied;
+          var saves = 0;
+          final saved = File(
+            '${directory.path}/${textMode ? 'chimera-decompressed.txt' : 'chimera-decompressed.bin'}',
+          );
+          try {
+            await tester.pumpWidget(
+              ChimeraApp(
+                localeTag: locale,
+                initialLocation: '/gzip/decompress',
+                gzipDecompressFilePicker: () async => source,
+                gzipDecompressClipboardWriter: (value) async => copied = value,
+                gzipDecompressFileSaver: (name, bytes, mime) async {
+                  saves++;
+                  expect(
+                    name,
+                    textMode
+                        ? 'chimera-decompressed.txt'
+                        : 'chimera-decompressed.bin',
+                  );
+                  expect(
+                    mime,
+                    textMode
+                        ? 'text/plain; charset=utf-8'
+                        : 'application/octet-stream',
+                  );
+                  await saved.writeAsBytes(bytes, flush: true);
+                  return true;
+                },
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.byKey(const Key('gzip-decompress-file')));
+            await tester.pumpAndSettle();
+            if (!textMode) {
+              await tester.tap(
+                find.byKey(const Key('gzip-decompress-mode-binary')),
+              );
+              await tester.pumpAndSettle();
+            }
+            await tester.tap(find.byKey(const Key('gzip-decompress-submit')));
+            await tester.pumpAndSettle();
+
+            final result = tester
+                .getSemantics(find.byKey(const Key('gzip-decompress-result')))
+                .getSemanticsData();
+            expect(
+              result.label,
+              locale == 'en'
+                  ? 'Decompressed result'
+                  : 'Resultado descomprimido',
+            );
+            expect(
+              result.value,
+              locale == 'en'
+                  ? 'Decompression succeeded.\nInput bytes: ${source.length}\nOutput bytes: ${expected.length}'
+                  : 'Descompressão concluída.\nBytes de entrada: ${source.length}\nBytes de saída: ${expected.length}',
+            );
+            expect(
+              tester
+                  .widget<Semantics>(
+                    find.byKey(const Key('gzip-decompress-result')),
+                  )
+                  .properties
+                  .liveRegion,
+              isTrue,
+            );
+            expect(
+              find.byKey(const Key('gzip-decompress-file-summary')),
+              findsNothing,
+            );
+            if (textMode) {
+              expect(
+                tester
+                    .widget<SelectableText>(
+                      find.byKey(const Key('gzip-decompress-text')),
+                    )
+                    .data,
+                '\uFEFFa\r\n ',
+              );
+              await tester.tap(find.byKey(const Key('gzip-decompress-copy')));
+              await tester.pumpAndSettle();
+              expect(copied, '\uFEFFa\r\n ');
+            } else {
+              expect(
+                find.byKey(const Key('gzip-decompress-text')),
+                findsNothing,
+              );
+              expect(
+                find.byKey(const Key('gzip-decompress-copy')),
+                findsNothing,
+              );
+            }
+            await tester.ensureVisible(
+              find.byKey(const Key('gzip-decompress-save')),
+            );
+            await tester.tap(find.byKey(const Key('gzip-decompress-save')));
+            await tester.pumpAndSettle();
+            expect(saves, 1);
+            expect(await saved.readAsBytes(), expected);
+            expect(network.attempts, 0);
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+
+    testWidgets(
+      'Given${locale}CorruptGzip_WhenDecompressed_ThenRedactedFailureHasNoPartialOutputOffline',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: locale,
+            initialLocation: '/gzip/decompress',
+            gzipDecompressFilePicker: () async => [31, 139, 8, 0, 1],
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('gzip-decompress-file')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('gzip-decompress-submit')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            locale == 'en'
+                ? 'The GZIP data could not be decompressed.'
+                : 'Não foi possível descomprimir os dados GZIP.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('gzip-decompress-result')), findsNothing);
+        expect(
+          find.byKey(const Key('gzip-decompress-file-summary')),
+          findsNothing,
+        );
+        expect(network.attempts, 0);
+      },
+    );
+  }
+
+  for (final locale in ['en', 'pt-BR']) {
     for (final source in ['pem', 'der']) {
       testWidgets(
         'Given${locale}Certificate${source}_WhenConvertedAndSaved_ThenExactFixtureAndSafeSemanticsTransferOffline',
@@ -943,6 +1111,11 @@ void _assertGzipMember(List<int> actual, String expectedHex, List<int> source) {
   // dart:io delegates to the platform zlib decoder, independent of archive.
   expect(gzip.decode(actual), source);
 }
+
+List<int> _hex(String value) => [
+  for (var offset = 0; offset < value.length; offset += 2)
+    int.parse(value.substring(offset, offset + 2), radix: 16),
+];
 
 final class _RejectConversionNetwork extends HttpOverrides {
   var attempts = 0;

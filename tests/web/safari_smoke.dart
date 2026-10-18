@@ -945,8 +945,10 @@ Future<void> main(List<String> arguments) async {
       await _compressGzip(driver, source);
     }
 
+    await _decompressGzip(driver);
+
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -1117,6 +1119,152 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
     );
   }
   await _assertNoNetworkRequests(driver, flow: 'GZIP $source compression/save');
+}
+
+Future<void> _decompressGzip(WebDriver driver) async {
+  const archive = <int>[
+    31,
+    139,
+    8,
+    0,
+    0,
+    0,
+    0,
+    0,
+    2,
+    255,
+    123,
+    191,
+    123,
+    127,
+    34,
+    47,
+    151,
+    2,
+    0,
+    132,
+    190,
+    221,
+    192,
+    7,
+    0,
+    0,
+    0,
+  ];
+  const expected = <int>[239, 187, 191, 97, 13, 10, 32];
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'GZIP decompression semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Decompress GZIP');
+  await _waitUntil(
+    () => _pageContains(driver, 'Load GZIP file'),
+    'GZIP decompression page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'GZIP decompression startup');
+  final saveObserver = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$saveObserver\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute('''
+    window.__chimeraCopiedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {writeText: async value => { window.__chimeraCopiedText = value; }},
+    });
+    const originalInputClick = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return originalInputClick.call(this);
+    };
+    performance.clearResourceTimings();
+  ''', const <Object?>[]);
+  await _clickButton(driver, 'Load GZIP file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          '''
+      const picker = document.querySelector('input[type="file"]');
+      if (!picker) return false;
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([new Uint8Array(arguments[0])],
+        'extension-independent.data', {type: 'application/octet-stream'}));
+      picker.files = transfer.files;
+      picker.dispatchEvent(new Event('change', {bubbles: true}));
+      return true;
+    ''',
+          const <Object?>[archive],
+        ) ==
+        true,
+    'GZIP decompression fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'Input bytes: 27'),
+    'GZIP decompression input count was incorrect',
+  );
+  await _clickButton(driver, 'Decompress');
+  const summary =
+      'Decompressed result Decompression succeeded. '
+      'Input bytes: 27 Output bytes: 7';
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+    const normalize = value => value.replace(/\s+/g, ' ').trim();
+    return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+      .some(element => normalize(element.getAttribute('aria-label') || '') === arguments[0]);
+  ''',
+          const <Object?>[summary],
+        ) ==
+        true,
+    'GZIP decompression success semantics/counts were incorrect',
+  );
+  await _clickButton(driver, 'Copy decompressed text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          'return window.__chimeraCopiedText === arguments[0];',
+          const <Object?>['\uFEFFa\r\n '],
+        ) ==
+        true,
+    'GZIP BOM text was not copied exactly',
+  );
+  await _clickButton(driver, 'Save decompressed bytes');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          '''
+    return window.__chimeraSavedName === 'chimera-decompressed.txt' &&
+      window.__chimeraSaveCount === 1 &&
+      window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+      window.__chimeraLiveDownloadUrlCount === 0 &&
+      window.__chimeraGzipSaveErrors.length === 0 &&
+      JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+  ''',
+          const <Object?>[expected],
+        ) ==
+        true,
+    'GZIP decompression exact save or URL cleanup did not complete',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'Decompressed bytes saved.'),
+    'GZIP decompression save notice did not complete',
+  );
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'GZIP BOM text decompression/copy/save',
+  );
 }
 
 Future<void> _convertCertificate(WebDriver driver, String source) async {
