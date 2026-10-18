@@ -10,6 +10,7 @@ import 'certificate_inspect_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
+import 'gzip_decompress_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -29,6 +30,10 @@ GoRouter buildRouter({
   required GzipCompressFilePicker gzipCompressFilePicker,
   required GzipCompressClipboardReader gzipCompressClipboardReader,
   required GzipCompressFileSaver gzipCompressFileSaver,
+  required GzipDecompressOperationService gzipDecompressService,
+  required GzipDecompressFilePicker gzipDecompressFilePicker,
+  required GzipDecompressClipboardWriter gzipDecompressClipboardWriter,
+  required GzipDecompressFileSaver gzipDecompressFileSaver,
   required CertificateConvertOperationService certificateConvertService,
   required CertificateConvertFilePicker certificateConvertFilePicker,
   required CertificateConvertFileSaver certificateConvertFileSaver,
@@ -133,6 +138,17 @@ GoRouter buildRouter({
           filePicker: gzipCompressFilePicker,
           clipboardReader: gzipCompressClipboardReader,
           fileSaver: gzipCompressFileSaver,
+        ),
+      ),
+      GoRoute(
+        path: '/gzip/decompress',
+        builder: (context, state) => GzipDecompressPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: gzipDecompressService,
+          filePicker: gzipDecompressFilePicker,
+          clipboardWriter: gzipDecompressClipboardWriter,
+          fileSaver: gzipDecompressFileSaver,
         ),
       ),
       GoRoute(
@@ -317,6 +333,17 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/gzip/compress'),
                         child: Text(
                           catalog.lookup(localeTag, 'gzipCompress.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-gzip-decompress'),
+                        onPressed: () => context.go('/gzip/decompress'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'gzipDecompress.openAction',
+                          ),
                         ),
                       ),
                     ],

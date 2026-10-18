@@ -262,3 +262,55 @@ Saving promises exact one-time payload handoff; platform file-picker
 implementations own their save transaction. These are automated widget findings;
 native screen-reader and compiled browser/platform evidence belongs to Task 5.
 No automated UC-20 accessibility findings remain open.
+
+## UC-21 GZIP Decompress
+
+- Release version: UC-21 candidate for issue #22
+- Branch: `feature/uc-21-gzip-decompress`
+- Reviewer: Chimera UC-21 GUI implementation self-review
+- Date: 2026-10-17
+- Target: shared Flutter web, Windows, and Linux decompression surface
+- Locales: English and Brazilian Portuguese
+
+### Checks
+
+- [x] Keyboard focus follows local file, explicit Text/Binary mode,
+  decompress, result, text copy when applicable, and save. Success focuses the
+  result; all actions support keyboard activation.
+- [x] The title, home action, file input, mode choices, decompress/copy/save,
+  result summaries, notices, and failures are localized in both locales.
+- [x] The live result region announces only success and byte counts. Exact text
+  remains selectable and copyable, including U+FEFF, while binary bytes are
+  never rendered or exposed to the clipboard.
+- [x] Successful decompression discards application-owned source state before
+  the asynchronous operation completes and retains only the immutable result
+  needed for one exact copy/save handoff.
+- [x] File, service, clipboard, and save failures publish only safe localized
+  live errors and clear source, result, notices, and result actions. Resource
+  exhaustion is distinguished from validation/access failures.
+- [x] Busy work disables file, mode, decompress, copy, and save actions.
+  Generation guards ignore late service/file/copy/save completions after
+  disposal; file and save cancellation remain neutral.
+- [x] File, mode, decompress, copy, and save controls meet the 48-by-48 logical
+  pixel target. Flutter Android tap-target, labeled-target, and text-contrast
+  guidelines pass with completed results in both locales.
+- [x] At 320 logical pixels and 200% text scale, both locales render without
+  overflow and selectable output plus copy/save remain reachable by scrolling.
+
+### Evidence and Findings
+
+The focused UC-21 widget file passes 21 tests. The complete GUI suite passes
+419 tests, including localized home navigation, every existing widget surface,
+catalog checks, and startup performance. The complete localization suite passes
+19 tests with exact English/PT-BR key parity; strict GUI and localization
+analysis report no issues.
+
+UC-21 regressions cover extension-independent GZIP input, empty/ASCII/Unicode
+and BOM-prefixed text, arbitrary binary, explicit mode behavior, invalid UTF-8,
+corruption, resource limits, exact immutable byte identity and one-time platform
+save handoff, `.txt`/`.bin` filenames and MIME types, source discard, redacted
+file/copy/save/service failures, cancellation, busy controls, disposal guards,
+focus order, bounded live semantics, target sizes, contrast, and narrow large
+text layouts. Platform adapters own their save transaction; native screen-reader
+and compiled browser/platform evidence belongs to Task 5. No automated UC-21
+accessibility findings remain open.

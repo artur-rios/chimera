@@ -110,6 +110,36 @@ void main() {
     );
   });
 
+  test('GivenGzipDecompressInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    for (final locale in supportedLocaleTags) {
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'fileAction',
+        'modeLabel',
+        'textMode',
+        'binaryMode',
+        'submitAction',
+        'copyAction',
+        'saveAction',
+        'copiedResult',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ]) {
+        final key = 'gzipDecompress.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      for (final name in ['interactiveInputAccess', 'clipboardWrite']) {
+        final key = 'error.gzipDecompress.$name';
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test(
     'GivenCertificateConvertMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -410,6 +440,26 @@ void main() {
       'error.gzipDecompress.fileAccess',
       'error.gzipDecompress.outputAccess',
       'error.gzipDecompress.resource',
+      for (final name in [
+        'pageTitle',
+        'openAction',
+        'fileAction',
+        'modeLabel',
+        'textMode',
+        'binaryMode',
+        'submitAction',
+        'copyAction',
+        'saveAction',
+        'copiedResult',
+        'fileSaved',
+        'outputLabel',
+        'resultSuccess',
+        'inputByteCountLabel',
+        'outputByteCountLabel',
+      ])
+        'gzipDecompress.$name',
+      'error.gzipDecompress.interactiveInputAccess',
+      'error.gzipDecompress.clipboardWrite',
       'cli.certificateConvertUsage',
       'certificateConvert.savedResult',
       'certificateConvert.pageTitle',

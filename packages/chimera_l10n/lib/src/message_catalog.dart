@@ -38,6 +38,21 @@ _catalogs = <String, Map<String, String>>{
         'Binary human output requires --output. Exit codes: '
         '64 validation, 74 access, 75 resource.',
     'gzipDecompress.savedResult': 'Decompressed bytes saved.',
+    'gzipDecompress.pageTitle': 'Decompress GZIP',
+    'gzipDecompress.openAction': 'Decompress GZIP',
+    'gzipDecompress.fileAction': 'Load GZIP file',
+    'gzipDecompress.modeLabel': 'Output mode',
+    'gzipDecompress.textMode': 'Text',
+    'gzipDecompress.binaryMode': 'Binary',
+    'gzipDecompress.submitAction': 'Decompress',
+    'gzipDecompress.copyAction': 'Copy decompressed text',
+    'gzipDecompress.saveAction': 'Save decompressed bytes',
+    'gzipDecompress.copiedResult': 'Decompressed text copied.',
+    'gzipDecompress.fileSaved': 'Decompressed bytes saved.',
+    'gzipDecompress.outputLabel': 'Decompressed result',
+    'gzipDecompress.resultSuccess': 'Decompression succeeded.',
+    'gzipDecompress.inputByteCountLabel': 'Input bytes',
+    'gzipDecompress.outputByteCountLabel': 'Output bytes',
     'error.gzipDecompress.validation':
         'The GZIP decompression request is invalid.',
     'error.gzipDecompress.inputAccess': 'The standard input could not be read.',
@@ -46,6 +61,10 @@ _catalogs = <String, Map<String, String>>{
         'The decompressed bytes could not be saved.',
     'error.gzipDecompress.resource':
         'GZIP decompression exceeded its resource limit.',
+    'error.gzipDecompress.interactiveInputAccess':
+        'The GZIP data could not be decompressed.',
+    'error.gzipDecompress.clipboardWrite':
+        'The decompressed text could not be copied.',
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
     'cli.certificateConvertUsage':
@@ -621,6 +640,21 @@ _catalogs = <String, Map<String, String>>{
         'A saída binária legível requer --output. Códigos de saída: '
         '64 validação, 74 acesso, 75 recursos.',
     'gzipDecompress.savedResult': 'Bytes descomprimidos salvos.',
+    'gzipDecompress.pageTitle': 'Descomprimir GZIP',
+    'gzipDecompress.openAction': 'Descomprimir GZIP',
+    'gzipDecompress.fileAction': 'Carregar arquivo GZIP',
+    'gzipDecompress.modeLabel': 'Modo de saída',
+    'gzipDecompress.textMode': 'Texto',
+    'gzipDecompress.binaryMode': 'Binário',
+    'gzipDecompress.submitAction': 'Descomprimir',
+    'gzipDecompress.copyAction': 'Copiar texto descomprimido',
+    'gzipDecompress.saveAction': 'Salvar bytes descomprimidos',
+    'gzipDecompress.copiedResult': 'Texto descomprimido copiado.',
+    'gzipDecompress.fileSaved': 'Bytes descomprimidos salvos.',
+    'gzipDecompress.outputLabel': 'Resultado descomprimido',
+    'gzipDecompress.resultSuccess': 'Descompressão concluída.',
+    'gzipDecompress.inputByteCountLabel': 'Bytes de entrada',
+    'gzipDecompress.outputByteCountLabel': 'Bytes de saída',
     'error.gzipDecompress.validation':
         'A solicitação de descompressão GZIP é inválida.',
     'error.gzipDecompress.inputAccess':
@@ -631,6 +665,10 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar os bytes descomprimidos.',
     'error.gzipDecompress.resource':
         'A descompressão GZIP excedeu o limite de recursos.',
+    'error.gzipDecompress.interactiveInputAccess':
+        'Não foi possível descomprimir os dados GZIP.',
+    'error.gzipDecompress.clipboardWrite':
+        'Não foi possível copiar o texto descomprimido.',
     'cli.certificateConvertUsage':
         'Uso: chimera certificate convert (--text=<valor>|--stdin|--file=<caminho>) '
         '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<caminho>] [--json]',
