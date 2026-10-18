@@ -20,6 +20,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'jwt_create_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'router.dart';
@@ -33,6 +34,11 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.jwtCreateService = const JwtCreateService(),
+    this.jwtCreateFilePicker,
+    this.jwtCreateClipboardReader,
+    this.jwtCreateClipboardWriter,
+    this.jwtCreateFileSaver,
     this.htmlDecodeService = const HtmlDecodeService(),
     this.htmlDecodeFilePicker,
     this.htmlDecodeClipboardReader,
@@ -153,6 +159,11 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final JwtCreateOperationService jwtCreateService;
+  final JwtCreateFilePicker? jwtCreateFilePicker;
+  final JwtCreateClipboardReader? jwtCreateClipboardReader;
+  final JwtCreateClipboardWriter? jwtCreateClipboardWriter;
+  final JwtCreateFileSaver? jwtCreateFileSaver;
   final HtmlDecodeOperationService htmlDecodeService;
   final HtmlDecodeFilePicker? htmlDecodeFilePicker;
   final HtmlDecodeClipboardReader? htmlDecodeClipboardReader;
@@ -267,6 +278,11 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        jwtCreateService: jwtCreateService,
+        jwtCreateFilePicker: jwtCreateFilePicker,
+        jwtCreateClipboardReader: jwtCreateClipboardReader,
+        jwtCreateClipboardWriter: jwtCreateClipboardWriter,
+        jwtCreateFileSaver: jwtCreateFileSaver,
         htmlDecodeService: htmlDecodeService,
         htmlDecodeFilePicker: htmlDecodeFilePicker,
         htmlDecodeClipboardReader: htmlDecodeClipboardReader,
@@ -384,6 +400,11 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.jwtCreateService,
+    required this.jwtCreateFilePicker,
+    required this.jwtCreateClipboardReader,
+    required this.jwtCreateClipboardWriter,
+    required this.jwtCreateFileSaver,
     required this.htmlDecodeService,
     required this.htmlDecodeFilePicker,
     required this.htmlDecodeClipboardReader,
@@ -497,6 +518,11 @@ final class _RoutedChimeraApp extends StatefulWidget {
   });
 
   final String localeTag;
+  final JwtCreateOperationService jwtCreateService;
+  final JwtCreateFilePicker? jwtCreateFilePicker;
+  final JwtCreateClipboardReader? jwtCreateClipboardReader;
+  final JwtCreateClipboardWriter? jwtCreateClipboardWriter;
+  final JwtCreateFileSaver? jwtCreateFileSaver;
   final Base64DecodeService base64DecodeService;
   final CertificateConvertOperationService certificateConvertService;
   final CertificateConvertFilePicker? certificateConvertFilePicker;
@@ -622,6 +648,13 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      jwtCreateService: widget.jwtCreateService,
+      jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
+      jwtCreateClipboardReader:
+          widget.jwtCreateClipboardReader ?? readJwtCreateClipboard,
+      jwtCreateClipboardWriter:
+          widget.jwtCreateClipboardWriter ?? writeJwtCreateClipboard,
+      jwtCreateFileSaver: widget.jwtCreateFileSaver ?? saveJwtCreateFile,
       htmlDecodeService: widget.htmlDecodeService,
       htmlDecodeFilePicker: widget.htmlDecodeFilePicker ?? pickHtmlDecodeFile,
       htmlDecodeClipboardReader:

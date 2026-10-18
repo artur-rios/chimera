@@ -17,6 +17,7 @@ import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
 import 'json_yaml_page.dart';
+import 'jwt_create_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
 import 'sql_format_page.dart';
@@ -28,6 +29,11 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required JwtCreateOperationService jwtCreateService,
+  required JwtCreateFilePicker jwtCreateFilePicker,
+  required JwtCreateClipboardReader jwtCreateClipboardReader,
+  required JwtCreateClipboardWriter jwtCreateClipboardWriter,
+  required JwtCreateFileSaver jwtCreateFileSaver,
   required HtmlDecodeOperationService htmlDecodeService,
   required HtmlDecodeFilePicker htmlDecodeFilePicker,
   required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
@@ -143,6 +149,18 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/jwt/create',
+        builder: (context, state) => JwtCreatePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: jwtCreateService,
+          filePicker: jwtCreateFilePicker,
+          clipboardReader: jwtCreateClipboardReader,
+          clipboardWriter: jwtCreateClipboardWriter,
+          fileSaver: jwtCreateFileSaver,
+        ),
+      ),
       GoRoute(
         path: '/html/decode',
         builder: (context, state) => HtmlDecodePage(
@@ -400,6 +418,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/html/decode'),
                         child: Text(
                           catalog.lookup(localeTag, 'htmlDecode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-jwt-create'),
+                        onPressed: () => context.go('/jwt/create'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'jwtCreate.openAction'),
                         ),
                       ),
                     ],
