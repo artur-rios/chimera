@@ -204,7 +204,7 @@ void main() {
       out: out,
       err: err,
       jwtInspectService: const JwtInspectService(
-        inspector: JwtInspector(maxInputCharacters: 1),
+        inspector: JwtInspector(maxInputBytes: 1),
       ),
     );
 

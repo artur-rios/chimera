@@ -160,7 +160,7 @@ void main() {
           (
             name: 'ResourceFailure',
             request: JwtInspectOperationRequest(token: _token),
-            inspector: const JwtInspector(maxInputCharacters: 1),
+            inspector: const JwtInspector(maxInputBytes: 1),
             kind: FailureKind.resource,
             code: 'jwt-inspect.resource-limit',
             field: 'token',

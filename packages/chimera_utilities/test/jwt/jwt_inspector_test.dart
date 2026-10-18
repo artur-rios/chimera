@@ -505,10 +505,28 @@ void main() {
   });
 
   group('JwtInspector failures', () {
+    test('GivenMultibyteKeyOverByteBudget_WhenInspected_ThenResourceFails', () {
+      final key = String.fromCharCodes(
+        List<int>.filled(JwtInspector.defaultMaxInputBytes ~/ 2 + 1, 0x00e9),
+      );
+
+      expect(
+        () => const JwtInspector().inspect(
+          JwtInspectRequest(token: _knownToken, key: key),
+        ),
+        _failure(
+          kind: JwtInspectFailureKind.resource,
+          code: 'jwt-inspect.resource-limit',
+          field: 'key',
+          reason: 'input-limit',
+        ),
+      );
+    });
+
     test('GivenInputBudgetExceeded_WhenInspected_ThenResourceFails', () {
       expect(
         () =>
-            const JwtInspector(maxInputCharacters: 1)
+            const JwtInspector(maxInputBytes: 1)
                 .inspect(const JwtInspectRequest(token: _knownToken)),
         _failure(
           kind: JwtInspectFailureKind.resource,

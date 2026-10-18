@@ -55,30 +55,29 @@ typedef JwtVerifyFunction = bool Function(
 
 final class JwtInspector {
   const JwtInspector({
-    this.maxInputCharacters = defaultMaxInputCharacters,
+    this.maxInputBytes = defaultMaxInputBytes,
     this.maxDecodedBytes = defaultMaxDecodedBytes,
     this.maxNestingDepth = defaultMaxNestingDepth,
-  }) : assert(maxInputCharacters == null || maxInputCharacters >= 0),
+  }) : assert(maxInputBytes == null || maxInputBytes >= 0),
        assert(maxDecodedBytes == null || maxDecodedBytes >= 0),
        assert(maxNestingDepth == null || maxNestingDepth >= 0),
        verify = _verifyWithJose;
 
   const JwtInspector.forTesting({
-    this.maxInputCharacters,
+    this.maxInputBytes,
     this.maxDecodedBytes,
     this.maxNestingDepth,
     this.verify = _verifyWithJose,
-  }) : assert(maxInputCharacters == null || maxInputCharacters >= 0),
+  }) : assert(maxInputBytes == null || maxInputBytes >= 0),
        assert(maxDecodedBytes == null || maxDecodedBytes >= 0),
        assert(maxNestingDepth == null || maxNestingDepth >= 0);
 
   static const supportedAlgorithms = JwtCreator.supportedAlgorithms;
-  static const defaultMaxInputCharacters = 1024 * 1024;
   static const defaultMaxInputBytes = 1024 * 1024;
   static const defaultMaxDecodedBytes = 768 * 1024;
   static const defaultMaxNestingDepth = 64;
 
-  final int? maxInputCharacters;
+  final int? maxInputBytes;
   final int? maxDecodedBytes;
   final int? maxNestingDepth;
   final JwtVerifyFunction verify;
@@ -186,7 +185,8 @@ final class JwtInspector {
   }
 
   void _checkInputBudget(String field, String value) {
-    if (maxInputCharacters case final limit? when value.length > limit) {
+    if (maxInputBytes case final limit?
+        when inputExceedsByteLimit(value, limit: limit)) {
       throw JwtInspectException(
         kind: JwtInspectFailureKind.resource,
         code: 'jwt-inspect.resource-limit',
@@ -194,6 +194,31 @@ final class JwtInspector {
         reason: 'input-limit',
       );
     }
+  }
+
+  static bool inputExceedsByteLimit(
+    String value, {
+    int limit = defaultMaxInputBytes,
+  }) {
+    assert(limit >= 0);
+    var length = 0;
+    for (var index = 0; index < value.length; index++) {
+      final unit = value.codeUnitAt(index);
+      final width = switch (unit) {
+        <= 0x7f => 1,
+        <= 0x7ff => 2,
+        >= 0xd800 && <= 0xdbff
+            when index + 1 < value.length &&
+                value.codeUnitAt(index + 1) >= 0xdc00 &&
+                value.codeUnitAt(index + 1) <= 0xdfff =>
+          4,
+        _ => 3,
+      };
+      if (width == 4) index++;
+      if (length > limit - width) return true;
+      length += width;
+    }
+    return false;
   }
 
   void _checkDecodedBudget(int length) {

@@ -158,6 +158,9 @@ final class _JwtInspectPageState extends State<JwtInspectPage> {
       final text = await widget.clipboardReader(field);
       if (!_current(generation)) return;
       if (text != null) {
+        if (JwtInspector.inputExceedsByteLimit(text)) {
+          throw const _JwtInspectInputLimit();
+        }
         setState(() {
           _output = null;
           _error = null;
@@ -167,6 +170,8 @@ final class _JwtInspectPageState extends State<JwtInspectPage> {
         });
       }
       if (_current(generation)) setState(() => _busy = false);
+    } on _JwtInspectInputLimit {
+      _fail(generation, 'resource');
     } on OutOfMemoryError {
       _fail(generation, 'resource');
     } on Object {

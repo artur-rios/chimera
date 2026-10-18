@@ -194,6 +194,36 @@ void main() {
     expect(find.byKey(const Key('jwt-inspect-output')), findsNothing);
   });
 
+  testWidgets(
+    'GivenOversizedAsciiClipboard_WhenPasted_ThenResourceFailureRetainsNothing',
+    (tester) async {
+      final oversized = String.fromCharCodes(
+        List<int>.filled(JwtInspector.defaultMaxInputBytes + 1, 0x61),
+      );
+      await tester.pumpWidget(
+        ChimeraApp(
+          initialLocation: '/jwt/inspect',
+          jwtInspectClipboardReader: (_) async => oversized,
+        ),
+      );
+      await tester.tap(find.byKey(const Key('jwt-inspect-token-paste')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('JWT inspection exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TextField>(find.byKey(const Key('jwt-inspect-token')))
+            .controller!
+            .text,
+        isEmpty,
+      );
+      expect(find.byKey(const Key('jwt-inspect-output')), findsNothing);
+    },
+  );
+
   testWidgets('GivenResult_WhenCopied_ThenStableJsonIsHandedOff', (
     tester,
   ) async {
