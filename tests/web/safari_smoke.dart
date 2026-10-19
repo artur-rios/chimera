@@ -1131,7 +1131,12 @@ Future<void> main(List<String> arguments) async {
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
-    await _generateChecksum(driver);
+    try {
+      await _generateChecksum(driver);
+    } on Object {
+      await _capturePageDiagnostics(driver, 'checksum-failure');
+      rethrow;
+    }
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
@@ -2714,7 +2719,7 @@ Future<bool> _inputHasValue(
   return result == true;
 }
 
-// Only the public baseline cron fixture calls this; preserve the original
+// Only public smoke fixtures call this; preserve the original
 // failure even if Safari cannot provide one of the diagnostic artifacts.
 Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
   try {
@@ -2825,6 +2830,7 @@ Future<void> _generateChecksum(WebDriver driver) async {
 
   for (final algorithm in ['crc32', 'adler32']) {
     for (final inputSource in ['clipboard', 'file', 'empty', 'allbytes']) {
+      stdout.writeln('Safari checksum scenario: $algorithm $inputSource');
       await openChecksum();
       final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
         (v) =>
@@ -2873,7 +2879,7 @@ Future<void> _generateChecksum(WebDriver driver) async {
         );
         await _waitUntil(
           () async => await probe('algorithm', algorithm.toUpperCase()) == true,
-          'Checksum algorithm choice missing',
+          'Checksum algorithm choice missing: $algorithm $inputSource',
         );
       }
       await _clickButton(driver, 'Generate checksum');
@@ -2905,6 +2911,7 @@ Future<void> _generateChecksum(WebDriver driver) async {
     }
   }
   for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    stdout.writeln('Safari checksum failure scenario: $failure');
     await openChecksum();
     if (failure == 'file') {
       await probe('fileFailure');
