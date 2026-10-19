@@ -384,7 +384,7 @@ final class _UrlDecodePageState extends State<UrlDecodePage> {
                           container: true,
                           focusable: true,
                           liveRegion: true,
-                          excludeSemantics: true,
+                          explicitChildNodes: true,
                           role: SemanticsRole.region,
                           label: _label('outputLabel'),
                           value: _label('resultSuccess'),
@@ -399,11 +399,13 @@ final class _UrlDecodePageState extends State<UrlDecodePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  _label('outputLabel'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
+                                ExcludeSemantics(
+                                  child: Text(
+                                    _label('outputLabel'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 ConstrainedBox(
