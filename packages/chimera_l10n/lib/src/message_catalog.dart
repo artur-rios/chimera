@@ -201,6 +201,40 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlEncode.outputAccess':
         'The HTML encoded text could not be saved.',
     'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
+    'urlEncode.pageTitle': 'Encode URL',
+    'urlEncode.openAction': 'Encode URL',
+    'urlEncode.inputLabel': 'Text to encode',
+    'urlEncode.fileAction': 'Load UTF-8 file',
+    'urlEncode.pasteAction': 'Paste text',
+    'urlEncode.modeLabel': 'URL mode',
+    'urlEncode.modeComponent': 'URL component',
+    'urlEncode.modeFull': 'Full value',
+    'urlEncode.submitAction': 'Encode',
+    'urlEncode.outputLabel': 'URL encoded result',
+    'urlEncode.resultSuccess': 'URL encoding succeeded.',
+    'urlEncode.copyAction': 'Copy encoded text',
+    'urlEncode.saveAction': 'Save encoded text',
+    'urlEncode.copiedResult': 'URL encoded text copied.',
+    'urlEncode.fileSaved': 'URL encoded text saved.',
+    'error.urlEncode.clipboardRead': 'The clipboard text could not be read.',
+    'error.urlEncode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.urlEncode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.urlEncodeUsage':
+        'Usage: chimera url encode (--input=<text>|--stdin|--file=<path>) '
+        '[--mode=component|full] '
+        '[--output=<path>] [--json]\n'
+        'Default mode: component. Full mode preserves URL delimiters; '
+        'component mode encodes them. Human stdout is exact text without a newline. '
+        'Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 74 access, 75 resource.',
+    'urlEncode.savedResult': 'URL encoded text saved.',
+    'error.urlEncode.validation': 'The URL encoding request is invalid.',
+    'error.urlEncode.inputAccess': 'The standard input could not be read.',
+    'error.urlEncode.fileAccess': 'The input file could not be read.',
+    'error.urlEncode.outputAccess': 'The URL encoded text could not be saved.',
+    'error.urlEncode.resource': 'URL encoding exceeded its resource limit.',
     'htmlDecode.pageTitle': 'Decode HTML',
     'htmlDecode.openAction': 'Decode HTML',
     'htmlDecode.inputLabel': 'HTML entities to decode',
@@ -231,6 +265,35 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlDecode.outputAccess':
         'The HTML decoded text could not be saved.',
     'error.htmlDecode.resource': 'HTML decoding exceeded its resource limit.',
+    'urlDecode.pageTitle': 'Decode URL',
+    'urlDecode.openAction': 'Decode URL',
+    'urlDecode.inputLabel': 'Percent-encoded text to decode',
+    'urlDecode.fileAction': 'Load UTF-8 file',
+    'urlDecode.pasteAction': 'Paste text',
+    'urlDecode.submitAction': 'Decode',
+    'urlDecode.outputLabel': 'URL decoded result',
+    'urlDecode.resultSuccess': 'URL decoding succeeded.',
+    'urlDecode.copyAction': 'Copy decoded text',
+    'urlDecode.saveAction': 'Save decoded text',
+    'urlDecode.copiedResult': 'URL decoded text copied.',
+    'urlDecode.fileSaved': 'URL decoded text saved.',
+    'error.urlDecode.clipboardRead': 'The clipboard text could not be read.',
+    'error.urlDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.urlDecode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.urlDecodeUsage':
+        'Usage: chimera url decode (--input=<text>|--stdin|--file=<path>) '
+        '[--output=<path>] [--json]\n'
+        'Human stdout is exact text without a newline. Output saves UTF-8 '
+        'text; JSON emits the result after saving. Exit codes: 64 validation, '
+        '74 access, 75 resource.',
+    'urlDecode.savedResult': 'URL decoded text saved.',
+    'error.urlDecode.validation': 'The URL decoding request is invalid.',
+    'error.urlDecode.inputAccess': 'The standard input could not be read.',
+    'error.urlDecode.fileAccess': 'The input file could not be read.',
+    'error.urlDecode.outputAccess': 'The URL decoded text could not be saved.',
+    'error.urlDecode.resource': 'URL decoding exceeded its resource limit.',
     'gzipCompress.pageTitle': 'Compress GZIP',
     'gzipCompress.openAction': 'Compress to GZIP',
     'gzipCompress.inputLabel': 'Text to compress',
@@ -1051,6 +1114,44 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto codificado em HTML.',
     'error.htmlEncode.resource':
         'A codificação HTML excedeu o limite de recursos.',
+    'urlEncode.pageTitle': 'Codificar URL',
+    'urlEncode.openAction': 'Codificar URL',
+    'urlEncode.inputLabel': 'Texto para codificar',
+    'urlEncode.fileAction': 'Carregar arquivo UTF-8',
+    'urlEncode.pasteAction': 'Colar texto',
+    'urlEncode.modeLabel': 'Modo de URL',
+    'urlEncode.modeComponent': 'Componente de URL',
+    'urlEncode.modeFull': 'Valor completo',
+    'urlEncode.submitAction': 'Codificar',
+    'urlEncode.outputLabel': 'Resultado codificado em URL',
+    'urlEncode.resultSuccess': 'Codificação URL concluída.',
+    'urlEncode.copyAction': 'Copiar texto codificado',
+    'urlEncode.saveAction': 'Salvar texto codificado',
+    'urlEncode.copiedResult': 'Texto codificado em URL copiado.',
+    'urlEncode.fileSaved': 'Texto codificado em URL salvo.',
+    'error.urlEncode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.urlEncode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.urlEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.urlEncodeUsage':
+        'Uso: chimera url encode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--mode=component|full] '
+        '[--output=<caminho>] [--json]\n'
+        'Modo padrão: component. O modo full preserva os delimitadores de URL; '
+        'component os codifica. A saída de texto é exata, sem nova linha. '
+        'O arquivo salva texto UTF-8; JSON emite o resultado após salvar. '
+        'Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'urlEncode.savedResult': 'Texto codificado em URL salvo.',
+    'error.urlEncode.validation':
+        'A solicitação de codificação URL é inválida.',
+    'error.urlEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.urlEncode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.urlEncode.outputAccess':
+        'Não foi possível salvar o texto codificado em URL.',
+    'error.urlEncode.resource':
+        'A codificação URL excedeu o limite de recursos.',
     'htmlDecode.pageTitle': 'Decodificar HTML',
     'htmlDecode.openAction': 'Decodificar HTML',
     'htmlDecode.inputLabel': 'Entidades HTML para decodificar',
@@ -1084,6 +1185,39 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto decodificado de HTML.',
     'error.htmlDecode.resource':
         'A decodificação HTML excedeu o limite de recursos.',
+    'urlDecode.pageTitle': 'Decodificar URL',
+    'urlDecode.openAction': 'Decodificar URL',
+    'urlDecode.inputLabel': 'Texto percentualmente codificado para decodificar',
+    'urlDecode.fileAction': 'Carregar arquivo UTF-8',
+    'urlDecode.pasteAction': 'Colar texto',
+    'urlDecode.submitAction': 'Decodificar',
+    'urlDecode.outputLabel': 'Resultado decodificado de URL',
+    'urlDecode.resultSuccess': 'Decodificação URL concluída.',
+    'urlDecode.copyAction': 'Copiar texto decodificado',
+    'urlDecode.saveAction': 'Salvar texto decodificado',
+    'urlDecode.copiedResult': 'Texto decodificado de URL copiado.',
+    'urlDecode.fileSaved': 'Texto decodificado de URL salvo.',
+    'error.urlDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.urlDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.urlDecode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.urlDecodeUsage':
+        'Uso: chimera url decode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--output=<caminho>] [--json]\n'
+        'A saída de texto é exata, sem nova linha. O arquivo salva texto UTF-8; '
+        'JSON emite o resultado após salvar. Códigos de saída: 64 validação, '
+        '74 acesso, 75 recursos.',
+    'urlDecode.savedResult': 'Texto decodificado de URL salvo.',
+    'error.urlDecode.validation':
+        'A solicitação de decodificação URL é inválida.',
+    'error.urlDecode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.urlDecode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.urlDecode.outputAccess':
+        'Não foi possível salvar o texto decodificado de URL.',
+    'error.urlDecode.resource':
+        'A decodificação URL excedeu o limite de recursos.',
     'gzipCompress.pageTitle': 'Comprimir GZIP',
     'gzipCompress.openAction': 'Comprimir para GZIP',
     'gzipCompress.inputLabel': 'Texto para comprimir',

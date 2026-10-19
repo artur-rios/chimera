@@ -44,12 +44,16 @@ Future<int> runChimera(
   JsonObjectEncoder? gzipCompressJsonEncoder,
   GzipDecompressService gzipDecompressService = const GzipDecompressService(),
   JsonObjectEncoder? gzipDecompressJsonEncoder,
+  UrlDecodeService urlDecodeService = const UrlDecodeService(),
+  JsonObjectEncoder? urlDecodeJsonEncoder,
   HtmlDecodeService htmlDecodeService = const HtmlDecodeService(),
   JsonObjectEncoder? htmlDecodeJsonEncoder,
   HashGenerateService hashGenerateService = const HashGenerateService(),
   JsonObjectEncoder? hashGenerateJsonEncoder,
   HtmlEncodeService htmlEncodeService = const HtmlEncodeService(),
   JsonObjectEncoder? htmlEncodeJsonEncoder,
+  UrlEncodeService urlEncodeService = const UrlEncodeService(),
+  JsonObjectEncoder? urlEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -103,12 +107,18 @@ Future<int> runChimera(
           : parsed.command?.name == 'hash' &&
                 parsed.command?.command?.name == 'generate'
           ? 'cli.hashGenerateUsage'
+          : parsed.command?.name == 'url' &&
+                parsed.command?.command?.name == 'decode'
+          ? 'cli.urlDecodeUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'decode'
           ? 'cli.htmlDecodeUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.htmlEncodeUsage'
+          : parsed.command?.name == 'url' &&
+                parsed.command?.command?.name == 'encode'
+          ? 'cli.urlEncodeUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
@@ -210,6 +220,29 @@ Future<int> runChimera(
         encodeJson: jwtInspectJsonEncoder ?? jsonEncode,
       );
     }
+    if (parsed.command!.name == 'url' &&
+        parsed.command!.command?.name == 'decode') {
+      return await _runUrlDecode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: urlDecodeService,
+        encodeJson: urlDecodeJsonEncoder ?? jsonEncode,
+      );
+    }
     if (parsed.command!.name == 'html' &&
         parsed.command!.command?.name == 'decode') {
       return await _runHtmlDecode(
@@ -277,6 +310,29 @@ Future<int> runChimera(
             ),
         service: htmlEncodeService,
         encodeJson: htmlEncodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'url' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runUrlEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: urlEncodeService,
+        encodeJson: urlEncodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'gzip' &&
@@ -636,10 +692,14 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'inspect';
     final isJwtCreate =
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
+    final isUrlDecode =
+        args.length >= 2 && args[0] == 'url' && args[1] == 'decode';
     final isHtmlDecode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'decode';
     final isHashGenerate =
         args.length >= 2 && args[0] == 'hash' && args[1] == 'generate';
+    final isUrlEncode =
+        args.length >= 2 && args[0] == 'url' && args[1] == 'encode';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -692,9 +752,11 @@ Future<int> runChimera(
               isQrEncode ||
               isJwtInspect ||
               isJwtCreate ||
+              isUrlDecode ||
               isHtmlDecode ||
               isHashGenerate ||
               isHtmlEncode ||
+              isUrlEncode ||
               isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
@@ -726,12 +788,16 @@ Future<int> runChimera(
           ? 'jwt-inspect.invalid-options'
           : isJwtCreate
           ? 'jwt-create.invalid-options'
+          : isUrlDecode
+          ? 'url-decode.invalid-options'
           : isHtmlDecode
           ? 'html-decode.invalid-options'
           : isHashGenerate
           ? 'hash-generate.invalid-options'
           : isHtmlEncode
           ? 'html-encode.invalid-options'
+          : isUrlEncode
+          ? 'url-encode.invalid-options'
           : isGzipCompress
           ? 'gzip-compress.invalid-options'
           : isGzipDecompress
@@ -783,12 +849,16 @@ Future<int> runChimera(
           ? 'error.jwtInspect.validation'
           : isJwtCreate
           ? 'error.jwtCreate.validation'
+          : isUrlDecode
+          ? 'error.urlDecode.validation'
           : isHtmlDecode
           ? 'error.htmlDecode.validation'
           : isHashGenerate
           ? 'error.hashGenerate.validation'
           : isHtmlEncode
           ? 'error.htmlEncode.validation'
+          : isUrlEncode
+          ? 'error.urlEncode.validation'
           : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
@@ -878,6 +948,12 @@ ArgParser _buildParser() {
   final qr = ArgParser()
     ..addCommand('encode', qrEncode)
     ..addCommand('decode', qrDecode);
+  final urlDecode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -899,6 +975,16 @@ ArgParser _buildParser() {
     ..addOption('context', defaultsTo: 'all')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final urlEncode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('mode', defaultsTo: 'component')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final url = ArgParser()
+    ..addCommand('encode', urlEncode)
+    ..addCommand('decode', urlDecode);
   final html = ArgParser()
     ..addCommand('decode', htmlDecode)
     ..addCommand('encode', htmlEncode);
@@ -1084,6 +1170,7 @@ ArgParser _buildParser() {
     ..addCommand('date', date)
     ..addCommand('gzip', gzip)
     ..addCommand('hash', hash)
+    ..addCommand('url', url)
     ..addCommand('html', html)
     ..addCommand('json', json)
     ..addCommand('jwt', jwt)
@@ -2602,6 +2689,151 @@ final class _JwtCreateAdapterFailure implements Exception {
   final Map<String, Object?> details;
 }
 
+Future<int> _runUrlDecode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required UrlDecodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'url-decode.$invalid',
+      messageKey: 'error.urlDecode.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'url-decode.resource-limit',
+    messageKey: 'error.urlDecode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'url-decode.output-access',
+    messageKey: 'error.urlDecode.outputAccess',
+  );
+
+  late UrlDecodeOperationRequest request;
+  try {
+    request = text != null
+        ? UrlDecodeOperationRequest.text(text)
+        : UrlDecodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'url-decode.input-access'
+          : 'url-decode.file-access',
+      messageKey: useStandardInput
+          ? 'error.urlDecode.inputAccess'
+          : 'error.urlDecode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'urlDecode.savedResult')}\n'
+            : value.decoded;
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.decoded));
+        } on OutOfMemoryError {
+          resourceFailure('decoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
 Future<int> _runHtmlDecode(
   ArgResults parsed, {
   required String localeTag,
@@ -3031,6 +3263,158 @@ Future<int> _runHtmlEncode(
       }
       try {
         out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runUrlEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required UrlEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final mode = parsed.option('mode')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !const ['component', 'full'].contains(mode)
+      ? 'invalid-mode'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'url-encode.$invalid',
+      messageKey: 'error.urlEncode.validation',
+      details: invalid == 'invalid-mode'
+          ? {'field': 'mode', 'reason': 'unsupported-mode'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'url-encode.resource-limit',
+    messageKey: 'error.urlEncode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'url-encode.output-access',
+    messageKey: 'error.urlEncode.outputAccess',
+  );
+
+  late UrlEncodeOperationRequest request;
+  try {
+    request = text != null
+        ? UrlEncodeOperationRequest.text(text, mode: mode)
+        : UrlEncodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            mode: mode,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'url-encode.input-access'
+          : 'url-encode.file-access',
+      messageKey: useStandardInput
+          ? 'error.urlEncode.inputAccess'
+          : 'error.urlEncode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'urlEncode.savedResult')}\n'
+            : value.encoded;
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.encoded));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;
