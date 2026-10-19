@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
+import 'package:chimera_gui/hash_generate_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +31,7 @@ void main() {
             await inputFile.writeAsBytes([0, 255, 128, 239, 187, 191, 0, 10]);
             final outputFile = File('${directory.path}/result.txt');
             String? copied;
+            Future<bool>? saveOperation;
             final expected =
                 hashKnownVectors[source == 'empty'
                     ? 'empty'
@@ -42,10 +45,13 @@ void main() {
                 hashGenerateFilePicker: inputFile.readAsBytes,
                 hashGenerateClipboardReader: () async => 'abc',
                 hashGenerateClipboardWriter: (v) async => copied = v,
-                hashGenerateFileSaver: (_, bytes, _) async {
-                  await outputFile.writeAsBytes(bytes, flush: true);
-                  return true;
-                },
+                hashGenerateFileSaver: (name, bytes, mime) =>
+                    saveOperation = saveHashGenerateFile(
+                      name,
+                      bytes,
+                      mime,
+                      chooseLocation: (_, _) async => outputFile.path,
+                    ),
               ),
             );
             await tester.pumpAndSettle();
@@ -86,7 +92,19 @@ void main() {
             await tap('copy');
             expect(copied, expected);
             await tap('save');
-            expect(await outputFile.readAsString(), '$expected\n');
+            // Frame settling does not wait for the native file transaction.
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
+            expect(
+              tester.widget<Text>(control('notice')).data,
+              locale == 'en' ? 'Digest saved.' : 'Resumo salvo.',
+            );
+            expect(await outputFile.readAsBytes(), utf8.encode('$expected\n'));
+            expect(
+              directory.listSync().map((file) => file.path),
+              unorderedEquals([inputFile.path, outputFile.path]),
+            );
             await tester.pumpWidget(const SizedBox());
             await tester.pumpAndSettle();
             expect(find.text(expected), findsNothing);
