@@ -10,6 +10,7 @@ import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
+import 'checksum_generate_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
@@ -63,6 +64,12 @@ final class ChimeraApp extends StatelessWidget {
     this.htmlDecodeClipboardWriter,
     this.htmlDecodeFileSaver,
     this.htmlDecodeOutputEncoder,
+    this.checksumGenerateService = const ChecksumGenerateService(),
+    this.checksumGenerateFilePicker,
+    this.checksumGenerateClipboardReader,
+    this.checksumGenerateClipboardWriter,
+    this.checksumGenerateFileSaver,
+    this.checksumGenerateOutputEncoder,
     this.hashGenerateService = const HashGenerateService(),
     this.hashGenerateFilePicker,
     this.hashGenerateClipboardReader,
@@ -218,6 +225,12 @@ final class ChimeraApp extends StatelessWidget {
   final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
   final HtmlDecodeFileSaver? htmlDecodeFileSaver;
   final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+  final ChecksumGenerateOperationService checksumGenerateService;
+  final ChecksumGenerateFilePicker? checksumGenerateFilePicker;
+  final ChecksumGenerateClipboardReader? checksumGenerateClipboardReader;
+  final ChecksumGenerateClipboardWriter? checksumGenerateClipboardWriter;
+  final ChecksumGenerateFileSaver? checksumGenerateFileSaver;
+  final ChecksumGenerateOutputEncoder? checksumGenerateOutputEncoder;
   final HashGenerateOperationService hashGenerateService;
   final HashGenerateFilePicker? hashGenerateFilePicker;
   final HashGenerateClipboardReader? hashGenerateClipboardReader;
@@ -367,6 +380,12 @@ final class ChimeraApp extends StatelessWidget {
         htmlDecodeClipboardWriter: htmlDecodeClipboardWriter,
         htmlDecodeFileSaver: htmlDecodeFileSaver,
         htmlDecodeOutputEncoder: htmlDecodeOutputEncoder,
+        checksumGenerateService: checksumGenerateService,
+        checksumGenerateFilePicker: checksumGenerateFilePicker,
+        checksumGenerateClipboardReader: checksumGenerateClipboardReader,
+        checksumGenerateClipboardWriter: checksumGenerateClipboardWriter,
+        checksumGenerateFileSaver: checksumGenerateFileSaver,
+        checksumGenerateOutputEncoder: checksumGenerateOutputEncoder,
         hashGenerateService: hashGenerateService,
         hashGenerateFilePicker: hashGenerateFilePicker,
         hashGenerateClipboardReader: hashGenerateClipboardReader,
@@ -519,6 +538,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.htmlDecodeClipboardWriter,
     required this.htmlDecodeFileSaver,
     required this.htmlDecodeOutputEncoder,
+    required this.checksumGenerateService,
+    required this.checksumGenerateFilePicker,
+    required this.checksumGenerateClipboardReader,
+    required this.checksumGenerateClipboardWriter,
+    required this.checksumGenerateFileSaver,
+    required this.checksumGenerateOutputEncoder,
     required this.hashGenerateService,
     required this.hashGenerateFilePicker,
     required this.hashGenerateClipboardReader,
@@ -767,6 +792,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final UrlDecodeFileSaver? urlDecodeFileSaver;
   final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
 
+  final ChecksumGenerateOperationService checksumGenerateService;
+  final ChecksumGenerateFilePicker? checksumGenerateFilePicker;
+  final ChecksumGenerateClipboardReader? checksumGenerateClipboardReader;
+  final ChecksumGenerateClipboardWriter? checksumGenerateClipboardWriter;
+  final ChecksumGenerateFileSaver? checksumGenerateFileSaver;
+  final ChecksumGenerateOutputEncoder? checksumGenerateOutputEncoder;
   final HashGenerateOperationService hashGenerateService;
   final HashGenerateFilePicker? hashGenerateFilePicker;
   final HashGenerateClipboardReader? hashGenerateClipboardReader;
@@ -836,6 +867,19 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       htmlDecodeFileSaver: widget.htmlDecodeFileSaver ?? saveHtmlDecodeFile,
       htmlDecodeOutputEncoder:
           widget.htmlDecodeOutputEncoder ?? encodeHtmlDecodeOutput,
+      checksumGenerateService: widget.checksumGenerateService,
+      checksumGenerateFilePicker:
+          widget.checksumGenerateFilePicker ?? pickChecksumGenerateFile,
+      checksumGenerateClipboardReader:
+          widget.checksumGenerateClipboardReader ??
+          readChecksumGenerateClipboard,
+      checksumGenerateClipboardWriter:
+          widget.checksumGenerateClipboardWriter ??
+          writeChecksumGenerateClipboard,
+      checksumGenerateFileSaver:
+          widget.checksumGenerateFileSaver ?? saveChecksumGenerateFile,
+      checksumGenerateOutputEncoder:
+          widget.checksumGenerateOutputEncoder ?? encodeChecksumGenerateOutput,
       hashGenerateService: widget.hashGenerateService,
       hashGenerateFilePicker:
           widget.hashGenerateFilePicker ?? pickHashGenerateFile,

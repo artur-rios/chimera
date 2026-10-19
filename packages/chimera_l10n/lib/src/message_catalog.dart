@@ -3,6 +3,35 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "cli.checksumGenerateUsage": "Usage: chimera checksum generate [--input <text> | --file <path> | --stdin] [--algorithm crc32|adler32] [--output <path>] [--json]. Default: crc32. Text uses exact UTF-8; file/stdin are exact bytes. JSON: algorithm, checksum (eight lowercase hexadecimal characters). Saved files contain the checksum and one LF.",
+    "checksumGenerate.pageTitle": "Generate checksum",
+    "checksumGenerate.openAction": "Generate checksum",
+    "checksumGenerate.inputLabel": "Text for checksum (UTF-8)",
+    "checksumGenerate.fileAction": "Choose local file bytes",
+    "checksumGenerate.pasteAction": "Paste text",
+    "checksumGenerate.algorithmLabel": "Checksum algorithm",
+    "checksumGenerate.submitAction": "Generate checksum",
+    "checksumGenerate.outputLabel": "Checksum result",
+    "checksumGenerate.resultSuccess": "Checksum generated.",
+    "checksumGenerate.copyAction": "Copy checksum",
+    "checksumGenerate.saveAction": "Save checksum",
+    "checksumGenerate.copiedResult": "Checksum copied.",
+    "checksumGenerate.fileSaved": "Checksum saved.",
+    "checksumGenerate.savedResult": "Checksum saved.",
+    "error.checksumGenerate.validation":
+        "The checksum algorithm or input source is invalid.",
+    "error.checksumGenerate.resource":
+        "Available resources could not generate the checksum.",
+    "error.checksumGenerate.fileAccess": "The local file could not be read.",
+    "error.checksumGenerate.inputAccess": "Standard input could not be read.",
+    "error.checksumGenerate.interactiveInputAccess":
+        "The checksum input could not be processed.",
+    "error.checksumGenerate.clipboardRead": "Clipboard text could not be read.",
+    "error.checksumGenerate.clipboardWrite":
+        "The checksum could not be copied.",
+    "error.checksumGenerate.outputAccess":
+        "The checksum could not be saved or written.",
+
     'cli.hashGenerateUsage': "Usage: chimera hash generate (--input=<text>|--stdin|--file=<path>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<path>] [--json]. Files and stdin are exact bytes; text uses UTF-8. JSON: algorithm, lowercase hexadecimal digest, legacy, warning. Saved files contain the digest and a newline. MD5/SHA-1 are legacy and unsuitable for security decisions.",
     'hashGenerate.pageTitle': "Generate hash",
     'hashGenerate.openAction': "Generate hash",
@@ -895,6 +924,37 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "cli.checksumGenerateUsage": "Uso: chimera checksum generate [--input <texto> | --file <caminho> | --stdin] [--algorithm crc32|adler32] [--output <caminho>] [--json]. Padrão: crc32. Texto usa UTF-8 exato; arquivo/stdin são bytes exatos. JSON: algorithm, checksum (oito caracteres hexadecimais minúsculos). Arquivos salvos contêm a soma e um LF.",
+    "checksumGenerate.pageTitle": "Gerar soma de verificação",
+    "checksumGenerate.openAction": "Gerar soma de verificação",
+    "checksumGenerate.inputLabel": "Texto para soma de verificação (UTF-8)",
+    "checksumGenerate.fileAction": "Escolher bytes de arquivo local",
+    "checksumGenerate.pasteAction": "Colar texto",
+    "checksumGenerate.algorithmLabel": "Algoritmo da soma de verificação",
+    "checksumGenerate.submitAction": "Gerar soma de verificação",
+    "checksumGenerate.outputLabel": "Resultado da soma de verificação",
+    "checksumGenerate.resultSuccess": "Soma de verificação gerada.",
+    "checksumGenerate.copyAction": "Copiar soma de verificação",
+    "checksumGenerate.saveAction": "Salvar soma de verificação",
+    "checksumGenerate.copiedResult": "Soma de verificação copiada.",
+    "checksumGenerate.fileSaved": "Soma de verificação salva.",
+    "checksumGenerate.savedResult": "Soma de verificação salva.",
+    "error.checksumGenerate.validation":
+        "O algoritmo da soma de verificação ou a origem da entrada é inválido.",
+    "error.checksumGenerate.resource": "Com os recursos disponíveis, não foi possível gerar a soma de verificação.",
+    "error.checksumGenerate.fileAccess":
+        "Não foi possível ler o arquivo local.",
+    "error.checksumGenerate.inputAccess":
+        "Não foi possível ler a entrada padrão.",
+    "error.checksumGenerate.interactiveInputAccess":
+        "Não foi possível processar a entrada da soma de verificação.",
+    "error.checksumGenerate.clipboardRead":
+        "Não foi possível ler o texto da área de transferência.",
+    "error.checksumGenerate.clipboardWrite":
+        "Não foi possível copiar a soma de verificação.",
+    "error.checksumGenerate.outputAccess":
+        "Não foi possível salvar ou gravar a soma de verificação.",
+
     'cli.hashGenerateUsage': "Uso: chimera hash generate (--input=<texto>|--stdin|--file=<caminho>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<caminho>] [--json]. Arquivos e stdin são bytes exatos; texto usa UTF-8. JSON: algorithm, digest hexadecimal minúsculo, legacy, warning. Arquivos salvos contêm o resumo e uma quebra de linha. MD5/SHA-1 são legados e inadequados para decisões de segurança.",
     'hashGenerate.pageTitle': "Gerar hash",
     'hashGenerate.openAction': "Gerar hash",

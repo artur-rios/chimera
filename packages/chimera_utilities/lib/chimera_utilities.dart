@@ -4,6 +4,7 @@ library;
 export 'src/base64/base64_byte_decoder.dart';
 export 'src/base64/base64_byte_encoder.dart';
 export 'src/certificate/certificate_inspector.dart';
+export 'src/checksum/checksum_generator.dart';
 export 'src/cron/cron_evaluator.dart';
 export 'src/date/date_converter.dart';
 export 'src/gzip/gzip_compressor.dart';

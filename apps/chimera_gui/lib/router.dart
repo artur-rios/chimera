@@ -7,6 +7,7 @@ import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
+import 'checksum_generate_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
@@ -64,6 +65,12 @@ GoRouter buildRouter({
   required HtmlDecodeClipboardWriter htmlDecodeClipboardWriter,
   required HtmlDecodeFileSaver htmlDecodeFileSaver,
   required HtmlDecodeOutputEncoder htmlDecodeOutputEncoder,
+  required ChecksumGenerateOperationService checksumGenerateService,
+  required ChecksumGenerateFilePicker checksumGenerateFilePicker,
+  required ChecksumGenerateClipboardReader checksumGenerateClipboardReader,
+  required ChecksumGenerateClipboardWriter checksumGenerateClipboardWriter,
+  required ChecksumGenerateFileSaver checksumGenerateFileSaver,
+  required ChecksumGenerateOutputEncoder checksumGenerateOutputEncoder,
   required HashGenerateOperationService hashGenerateService,
   required HashGenerateFilePicker hashGenerateFilePicker,
   required HashGenerateClipboardReader hashGenerateClipboardReader,
@@ -185,6 +192,19 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/checksum/generate',
+        builder: (context, state) => ChecksumGeneratePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: checksumGenerateService,
+          filePicker: checksumGenerateFilePicker,
+          clipboardReader: checksumGenerateClipboardReader,
+          clipboardWriter: checksumGenerateClipboardWriter,
+          fileSaver: checksumGenerateFileSaver,
+          outputEncoder: checksumGenerateOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/jwt/create',
         builder: (context, state) => JwtCreatePage(
@@ -336,6 +356,17 @@ GoRouter buildRouter({
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag, 'app.description')),
                       const SizedBox(height: 24),
+                      ElevatedButton(
+                        key: const Key('open-checksum-generate'),
+                        onPressed: () => context.go('/checksum/generate'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'checksumGenerate.openAction',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       ElevatedButton(
                         key: const Key('open-cron'),
                         onPressed: () => context.go('/cron/parse'),

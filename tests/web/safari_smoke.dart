@@ -1216,6 +1216,12 @@ Future<void> main(List<String> arguments) async {
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
+    try {
+      await _generateChecksum(driver);
+    } on Object {
+      await _capturePageDiagnostics(driver, 'checksum-failure');
+      rethrow;
+    }
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
@@ -2993,7 +2999,7 @@ Future<bool> _inputHasValue(
   return result == true;
 }
 
-// Only the public baseline cron fixture calls this; preserve the original
+// Only public smoke fixtures call this; preserve the original
 // failure even if Safari cannot provide one of the diagnostic artifacts.
 Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
   try {
@@ -3579,5 +3585,225 @@ Future<void> _generateHash(WebDriver driver) async {
       'Hash failure retained source',
     );
     await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+  }
+}
+
+// Create invalid UTF-16 after WebDriver has decoded its well-formed request.
+const _checksumInvalidClipboardScript = r'''
+return checksumProbe('setup', String.fromCharCode(0xd800));
+''';
+
+const _checksumFileReadyScript = r'''
+return checksumProbe('fileReady');
+''';
+
+Future<void> _generateChecksum(WebDriver driver) async {
+  final source = await File.fromUri(
+    Platform.script.resolve('checksum_browser.js'),
+  ).readAsString();
+  final observer = await _loadGzipSaveObserver();
+  final vectors = jsonDecode(
+    await File.fromUri(
+      Platform.script.resolve('../fixtures/checksums/vectors.json'),
+    ).readAsString(),
+  ) as List<dynamic>;
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn checksumProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openChecksum() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Checksum semantics placeholder did not load',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder').click();",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Generate checksum');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text for checksum (UTF-8)'),
+      'Checksum page did not open',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Checksum startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup', 'abc');
+    // SafariDriver exposes no file chooser endpoint; dispatch a real File.
+    await driver.execute(r'''
+      const original = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') return;
+        return original.call(this);
+      };
+    ''', const <Object?>[]);
+  }
+
+  for (final algorithm in ['crc32', 'adler32']) {
+    for (final inputSource in ['clipboard', 'file', 'empty', 'allbytes']) {
+      stdout.writeln('Safari checksum scenario: $algorithm $inputSource');
+      await openChecksum();
+      final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
+        (v) =>
+            v['name'] ==
+            (inputSource == 'allbytes'
+                ? 'allbytes'
+                : inputSource == 'empty'
+                ? 'empty'
+                : inputSource == 'file'
+                ? 'binary'
+                : 'abc'),
+      );
+      final expected =
+          (fixture['checksums'] as Map<String, dynamic>)[algorithm] as String;
+      if (inputSource == 'clipboard') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text for checksum (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Checksum clipboard source missing',
+        );
+      }
+      if (inputSource == 'file' || inputSource == 'allbytes') {
+        await _clickButton(driver, 'Choose local file bytes');
+        await _waitUntil(
+          () async => await probe('file', fixture['bytes']) == true,
+          'Checksum file input missing',
+        );
+        await _waitUntil(
+          () async =>
+              await driver.execute(
+                '$source\n$_checksumFileReadyScript',
+                const <Object?>[],
+              ) ==
+              true,
+          'Checksum file loading did not finish',
+        );
+      }
+      if (algorithm != 'crc32') {
+        await _waitUntil(
+          () async => await probe('openAlgorithm') == true,
+          'Checksum algorithm selector missing',
+        );
+        await _waitUntil(
+          () async => await probe('algorithm', algorithm.toUpperCase()) == true,
+          'Checksum algorithm choice missing: $algorithm $inputSource',
+        );
+      }
+      await _clickButton(driver, 'Generate checksum');
+      await _waitUntil(
+        () async => await probe('result', expected) == true,
+        'Checksum known checksum mismatch',
+      );
+      await _waitUntil(
+        () async => await probe('sourceCleared') == true,
+        'Checksum source retained',
+      );
+      await _waitUntil(
+        () async => await probe('copy') == true,
+        'Checksum copy unavailable',
+      );
+      await _waitUntil(
+        () async => await probe('copied', expected) == true,
+        'Checksum clipboard result mismatch',
+      );
+      await _clickButton(driver, 'Save checksum');
+      await _waitUntil(
+        () async => await probe('saved', utf8.encode('$expected\n')) == true,
+        'Checksum saved bytes mismatch',
+      );
+      await _assertNoNetworkRequests(
+        driver,
+        flow: 'Checksum $algorithm $inputSource',
+      );
+    }
+  }
+  for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    stdout.writeln('Safari checksum failure scenario: $failure');
+    await openChecksum();
+    if (failure == 'file') {
+      await probe('fileFailure');
+      await _clickButton(driver, 'Choose local file bytes');
+      await _waitUntil(
+        () async => await probe('file', <int>[0, 255]) == true,
+        'Checksum failure file input missing',
+      );
+      await _waitUntil(
+        () => _pageContains(driver, 'The local file could not be read.'),
+        'Checksum file access failure missing',
+      );
+    } else if (failure == 'validation') {
+      await driver.execute(
+        '$source\n$_checksumInvalidClipboardScript',
+        const <Object?>[],
+      );
+      await _clickButton(driver, 'Paste text');
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          'The checksum algorithm or input source is invalid.',
+        ),
+        'Checksum clipboard validation missing',
+      );
+    } else {
+      if (failure != 'read') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text for checksum (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Checksum failure source missing',
+        );
+        await _clickButton(driver, 'Generate checksum');
+        await _waitUntil(
+          () async => await probe('result', '352441c2') == true,
+          'Checksum failure setup missing',
+        );
+      }
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'read'
+            ? 'Paste text'
+            : failure == 'copy'
+            ? 'Copy checksum'
+            : 'Save checksum',
+      );
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          failure == 'read'
+              ? 'Clipboard text could not be read.'
+              : failure == 'copy'
+              ? 'The checksum could not be copied.'
+              : 'The checksum could not be saved or written.',
+        ),
+        'Checksum adapter failure missing',
+      );
+    }
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Checksum failure retained partial output',
+    );
+    await _waitUntil(
+      () async => await probe('sourceCleared') == true,
+      'Checksum failure retained source',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Checksum $failure failure');
   }
 }
