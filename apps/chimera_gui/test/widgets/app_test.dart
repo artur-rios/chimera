@@ -355,6 +355,8 @@ void main() {
       await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.byKey(const Key('open-date')));
+      await tester.pumpAndSettle();
       await tester.tap(find.byKey(const Key('open-date')));
       await tester.pumpAndSettle();
       expect(
