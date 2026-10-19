@@ -30,17 +30,21 @@ final class LoremResult {
 
 /// Deterministic public-domain Latin fragments; no randomness or retained state.
 final class LoremGenerator {
-  const LoremGenerator({this.maxOutputCharacters}) : _allocate = _generate;
+  const LoremGenerator({this.maxOutputCharacters})
+    : _allocate = null,
+      _createBuffer = _newBuffer;
 
   @visibleForTesting
   const LoremGenerator.forTesting({
-    required this._allocate,
+    this._allocate,
+    this._createBuffer = _newBuffer,
     this.maxOutputCharacters,
   });
 
   /// Optional test/caller budget. Production imposes no arbitrary count ceiling.
   final int? maxOutputCharacters;
-  final String Function(LoremRequest) _allocate;
+  final String Function(LoremRequest)? _allocate;
+  final StringBuffer Function() _createBuffer;
 
   LoremResult generate(LoremRequest request) {
     if (!const ['words', 'sentences', 'paragraphs'].contains(request.unit)) {
@@ -71,7 +75,8 @@ final class LoremGenerator {
           when request.count > maximum ~/ minimum) {
         _resource('output-limit');
       }
-      final text = _allocate(request);
+      final text =
+          _allocate?.call(request) ?? _generate(request, _createBuffer);
       if (maxOutputCharacters case final maximum? when text.length > maximum) {
         _resource('output-limit');
       }
@@ -89,7 +94,9 @@ Never _resource(String reason) => throw LoremException(
   reason,
 );
 
-String _generate(LoremRequest request) {
+StringBuffer _newBuffer() => StringBuffer();
+
+String _generate(LoremRequest request, StringBuffer Function() createBuffer) {
   const words = [
     'Lorem',
     'ipsum',
@@ -105,14 +112,37 @@ String _generate(LoremRequest request) {
     'Consectetur adipiscing elit.',
   ];
   const paragraph = 'Lorem ipsum dolor sit amet. Consectetur adipiscing elit.';
-  final buffer = StringBuffer();
+  final buffer = createBuffer();
   for (var index = 0; index < request.count; index++) {
-    if (index != 0) buffer.write(request.unit == 'paragraphs' ? '\n\n' : ' ');
-    buffer.write(switch (request.unit) {
+    if (index != 0) {
+      _appendLatin(buffer, request.unit == 'paragraphs' ? '\n\n' : ' ');
+    }
+    final fragment = switch (request.unit) {
       'words' => words[index % words.length],
       'sentences' => sentences[index % sentences.length],
       _ => paragraph,
-    });
+    };
+    _appendLatin(buffer, fragment);
   }
-  return buffer.toString();
+  return _finishLatin(buffer);
+}
+
+// Only trusted StringBuffer operations receive this backend normalization.
+// dart2js maps JS string-capacity RangeError to ArgumentError. These operations
+// receive fixed Latin fragments, so there is no user argument/range to reject.
+// Keep token selection, validation and injected allocator errors outside catches.
+void _appendLatin(StringBuffer buffer, String fragment) {
+  try {
+    buffer.write(fragment);
+  } on ArgumentError {
+    _resource('allocation-limit');
+  }
+}
+
+String _finishLatin(StringBuffer buffer) {
+  try {
+    return buffer.toString();
+  } on ArgumentError {
+    _resource('allocation-limit');
+  }
 }

@@ -73,8 +73,10 @@ dart run apps/chimera_cli/bin/chimera.dart lorem generate --unit=paragraphs --co
 
 The defaults are `--unit=paragraphs --count=1`. Unit names are case-sensitive:
 `words`, `sentences`, and `paragraphs`. Count must contain only decimal digits
-and represent a positive integer. No production count ceiling is imposed;
-requests exceeding available resources return a typed resource failure with no
+and represent a positive integer exactly representable by the target runtime
+(native/Wasm int64 or a finite JavaScript number). Leading zeroes are accepted;
+values that would be rounded are rejected. There is no product count ceiling.
+Requests exceeding available resources return a typed resource failure with no
 partial result. The generator needs no input source and rejects input, file, and
 stdin flags.
 

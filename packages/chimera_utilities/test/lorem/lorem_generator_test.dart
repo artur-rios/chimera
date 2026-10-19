@@ -93,6 +93,15 @@ void main() {
       56,
     );
   });
+  test('GivenUnrelatedArgumentError_WhenAllocatorFails_ThenDoNotMisclassifyAsResource', () {
+    final generator = LoremGenerator.forTesting(
+      allocate: (_) => throw ArgumentError('PRIVATE'),
+    );
+    expect(
+      () => generator.generate(const LoremRequest()),
+      throwsA(isA<ArgumentError>()),
+    );
+  });
   test('GivenAllocationFailure_WhenGenerated_ThenRedactedResource', () {
     final generator = LoremGenerator.forTesting(
       allocate: (_) => throw OutOfMemoryError(),

@@ -21,6 +21,7 @@ void main() {
     '1.0',
     '',
     '1e2',
+    '1\n',
     '999999999999999999999999999999999',
   ]) {
     test(
@@ -45,6 +46,25 @@ void main() {
     expect(failure.code, 'lorem.invalid-unit');
     expect(failure.details.toString(), isNot(contains('private')));
   });
+  for (final raw in ['0001', '9007199254740993', '9223372036854775807']) {
+    test(
+      'Given${raw}NativeExactCount_WhenAllocatedThroughSeam_ThenNoUnnecessaryWebCap',
+      () async {
+        int? observed;
+        final service = LoremService(
+          generator: LoremGenerator.forTesting(
+            allocate: (request) {
+              observed = request.count;
+              return 'test-only';
+            },
+          ),
+        );
+        final result = await service.execute(LoremOperationRequest(count: raw));
+        expect(result, isA<ChimeraSuccess<LoremOutput>>());
+        expect(observed, int.parse(raw));
+      },
+    );
+  }
   test('GivenResourceBudget_WhenExecuted_ThenNoPartialOutput', () async {
     final result = await const LoremService(
       generator: LoremGenerator(maxOutputCharacters: 1),

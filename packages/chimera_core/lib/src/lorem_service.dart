@@ -29,10 +29,8 @@ final class LoremService
     LoremOperationRequest request,
   ) async {
     try {
-      final count = int.tryParse(request.count);
-      if (!RegExp(r'^[0-9]+$').hasMatch(request.count) ||
-          count == null ||
-          count < 1) {
+      final count = tryParsePositiveDecimalInteger(request.count);
+      if (count == null) {
         throw const LoremException(
           LoremFailureKind.validation,
           'lorem.invalid-count',
