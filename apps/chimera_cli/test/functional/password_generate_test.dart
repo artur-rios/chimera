@@ -385,10 +385,7 @@ void main() {
         .toList();
     expect(
       remainingNames,
-      unorderedEquals([
-        File(executable).uri.pathSegments.last,
-        'result.txt',
-      ]),
+      unorderedEquals([File(executable).uri.pathSegments.last, 'result.txt']),
     );
     expect(
       remainingNames.where(
