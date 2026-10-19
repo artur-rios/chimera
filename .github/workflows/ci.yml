@@ -131,6 +131,7 @@ jobs:
           path: |
             safari-driver.log
             safari-server.log
+            safari-diagnostics/
           if-no-files-found: error
 
   native-tests:
