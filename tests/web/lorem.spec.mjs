@@ -12,6 +12,12 @@ function visibleText(page, text) {
   const escaped=text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
   return page.locator('span',{hasText:new RegExp(`^${escaped}$`)});
 }
+async function fillCount(count, value) {
+  // Activate Flutter's editor before replacing the unfocused semantics value.
+  await count.click();await expect(count).toBeFocused();
+  await count.fill(value);await count.press('Tab');
+  await expect(count).toHaveValue(value);
+}
 async function openLorem(page) {
   await page.goto('/');
   const placeholder=page.locator('flt-semantics-placeholder');await placeholder.waitFor({state:'attached'});await placeholder.evaluate(node=>node.click());
@@ -24,7 +30,7 @@ for(const unit of ['words','sentences','paragraphs']) {
     const requests=[];await page.addInitScript(`${saveSource}\nobserveGzipSaves();`);await openLorem(page);
     page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});
     if(unit!=='paragraphs'){await expect.poll(()=>probe(page,'openUnit')).toBe(true);await expect.poll(()=>probe(page,'unit',unit==='words'?'Words':'Sentences')).toBe(true);}
-    const count=page.getByRole('textbox',{name:'Positive integer count',exact:true});await count.fill('2');await count.press('Tab');
+    const count=page.getByRole('textbox',{name:'Positive integer count',exact:true});await fillCount(count,'2');
     await page.getByRole('button',{name:'Generate text',exact:true}).click();
     const expected=unit==='words'?'Lorem ipsum':unit==='sentences'?paragraph:`${paragraph}\n\n${paragraph}`;
     await expect.poll(()=>probe(page,'result',expected)).toBe(true);
@@ -33,7 +39,8 @@ for(const unit of ['words','sentences','paragraphs']) {
     const downloaded=page.waitForEvent('download');await page.getByRole('button',{name:'Save UTF-8 text',exact:true}).press('Enter');const download=await downloaded;
     expect(download.suggestedFilename()).toBe('chimera-lorem.txt');const chunks=[];for await(const chunk of await download.createReadStream())chunks.push(chunk);expect(Buffer.concat(chunks)).toEqual(Buffer.from(expected));
     await expect.poll(()=>probe(page,'saved',[...Buffer.from(expected)])).toBe(true);
-    await count.fill('3');await count.press('Tab');await expect.poll(()=>probe(page,'noResult')).toBe(true);
+    await fillCount(count,'3');
+    await expect.poll(()=>probe(page,'noResult')).toBe(true);
     expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
   });
 }
@@ -43,7 +50,7 @@ test('GivenDefaults_WhenGeneratedOffline_ThenKnownSingleParagraph',async({page})
 for(const failure of ['validation','copy','save']) {
   test(`Given${failure}Failure_WhenActionRunsOffline_ThenVisibleErrorWithoutPartialText`,async({page})=>{
     const requests=[];await openLorem(page);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});
-    if(failure==='validation'){const count=page.getByRole('textbox',{name:'Positive integer count',exact:true});await count.fill('0');await count.press('Tab');}
+    if(failure==='validation'){const count=page.getByRole('textbox',{name:'Positive integer count',exact:true});await fillCount(count,'0');}
     await page.getByRole('button',{name:'Generate text',exact:true}).click();
     if(failure!=='validation'){
       await expect.poll(()=>probe(page,'result',paragraph)).toBe(true);await probe(page,`${failure}Failure`);
