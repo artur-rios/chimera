@@ -3,8 +3,18 @@ function hashProbe(action, value) {
   const label = node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g, ' ').trim();
   const button = name => [...document.querySelectorAll('[role="button"]')].find(node => label(node) === name && node.getAttribute('aria-disabled') !== 'true');
   const result = () => [...document.querySelectorAll('[role="region"][tabindex="0"]')].find(node => label(node).startsWith('Hash result Hash generated.'));
+  // Flutter materializes the real editor value when it receives focus.
+  // Observe the exact labeled value; never assign it in an observation probe.
+  const inputHasValue = expected => {
+    const input = [...document.querySelectorAll('input[aria-label],textarea[aria-label]')]
+      .find(node => node.getAttribute('aria-label') === 'Text to hash (UTF-8)');
+    if (!input || input.disabled) return false;
+    input.focus();
+    return input.value === expected;
+  };
   if (action === 'setup') {
     window.__chimeraHashCopied = null;
+    window.__chimeraHashFileReadFailures = 0;
     window.__chimeraHashClipboard = value;
     window.__chimeraHashCopyFailure = false;
     window.__chimeraHashReadFailure = false;
@@ -33,21 +43,22 @@ function hashProbe(action, value) {
     return true;
   }
   if (action === 'result') return result()?.getAttribute('aria-label')?.includes(value) === true;
-  if (action === 'sourceCleared') {
-    const input = [...document.querySelectorAll('input,textarea')].find(node => node.getAttribute('aria-label') === 'Text to hash (UTF-8)');
-    if (!input) return false;
-    input.focus();
-    return input.value === '';
-  }
+  if (action === 'inputHasValue') return inputHasValue(value);
+  if (action === 'sourceCleared') return inputHasValue('');
   if (action === 'copy') { const node=button('Copy digest'); if (!node) return false; node.click(); return true; }
   if (action === 'copied') return window.__chimeraHashCopied === value;
   if (action === 'saved') return window.__chimeraSavedName === 'chimera-hash.txt' && JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(value) && window.__chimeraSaveCount === 1;
   if (action === 'noResult') return !result() && !button('Copy digest') && !button('Save digest');
   if (action === 'fileFailure') {
-    const fetchOriginal=window.fetch.bind(window);
-    window.fetch=(url,...args)=>String(url).startsWith('blob:')?Promise.reject(Error('PRIVATE')):fetchOriginal(url,...args);
+    // file_picker_web 4.2.0 preloads small selections with FileReader because
+    // FilePickerWebOptions.withData defaults to true; blob fetch is bypassed.
+    FileReader.prototype.readAsArrayBuffer = function() {
+      window.__chimeraHashFileReadFailures++;
+      throw new DOMException('PRIVATE', 'NotReadableError');
+    };
     return true;
   }
+  if (action === 'fileFailureObserved') return window.__chimeraHashFileReadFailures === 1;
   if (action === 'readFailure') { window.__chimeraHashReadFailure=true; return true; }
   if (action === 'copyFailure') { window.__chimeraHashCopyFailure=true; return true; }
   if (action === 'saveFailure') { URL.createObjectURL = () => { throw Error('PRIVATE'); }; return true; }
