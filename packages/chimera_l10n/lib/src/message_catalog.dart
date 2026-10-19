@@ -26,6 +26,63 @@ _catalogs = <String, Map<String, String>>{
         'The generated text could not be saved or written.',
     'error.lorem.clipboardWrite': 'The generated text could not be copied.',
 
+    "cli.checksumGenerateUsage": "Usage: chimera checksum generate [--input <text> | --file <path> | --stdin] [--algorithm crc32|adler32] [--output <path>] [--json]. Default: crc32. Text uses exact UTF-8; file/stdin are exact bytes. JSON: algorithm, checksum (eight lowercase hexadecimal characters). Saved files contain the checksum and one LF.",
+    "checksumGenerate.pageTitle": "Generate checksum",
+    "checksumGenerate.openAction": "Generate checksum",
+    "checksumGenerate.inputLabel": "Text for checksum (UTF-8)",
+    "checksumGenerate.fileAction": "Choose local file bytes",
+    "checksumGenerate.pasteAction": "Paste text",
+    "checksumGenerate.algorithmLabel": "Checksum algorithm",
+    "checksumGenerate.submitAction": "Generate checksum",
+    "checksumGenerate.outputLabel": "Checksum result",
+    "checksumGenerate.resultSuccess": "Checksum generated.",
+    "checksumGenerate.copyAction": "Copy checksum",
+    "checksumGenerate.saveAction": "Save checksum",
+    "checksumGenerate.copiedResult": "Checksum copied.",
+    "checksumGenerate.fileSaved": "Checksum saved.",
+    "checksumGenerate.savedResult": "Checksum saved.",
+    "error.checksumGenerate.validation":
+        "The checksum algorithm or input source is invalid.",
+    "error.checksumGenerate.resource":
+        "Available resources could not generate the checksum.",
+    "error.checksumGenerate.fileAccess": "The local file could not be read.",
+    "error.checksumGenerate.inputAccess": "Standard input could not be read.",
+    "error.checksumGenerate.interactiveInputAccess":
+        "The checksum input could not be processed.",
+    "error.checksumGenerate.clipboardRead": "Clipboard text could not be read.",
+    "error.checksumGenerate.clipboardWrite":
+        "The checksum could not be copied.",
+    "error.checksumGenerate.outputAccess":
+        "The checksum could not be saved or written.",
+
+    'cli.hashGenerateUsage': "Usage: chimera hash generate (--input=<text>|--stdin|--file=<path>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<path>] [--json]. Files and stdin are exact bytes; text uses UTF-8. JSON: algorithm, lowercase hexadecimal digest, legacy, warning. Saved files contain the digest and a newline. MD5/SHA-1 are legacy and unsuitable for security decisions.",
+    'hashGenerate.pageTitle': "Generate hash",
+    'hashGenerate.openAction': "Generate hash",
+    'hashGenerate.inputLabel': "Text to hash (UTF-8)",
+    'hashGenerate.fileAction': "Choose local file bytes",
+    'hashGenerate.pasteAction': "Paste text",
+    'hashGenerate.algorithmLabel': "Hash algorithm",
+    'hashGenerate.submitAction': "Generate hash",
+    'hashGenerate.outputLabel': "Hash result",
+    'hashGenerate.resultSuccess': "Hash generated.",
+    'hashGenerate.copyAction': "Copy digest",
+    'hashGenerate.saveAction': "Save digest",
+    'hashGenerate.copiedResult': "Digest copied.",
+    'hashGenerate.fileSaved': "Digest saved.",
+    'hashGenerate.savedResult': "Digest saved.",
+    'hashGenerate.legacyWarning': "MD5 and SHA-1 are legacy algorithms and unsuitable for security decisions.",
+    'error.hashGenerate.validation':
+        "The hash algorithm or input source is invalid.",
+    'error.hashGenerate.resource':
+        "Hash generation could not finish with the available resources.",
+    'error.hashGenerate.fileAccess': "The local file could not be read.",
+    'error.hashGenerate.inputAccess': "The standard input could not be read.",
+    'error.hashGenerate.interactiveInputAccess':
+        "The hash input could not be processed.",
+    'error.hashGenerate.clipboardRead': "Clipboard text could not be read.",
+    'error.hashGenerate.clipboardWrite': "The digest could not be copied.",
+    'error.hashGenerate.outputAccess':
+        "The digest could not be saved or written.",
     'cli.qrDecodeUsage': 'Usage: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]. Input: PNG, JPEG or BMP image.',
     'qrDecode.pageTitle': 'Decode QR code',
     'qrDecode.openAction': 'Decode QR code',
@@ -196,6 +253,40 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlEncode.outputAccess':
         'The HTML encoded text could not be saved.',
     'error.htmlEncode.resource': 'HTML encoding exceeded its resource limit.',
+    'urlEncode.pageTitle': 'Encode URL',
+    'urlEncode.openAction': 'Encode URL',
+    'urlEncode.inputLabel': 'Text to encode',
+    'urlEncode.fileAction': 'Load UTF-8 file',
+    'urlEncode.pasteAction': 'Paste text',
+    'urlEncode.modeLabel': 'URL mode',
+    'urlEncode.modeComponent': 'URL component',
+    'urlEncode.modeFull': 'Full value',
+    'urlEncode.submitAction': 'Encode',
+    'urlEncode.outputLabel': 'URL encoded result',
+    'urlEncode.resultSuccess': 'URL encoding succeeded.',
+    'urlEncode.copyAction': 'Copy encoded text',
+    'urlEncode.saveAction': 'Save encoded text',
+    'urlEncode.copiedResult': 'URL encoded text copied.',
+    'urlEncode.fileSaved': 'URL encoded text saved.',
+    'error.urlEncode.clipboardRead': 'The clipboard text could not be read.',
+    'error.urlEncode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.urlEncode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.urlEncodeUsage':
+        'Usage: chimera url encode (--input=<text>|--stdin|--file=<path>) '
+        '[--mode=component|full] '
+        '[--output=<path>] [--json]\n'
+        'Default mode: component. Full mode preserves URL delimiters; '
+        'component mode encodes them. Human stdout is exact text without a newline. '
+        'Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 74 access, 75 resource.',
+    'urlEncode.savedResult': 'URL encoded text saved.',
+    'error.urlEncode.validation': 'The URL encoding request is invalid.',
+    'error.urlEncode.inputAccess': 'The standard input could not be read.',
+    'error.urlEncode.fileAccess': 'The input file could not be read.',
+    'error.urlEncode.outputAccess': 'The URL encoded text could not be saved.',
+    'error.urlEncode.resource': 'URL encoding exceeded its resource limit.',
     'htmlDecode.pageTitle': 'Decode HTML',
     'htmlDecode.openAction': 'Decode HTML',
     'htmlDecode.inputLabel': 'HTML entities to decode',
@@ -226,6 +317,35 @@ _catalogs = <String, Map<String, String>>{
     'error.htmlDecode.outputAccess':
         'The HTML decoded text could not be saved.',
     'error.htmlDecode.resource': 'HTML decoding exceeded its resource limit.',
+    'urlDecode.pageTitle': 'Decode URL',
+    'urlDecode.openAction': 'Decode URL',
+    'urlDecode.inputLabel': 'Percent-encoded text to decode',
+    'urlDecode.fileAction': 'Load UTF-8 file',
+    'urlDecode.pasteAction': 'Paste text',
+    'urlDecode.submitAction': 'Decode',
+    'urlDecode.outputLabel': 'URL decoded result',
+    'urlDecode.resultSuccess': 'URL decoding succeeded.',
+    'urlDecode.copyAction': 'Copy decoded text',
+    'urlDecode.saveAction': 'Save decoded text',
+    'urlDecode.copiedResult': 'URL decoded text copied.',
+    'urlDecode.fileSaved': 'URL decoded text saved.',
+    'error.urlDecode.clipboardRead': 'The clipboard text could not be read.',
+    'error.urlDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.urlDecode.interactiveInputAccess':
+        'The input could not be processed.',
+    'cli.urlDecodeUsage':
+        'Usage: chimera url decode (--input=<text>|--stdin|--file=<path>) '
+        '[--output=<path>] [--json]\n'
+        'Human stdout is exact text without a newline. Output saves UTF-8 '
+        'text; JSON emits the result after saving. Exit codes: 64 validation, '
+        '74 access, 75 resource.',
+    'urlDecode.savedResult': 'URL decoded text saved.',
+    'error.urlDecode.validation': 'The URL decoding request is invalid.',
+    'error.urlDecode.inputAccess': 'The standard input could not be read.',
+    'error.urlDecode.fileAccess': 'The input file could not be read.',
+    'error.urlDecode.outputAccess': 'The URL decoded text could not be saved.',
+    'error.urlDecode.resource': 'URL decoding exceeded its resource limit.',
     'gzipCompress.pageTitle': 'Compress GZIP',
     'gzipCompress.openAction': 'Compress to GZIP',
     'gzipCompress.inputLabel': 'Text to compress',
@@ -850,6 +970,66 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar ou escrever o texto gerado.',
     'error.lorem.clipboardWrite': 'Não foi possível copiar o texto gerado.',
 
+    "cli.checksumGenerateUsage": "Uso: chimera checksum generate [--input <texto> | --file <caminho> | --stdin] [--algorithm crc32|adler32] [--output <caminho>] [--json]. Padrão: crc32. Texto usa UTF-8 exato; arquivo/stdin são bytes exatos. JSON: algorithm, checksum (oito caracteres hexadecimais minúsculos). Arquivos salvos contêm a soma e um LF.",
+    "checksumGenerate.pageTitle": "Gerar soma de verificação",
+    "checksumGenerate.openAction": "Gerar soma de verificação",
+    "checksumGenerate.inputLabel": "Texto para soma de verificação (UTF-8)",
+    "checksumGenerate.fileAction": "Escolher bytes de arquivo local",
+    "checksumGenerate.pasteAction": "Colar texto",
+    "checksumGenerate.algorithmLabel": "Algoritmo da soma de verificação",
+    "checksumGenerate.submitAction": "Gerar soma de verificação",
+    "checksumGenerate.outputLabel": "Resultado da soma de verificação",
+    "checksumGenerate.resultSuccess": "Soma de verificação gerada.",
+    "checksumGenerate.copyAction": "Copiar soma de verificação",
+    "checksumGenerate.saveAction": "Salvar soma de verificação",
+    "checksumGenerate.copiedResult": "Soma de verificação copiada.",
+    "checksumGenerate.fileSaved": "Soma de verificação salva.",
+    "checksumGenerate.savedResult": "Soma de verificação salva.",
+    "error.checksumGenerate.validation":
+        "O algoritmo da soma de verificação ou a origem da entrada é inválido.",
+    "error.checksumGenerate.resource": "Com os recursos disponíveis, não foi possível gerar a soma de verificação.",
+    "error.checksumGenerate.fileAccess":
+        "Não foi possível ler o arquivo local.",
+    "error.checksumGenerate.inputAccess":
+        "Não foi possível ler a entrada padrão.",
+    "error.checksumGenerate.interactiveInputAccess":
+        "Não foi possível processar a entrada da soma de verificação.",
+    "error.checksumGenerate.clipboardRead":
+        "Não foi possível ler o texto da área de transferência.",
+    "error.checksumGenerate.clipboardWrite":
+        "Não foi possível copiar a soma de verificação.",
+    "error.checksumGenerate.outputAccess":
+        "Não foi possível salvar ou gravar a soma de verificação.",
+
+    'cli.hashGenerateUsage': "Uso: chimera hash generate (--input=<texto>|--stdin|--file=<caminho>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<caminho>] [--json]. Arquivos e stdin são bytes exatos; texto usa UTF-8. JSON: algorithm, digest hexadecimal minúsculo, legacy, warning. Arquivos salvos contêm o resumo e uma quebra de linha. MD5/SHA-1 são legados e inadequados para decisões de segurança.",
+    'hashGenerate.pageTitle': "Gerar hash",
+    'hashGenerate.openAction': "Gerar hash",
+    'hashGenerate.inputLabel': "Texto para hash (UTF-8)",
+    'hashGenerate.fileAction': "Escolher bytes de arquivo local",
+    'hashGenerate.pasteAction': "Colar texto",
+    'hashGenerate.algorithmLabel': "Algoritmo de hash",
+    'hashGenerate.submitAction': "Gerar hash",
+    'hashGenerate.outputLabel': "Resultado do hash",
+    'hashGenerate.resultSuccess': "Hash gerado.",
+    'hashGenerate.copyAction': "Copiar resumo",
+    'hashGenerate.saveAction': "Salvar resumo",
+    'hashGenerate.copiedResult': "Resumo copiado.",
+    'hashGenerate.fileSaved': "Resumo salvo.",
+    'hashGenerate.savedResult': "Resumo salvo.",
+    'hashGenerate.legacyWarning': "MD5 e SHA-1 são algoritmos legados e inadequados para decisões de segurança.",
+    'error.hashGenerate.validation':
+        "O algoritmo de hash ou a origem da entrada é inválido.",
+    'error.hashGenerate.resource':
+        "Com os recursos disponíveis, não foi possível gerar o hash.",
+    'error.hashGenerate.fileAccess': "Não foi possível ler o arquivo local.",
+    'error.hashGenerate.inputAccess': "Não foi possível ler a entrada padrão.",
+    'error.hashGenerate.interactiveInputAccess':
+        "Não foi possível processar a entrada do hash.",
+    'error.hashGenerate.clipboardRead':
+        "Não foi possível ler o texto da área de transferência.",
+    'error.hashGenerate.clipboardWrite': "Não foi possível copiar o resumo.",
+    'error.hashGenerate.outputAccess':
+        "Não foi possível salvar ou gravar o resumo.",
     'cli.qrDecodeUsage': 'Uso: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]. Entrada: imagem PNG, JPEG ou BMP.',
     'qrDecode.pageTitle': 'Decodificar código QR',
     'qrDecode.openAction': 'Decodificar código QR',
@@ -1040,6 +1220,44 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto codificado em HTML.',
     'error.htmlEncode.resource':
         'A codificação HTML excedeu o limite de recursos.',
+    'urlEncode.pageTitle': 'Codificar URL',
+    'urlEncode.openAction': 'Codificar URL',
+    'urlEncode.inputLabel': 'Texto para codificar',
+    'urlEncode.fileAction': 'Carregar arquivo UTF-8',
+    'urlEncode.pasteAction': 'Colar texto',
+    'urlEncode.modeLabel': 'Modo de URL',
+    'urlEncode.modeComponent': 'Componente de URL',
+    'urlEncode.modeFull': 'Valor completo',
+    'urlEncode.submitAction': 'Codificar',
+    'urlEncode.outputLabel': 'Resultado codificado em URL',
+    'urlEncode.resultSuccess': 'Codificação URL concluída.',
+    'urlEncode.copyAction': 'Copiar texto codificado',
+    'urlEncode.saveAction': 'Salvar texto codificado',
+    'urlEncode.copiedResult': 'Texto codificado em URL copiado.',
+    'urlEncode.fileSaved': 'Texto codificado em URL salvo.',
+    'error.urlEncode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.urlEncode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.urlEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.urlEncodeUsage':
+        'Uso: chimera url encode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--mode=component|full] '
+        '[--output=<caminho>] [--json]\n'
+        'Modo padrão: component. O modo full preserva os delimitadores de URL; '
+        'component os codifica. A saída de texto é exata, sem nova linha. '
+        'O arquivo salva texto UTF-8; JSON emite o resultado após salvar. '
+        'Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+    'urlEncode.savedResult': 'Texto codificado em URL salvo.',
+    'error.urlEncode.validation':
+        'A solicitação de codificação URL é inválida.',
+    'error.urlEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.urlEncode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.urlEncode.outputAccess':
+        'Não foi possível salvar o texto codificado em URL.',
+    'error.urlEncode.resource':
+        'A codificação URL excedeu o limite de recursos.',
     'htmlDecode.pageTitle': 'Decodificar HTML',
     'htmlDecode.openAction': 'Decodificar HTML',
     'htmlDecode.inputLabel': 'Entidades HTML para decodificar',
@@ -1073,6 +1291,39 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto decodificado de HTML.',
     'error.htmlDecode.resource':
         'A decodificação HTML excedeu o limite de recursos.',
+    'urlDecode.pageTitle': 'Decodificar URL',
+    'urlDecode.openAction': 'Decodificar URL',
+    'urlDecode.inputLabel': 'Texto percentualmente codificado para decodificar',
+    'urlDecode.fileAction': 'Carregar arquivo UTF-8',
+    'urlDecode.pasteAction': 'Colar texto',
+    'urlDecode.submitAction': 'Decodificar',
+    'urlDecode.outputLabel': 'Resultado decodificado de URL',
+    'urlDecode.resultSuccess': 'Decodificação URL concluída.',
+    'urlDecode.copyAction': 'Copiar texto decodificado',
+    'urlDecode.saveAction': 'Salvar texto decodificado',
+    'urlDecode.copiedResult': 'Texto decodificado de URL copiado.',
+    'urlDecode.fileSaved': 'Texto decodificado de URL salvo.',
+    'error.urlDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.urlDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.urlDecode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.urlDecodeUsage':
+        'Uso: chimera url decode (--input=<texto>|--stdin|--file=<caminho>) '
+        '[--output=<caminho>] [--json]\n'
+        'A saída de texto é exata, sem nova linha. O arquivo salva texto UTF-8; '
+        'JSON emite o resultado após salvar. Códigos de saída: 64 validação, '
+        '74 acesso, 75 recursos.',
+    'urlDecode.savedResult': 'Texto decodificado de URL salvo.',
+    'error.urlDecode.validation':
+        'A solicitação de decodificação URL é inválida.',
+    'error.urlDecode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.urlDecode.fileAccess': 'Não foi possível ler o arquivo de entrada.',
+    'error.urlDecode.outputAccess':
+        'Não foi possível salvar o texto decodificado de URL.',
+    'error.urlDecode.resource':
+        'A decodificação URL excedeu o limite de recursos.',
     'gzipCompress.pageTitle': 'Comprimir GZIP',
     'gzipCompress.openAction': 'Comprimir para GZIP',
     'gzipCompress.inputLabel': 'Texto para comprimir',

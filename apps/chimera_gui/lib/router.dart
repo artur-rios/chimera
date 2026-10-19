@@ -7,10 +7,12 @@ import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
+import 'checksum_generate_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'hash_generate_page.dart';
 import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
@@ -30,6 +32,8 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_decode_page.dart';
+import 'url_encode_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -54,18 +58,42 @@ GoRouter buildRouter({
   required QrEncodeFilePicker qrEncodeFilePicker,
   required QrEncodeClipboardReader qrEncodeClipboardReader,
   required QrEncodeFileSaver qrEncodeFileSaver,
+  required UrlDecodeOperationService urlDecodeService,
+  required UrlDecodeFilePicker urlDecodeFilePicker,
+  required UrlDecodeClipboardReader urlDecodeClipboardReader,
+  required UrlDecodeClipboardWriter urlDecodeClipboardWriter,
+  required UrlDecodeFileSaver urlDecodeFileSaver,
+  required UrlDecodeOutputEncoder urlDecodeOutputEncoder,
   required HtmlDecodeOperationService htmlDecodeService,
   required HtmlDecodeFilePicker htmlDecodeFilePicker,
   required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
   required HtmlDecodeClipboardWriter htmlDecodeClipboardWriter,
   required HtmlDecodeFileSaver htmlDecodeFileSaver,
   required HtmlDecodeOutputEncoder htmlDecodeOutputEncoder,
+  required ChecksumGenerateOperationService checksumGenerateService,
+  required ChecksumGenerateFilePicker checksumGenerateFilePicker,
+  required ChecksumGenerateClipboardReader checksumGenerateClipboardReader,
+  required ChecksumGenerateClipboardWriter checksumGenerateClipboardWriter,
+  required ChecksumGenerateFileSaver checksumGenerateFileSaver,
+  required ChecksumGenerateOutputEncoder checksumGenerateOutputEncoder,
+  required HashGenerateOperationService hashGenerateService,
+  required HashGenerateFilePicker hashGenerateFilePicker,
+  required HashGenerateClipboardReader hashGenerateClipboardReader,
+  required HashGenerateClipboardWriter hashGenerateClipboardWriter,
+  required HashGenerateFileSaver hashGenerateFileSaver,
+  required HashGenerateOutputEncoder hashGenerateOutputEncoder,
   required HtmlEncodeOperationService htmlEncodeService,
   required HtmlEncodeFilePicker htmlEncodeFilePicker,
   required HtmlEncodeClipboardReader htmlEncodeClipboardReader,
   required HtmlEncodeClipboardWriter htmlEncodeClipboardWriter,
   required HtmlEncodeFileSaver htmlEncodeFileSaver,
   required HtmlEncodeOutputEncoder htmlEncodeOutputEncoder,
+  required UrlEncodeOperationService urlEncodeService,
+  required UrlEncodeFilePicker urlEncodeFilePicker,
+  required UrlEncodeClipboardReader urlEncodeClipboardReader,
+  required UrlEncodeClipboardWriter urlEncodeClipboardWriter,
+  required UrlEncodeFileSaver urlEncodeFileSaver,
+  required UrlEncodeOutputEncoder urlEncodeOutputEncoder,
   required GzipCompressOperationService gzipCompressService,
   required GzipCompressFilePicker gzipCompressFilePicker,
   required GzipCompressClipboardReader gzipCompressClipboardReader,
@@ -181,6 +209,19 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(
+        path: '/checksum/generate',
+        builder: (context, state) => ChecksumGeneratePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: checksumGenerateService,
+          filePicker: checksumGenerateFilePicker,
+          clipboardReader: checksumGenerateClipboardReader,
+          clipboardWriter: checksumGenerateClipboardWriter,
+          fileSaver: checksumGenerateFileSaver,
+          outputEncoder: checksumGenerateOutputEncoder,
+        ),
+      ),
+      GoRoute(
         path: '/jwt/create',
         builder: (context, state) => JwtCreatePage(
           catalog: catalog,
@@ -226,6 +267,19 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(
+        path: '/url/decode',
+        builder: (context, state) => UrlDecodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: urlDecodeService,
+          filePicker: urlDecodeFilePicker,
+          clipboardReader: urlDecodeClipboardReader,
+          clipboardWriter: urlDecodeClipboardWriter,
+          fileSaver: urlDecodeFileSaver,
+          outputEncoder: urlDecodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
         path: '/html/decode',
         builder: (context, state) => HtmlDecodePage(
           catalog: catalog,
@@ -239,6 +293,19 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(
+        path: '/hash/generate',
+        builder: (context, state) => HashGeneratePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: hashGenerateService,
+          filePicker: hashGenerateFilePicker,
+          clipboardReader: hashGenerateClipboardReader,
+          clipboardWriter: hashGenerateClipboardWriter,
+          fileSaver: hashGenerateFileSaver,
+          outputEncoder: hashGenerateOutputEncoder,
+        ),
+      ),
+      GoRoute(
         path: '/html/encode',
         builder: (context, state) => HtmlEncodePage(
           catalog: catalog,
@@ -249,6 +316,19 @@ GoRouter buildRouter({
           clipboardWriter: htmlEncodeClipboardWriter,
           fileSaver: htmlEncodeFileSaver,
           outputEncoder: htmlEncodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/url/encode',
+        builder: (context, state) => UrlEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: urlEncodeService,
+          filePicker: urlEncodeFilePicker,
+          clipboardReader: urlEncodeClipboardReader,
+          clipboardWriter: urlEncodeClipboardWriter,
+          fileSaver: urlEncodeFileSaver,
+          outputEncoder: urlEncodeOutputEncoder,
         ),
       ),
       GoRoute(
@@ -292,6 +372,17 @@ GoRouter buildRouter({
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag, 'app.description')),
                       const SizedBox(height: 24),
+                      ElevatedButton(
+                        key: const Key('open-checksum-generate'),
+                        onPressed: () => context.go('/checksum/generate'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'checksumGenerate.openAction',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       ElevatedButton(
                         key: const Key('open-cron'),
                         onPressed: () => context.go('/cron/parse'),
@@ -478,10 +569,34 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
+                        key: const Key('open-hash-generate'),
+                        onPressed: () => context.go('/hash/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'hashGenerate.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
                         key: const Key('open-html-encode'),
                         onPressed: () => context.go('/html/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'htmlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-url-encode'),
+                        onPressed: () => context.go('/url/encode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'urlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-url-decode'),
+                        onPressed: () => context.go('/url/decode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'urlDecode.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

@@ -3,6 +3,46 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenHashMessages_WhenLookedUp_ThenBothLocalesDescribeLegacySecurityAndAdapters', () {
+    for (final locale in supportedLocaleTags) {
+      for (final key in const [
+        'cli.hashGenerateUsage',
+        'hashGenerate.pageTitle',
+        'hashGenerate.openAction',
+        'hashGenerate.inputLabel',
+        'hashGenerate.fileAction',
+        'hashGenerate.pasteAction',
+        'hashGenerate.algorithmLabel',
+        'hashGenerate.submitAction',
+        'hashGenerate.outputLabel',
+        'hashGenerate.resultSuccess',
+        'hashGenerate.copyAction',
+        'hashGenerate.saveAction',
+        'hashGenerate.copiedResult',
+        'hashGenerate.fileSaved',
+        'hashGenerate.savedResult',
+        'hashGenerate.legacyWarning',
+        'error.hashGenerate.validation',
+        'error.hashGenerate.resource',
+        'error.hashGenerate.fileAccess',
+        'error.hashGenerate.inputAccess',
+        'error.hashGenerate.interactiveInputAccess',
+        'error.hashGenerate.clipboardRead',
+        'error.hashGenerate.clipboardWrite',
+        'error.hashGenerate.outputAccess',
+      ]) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      expect(
+        catalog.lookup(locale, 'hashGenerate.legacyWarning'),
+        contains(
+          locale == 'en'
+              ? 'unsuitable for security decisions'
+              : 'inadequados para decisões de segurança',
+        ),
+      );
+    }
+  });
 
   test('GivenQrDecodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
@@ -156,6 +196,66 @@ void main() {
         expect(catalog.lookup(locale, key), isNot(key));
       }
     }
+  });
+
+  test(
+    'GivenUrlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final name in [
+          'pageTitle',
+          'openAction',
+          'inputLabel',
+          'fileAction',
+          'pasteAction',
+          'modeLabel',
+          'modeComponent',
+          'modeFull',
+          'submitAction',
+          'outputLabel',
+          'resultSuccess',
+          'copyAction',
+          'saveAction',
+          'copiedResult',
+          'fileSaved',
+        ]) {
+          final key = 'urlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        for (final name in [
+          'clipboardRead',
+          'clipboardWrite',
+          'interactiveInputAccess',
+        ]) {
+          final key = 'error.urlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test('GivenUrlEncodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = {
+      'cli.urlEncodeUsage',
+      'urlEncode.savedResult',
+      'error.urlEncode.validation',
+      'error.urlEncode.inputAccess',
+      'error.urlEncode.fileAccess',
+      'error.urlEncode.outputAccess',
+      'error.urlEncode.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+    expect(
+      catalog.lookup('pt-BR', 'error.urlEncode.resource'),
+      'A codificação URL excedeu o limite de recursos.',
+    );
   });
 
   test(
@@ -704,6 +804,53 @@ void main() {
       'error.lorem.resource',
       'error.lorem.outputAccess',
       'error.lorem.clipboardWrite',
+      'cli.checksumGenerateUsage',
+      'checksumGenerate.pageTitle',
+      'checksumGenerate.openAction',
+      'checksumGenerate.inputLabel',
+      'checksumGenerate.fileAction',
+      'checksumGenerate.pasteAction',
+      'checksumGenerate.algorithmLabel',
+      'checksumGenerate.submitAction',
+      'checksumGenerate.outputLabel',
+      'checksumGenerate.resultSuccess',
+      'checksumGenerate.copyAction',
+      'checksumGenerate.saveAction',
+      'checksumGenerate.copiedResult',
+      'checksumGenerate.fileSaved',
+      'checksumGenerate.savedResult',
+      'error.checksumGenerate.validation',
+      'error.checksumGenerate.resource',
+      'error.checksumGenerate.fileAccess',
+      'error.checksumGenerate.inputAccess',
+      'error.checksumGenerate.interactiveInputAccess',
+      'error.checksumGenerate.clipboardRead',
+      'error.checksumGenerate.clipboardWrite',
+      'error.checksumGenerate.outputAccess',
+      'cli.hashGenerateUsage',
+      'hashGenerate.pageTitle',
+      'hashGenerate.openAction',
+      'hashGenerate.inputLabel',
+      'hashGenerate.fileAction',
+      'hashGenerate.pasteAction',
+      'hashGenerate.algorithmLabel',
+      'hashGenerate.submitAction',
+      'hashGenerate.outputLabel',
+      'hashGenerate.resultSuccess',
+      'hashGenerate.copyAction',
+      'hashGenerate.saveAction',
+      'hashGenerate.copiedResult',
+      'hashGenerate.fileSaved',
+      'hashGenerate.savedResult',
+      'hashGenerate.legacyWarning',
+      'error.hashGenerate.validation',
+      'error.hashGenerate.resource',
+      'error.hashGenerate.fileAccess',
+      'error.hashGenerate.inputAccess',
+      'error.hashGenerate.interactiveInputAccess',
+      'error.hashGenerate.clipboardRead',
+      'error.hashGenerate.clipboardWrite',
+      'error.hashGenerate.outputAccess',
 
       'cli.qrDecodeUsage',
       'qrDecode.pageTitle',
@@ -819,6 +966,31 @@ void main() {
       'error.jwtCreate.clipboardRead',
       'error.jwtCreate.clipboardWrite',
       'error.jwtCreate.interactiveInputAccess',
+      'urlEncode.pageTitle',
+      'urlEncode.openAction',
+      'urlEncode.inputLabel',
+      'urlEncode.fileAction',
+      'urlEncode.pasteAction',
+      'urlEncode.modeLabel',
+      'urlEncode.modeComponent',
+      'urlEncode.modeFull',
+      'urlEncode.submitAction',
+      'urlEncode.outputLabel',
+      'urlEncode.resultSuccess',
+      'urlEncode.copyAction',
+      'urlEncode.saveAction',
+      'urlEncode.copiedResult',
+      'urlEncode.fileSaved',
+      'error.urlEncode.clipboardRead',
+      'error.urlEncode.clipboardWrite',
+      'error.urlEncode.interactiveInputAccess',
+      'cli.urlEncodeUsage',
+      'urlEncode.savedResult',
+      'error.urlEncode.validation',
+      'error.urlEncode.inputAccess',
+      'error.urlEncode.fileAccess',
+      'error.urlEncode.outputAccess',
+      'error.urlEncode.resource',
       'htmlEncode.pageTitle',
       'htmlEncode.openAction',
       'htmlEncode.inputLabel',
@@ -868,6 +1040,28 @@ void main() {
       'error.htmlDecode.fileAccess',
       'error.htmlDecode.outputAccess',
       'error.htmlDecode.resource',
+      'urlDecode.pageTitle',
+      'urlDecode.openAction',
+      'urlDecode.inputLabel',
+      'urlDecode.fileAction',
+      'urlDecode.pasteAction',
+      'urlDecode.submitAction',
+      'urlDecode.outputLabel',
+      'urlDecode.resultSuccess',
+      'urlDecode.copyAction',
+      'urlDecode.saveAction',
+      'urlDecode.copiedResult',
+      'urlDecode.fileSaved',
+      'error.urlDecode.clipboardRead',
+      'error.urlDecode.clipboardWrite',
+      'error.urlDecode.interactiveInputAccess',
+      'cli.urlDecodeUsage',
+      'urlDecode.savedResult',
+      'error.urlDecode.validation',
+      'error.urlDecode.inputAccess',
+      'error.urlDecode.fileAccess',
+      'error.urlDecode.outputAccess',
+      'error.urlDecode.resource',
       for (final name in [
         'pageTitle',
         'openAction',

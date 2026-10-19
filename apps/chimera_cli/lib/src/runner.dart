@@ -46,10 +46,16 @@ Future<int> runChimera(
   JsonObjectEncoder? gzipCompressJsonEncoder,
   GzipDecompressService gzipDecompressService = const GzipDecompressService(),
   JsonObjectEncoder? gzipDecompressJsonEncoder,
+  UrlDecodeService urlDecodeService = const UrlDecodeService(),
+  JsonObjectEncoder? urlDecodeJsonEncoder,
   HtmlDecodeService htmlDecodeService = const HtmlDecodeService(),
   JsonObjectEncoder? htmlDecodeJsonEncoder,
+  HashGenerateService hashGenerateService = const HashGenerateService(),
+  JsonObjectEncoder? hashGenerateJsonEncoder,
   HtmlEncodeService htmlEncodeService = const HtmlEncodeService(),
   JsonObjectEncoder? htmlEncodeJsonEncoder,
+  UrlEncodeService urlEncodeService = const UrlEncodeService(),
+  JsonObjectEncoder? urlEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -64,6 +70,9 @@ Future<int> runChimera(
   JsonObjectEncoder? qrEncodeJsonEncoder,
   QrDecodeService qrDecodeService = const QrDecodeService(),
   JsonObjectEncoder? qrDecodeJsonEncoder,
+  ChecksumGenerateService checksumGenerateService =
+      const ChecksumGenerateService(),
+  JsonObjectEncoder? checksumGenerateJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -89,6 +98,9 @@ Future<int> runChimera(
     if (parsed.flag('help')) {
       final key = parsed.command?.name == 'lorem'
           ? 'cli.loremUsage'
+          : parsed.command?.name == 'checksum' &&
+                parsed.command?.command?.name == 'generate'
+          ? 'cli.checksumGenerateUsage'
           : parsed.command?.name == 'qr' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.qrEncodeUsage'
@@ -101,12 +113,21 @@ Future<int> runChimera(
           : parsed.command?.name == 'jwt' &&
                 parsed.command?.command?.name == 'create'
           ? 'cli.jwtCreateUsage'
+          : parsed.command?.name == 'hash' &&
+                parsed.command?.command?.name == 'generate'
+          ? 'cli.hashGenerateUsage'
+          : parsed.command?.name == 'url' &&
+                parsed.command?.command?.name == 'decode'
+          ? 'cli.urlDecodeUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'decode'
           ? 'cli.htmlDecodeUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.htmlEncodeUsage'
+          : parsed.command?.name == 'url' &&
+                parsed.command?.command?.name == 'encode'
+          ? 'cli.urlEncodeUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
@@ -142,6 +163,29 @@ Future<int> runChimera(
               writeStage: writeOutputStage ?? _writeFileStageExactly,
               operations: outputFileOperations,
             ),
+      );
+    }
+    if (parsed.command!.name == 'checksum' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runChecksumGenerate(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: checksumGenerateService,
+        encodeJson: checksumGenerateJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'qr' &&
@@ -228,6 +272,29 @@ Future<int> runChimera(
         encodeJson: jwtInspectJsonEncoder ?? jsonEncode,
       );
     }
+    if (parsed.command!.name == 'url' &&
+        parsed.command!.command?.name == 'decode') {
+      return await _runUrlDecode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: urlDecodeService,
+        encodeJson: urlDecodeJsonEncoder ?? jsonEncode,
+      );
+    }
     if (parsed.command!.name == 'html' &&
         parsed.command!.command?.name == 'decode') {
       return await _runHtmlDecode(
@@ -251,6 +318,29 @@ Future<int> runChimera(
         encodeJson: htmlDecodeJsonEncoder ?? jsonEncode,
       );
     }
+    if (parsed.command!.name == 'hash' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runHashGenerate(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: hashGenerateService,
+        encodeJson: hashGenerateJsonEncoder ?? jsonEncode,
+      );
+    }
     if (parsed.command!.name == 'html' &&
         parsed.command!.command?.name == 'encode') {
       return await _runHtmlEncode(
@@ -272,6 +362,29 @@ Future<int> runChimera(
             ),
         service: htmlEncodeService,
         encodeJson: htmlEncodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'url' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runUrlEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: urlEncodeService,
+        encodeJson: urlEncodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'gzip' &&
@@ -625,6 +738,8 @@ Future<int> runChimera(
   } on FormatException {
     final isLorem =
         args.length >= 2 && args[0] == 'lorem' && args[1] == 'generate';
+    final isChecksumGenerate =
+        args.length >= 2 && args[0] == 'checksum' && args[1] == 'generate';
     final isQrDecode =
         args.length >= 2 && args[0] == 'qr' && args[1] == 'decode';
     final isQrEncode =
@@ -633,8 +748,14 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'inspect';
     final isJwtCreate =
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
+    final isUrlDecode =
+        args.length >= 2 && args[0] == 'url' && args[1] == 'decode';
     final isHtmlDecode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'decode';
+    final isHashGenerate =
+        args.length >= 2 && args[0] == 'hash' && args[1] == 'generate';
+    final isUrlEncode =
+        args.length >= 2 && args[0] == 'url' && args[1] == 'encode';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -684,12 +805,16 @@ Future<int> runChimera(
       localeTag: localeTag,
       json:
           (isLorem ||
+              isChecksumGenerate ||
               isQrDecode ||
               isQrEncode ||
               isJwtInspect ||
               isJwtCreate ||
+              isUrlDecode ||
               isHtmlDecode ||
+              isHashGenerate ||
               isHtmlEncode ||
+              isUrlEncode ||
               isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
@@ -715,6 +840,8 @@ Future<int> runChimera(
       kind: 'validation',
       code: isLorem
           ? 'lorem.invalid-options'
+          : isChecksumGenerate
+          ? 'checksum-generate.invalid-options'
           : isQrDecode
           ? 'qr-decode.invalid-options'
           : isQrEncode
@@ -723,10 +850,16 @@ Future<int> runChimera(
           ? 'jwt-inspect.invalid-options'
           : isJwtCreate
           ? 'jwt-create.invalid-options'
+          : isUrlDecode
+          ? 'url-decode.invalid-options'
           : isHtmlDecode
           ? 'html-decode.invalid-options'
+          : isHashGenerate
+          ? 'hash-generate.invalid-options'
           : isHtmlEncode
           ? 'html-encode.invalid-options'
+          : isUrlEncode
+          ? 'url-encode.invalid-options'
           : isGzipCompress
           ? 'gzip-compress.invalid-options'
           : isGzipDecompress
@@ -772,6 +905,8 @@ Future<int> runChimera(
           : 'cli.invalid-options',
       messageKey: isLorem
           ? 'error.lorem.validation'
+          : isChecksumGenerate
+          ? 'error.checksumGenerate.validation'
           : isQrDecode
           ? 'error.qrDecode.validation'
           : isQrEncode
@@ -780,10 +915,16 @@ Future<int> runChimera(
           ? 'error.jwtInspect.validation'
           : isJwtCreate
           ? 'error.jwtCreate.validation'
+          : isUrlDecode
+          ? 'error.urlDecode.validation'
           : isHtmlDecode
           ? 'error.htmlDecode.validation'
+          : isHashGenerate
+          ? 'error.hashGenerate.validation'
           : isHtmlEncode
           ? 'error.htmlEncode.validation'
+          : isUrlEncode
+          ? 'error.urlEncode.validation'
           : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
@@ -874,6 +1015,14 @@ ArgParser _buildParser() {
     ..addOption('background', defaultsTo: '#FFFFFF')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final checksumGenerate = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('algorithm', defaultsTo: 'crc32')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final checksum = ArgParser()..addCommand('generate', checksumGenerate);
   final qrDecode = ArgParser()
     ..addFlag('stdin', negatable: false)
     ..addOption('file', abbr: 'f')
@@ -882,12 +1031,26 @@ ArgParser _buildParser() {
   final qr = ArgParser()
     ..addCommand('encode', qrEncode)
     ..addCommand('decode', qrDecode);
+  final urlDecode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
     ..addOption('file', abbr: 'f')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final hashGenerate = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('algorithm', defaultsTo: 'sha256')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final hash = ArgParser()..addCommand('generate', hashGenerate);
   final htmlEncode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -895,6 +1058,16 @@ ArgParser _buildParser() {
     ..addOption('context', defaultsTo: 'all')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final urlEncode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('mode', defaultsTo: 'component')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final url = ArgParser()
+    ..addCommand('encode', urlEncode)
+    ..addCommand('decode', urlDecode);
   final html = ArgParser()
     ..addCommand('decode', htmlDecode)
     ..addCommand('encode', htmlEncode);
@@ -1079,12 +1252,15 @@ ArgParser _buildParser() {
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('gzip', gzip)
+    ..addCommand('hash', hash)
+    ..addCommand('url', url)
     ..addCommand('html', html)
     ..addCommand('json', json)
     ..addCommand('jwt', jwt)
     ..addCommand('list', list)
     ..addCommand('lorem', lorem)
     ..addCommand('number', number)
+    ..addCommand('checksum', checksum)
     ..addCommand('qr', qr)
     ..addCommand('sql', sql)
     ..addCommand('text', text)
@@ -2598,6 +2774,151 @@ final class _JwtCreateAdapterFailure implements Exception {
   final Map<String, Object?> details;
 }
 
+Future<int> _runUrlDecode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required UrlDecodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'url-decode.$invalid',
+      messageKey: 'error.urlDecode.validation',
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'url-decode.resource-limit',
+    messageKey: 'error.urlDecode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'url-decode.output-access',
+    messageKey: 'error.urlDecode.outputAccess',
+  );
+
+  late UrlDecodeOperationRequest request;
+  try {
+    request = text != null
+        ? UrlDecodeOperationRequest.text(text)
+        : UrlDecodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'url-decode.input-access'
+          : 'url-decode.file-access',
+      messageKey: useStandardInput
+          ? 'error.urlDecode.inputAccess'
+          : 'error.urlDecode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'urlDecode.savedResult')}\n'
+            : value.decoded;
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.decoded));
+        } on OutOfMemoryError {
+          resourceFailure('decoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
 Future<int> _runHtmlDecode(
   ArgResults parsed, {
   required String localeTag,
@@ -2720,6 +3041,158 @@ Future<int> _runHtmlDecode(
         out.write(stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runHashGenerate(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required HashGenerateService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final algorithm = parsed.option('algorithm')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !HashGenerator.algorithms.contains(algorithm)
+      ? 'invalid-algorithm'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'hash-generate.$invalid',
+      messageKey: 'error.hashGenerate.validation',
+      details: invalid == 'invalid-algorithm'
+          ? {'field': 'algorithm', 'reason': 'unsupported-algorithm'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'hash-generate.resource-limit',
+    messageKey: 'error.hashGenerate.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'hash-generate.output-access',
+    messageKey: 'error.hashGenerate.outputAccess',
+  );
+
+  late HashGenerateOperationRequest request;
+  try {
+    request = text != null
+        ? HashGenerateOperationRequest.text(text, algorithm: algorithm)
+        : HashGenerateOperationRequest.bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            algorithm: algorithm,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'hash-generate.input-access'
+          : 'hash-generate.file-access',
+      messageKey: useStandardInput
+          ? 'error.hashGenerate.inputAccess'
+          : 'error.hashGenerate.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson({'algorithm': value.algorithm, 'digest': value.digest, 'legacy': value.legacy, 'warning': value.warningKey == null ? null : catalog.lookup(localeTag, value.warningKey!)})}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'hashGenerate.savedResult')}\n${value.warningKey == null ? '' : '${catalog.lookup(localeTag, value.warningKey!)}\n'}'
+            : '${value.digest}\n${value.warningKey == null ? '' : '${catalog.lookup(localeTag, value.warningKey!)}\n'}';
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode('${value.digest}\n'));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
         return 75;
       } on Object {
         outputAccessFailure();
@@ -2875,6 +3348,158 @@ Future<int> _runHtmlEncode(
       }
       try {
         out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runUrlEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required UrlEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final mode = parsed.option('mode')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !const ['component', 'full'].contains(mode)
+      ? 'invalid-mode'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'url-encode.$invalid',
+      messageKey: 'error.urlEncode.validation',
+      details: invalid == 'invalid-mode'
+          ? {'field': 'mode', 'reason': 'unsupported-mode'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'url-encode.resource-limit',
+    messageKey: 'error.urlEncode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'url-encode.output-access',
+    messageKey: 'error.urlEncode.outputAccess',
+  );
+
+  late UrlEncodeOperationRequest request;
+  try {
+    request = text != null
+        ? UrlEncodeOperationRequest.text(text, mode: mode)
+        : UrlEncodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            mode: mode,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'url-encode.input-access'
+          : 'url-encode.file-access',
+      messageKey: useStandardInput
+          ? 'error.urlEncode.inputAccess'
+          : 'error.urlEncode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'urlEncode.savedResult')}\n'
+            : value.encoded;
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.encoded));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;
@@ -5463,6 +6088,158 @@ void _writeHumanCronResult(
       '${occurrence.localIso8601}',
     );
   }
+}
+
+Future<int> _runChecksumGenerate(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required ChecksumGenerateService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final algorithm = parsed.option('algorithm')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !ChecksumGenerator.algorithms.contains(algorithm)
+      ? 'invalid-algorithm'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'checksum-generate.$invalid',
+      messageKey: 'error.checksumGenerate.validation',
+      details: invalid == 'invalid-algorithm'
+          ? {'field': 'algorithm', 'reason': 'unsupported-algorithm'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'checksum-generate.resource-limit',
+    messageKey: 'error.checksumGenerate.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'checksum-generate.output-access',
+    messageKey: 'error.checksumGenerate.outputAccess',
+  );
+
+  late ChecksumGenerateOperationRequest request;
+  try {
+    request = text != null
+        ? ChecksumGenerateOperationRequest.text(text, algorithm: algorithm)
+        : ChecksumGenerateOperationRequest.bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            algorithm: algorithm,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'checksum-generate.input-access'
+          : 'checksum-generate.file-access',
+      messageKey: useStandardInput
+          ? 'error.checksumGenerate.inputAccess'
+          : 'error.checksumGenerate.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'checksumGenerate.savedResult')}\n'
+            : '${value.checksum}\n';
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode('${value.checksum}\n'));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
 }
 
 Future<int> _runLorem(

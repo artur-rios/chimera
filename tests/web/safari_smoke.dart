@@ -124,6 +124,67 @@ const _htmlNoResultScript = r'''
     !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
 ''';
 
+const _urlDecodeSetupScript = r'''
+  window.__chimeraUrlDecodeCopiedText = null;
+  window.__chimeraUrlDecodeCopies = 0;
+  window.__chimeraUrlDecodeReads = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraUrlDecodeReads++;
+        return '%3C%26%41%F0%9F%99%82%253C+';
+      },
+      writeText: async value => {
+        window.__chimeraUrlDecodeCopies++;
+        window.__chimeraUrlDecodeCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _urlDecodeSubmitScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Decode' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeResultScript = r'''
+  return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .some(element => element.getAttribute('aria-label') ===
+      'URL decoded result URL decoding succeeded.');
+''';
+const _urlDecodeCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy decoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeCopiedScript = r'''
+  return window.__chimeraUrlDecodeCopies === arguments[1] &&
+    window.__chimeraUrlDecodeCopiedText === arguments[0];
+''';
+const _urlDecodeSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-url-decoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _urlDecodeNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('URL decoded result')) &&
+    !buttons.includes('Copy decoded text') && !buttons.includes('Save decoded text');
+''';
+
 const _htmlDecodeSetupScript = r'''
   window.__chimeraHtmlDecodeCopiedText = null;
   window.__chimeraHtmlDecodeCopies = 0;
@@ -191,6 +252,22 @@ Future<void> main(List<String> arguments) async {
     final observer = await _loadGzipSaveObserver();
     if (observer.isEmpty) throw StateError('GZIP save observer is empty');
     stdout.writeln('GZIP save observer source loaded successfully.');
+    return;
+  }
+  if (arguments case ['--verify-url-helpers']) {
+    final helpers = [
+      _urlDecodeSetupScript,
+      _urlDecodeSubmitScript,
+      _urlDecodeResultScript,
+      _urlDecodeCopyScript,
+      _urlDecodeCopiedScript,
+      _urlDecodeSaveScript,
+      _urlDecodeNoResultScript,
+    ];
+    if (helpers.any((source) => source.isEmpty)) {
+      throw StateError('URL helpers missing');
+    }
+    stdout.writeln('URL helpers (7) loaded successfully.');
     return;
   }
   if (arguments case ['--verify-html-helpers']) {
@@ -1126,12 +1203,26 @@ Future<void> main(List<String> arguments) async {
     }
 
     await _decompressGzip(driver);
+    try {
+      await _generateHash(driver);
+    } on Object {
+      await _capturePageDiagnostics(driver, 'hash-failure');
+      rethrow;
+    }
     await _encodeHtml(driver);
     await _decodeHtml(driver);
+    await _encodeUrl(driver);
+    await _decodeUrl(driver);
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
     await _generateLorem(driver);
+    try {
+      await _generateChecksum(driver);
+    } on Object {
+      await _capturePageDiagnostics(driver, 'checksum-failure');
+      rethrow;
+    }
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
@@ -1842,6 +1933,201 @@ Future<void> _encodeHtml(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'HTML context/copy/save/validation',
+  );
+}
+
+Future<void> _decodeUrl(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'URL Decode semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Decode URL');
+  await _waitUntil(
+    () => _pageContains(driver, 'Percent-encoded text to decode'),
+    'URL Decode page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'URL Decode startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_urlDecodeSetupScript, const <Object?>[]);
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '<&A🙂%3C+';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '%3C%26%41%F0%9F%99%82%253C+',
+      focus: true,
+    ),
+    'URL Decode clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSubmitScript, const <Object?>[]) == true,
+    'URL Decode submit was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '',
+      focus: true,
+    ),
+    'URL Decode source was retained',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>[
+          expected,
+          1,
+        ]) ==
+        true,
+    'URL Decode clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'URL Decode non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL decoded text saved.'),
+    'URL Decode non-empty save did not finish',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode empty result did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>['', 2]) ==
+        true,
+    'URL Decode empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSaveScript, const <Object?>[
+          <int>[],
+          2,
+        ]) ==
+        true,
+    'URL Decode empty save/URL cleanup was not exact',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'URL Decode malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The URL decoding request is invalid.'),
+    'URL Decode UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) !=
+      true) {
+    throw StateError('URL Decode validation retained an output action');
+  }
+  final reads = await driver.execute(
+    'return window.__chimeraUrlDecodeReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) {
+    throw StateError('URL Decode clipboard source was not read once');
+  }
+  await driver.execute(r'''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: async () => '%3Cprivate%3E',
+        writeText: async () => { throw new Error('private'); },
+      },
+    });
+  ''', const <Object?>[]);
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '%3Cprivate%3E',
+      focus: true,
+    ),
+    'URL Decode output-denial fixture was not loaded',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode output-denial result did not appear',
+  );
+  await _clickButton(driver, 'Copy decoded text');
+  await _waitUntil(
+    () => _pageContains(driver, 'The clipboard text could not be written.'),
+    'URL Decode output access failure did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode output access retained a result',
+  );
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'URL Decode copy/save/validation',
   );
 }
 
@@ -2714,7 +3000,7 @@ Future<bool> _inputHasValue(
   return result == true;
 }
 
-// Only the public baseline cron fixture calls this; preserve the original
+// Only public smoke fixtures call this; preserve the original
 // failure even if Safari cannot provide one of the diagnostic artifacts.
 Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
   try {
@@ -2766,6 +3052,751 @@ Future<void> _waitUntil(
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
   throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
+}
+
+const _urlSetupScript = r'''
+  window.__chimeraUrlCopiedText = null;
+  window.__chimeraUrlCopies = 0;
+  window.__chimeraUrlReads = 0;
+  window.__chimeraUrlClipboardSource = '&<>"\'/ &amp; Olá 🌍';
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraUrlReads++;
+        return window.__chimeraUrlClipboardSource;
+      },
+      writeText: async value => {
+        window.__chimeraUrlCopies++;
+        window.__chimeraUrlCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _urlModeOpenScript = r'''
+  const normalize = value => value.replace(/\s+/g, ' ').trim();
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'URL mode URL component' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.click();
+  return true;
+''';
+const _urlModeSelectScript = r'''
+  const option = [...document.querySelectorAll('[role="menuitem"]')]
+    .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!option) return false;
+  option.click();
+  return true;
+''';
+const _urlResultScript = r'''
+  const result = [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .find(element => element.getAttribute('aria-label') === 'URL encoded result URL encoding succeeded.');
+  return result !== undefined;
+''';
+const _urlCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy encoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlCopiedScript = r'''
+  return window.__chimeraUrlCopies === arguments[1] &&
+    window.__chimeraUrlCopiedText === arguments[0];
+''';
+const _urlSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-url-encoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _urlFileScript = r'''
+  const picker = document.querySelector('input[type="file"]');
+  if (!picker) return false;
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([new Uint8Array(arguments[0])],
+    'source.txt', {type: 'text/plain'}));
+  picker.files = transfer.files;
+  picker.dispatchEvent(new Event('change', {bubbles: true}));
+  return true;
+''';
+const _urlNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('URL encoded result')) &&
+    !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
+''';
+
+Future<void> _encodeUrl(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'URL semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Encode URL');
+  await _waitUntil(
+    () => _pageContains(driver, 'Text to encode'),
+    'URL page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'URL startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_urlSetupScript, const <Object?>[]);
+  // SafariDriver has no upload endpoint; use its existing real File dispatch.
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '&%3C%3E%22\'/%20&amp;%20Ol%C3%A1%20%F0%9F%8C%8D';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Text to encode',
+      '&<>"\'/ &amp; Olá 🌍',
+      focus: true,
+    ),
+    'URL clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlModeOpenScript, const <Object?>[]) == true,
+    'URL default context was unavailable',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlModeSelectScript, const <Object?>[
+          'Full value',
+        ]) ==
+        true,
+    'URL double-quoted context was unavailable',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlResultScript, const <Object?>[]) == true,
+    'URL result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'URL source was retained',
+  );
+  await _waitUntil(
+    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
+    'URL copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlCopiedScript, const <Object?>[expected, 1]) ==
+        true,
+    'URL clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'URL non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL encoded text saved.'),
+    'URL non-empty save did not finish',
+  );
+  // A second encode has no retained source: it must copy/save exactly zero bytes.
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlResultScript, const <Object?>[]) == true,
+    'URL empty result did not appear',
+  );
+  await _waitUntil(
+    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
+    'URL empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlCopiedScript, const <Object?>['', 2]) == true,
+    'URL empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlSaveScript, const <Object?>[<int>[], 2]) ==
+        true,
+    'URL empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL encoded text saved.'),
+    'URL empty save did not finish',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'URL malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
+    'URL file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The URL encoding request is invalid.'),
+    'URL UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_urlNoResultScript, const <Object?>[]) != true) {
+    throw StateError('URL validation retained an output action or result');
+  }
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'URL validation retained source text',
+  );
+  final reads = await driver.execute(
+    'return window.__chimeraUrlReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) throw StateError('URL clipboard source was not read once');
+  for (final boundary in ['copy', 'save']) {
+    await driver.execute(
+      "window.__chimeraUrlClipboardSource = 'private /ação';",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Paste text');
+    await _waitUntil(
+      () => _inputHasValue(
+        driver,
+        'Text to encode',
+        'private /ação',
+        focus: true,
+      ),
+      'URL failure source was not loaded',
+    );
+    await _clickButton(driver, 'Encode');
+    await _waitUntil(
+      () async =>
+          await driver.execute(_urlResultScript, const <Object?>[]) == true,
+      'URL failure fixture did not produce a result',
+    );
+    await driver.execute(
+      r'''
+      if (arguments[0] === 'copy') {
+        navigator.clipboard.writeText = async () => {
+          throw new Error('private output denial');
+        };
+      } else {
+        window.__chimeraUrlOriginalCreateObjectURL = URL.createObjectURL;
+        URL.createObjectURL = () => { throw new Error('private output denial'); };
+      }
+    ''',
+      <Object?>[boundary],
+    );
+    await _clickButton(
+      driver,
+      boundary == 'copy' ? 'Copy encoded text' : 'Save encoded text',
+    );
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        boundary == 'copy'
+            ? 'The clipboard text could not be written.'
+            : 'The URL encoded text could not be saved.',
+      ),
+      'URL safe output access error did not appear',
+    );
+    await _waitUntil(
+      () async =>
+          await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
+      'URL output access failure retained a result',
+    );
+    if (boundary == 'save') {
+      await driver.execute(
+        'URL.createObjectURL = window.__chimeraUrlOriginalCreateObjectURL;',
+        const <Object?>[],
+      );
+    }
+  }
+
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'URL context/copy/save/validation',
+  );
+}
+
+const _hashInvalidClipboardScript = r'''
+return hashProbe('setup', String.fromCharCode(0xd800));
+''';
+
+Future<void> _generateHash(WebDriver driver) async {
+  final source = await File.fromUri(Platform.script.resolve('hash_browser.js'))
+      .readAsString();
+  final observer = await _loadGzipSaveObserver();
+  final vectors = jsonDecode(
+    await File.fromUri(
+      Platform.script.resolve('../fixtures/hashes/vectors.json'),
+    ).readAsString(),
+  ) as List<dynamic>;
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn hashProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openHash() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Hash semantics placeholder did not load',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder').click();",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Generate hash');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text to hash (UTF-8)'),
+      'Hash page did not open',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Hash startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup', 'abc');
+    // SafariDriver exposes no file chooser endpoint; dispatch a real File.
+    await driver.execute(r'''
+      const original = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') return;
+        return original.call(this);
+      };
+    ''', const <Object?>[]);
+  }
+
+  for (final algorithm in ['sha256', 'sha384', 'sha512', 'md5', 'sha1']) {
+    for (final inputSource in ['clipboard', 'file', 'empty']) {
+      stdout.writeln('Safari hash scenario: $algorithm $inputSource');
+      await openHash();
+      final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
+        (v) =>
+            v['name'] ==
+            (inputSource == 'empty'
+                ? 'empty'
+                : inputSource == 'file'
+                ? 'binary'
+                : 'abc'),
+      );
+      final expected =
+          (fixture['digests'] as Map<String, dynamic>)[algorithm] as String;
+      if (inputSource == 'clipboard') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text to hash (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Hash clipboard source missing',
+        );
+      }
+      if (inputSource == 'file') {
+        await _clickButton(driver, 'Choose local file bytes');
+        await _waitUntil(
+          () async => await probe('file', fixture['bytes']) == true,
+          'Hash file input missing',
+        );
+        await _waitUntil(
+          () async =>
+              await driver.execute(r'''
+          return [...document.querySelectorAll('[role="button"]')].some(node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g,' ').trim() === 'Hash algorithm SHA256' && node.getAttribute('aria-disabled') !== 'true');
+        ''', const <Object?>[]) ==
+              true,
+          'Hash file loading did not finish',
+        );
+      }
+      if (algorithm != 'sha256') {
+        await _capturePageDiagnostics(
+          driver,
+          'hash-$algorithm-$inputSource-before-selector',
+        );
+        await _waitUntil(
+          () async => await probe('openAlgorithm') == true,
+          'Hash algorithm selector missing',
+        );
+        await _capturePageDiagnostics(
+          driver,
+          'hash-$algorithm-$inputSource-after-selector',
+        );
+        await _waitUntil(
+          () async => await probe('algorithm', algorithm.toUpperCase()) == true,
+          'Hash algorithm choice missing',
+        );
+      }
+      await _clickButton(driver, 'Generate hash');
+      await _waitUntil(
+        () async => await probe('result', expected) == true,
+        'Hash known digest mismatch',
+      );
+      if (algorithm == 'md5' || algorithm == 'sha1') {
+        await _waitUntil(
+          () => _pageContains(driver, 'unsuitable for security decisions'),
+          'Hash legacy security warning missing',
+        );
+      }
+      await _waitUntil(
+        () async => await probe('sourceCleared') == true,
+        'Hash source retained',
+      );
+      await _waitUntil(
+        () async => await probe('copy') == true,
+        'Hash copy unavailable',
+      );
+      await _waitUntil(
+        () async => await probe('copied', expected) == true,
+        'Hash clipboard result mismatch',
+      );
+      await _clickButton(driver, 'Save digest');
+      await _waitUntil(
+        () async => await probe('saved', utf8.encode('$expected\n')) == true,
+        'Hash saved bytes mismatch',
+      );
+      await _assertNoNetworkRequests(
+        driver,
+        flow: 'Hash $algorithm $inputSource',
+      );
+    }
+  }
+  for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    stdout.writeln('Safari hash failure scenario: $failure');
+    await openHash();
+    if (failure == 'file') {
+      await probe('fileFailure');
+      await _clickButton(driver, 'Choose local file bytes');
+      await _waitUntil(
+        () async => await probe('file', <int>[0, 255]) == true,
+        'Hash failure file input missing',
+      );
+      await _waitUntil(
+        () => _pageContains(driver, 'The local file could not be read.'),
+        'Hash file access failure missing',
+      );
+    } else if (failure == 'validation') {
+      await driver.execute(
+        '$source\n$_hashInvalidClipboardScript',
+        const <Object?>[],
+      );
+      await _clickButton(driver, 'Paste text');
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          'The hash algorithm or input source is invalid.',
+        ),
+        'Hash clipboard validation missing',
+      );
+    } else {
+      if (failure != 'read') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text to hash (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Hash failure source missing',
+        );
+        await _clickButton(driver, 'Generate hash');
+        await _waitUntil(
+          () async =>
+              await probe(
+                'result',
+                'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+              ) ==
+              true,
+          'Hash failure setup missing',
+        );
+      }
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'read'
+            ? 'Paste text'
+            : failure == 'copy'
+            ? 'Copy digest'
+            : 'Save digest',
+      );
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          failure == 'read'
+              ? 'Clipboard text could not be read.'
+              : failure == 'copy'
+              ? 'The digest could not be copied.'
+              : 'The digest could not be saved or written.',
+        ),
+        'Hash adapter failure missing',
+      );
+    }
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Hash failure retained partial output',
+    );
+    await _waitUntil(
+      () async => await probe('sourceCleared') == true,
+      'Hash failure retained source',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+  }
+}
+
+// Create invalid UTF-16 after WebDriver has decoded its well-formed request.
+const _checksumInvalidClipboardScript = r'''
+return checksumProbe('setup', String.fromCharCode(0xd800));
+''';
+
+Future<void> _generateChecksum(WebDriver driver) async {
+  final source = await File.fromUri(
+    Platform.script.resolve('checksum_browser.js'),
+  ).readAsString();
+  final observer = await _loadGzipSaveObserver();
+  final vectors = jsonDecode(
+    await File.fromUri(
+      Platform.script.resolve('../fixtures/checksums/vectors.json'),
+    ).readAsString(),
+  ) as List<dynamic>;
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn checksumProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openChecksum() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Checksum semantics placeholder did not load',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder').click();",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Generate checksum');
+    await _waitUntil(
+      () => _pageContains(driver, 'Text for checksum (UTF-8)'),
+      'Checksum page did not open',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Checksum startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup', 'abc');
+    // SafariDriver exposes no file chooser endpoint; dispatch a real File.
+    await driver.execute(r'''
+      const original = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') return;
+        return original.call(this);
+      };
+    ''', const <Object?>[]);
+  }
+
+  for (final algorithm in ['crc32', 'adler32']) {
+    for (final inputSource in ['clipboard', 'file', 'empty', 'allbytes']) {
+      stdout.writeln('Safari checksum scenario: $algorithm $inputSource');
+      await openChecksum();
+      final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
+        (v) =>
+            v['name'] ==
+            (inputSource == 'allbytes'
+                ? 'allbytes'
+                : inputSource == 'empty'
+                ? 'empty'
+                : inputSource == 'file'
+                ? 'binary'
+                : 'abc'),
+      );
+      final expected =
+          (fixture['checksums'] as Map<String, dynamic>)[algorithm] as String;
+      if (inputSource == 'clipboard') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text for checksum (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Checksum clipboard source missing',
+        );
+      }
+      if (inputSource == 'file' || inputSource == 'allbytes') {
+        await _clickButton(driver, 'Choose local file bytes');
+        await _waitUntil(
+          () async => await probe('file', fixture['bytes']) == true,
+          'Checksum file input missing',
+        );
+        await _waitUntil(
+          () async =>
+              await driver.execute(r'''
+          return [...document.querySelectorAll('[role="button"]')].some(node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g,' ').trim() === 'Checksum algorithm CRC32' && node.getAttribute('aria-disabled') !== 'true');
+        ''', const <Object?>[]) ==
+              true,
+          'Checksum file loading did not finish',
+        );
+      }
+      if (algorithm != 'crc32') {
+        await _waitUntil(
+          () async => await probe('openAlgorithm') == true,
+          'Checksum algorithm selector missing',
+        );
+        await _waitUntil(
+          () async => await probe('algorithm', algorithm.toUpperCase()) == true,
+          'Checksum algorithm choice missing: $algorithm $inputSource',
+        );
+      }
+      await _clickButton(driver, 'Generate checksum');
+      await _waitUntil(
+        () async => await probe('result', expected) == true,
+        'Checksum known checksum mismatch',
+      );
+      await _waitUntil(
+        () async => await probe('sourceCleared') == true,
+        'Checksum source retained',
+      );
+      await _waitUntil(
+        () async => await probe('copy') == true,
+        'Checksum copy unavailable',
+      );
+      await _waitUntil(
+        () async => await probe('copied', expected) == true,
+        'Checksum clipboard result mismatch',
+      );
+      await _clickButton(driver, 'Save checksum');
+      await _waitUntil(
+        () async => await probe('saved', utf8.encode('$expected\n')) == true,
+        'Checksum saved bytes mismatch',
+      );
+      await _assertNoNetworkRequests(
+        driver,
+        flow: 'Checksum $algorithm $inputSource',
+      );
+    }
+  }
+  for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    stdout.writeln('Safari checksum failure scenario: $failure');
+    await openChecksum();
+    if (failure == 'file') {
+      await probe('fileFailure');
+      await _clickButton(driver, 'Choose local file bytes');
+      await _waitUntil(
+        () async => await probe('file', <int>[0, 255]) == true,
+        'Checksum failure file input missing',
+      );
+      await _waitUntil(
+        () => _pageContains(driver, 'The local file could not be read.'),
+        'Checksum file access failure missing',
+      );
+    } else if (failure == 'validation') {
+      await driver.execute(
+        '$source\n$_checksumInvalidClipboardScript',
+        const <Object?>[],
+      );
+      await _clickButton(driver, 'Paste text');
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          'The checksum algorithm or input source is invalid.',
+        ),
+        'Checksum clipboard validation missing',
+      );
+    } else {
+      if (failure != 'read') {
+        await _clickButton(driver, 'Paste text');
+        await _waitUntil(
+          () => _inputHasValue(
+            driver,
+            'Text for checksum (UTF-8)',
+            'abc',
+            focus: true,
+          ),
+          'Checksum failure source missing',
+        );
+        await _clickButton(driver, 'Generate checksum');
+        await _waitUntil(
+          () async => await probe('result', '352441c2') == true,
+          'Checksum failure setup missing',
+        );
+      }
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'read'
+            ? 'Paste text'
+            : failure == 'copy'
+            ? 'Copy checksum'
+            : 'Save checksum',
+      );
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          failure == 'read'
+              ? 'Clipboard text could not be read.'
+              : failure == 'copy'
+              ? 'The checksum could not be copied.'
+              : 'The checksum could not be saved or written.',
+        ),
+        'Checksum adapter failure missing',
+      );
+    }
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Checksum failure retained partial output',
+    );
+    await _waitUntil(
+      () async => await probe('sourceCleared') == true,
+      'Checksum failure retained source',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Checksum $failure failure');
+  }
 }
 
 // Keep new operations outside the JWT inspection helper interval.

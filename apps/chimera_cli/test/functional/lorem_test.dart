@@ -110,50 +110,76 @@ void main() {
         expect(_error(err.toString())['kind'], 'access');
       },
     );
-    for (final json in [false, true]) {
-      test('Given$locale${json}RealFullStdout_WhenGenerated_ThenSafe74', () async {
-        final library = (await Isolate.resolvePackageUri(
-          Uri.parse('package:chimera_cli/chimera_cli.dart'),
-        ))!;
-        final config = File.fromUri(
-          library.resolve('../../../.dart_tool/package_config.json'),
-        ).path;
-        final directory = await Directory.systemTemp.createTemp(
-          'lorem-stdout-',
-        );
-        addTearDown(() => directory.delete(recursive: true));
-        final harness = File('${directory.path}/locale.dart');
-        await harness.writeAsString(
-          "import 'dart:io'; import 'package:chimera_cli/chimera_cli.dart'; Future<void> main(List<String> args) async { exitCode = await runChimera(args, localeTag: '$locale', out: stdout, err: stderr); }",
-        );
-        final result = await Process.run('/bin/sh', [
-          '-c',
-          r'exec "$@" > /dev/full',
-          'lorem',
-          Platform.resolvedExecutable,
-          '--packages=$config',
-          locale == 'en'
-              ? File.fromUri(library.resolve('../bin/chimera.dart')).path
-              : harness.path,
-          'lorem',
-          'generate',
-          if (json) '--json',
-        ]);
-        expect(result.exitCode, 74);
-        expect(result.stdout, '');
-        expect(result.stderr, isNot(contains('Unhandled exception')));
-        expect(result.stderr, isNot(contains('FileSystemException')));
-        expect(
-          result.stderr,
-          contains(
-            const MessageCatalog().lookup(locale, 'error.lorem.outputAccess'),
-          ),
-        );
-        if (json) {
-          expect(_error(result.stderr as String)['kind'], 'access');
+    group(
+      'Real stdout $locale',
+      () {
+        late String executable;
+        setUpAll(() async {
+          final library = (await Isolate.resolvePackageUri(
+            Uri.parse('package:chimera_cli/chimera_cli.dart'),
+          ))!;
+          final config = File.fromUri(
+            library.resolve('../../../.dart_tool/package_config.json'),
+          ).path;
+          final directory = await Directory.systemTemp.createTemp(
+            'lorem-stdout-',
+          );
+          addTearDown(() => directory.delete(recursive: true));
+          final harness = File('${directory.path}/locale.dart');
+          await harness.writeAsString(
+            "import 'dart:io'; import 'package:chimera_cli/chimera_cli.dart'; Future<void> main(List<String> args) async { exitCode = await runChimera(args, localeTag: '$locale', out: stdout, err: stderr); }",
+          );
+          executable = '${directory.path}/chimera';
+          // Cold source compilation must not consume the output-failure deadline.
+          final build = await Process.run(Platform.resolvedExecutable, [
+            'compile',
+            'exe',
+            '--packages=$config',
+            locale == 'en'
+                ? File.fromUri(library.resolve('../bin/chimera.dart')).path
+                : harness.path,
+            '-o',
+            executable,
+          ]);
+          expect(build.exitCode, 0, reason: '${build.stdout}\n${build.stderr}');
+        });
+        for (final json in [false, true]) {
+          test(
+            'Given$locale${json}RealFullStdout_WhenGenerated_ThenSafe74',
+            () async {
+              final result = await Process.run('/bin/sh', [
+                '-c',
+                r'exec "$@" > /dev/full',
+                'lorem',
+                executable,
+                'lorem',
+                'generate',
+                if (json) '--json',
+              ]);
+              expect(result.exitCode, 74);
+              expect(result.stdout, '');
+              expect(result.stderr, isNot(contains('Unhandled exception')));
+              expect(result.stderr, isNot(contains('FileSystemException')));
+              expect(
+                result.stderr,
+                contains(
+                  const MessageCatalog().lookup(
+                    locale,
+                    'error.lorem.outputAccess',
+                  ),
+                ),
+              );
+              if (json) {
+                expect(_error(result.stderr as String)['kind'], 'access');
+              }
+            },
+            timeout: const Timeout(Duration(seconds: 30)),
+          );
         }
-      }, skip: !Platform.isLinux);
-    }
+      },
+      skip: !Platform.isLinux,
+      timeout: const Timeout(Duration(minutes: 2)),
+    );
   }
   test('GivenInjectedResource_WhenGenerated_Then75WithoutOutput', () async {
     final out = StringBuffer(), err = StringBuffer();

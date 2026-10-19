@@ -103,6 +103,34 @@ copy, or save clears the result; canceling a save preserves it. English and
 Brazilian Portuguese labels and errors are provided. Generation, copying, and
 saving use no network or operation history.
 
+### Generate a checksum
+
+Open **Generate checksum** in the GUI, or use the CLI:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart checksum generate --input=123456789
+dart run apps/chimera_cli/bin/chimera.dart checksum generate --file=input.bin --algorithm=adler32 --json
+dart run apps/chimera_cli/bin/chimera.dart checksum generate --stdin --output=checksum.txt
+```
+
+Algorithms are `crc32` (default, CRC-32/ISO-HDLC) and `adler32` (RFC 1950).
+Provide exactly one source: `--input` preserves text as UTF-8, including whitespace,
+newlines and BOM; `--file` and `--stdin` preserve every byte. Empty text or files
+are valid. Checksums are eight lowercase hexadecimal characters with leading
+zeroes. For `--input=123456789`, exact human stdout is `cbf43926` followed by one
+LF; JSON stdout is `{"algorithm":"crc32","checksum":"cbf43926"}` followed by one
+LF. This two-field JSON schema is locale independent.
+
+`--output` saves the checksum followed by one LF as UTF-8, using a transactional
+local file replacement. Human stdout then reports `Checksum saved.` (localized);
+JSON stdout retains the same result schema. Exit codes are 0 for success, 64 for
+invalid options/input, 74 for input/output access failures, and 75 for resource
+failure. Diagnostics go to stderr without source data or exception details.
+GUI copy writes the checksum alone; GUI save writes the same checksum-plus-LF
+file. Processing works offline, keeps no history and imposes no arbitrary size
+limit. Input and editor undo history are discarded after processing, failure,
+replacement, or navigation away. See the [independent known-answer fixtures](tests/fixtures/checksums/README.md).
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.
@@ -315,6 +343,28 @@ copy, and Save UTF-8 text. Encoded input is limited to 16 MiB, raster images to
 and QR-free images return typed decoding failures without retaining image data.
 Byte-mode text supports UTF-8, ISO-8859-1, and ASCII; other ECI encodings and
 malformed encoded text return a typed decoding failure.
+
+### Generate a hash
+
+`chimera hash generate` accepts exactly one source: UTF-8 text with `--input`,
+arbitrary bytes from `--stdin`, or a local `--file`. File/stdin bytes preserve
+BOMs and invalid UTF-8. Choose `sha256` (default), `sha384`, `sha512`, `md5`,
+or `sha1` with `--algorithm`.
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart hash generate --input=abc --json
+dart run apps/chimera_cli/bin/chimera.dart hash generate --file=archive.bin --algorithm=sha512 --output=digest.txt
+```
+
+JSON has stable `algorithm`, lowercase hexadecimal `digest`, `legacy`, and
+localized `warning` fields. Human output includes the digest and any warning;
+`--output` transactionally saves the digest followed by a newline. MD5 and SHA-1
+are explicitly labeled legacy and unsuitable for security decisions.
+
+The GUI route `/hash/generate` supports text, clipboard and arbitrary local
+files, an algorithm selector, copy, and save. Processing is offline and
+stateless, with no application size cap or retained source/history. Resource and
+access failures discard the source and expose no successful partial result.
 
 ## Roadmap
 
