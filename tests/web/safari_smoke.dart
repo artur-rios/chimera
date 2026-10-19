@@ -1126,7 +1126,12 @@ Future<void> main(List<String> arguments) async {
     }
 
     await _decompressGzip(driver);
-    await _generateHash(driver);
+    try {
+      await _generateHash(driver);
+    } on Object {
+      await _capturePageDiagnostics(driver, 'hash-failure');
+      rethrow;
+    }
     await _encodeHtml(driver);
     await _decodeHtml(driver);
     await _createJwt(driver);
@@ -2714,7 +2719,7 @@ Future<bool> _inputHasValue(
   return result == true;
 }
 
-// Only the public baseline cron fixture calls this; preserve the original
+// Only public smoke fixtures call this; preserve the original
 // failure even if Safari cannot provide one of the diagnostic artifacts.
 Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
   try {
@@ -2819,6 +2824,7 @@ Future<void> _generateHash(WebDriver driver) async {
 
   for (final algorithm in ['sha256', 'sha384', 'sha512', 'md5', 'sha1']) {
     for (final inputSource in ['clipboard', 'file', 'empty']) {
+      stdout.writeln('Safari hash scenario: $algorithm $inputSource');
       await openHash();
       final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
         (v) =>
@@ -2859,9 +2865,17 @@ Future<void> _generateHash(WebDriver driver) async {
         );
       }
       if (algorithm != 'sha256') {
+        await _capturePageDiagnostics(
+          driver,
+          'hash-$algorithm-$inputSource-before-selector',
+        );
         await _waitUntil(
           () async => await probe('openAlgorithm') == true,
           'Hash algorithm selector missing',
+        );
+        await _capturePageDiagnostics(
+          driver,
+          'hash-$algorithm-$inputSource-after-selector',
         );
         await _waitUntil(
           () async => await probe('algorithm', algorithm.toUpperCase()) == true,
@@ -2903,6 +2917,7 @@ Future<void> _generateHash(WebDriver driver) async {
     }
   }
   for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    stdout.writeln('Safari hash failure scenario: $failure');
     await openHash();
     if (failure == 'file') {
       await probe('fileFailure');
