@@ -5,6 +5,7 @@ import { unexpectedHttpRequests } from './network_policy.mjs';
 const checksumSource=readFileSync(new URL('./checksum_browser.js',import.meta.url),'utf8');
 const saveSource=readFileSync(new URL('./gzip_save_observer.js',import.meta.url),'utf8');
 const safariHarness=readFileSync(new URL('./safari_smoke.dart',import.meta.url),'utf8');
+const fileReadyScript=safariHarness.match(/const _checksumFileReadyScript = r'''([\s\S]*?)''';/)[1];
 const invalidClipboardScript=safariHarness.match(/const _checksumInvalidClipboardScript = r'''([\s\S]*?)''';/)[1];
 const vectors=JSON.parse(readFileSync(new URL('../fixtures/checksums/vectors.json',import.meta.url),'utf8'));
 async function probe(page, action, value) {
@@ -82,3 +83,39 @@ test('GivenLocalFileAccessFailure_WhenChecksumFileLoaded_ThenNoPartialResultOrSo
  const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Choose local file bytes',exact:true}).click();await(await chooser).setFiles({name:'denied.bin',mimeType:'application/octet-stream',buffer:Buffer.from([0,255])});
  await expect(visibleError(page,'The local file could not be read.')).toBeVisible();await expect.poll(()=>probe(page,'fileFailureObserved')).toBe(true);await expect.poll(()=>probe(page,'noResult')).toBe(true);await expect.poll(()=>probe(page,'sourceCleared')).toBe(true);expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
 });
+
+for(const source of ['binary','allbytes']) {
+test(`GivenDelayed${source}Read_WhenSafariChecksReadiness_ThenWaitForReplacementAndExactAdler32Offline`,async({page})=>{
+ const requests=[];await openChecksum(page);await page.context().setOffline(true);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});await probe(page,'setup','abc');
+ const vector=vectors.find(v=>v.name===source);
+ const editor=page.getByRole('textbox',{name:'Text for checksum (UTF-8)',exact:true});
+ await editor.fill('previous source');await editor.press('Tab');
+ // Hold the actual browser read, then release the original method with the
+ // original File. Keep the compiled app's picker and byte processing intact.
+ await page.evaluate(()=>{
+  const read=FileReader.prototype.readAsArrayBuffer;
+  FileReader.prototype.readAsArrayBuffer=function(file){window.__chimeraReleaseChecksumFile=()=>read.call(this,file);};
+  const click=HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click=function(){if(this.type!=='file')return click.call(this);};
+ });
+ const ready=()=>page.evaluate(({source,script})=>new Function(`${source}\n${script}`)(),{source:checksumSource,script:fileReadyScript});
+ // Dispatch in the same task as the click, before Flutter can render busy
+ // semantics. An enabled algorithm still describes the previous source here.
+ const initial=await page.evaluate(({source,script,bytes})=>{
+  const checksum=new Function(`${source}\nreturn checksumProbe;`)();
+  [...document.querySelectorAll('[role="button"]')].find(node=>node.textContent.trim()==='Choose local file bytes').click();
+  const dispatched=checksum('file',bytes);
+  return {dispatched,ready:new Function(`${source}\n${script}`)()};
+ },{source:checksumSource,script:fileReadyScript,bytes:vector.bytes});
+ expect(initial.dispatched).toBe(true);expect(initial.ready).toBe(false);
+ await expect(editor).toBeDisabled();expect(await ready()).toBe(false);
+ await page.evaluate(()=>window.__chimeraReleaseChecksumFile());
+ await expect.poll(ready).toBe(true);
+ await expect.poll(()=>probe(page,'openAlgorithm')).toBe(true);
+ await expect.poll(()=>probe(page,'algorithm','ADLER32')).toBe(true);
+ await page.getByRole('button',{name:'Generate checksum',exact:true}).click();
+ await expect.poll(()=>probe(page,'result',vector.checksums.adler32)).toBe(true);
+ await expect.poll(()=>probe(page,'sourceCleared')).toBe(true);
+ expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
+});
+}

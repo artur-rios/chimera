@@ -3357,6 +3357,10 @@ const _hashInvalidClipboardScript = r'''
 return hashProbe('setup', String.fromCharCode(0xd800));
 ''';
 
+const _hashFileReadyScript = r'''
+return hashProbe('fileReady');
+''';
+
 Future<void> _generateHash(WebDriver driver) async {
   final source = await File.fromUri(Platform.script.resolve('hash_browser.js'))
       .readAsString();
@@ -3441,9 +3445,10 @@ Future<void> _generateHash(WebDriver driver) async {
         );
         await _waitUntil(
           () async =>
-              await driver.execute(r'''
-          return [...document.querySelectorAll('[role="button"]')].some(node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g,' ').trim() === 'Hash algorithm SHA256' && node.getAttribute('aria-disabled') !== 'true');
-        ''', const <Object?>[]) ==
+              await driver.execute(
+                '$source\n$_hashFileReadyScript',
+                const <Object?>[],
+              ) ==
               true,
           'Hash file loading did not finish',
         );
@@ -3588,6 +3593,10 @@ const _checksumInvalidClipboardScript = r'''
 return checksumProbe('setup', String.fromCharCode(0xd800));
 ''';
 
+const _checksumFileReadyScript = r'''
+return checksumProbe('fileReady');
+''';
+
 Future<void> _generateChecksum(WebDriver driver) async {
   final source = await File.fromUri(
     Platform.script.resolve('checksum_browser.js'),
@@ -3675,9 +3684,10 @@ Future<void> _generateChecksum(WebDriver driver) async {
         );
         await _waitUntil(
           () async =>
-              await driver.execute(r'''
-          return [...document.querySelectorAll('[role="button"]')].some(node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g,' ').trim() === 'Checksum algorithm CRC32' && node.getAttribute('aria-disabled') !== 'true');
-        ''', const <Object?>[]) ==
+              await driver.execute(
+                '$source\n$_checksumFileReadyScript',
+                const <Object?>[],
+              ) ==
               true,
           'Checksum file loading did not finish',
         );
