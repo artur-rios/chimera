@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
@@ -30,6 +31,7 @@ void main() {
             await inputFile.writeAsBytes([0, 255, 128, 13, 10]);
             final outputFile = File('${directory.path}/result.txt');
             String? copied;
+            Future<bool>? saveOperation;
             final expected =
                 checksumKnownVectors[source == 'empty'
                     ? 'empty'
@@ -44,7 +46,7 @@ void main() {
                 checksumGenerateClipboardReader: () async => 'abc',
                 checksumGenerateClipboardWriter: (v) async => copied = v,
                 checksumGenerateFileSaver: (name, bytes, mime) =>
-                    saveChecksumGenerateFile(
+                    saveOperation = saveChecksumGenerateFile(
                       name,
                       bytes,
                       mime,
@@ -84,7 +86,19 @@ void main() {
             await tap('copy');
             expect(copied, expected);
             await tap('save');
-            expect(await outputFile.readAsString(), '$expected\n');
+            // Frame settling does not wait for the native file transaction.
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
+            expect(
+              tester.widget<Text>(control('notice')).data,
+              locale == 'en' ? 'Checksum saved.' : 'Soma de verificação salva.',
+            );
+            expect(await outputFile.readAsBytes(), utf8.encode('$expected\n'));
+            expect(
+              directory.listSync().map((file) => file.path),
+              unorderedEquals([inputFile.path, outputFile.path]),
+            );
             await tester.pumpWidget(const SizedBox());
             await tester.pumpAndSettle();
             expect(find.text(expected), findsNothing);
