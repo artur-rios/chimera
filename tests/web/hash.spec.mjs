@@ -4,6 +4,8 @@ import { unexpectedHttpRequests } from './network_policy.mjs';
 
 const hashSource=readFileSync(new URL('./hash_browser.js',import.meta.url),'utf8');
 const saveSource=readFileSync(new URL('./gzip_save_observer.js',import.meta.url),'utf8');
+const safariHarness=readFileSync(new URL('./safari_smoke.dart',import.meta.url),'utf8');
+const invalidClipboardScript=safariHarness.match(/const _hashInvalidClipboardScript = r'''([\s\S]*?)''';/)[1];
 const vectors=JSON.parse(readFileSync(new URL('../fixtures/hashes/vectors.json',import.meta.url),'utf8'));
 async function probe(page, action, value) {
   return page.evaluate(({source,action,value})=>new Function(`${source}\nreturn hashProbe(arguments[0], arguments[1]);`)(action,value),{source:hashSource,action,value});
@@ -64,7 +66,13 @@ for(const action of ['read','copy','save']) {
 }
 
 test('GivenMalformedClipboard_WhenHashPasted_ThenValidationAndDiscardOffline',async({page})=>{
- await openHash(page);await page.context().setOffline(true);await probe(page,'setup','\ud800');
+ await openHash(page);await page.context().setOffline(true);
+ // Exercise Safari's actual script and argument shape through a valid JSON body.
+ const script=`${hashSource}\n${invalidClipboardScript}`;
+ expect(script.isWellFormed()).toBe(true);
+ const request=JSON.parse(JSON.stringify({script,args:[]}));
+ await page.evaluate(({script,args})=>new Function(script)(...args),request);
+ expect(await page.evaluate(()=>[window.__chimeraHashClipboard.length,window.__chimeraHashClipboard.charCodeAt(0)])).toEqual([1,0xd800]);
  await page.getByRole('button',{name:'Paste text',exact:true}).evaluate(node=>node.click());
  await expect(visibleError(page,'The hash algorithm or input source is invalid.')).toBeVisible();
  await expect.poll(()=>probe(page,'noResult')).toBe(true);await expect.poll(()=>probe(page,'sourceCleared')).toBe(true);

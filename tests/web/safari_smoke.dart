@@ -2773,6 +2773,11 @@ Future<void> _waitUntil(
   throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
 }
 
+// Create invalid UTF-16 after WebDriver has decoded its well-formed request.
+const _hashInvalidClipboardScript = r'''
+return hashProbe('setup', String.fromCharCode(0xd800));
+''';
+
 Future<void> _generateHash(WebDriver driver) async {
   final source = await File.fromUri(Platform.script.resolve('hash_browser.js'))
       .readAsString();
@@ -2931,7 +2936,10 @@ Future<void> _generateHash(WebDriver driver) async {
         'Hash file access failure missing',
       );
     } else if (failure == 'validation') {
-      await probe('setup', String.fromCharCode(0xd800));
+      await driver.execute(
+        '$source\n$_hashInvalidClipboardScript',
+        const <Object?>[],
+      );
       await _clickButton(driver, 'Paste text');
       await _waitUntil(
         () => _pageContains(
