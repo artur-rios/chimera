@@ -33,6 +33,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_decode_page.dart';
 import 'url_encode_page.dart';
 import 'xml_format_page.dart';
 
@@ -61,6 +62,12 @@ final class ChimeraApp extends StatelessWidget {
     this.htmlDecodeClipboardWriter,
     this.htmlDecodeFileSaver,
     this.htmlDecodeOutputEncoder,
+    this.urlDecodeService = const UrlDecodeService(),
+    this.urlDecodeFilePicker,
+    this.urlDecodeClipboardReader,
+    this.urlDecodeClipboardWriter,
+    this.urlDecodeFileSaver,
+    this.urlDecodeOutputEncoder,
     this.htmlEncodeService = const HtmlEncodeService(),
     this.htmlEncodeFilePicker,
     this.htmlEncodeClipboardReader,
@@ -204,6 +211,12 @@ final class ChimeraApp extends StatelessWidget {
   final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
   final HtmlDecodeFileSaver? htmlDecodeFileSaver;
   final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+  final UrlDecodeOperationService urlDecodeService;
+  final UrlDecodeFilePicker? urlDecodeFilePicker;
+  final UrlDecodeClipboardReader? urlDecodeClipboardReader;
+  final UrlDecodeClipboardWriter? urlDecodeClipboardWriter;
+  final UrlDecodeFileSaver? urlDecodeFileSaver;
+  final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
@@ -341,6 +354,12 @@ final class ChimeraApp extends StatelessWidget {
         htmlDecodeClipboardWriter: htmlDecodeClipboardWriter,
         htmlDecodeFileSaver: htmlDecodeFileSaver,
         htmlDecodeOutputEncoder: htmlDecodeOutputEncoder,
+        urlDecodeService: urlDecodeService,
+        urlDecodeFilePicker: urlDecodeFilePicker,
+        urlDecodeClipboardReader: urlDecodeClipboardReader,
+        urlDecodeClipboardWriter: urlDecodeClipboardWriter,
+        urlDecodeFileSaver: urlDecodeFileSaver,
+        urlDecodeOutputEncoder: urlDecodeOutputEncoder,
         htmlEncodeService: htmlEncodeService,
         htmlEncodeFilePicker: htmlEncodeFilePicker,
         htmlEncodeClipboardReader: htmlEncodeClipboardReader,
@@ -481,6 +500,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.htmlDecodeClipboardWriter,
     required this.htmlDecodeFileSaver,
     required this.htmlDecodeOutputEncoder,
+    required this.urlDecodeService,
+    required this.urlDecodeFilePicker,
+    required this.urlDecodeClipboardReader,
+    required this.urlDecodeClipboardWriter,
+    required this.urlDecodeFileSaver,
+    required this.urlDecodeOutputEncoder,
     required this.htmlEncodeService,
     required this.htmlEncodeFilePicker,
     required this.htmlEncodeClipboardReader,
@@ -710,6 +735,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
   final HtmlDecodeFileSaver? htmlDecodeFileSaver;
   final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+  final UrlDecodeOperationService urlDecodeService;
+  final UrlDecodeFilePicker? urlDecodeFilePicker;
+  final UrlDecodeClipboardReader? urlDecodeClipboardReader;
+  final UrlDecodeClipboardWriter? urlDecodeClipboardWriter;
+  final UrlDecodeFileSaver? urlDecodeFileSaver;
+  final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
 
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
@@ -774,6 +805,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       htmlDecodeFileSaver: widget.htmlDecodeFileSaver ?? saveHtmlDecodeFile,
       htmlDecodeOutputEncoder:
           widget.htmlDecodeOutputEncoder ?? encodeHtmlDecodeOutput,
+      urlDecodeService: widget.urlDecodeService,
+      urlDecodeFilePicker: widget.urlDecodeFilePicker ?? pickUrlDecodeFile,
+      urlDecodeClipboardReader:
+          widget.urlDecodeClipboardReader ?? readUrlDecodeClipboard,
+      urlDecodeClipboardWriter:
+          widget.urlDecodeClipboardWriter ?? writeUrlDecodeClipboard,
+      urlDecodeFileSaver: widget.urlDecodeFileSaver ?? saveUrlDecodeFile,
+      urlDecodeOutputEncoder:
+          widget.urlDecodeOutputEncoder ?? encodeUrlDecodeOutput,
       htmlEncodeService: widget.htmlEncodeService,
       htmlEncodeFilePicker: widget.htmlEncodeFilePicker ?? pickHtmlEncodeFile,
       htmlEncodeClipboardReader:

@@ -43,87 +43,6 @@ Future<String> _loadGzipSaveObserver() =>
         .readAsString();
 
 // These exact helper bodies also run in the compiled Playwright matrix.
-const _urlSetupScript = r'''
-  window.__chimeraUrlCopiedText = null;
-  window.__chimeraUrlCopies = 0;
-  window.__chimeraUrlReads = 0;
-  window.__chimeraUrlClipboardSource = '&<>"\'/ &amp; Olá 🌍';
-  Object.defineProperty(navigator, 'clipboard', {
-    configurable: true,
-    value: {
-      readText: async () => {
-        window.__chimeraUrlReads++;
-        return window.__chimeraUrlClipboardSource;
-      },
-      writeText: async value => {
-        window.__chimeraUrlCopies++;
-        window.__chimeraUrlCopiedText = value;
-      },
-    },
-  });
-  performance.clearResourceTimings();
-''';
-const _urlModeOpenScript = r'''
-  const normalize = value => value.replace(/\s+/g, ' ').trim();
-  const button = [...document.querySelectorAll('[role="button"]')]
-    .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'URL mode URL component' &&
-      element.getAttribute('aria-disabled') !== 'true');
-  if (!button) return false;
-  button.click();
-  return true;
-''';
-const _urlModeSelectScript = r'''
-  const option = [...document.querySelectorAll('[role="menuitem"]')]
-    .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
-      element.getAttribute('aria-disabled') !== 'true');
-  if (!option) return false;
-  option.click();
-  return true;
-''';
-const _urlResultScript = r'''
-  const result = [...document.querySelectorAll('[role="region"][tabindex="0"]')]
-    .find(element => element.getAttribute('aria-label') === 'URL encoded result URL encoding succeeded.');
-  return result !== undefined;
-''';
-const _urlCopyScript = r'''
-  const button = [...document.querySelectorAll('[role="button"]')]
-    .find(element => element.textContent.trim() === 'Copy encoded text' &&
-      element.getAttribute('aria-disabled') !== 'true');
-  if (!button) return false;
-  button.focus();
-  return document.activeElement === button;
-''';
-const _urlCopiedScript = r'''
-  return window.__chimeraUrlCopies === arguments[1] &&
-    window.__chimeraUrlCopiedText === arguments[0];
-''';
-const _urlSaveScript = r'''
-  return window.__chimeraSavedName === 'chimera-url-encoded.txt' &&
-    window.__chimeraSaveCount === arguments[1] &&
-    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
-    window.__chimeraLiveDownloadUrlCount === 0 &&
-    window.__chimeraGzipSaveErrors.length === 0 &&
-    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
-''';
-const _urlFileScript = r'''
-  const picker = document.querySelector('input[type="file"]');
-  if (!picker) return false;
-  const transfer = new DataTransfer();
-  transfer.items.add(new File([new Uint8Array(arguments[0])],
-    'source.txt', {type: 'text/plain'}));
-  picker.files = transfer.files;
-  picker.dispatchEvent(new Event('change', {bubbles: true}));
-  return true;
-''';
-const _urlNoResultScript = r'''
-  const labels = [...document.querySelectorAll('[aria-label]')]
-    .map(element => element.getAttribute('aria-label'));
-  const buttons = [...document.querySelectorAll('[role="button"]')]
-    .map(element => element.textContent.trim());
-  return !labels.some(label => label.startsWith('URL encoded result')) &&
-    !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
-''';
-
 const _htmlSetupScript = r'''
   window.__chimeraHtmlCopiedText = null;
   window.__chimeraHtmlCopies = 0;
@@ -205,6 +124,67 @@ const _htmlNoResultScript = r'''
     !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
 ''';
 
+const _urlDecodeSetupScript = r'''
+  window.__chimeraUrlDecodeCopiedText = null;
+  window.__chimeraUrlDecodeCopies = 0;
+  window.__chimeraUrlDecodeReads = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraUrlDecodeReads++;
+        return '%3C%26%41%F0%9F%99%82%253C+';
+      },
+      writeText: async value => {
+        window.__chimeraUrlDecodeCopies++;
+        window.__chimeraUrlDecodeCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _urlDecodeSubmitScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Decode' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeResultScript = r'''
+  return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .some(element => element.getAttribute('aria-label') ===
+      'URL decoded result URL decoding succeeded.');
+''';
+const _urlDecodeCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy decoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeCopiedScript = r'''
+  return window.__chimeraUrlDecodeCopies === arguments[1] &&
+    window.__chimeraUrlDecodeCopiedText === arguments[0];
+''';
+const _urlDecodeSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-url-decoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _urlDecodeNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('URL decoded result')) &&
+    !buttons.includes('Copy decoded text') && !buttons.includes('Save decoded text');
+''';
+
 const _htmlDecodeSetupScript = r'''
   window.__chimeraHtmlDecodeCopiedText = null;
   window.__chimeraHtmlDecodeCopies = 0;
@@ -275,25 +255,19 @@ Future<void> main(List<String> arguments) async {
     return;
   }
   if (arguments case ['--verify-url-helpers']) {
-    final observer = await _loadGzipSaveObserver();
     final helpers = [
-      _urlSetupScript,
-      _urlModeOpenScript,
-      _urlModeSelectScript,
-      _urlResultScript,
-      _urlCopyScript,
-      _urlCopiedScript,
-      _urlSaveScript,
-      _urlFileScript,
-      _urlNoResultScript,
+      _urlDecodeSetupScript,
+      _urlDecodeSubmitScript,
+      _urlDecodeResultScript,
+      _urlDecodeCopyScript,
+      _urlDecodeCopiedScript,
+      _urlDecodeSaveScript,
+      _urlDecodeNoResultScript,
     ];
-    if (!observer.contains('function observeGzipSaves') ||
-        helpers.any((source) => source.isEmpty)) {
-      throw StateError('URL helper or save observer source is missing');
+    if (helpers.any((source) => source.isEmpty)) {
+      throw StateError('URL helpers missing');
     }
-    stdout.writeln(
-      'URL helpers (9) and save observer source loaded successfully.',
-    );
+    stdout.writeln('URL helpers (7) loaded successfully.');
     return;
   }
   if (arguments case ['--verify-html-helpers']) {
@@ -1229,9 +1203,10 @@ Future<void> main(List<String> arguments) async {
     }
 
     await _decompressGzip(driver);
-    await _encodeUrl(driver);
     await _encodeHtml(driver);
     await _decodeHtml(driver);
+    await _encodeUrl(driver);
+    await _decodeUrl(driver);
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
@@ -1948,7 +1923,7 @@ Future<void> _encodeHtml(WebDriver driver) async {
   );
 }
 
-Future<void> _encodeUrl(WebDriver driver) async {
+Future<void> _decodeUrl(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
   await _waitUntil(
     () async =>
@@ -1957,25 +1932,24 @@ Future<void> _encodeUrl(WebDriver driver) async {
           const <Object?>[],
         ) ==
         true,
-    'URL semantics placeholder did not load',
+    'URL Decode semantics placeholder did not load',
   );
   await driver.execute(
     "document.querySelector('flt-semantics-placeholder').click();",
     const <Object?>[],
   );
-  await _clickButton(driver, 'Encode URL');
+  await _clickButton(driver, 'Decode URL');
   await _waitUntil(
-    () => _pageContains(driver, 'Text to encode'),
-    'URL page did not open',
+    () => _pageContains(driver, 'Percent-encoded text to decode'),
+    'URL Decode page did not open',
   );
-  await _assertNoExternalRequests(driver, flow: 'URL startup');
+  await _assertNoExternalRequests(driver, flow: 'URL Decode startup');
   final observer = await _loadGzipSaveObserver();
   await driver.execute(
     '$observer\nobserveGzipSaves({suppressDownloads: true});',
     const <Object?>[],
   );
-  await driver.execute(_urlSetupScript, const <Object?>[]);
-  // SafariDriver has no upload endpoint; use its existing real File dispatch.
+  await driver.execute(_urlDecodeSetupScript, const <Object?>[]);
   await driver.execute('''
     const click = HTMLInputElement.prototype.click;
     HTMLInputElement.prototype.click = function() {
@@ -1983,187 +1957,164 @@ Future<void> _encodeUrl(WebDriver driver) async {
       return click.call(this);
     };
   ''', const <Object?>[]);
-  const expected = '&%3C%3E%22\'/%20&amp;%20Ol%C3%A1%20%F0%9F%8C%8D';
+  const expected = '<&A🙂%3C+';
   await _clickButton(driver, 'Paste text');
   await _waitUntil(
     () => _inputHasValue(
       driver,
-      'Text to encode',
-      '&<>"\'/ &amp; Olá 🌍',
+      'Percent-encoded text to decode',
+      '%3C%26%41%F0%9F%99%82%253C+',
       focus: true,
     ),
-    'URL clipboard source was not loaded',
+    'URL Decode clipboard source was not loaded',
   );
   await _waitUntil(
     () async =>
-        await driver.execute(_urlModeOpenScript, const <Object?>[]) == true,
-    'URL default context was unavailable',
-  );
-  await _waitUntil(
-    () async =>
-        await driver.execute(_urlModeSelectScript, const <Object?>[
-          'Full value',
-        ]) ==
-        true,
-    'URL double-quoted context was unavailable',
-  );
-  await _clickButton(driver, 'Encode');
-  await _waitUntil(
-    () async =>
-        await driver.execute(_urlResultScript, const <Object?>[]) == true,
-    'URL result semantics were incorrect',
-  );
-  await _waitUntil(
-    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
-    'URL source was retained',
-  );
-  await _waitUntil(
-    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
-    'URL copy was not keyboard-active',
+        await driver.execute(_urlDecodeSubmitScript, const <Object?>[]) == true,
+    'URL Decode submit was not keyboard-active',
   );
   await driver.keyboard.sendKeys(Keyboard.enter);
   await _waitUntil(
     () async =>
-        await driver.execute(_urlCopiedScript, const <Object?>[expected, 1]) ==
-        true,
-    'URL clipboard output was not exact',
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode result semantics were incorrect',
   );
-  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '',
+      focus: true,
+    ),
+    'URL Decode source was retained',
+  );
   await _waitUntil(
     () async =>
-        await driver.execute(_urlSaveScript, <Object?>[
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>[
+          expected,
+          1,
+        ]) ==
+        true,
+    'URL Decode clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSaveScript, <Object?>[
           utf8.encode(expected),
           1,
         ]) ==
         true,
-    'URL non-empty save/URL cleanup was not exact',
+    'URL Decode non-empty save/URL cleanup was not exact',
   );
   await _waitUntil(
-    () => _pageContains(driver, 'URL encoded text saved.'),
-    'URL non-empty save did not finish',
+    () => _pageContains(driver, 'URL decoded text saved.'),
+    'URL Decode non-empty save did not finish',
   );
-  // A second encode has no retained source: it must copy/save exactly zero bytes.
-  await _clickButton(driver, 'Encode');
+  await _clickButton(driver, 'Decode');
   await _waitUntil(
     () async =>
-        await driver.execute(_urlResultScript, const <Object?>[]) == true,
-    'URL empty result did not appear',
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode empty result did not appear',
   );
   await _waitUntil(
-    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
-    'URL empty copy was not keyboard-active',
+    () async =>
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode empty copy was not keyboard-active',
   );
   await driver.keyboard.sendKeys(Keyboard.enter);
   await _waitUntil(
     () async =>
-        await driver.execute(_urlCopiedScript, const <Object?>['', 2]) == true,
-    'URL empty copy was not exact',
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>['', 2]) ==
+        true,
+    'URL Decode empty copy was not exact',
   );
-  await _clickButton(driver, 'Save encoded text');
+  await _clickButton(driver, 'Save decoded text');
   await _waitUntil(
     () async =>
-        await driver.execute(_urlSaveScript, const <Object?>[<int>[], 2]) ==
+        await driver.execute(_urlDecodeSaveScript, const <Object?>[
+          <int>[],
+          2,
+        ]) ==
         true,
-    'URL empty save/URL cleanup was not exact',
-  );
-  await _waitUntil(
-    () => _pageContains(driver, 'URL encoded text saved.'),
-    'URL empty save did not finish',
+    'URL Decode empty save/URL cleanup was not exact',
   );
   await _clickButton(driver, 'Load UTF-8 file');
   await _waitUntil(
     () async =>
-        await driver.execute(_urlFileScript, const <Object?>[
+        await driver.execute(_htmlFileScript, const <Object?>[
           <int>[0xc3, 0x28],
         ]) ==
         true,
-    'URL malformed UTF-8 fixture could not be dispatched',
+    'URL Decode malformed UTF-8 fixture could not be dispatched',
   );
   await _waitUntil(
     () async =>
-        await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
-    'URL file load did not discard the previous result',
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode file load did not discard the previous result',
   );
-  await _clickButton(driver, 'Encode');
+  await _clickButton(driver, 'Decode');
   await _waitUntil(
-    () => _pageContains(driver, 'The URL encoding request is invalid.'),
-    'URL UTF-8 validation did not appear',
+    () => _pageContains(driver, 'The URL decoding request is invalid.'),
+    'URL Decode UTF-8 validation did not appear',
   );
-  if (await driver.execute(_urlNoResultScript, const <Object?>[]) != true) {
-    throw StateError('URL validation retained an output action or result');
+  if (await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) !=
+      true) {
+    throw StateError('URL Decode validation retained an output action');
   }
-  await _waitUntil(
-    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
-    'URL validation retained source text',
-  );
   final reads = await driver.execute(
-    'return window.__chimeraUrlReads;',
+    'return window.__chimeraUrlDecodeReads;',
     const <Object?>[],
   );
-  if (reads != 1) throw StateError('URL clipboard source was not read once');
-  for (final boundary in ['copy', 'save']) {
-    await driver.execute(
-      "window.__chimeraUrlClipboardSource = 'private /ação';",
-      const <Object?>[],
-    );
-    await _clickButton(driver, 'Paste text');
-    await _waitUntil(
-      () => _inputHasValue(
-        driver,
-        'Text to encode',
-        'private /ação',
-        focus: true,
-      ),
-      'URL failure source was not loaded',
-    );
-    await _clickButton(driver, 'Encode');
-    await _waitUntil(
-      () async =>
-          await driver.execute(_urlResultScript, const <Object?>[]) == true,
-      'URL failure fixture did not produce a result',
-    );
-    await driver.execute(
-      r'''
-      if (arguments[0] === 'copy') {
-        navigator.clipboard.writeText = async () => {
-          throw new Error('private output denial');
-        };
-      } else {
-        window.__chimeraUrlOriginalCreateObjectURL = URL.createObjectURL;
-        URL.createObjectURL = () => { throw new Error('private output denial'); };
-      }
-    ''',
-      <Object?>[boundary],
-    );
-    await _clickButton(
-      driver,
-      boundary == 'copy' ? 'Copy encoded text' : 'Save encoded text',
-    );
-    await _waitUntil(
-      () => _pageContains(
-        driver,
-        boundary == 'copy'
-            ? 'The clipboard text could not be written.'
-            : 'The URL encoded text could not be saved.',
-      ),
-      'URL safe output access error did not appear',
-    );
-    await _waitUntil(
-      () async =>
-          await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
-      'URL output access failure retained a result',
-    );
-    if (boundary == 'save') {
-      await driver.execute(
-        'URL.createObjectURL = window.__chimeraUrlOriginalCreateObjectURL;',
-        const <Object?>[],
-      );
-    }
+  if (reads != 1) {
+    throw StateError('URL Decode clipboard source was not read once');
   }
-
+  await driver.execute(r'''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: async () => '%3Cprivate%3E',
+        writeText: async () => { throw new Error('private'); },
+      },
+    });
+  ''', const <Object?>[]);
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '%3Cprivate%3E',
+      focus: true,
+    ),
+    'URL Decode output-denial fixture was not loaded',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode output-denial result did not appear',
+  );
+  await _clickButton(driver, 'Copy decoded text');
+  await _waitUntil(
+    () => _pageContains(driver, 'The clipboard text could not be written.'),
+    'URL Decode output access failure did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode output access retained a result',
+  );
   await _assertNoNetworkRequests(
     driver,
-    flow: 'URL context/copy/save/validation',
+    flow: 'URL Decode copy/save/validation',
   );
 }
 
@@ -3088,4 +3039,304 @@ Future<void> _waitUntil(
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
   throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
+}
+
+const _urlSetupScript = r'''
+  window.__chimeraUrlCopiedText = null;
+  window.__chimeraUrlCopies = 0;
+  window.__chimeraUrlReads = 0;
+  window.__chimeraUrlClipboardSource = '&<>"\'/ &amp; Olá 🌍';
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraUrlReads++;
+        return window.__chimeraUrlClipboardSource;
+      },
+      writeText: async value => {
+        window.__chimeraUrlCopies++;
+        window.__chimeraUrlCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _urlModeOpenScript = r'''
+  const normalize = value => value.replace(/\s+/g, ' ').trim();
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === 'URL mode URL component' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.click();
+  return true;
+''';
+const _urlModeSelectScript = r'''
+  const option = [...document.querySelectorAll('[role="menuitem"]')]
+    .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === arguments[0] &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!option) return false;
+  option.click();
+  return true;
+''';
+const _urlResultScript = r'''
+  const result = [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .find(element => element.getAttribute('aria-label') === 'URL encoded result URL encoding succeeded.');
+  return result !== undefined;
+''';
+const _urlCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy encoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlCopiedScript = r'''
+  return window.__chimeraUrlCopies === arguments[1] &&
+    window.__chimeraUrlCopiedText === arguments[0];
+''';
+const _urlSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-url-encoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _urlFileScript = r'''
+  const picker = document.querySelector('input[type="file"]');
+  if (!picker) return false;
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([new Uint8Array(arguments[0])],
+    'source.txt', {type: 'text/plain'}));
+  picker.files = transfer.files;
+  picker.dispatchEvent(new Event('change', {bubbles: true}));
+  return true;
+''';
+const _urlNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('URL encoded result')) &&
+    !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
+''';
+
+Future<void> _encodeUrl(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'URL semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Encode URL');
+  await _waitUntil(
+    () => _pageContains(driver, 'Text to encode'),
+    'URL page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'URL startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_urlSetupScript, const <Object?>[]);
+  // SafariDriver has no upload endpoint; use its existing real File dispatch.
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '&%3C%3E%22\'/%20&amp;%20Ol%C3%A1%20%F0%9F%8C%8D';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Text to encode',
+      '&<>"\'/ &amp; Olá 🌍',
+      focus: true,
+    ),
+    'URL clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlModeOpenScript, const <Object?>[]) == true,
+    'URL default context was unavailable',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlModeSelectScript, const <Object?>[
+          'Full value',
+        ]) ==
+        true,
+    'URL double-quoted context was unavailable',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlResultScript, const <Object?>[]) == true,
+    'URL result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'URL source was retained',
+  );
+  await _waitUntil(
+    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
+    'URL copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlCopiedScript, const <Object?>[expected, 1]) ==
+        true,
+    'URL clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'URL non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL encoded text saved.'),
+    'URL non-empty save did not finish',
+  );
+  // A second encode has no retained source: it must copy/save exactly zero bytes.
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlResultScript, const <Object?>[]) == true,
+    'URL empty result did not appear',
+  );
+  await _waitUntil(
+    () async => await driver.execute(_urlCopyScript, const <Object?>[]) == true,
+    'URL empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlCopiedScript, const <Object?>['', 2]) == true,
+    'URL empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlSaveScript, const <Object?>[<int>[], 2]) ==
+        true,
+    'URL empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL encoded text saved.'),
+    'URL empty save did not finish',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'URL malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
+    'URL file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The URL encoding request is invalid.'),
+    'URL UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_urlNoResultScript, const <Object?>[]) != true) {
+    throw StateError('URL validation retained an output action or result');
+  }
+  await _waitUntil(
+    () => _inputHasValue(driver, 'Text to encode', '', focus: true),
+    'URL validation retained source text',
+  );
+  final reads = await driver.execute(
+    'return window.__chimeraUrlReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) throw StateError('URL clipboard source was not read once');
+  for (final boundary in ['copy', 'save']) {
+    await driver.execute(
+      "window.__chimeraUrlClipboardSource = 'private /ação';",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Paste text');
+    await _waitUntil(
+      () => _inputHasValue(
+        driver,
+        'Text to encode',
+        'private /ação',
+        focus: true,
+      ),
+      'URL failure source was not loaded',
+    );
+    await _clickButton(driver, 'Encode');
+    await _waitUntil(
+      () async =>
+          await driver.execute(_urlResultScript, const <Object?>[]) == true,
+      'URL failure fixture did not produce a result',
+    );
+    await driver.execute(
+      r'''
+      if (arguments[0] === 'copy') {
+        navigator.clipboard.writeText = async () => {
+          throw new Error('private output denial');
+        };
+      } else {
+        window.__chimeraUrlOriginalCreateObjectURL = URL.createObjectURL;
+        URL.createObjectURL = () => { throw new Error('private output denial'); };
+      }
+    ''',
+      <Object?>[boundary],
+    );
+    await _clickButton(
+      driver,
+      boundary == 'copy' ? 'Copy encoded text' : 'Save encoded text',
+    );
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        boundary == 'copy'
+            ? 'The clipboard text could not be written.'
+            : 'The URL encoded text could not be saved.',
+      ),
+      'URL safe output access error did not appear',
+    );
+    await _waitUntil(
+      () async =>
+          await driver.execute(_urlNoResultScript, const <Object?>[]) == true,
+      'URL output access failure retained a result',
+    );
+    if (boundary == 'save') {
+      await driver.execute(
+        'URL.createObjectURL = window.__chimeraUrlOriginalCreateObjectURL;',
+        const <Object?>[],
+      );
+    }
+  }
+
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'URL context/copy/save/validation',
+  );
 }

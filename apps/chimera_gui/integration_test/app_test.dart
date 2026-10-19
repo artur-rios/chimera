@@ -463,6 +463,208 @@ void main() {
 
   for (final locale in ['en', 'pt-BR']) {
     for (final (source, input, expected) in [
+      ('typed', '%3C%26%41%F0%9F%99%82%253C+', '<&A🙂%3C+'),
+      ('file', '%3C%26%41%F0%9F%99%82', '<&A🙂'),
+      ('clipboard', '%22offline%22', '"offline"'),
+      ('empty', '', ''),
+    ]) {
+      testWidgets('Given${locale}UrlDecode$source'
+          '_WhenActivatedCopiedAndSaved_ThenExactTextTransfersOffline', (
+        tester,
+      ) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          final directory = await Directory.systemTemp.createTemp(
+            'chimera-url-decode-',
+          );
+          addTearDown(() => directory.delete(recursive: true));
+          String? copied;
+          var copies = 0;
+          var saves = 0;
+          final saved = File('${directory.path}/chimera-url-decoded.txt');
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/url/decode',
+              urlDecodeFilePicker: () async => utf8.encode(input),
+              urlDecodeClipboardReader: () async => input,
+              urlDecodeClipboardWriter: (value) async {
+                copies++;
+                copied = value;
+              },
+              urlDecodeFileSaver: (name, bytes, mime) async {
+                saves++;
+                expect(name, 'chimera-url-decoded.txt');
+                expect(mime, 'text/plain; charset=utf-8');
+                await saved.writeAsBytes(bytes, flush: true);
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          final editor = find.byKey(const Key('url-decode-input'));
+          if (source == 'typed') {
+            await tester.enterText(editor, input);
+          } else if (source == 'file') {
+            await tester.tap(find.byKey(const Key('url-decode-file')));
+            await tester.pumpAndSettle();
+          } else if (source == 'clipboard') {
+            await tester.tap(find.byKey(const Key('url-decode-paste')));
+            await tester.pumpAndSettle();
+          }
+          await tester.tap(editor);
+          await tester.pumpAndSettle();
+          for (final name in ['file', 'paste', 'submit']) {
+            await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+            await tester.pumpAndSettle();
+            expect(
+              find.ancestor(
+                of: find.byWidget(
+                  FocusManager.instance.primaryFocus!.context!.widget,
+                ),
+                matching: find.byKey(Key('url-decode-$name')),
+              ),
+              findsOneWidget,
+              reason: name,
+            );
+          }
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(
+            FocusManager.instance.primaryFocus!.debugLabel,
+            'URL decoding result',
+          );
+          final result = find.byKey(const Key('url-decode-result'));
+          final data = tester.getSemantics(result).getSemanticsData();
+          expect(
+            data.label,
+            locale == 'en'
+                ? 'URL decoded result'
+                : 'Resultado decodificado de URL',
+          );
+          expect(
+            data.value,
+            locale == 'en'
+                ? 'URL decoding succeeded.'
+                : 'Decodificação URL concluída.',
+          );
+          expect(
+            tester.widget<Semantics>(result).properties.liveRegion,
+            isTrue,
+          );
+          expect(
+            tester
+                .widget<SelectableText>(
+                  find.byKey(const Key('url-decode-output')),
+                )
+                .data,
+            expected,
+          );
+          expect(tester.widget<TextField>(editor).controller!.text, '');
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(copied, expected);
+          expect(copies, 1);
+          await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+          await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+          await tester.pumpAndSettle();
+          expect(saves, 1);
+          expect(await saved.readAsBytes(), utf8.encode(expected));
+          expect(network.attempts, 0);
+        } finally {
+          semantics.dispose();
+        }
+      });
+    }
+
+    testWidgets(
+      'Given${locale}MalformedUrlFile_WhenDecoded_ThenSourceAndResultAreDiscardedOffline',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        await tester.pumpWidget(
+          ChimeraApp(
+            localeTag: locale,
+            initialLocation: '/url/decode',
+            urlDecodeFilePicker: () async => [0xc3, 0x28],
+          ),
+        );
+        await tester.pumpAndSettle();
+        final editor = find.byKey(const Key('url-decode-input'));
+        await tester.enterText(editor, '%3Cprivate%3E');
+        await tester.tap(find.byKey(const Key('url-decode-file')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('url-decode-submit')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            locale == 'en'
+                ? 'The URL decoding request is invalid.'
+                : 'A solicitação de decodificação URL é inválida.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('url-decode-result')), findsNothing);
+        expect(find.byKey(const Key('url-decode-copy')), findsNothing);
+        expect(find.byKey(const Key('url-decode-save')), findsNothing);
+        expect(find.textContaining('private'), findsNothing);
+        expect(tester.widget<TextField>(editor).controller!.text, '');
+        expect(network.attempts, 0);
+      },
+    );
+  }
+
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}UrlDecodeOutputDenied_WhenSaved_ThenResultAndSourceAreDiscarded',
+      (tester) async {
+        final network = _RejectConversionNetwork();
+        final previous = HttpOverrides.current;
+        HttpOverrides.global = network;
+        addTearDown(() => HttpOverrides.global = previous);
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/url/decode',
+            localeTag: locale,
+            urlDecodeFileSaver: (_, _, _) async => throw StateError('private'),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const Key('url-decode-input')),
+          '%3Cprivate%3E',
+        );
+        await tester.tap(find.byKey(const Key('url-decode-submit')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('url-decode-save')));
+        await tester.tap(find.byKey(const Key('url-decode-save')));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            locale == 'en'
+                ? 'The URL decoded text could not be saved.'
+                : 'Não foi possível salvar o texto decodificado de URL.',
+          ),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('url-decode-result')), findsNothing);
+        expect(find.byKey(const Key('url-decode-copy')), findsNothing);
+        expect(find.byKey(const Key('url-decode-save')), findsNothing);
+        expect(find.textContaining('private'), findsNothing);
+        expect(network.attempts, 0);
+      },
+    );
+  }
+
+  for (final locale in ['en', 'pt-BR']) {
+    for (final (source, input, expected) in [
       ('typed', '&lt;&amp;&#65;&#x1F642;&amp;lt;', '<&A🙂&lt;'),
       ('file', '&#60;&#38;&#x41;&#x1F642;', '<&A🙂'),
       ('clipboard', '&quot;offline&quot;', '"offline"'),
