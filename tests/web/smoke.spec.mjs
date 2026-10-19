@@ -32,6 +32,151 @@ const safariCopiedTextObservation = safariHarness
   .split('Future<List<int>?> _copiedTextCodeUnits(')[1]
   ?.match(/driver\.execute\(\s*'''([\s\S]*?)'''/)?.[1] ?? '';
 
+const safariUrlScripts = Object.fromEntries([...safariHarness.matchAll(
+  /const _url(\w+)Script = r'''([\s\S]*?)''';/g,
+)].map(([, name, source]) => [name, source]));
+async function urlScript(page, name, ...args) {
+  expect(safariUrlScripts[name], `Safari URL ${name} helper`).toBeTruthy();
+  return page.evaluate(({ source, args }) => new Function(source)(...args), {
+    source: safariUrlScripts[name], args,
+  });
+}
+
+for (const scenario of [
+  { mode: 'component', source: 'typed', expected: "%26%3C%3E%22'%2F%20%26amp%3B%20Ol%C3%A1%20%F0%9F%8C%8D" },
+  { mode: 'Full value', source: 'file', expected: "&%3C%3E%22'/%20&amp;%20Ol%C3%A1%20%F0%9F%8C%8D" },
+  { mode: 'component', source: 'clipboard', expected: "%26%3C%3E%22'%2F%20%26amp%3B%20Ol%C3%A1%20%F0%9F%8C%8D" },
+  { mode: 'Full value', source: 'typed', expected: "&%3C%3E%22'/%20&amp;%20Ol%C3%A1%20%F0%9F%8C%8D" },
+  { mode: 'component', source: 'empty', expected: '' },
+]) {
+  test(`GivenUrl${scenario.mode}${scenario.source}_WhenEncodedCopiedAndSaved_ThenExactEntitiesTransferOffline`, async ({ page }) => {
+    const externalRequests = [];
+    const interactionRequests = [];
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    page.on('request', request => {
+      if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+        externalRequests.push(request.url());
+      }
+    });
+    // The existing observer is generic: pin the clicked Blob rather than an
+    // unrelated allocation, and retain every existing GZIP boundary assertion.
+    await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Encode URL', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'Text to encode', exact: true });
+    await expect(editor).toBeVisible();
+    page.on('request', request => recordHttpRequest(request, interactionRequests));
+    await urlScript(page, 'Setup');
+    const input = '&<>"\'/ &amp; Olá 🌍';
+    if (scenario.source === 'typed') {
+      await fillFlutterTextBox(editor, input);
+    } else if (scenario.source === 'clipboard') {
+      await page.getByRole('button', { name: 'Paste text', exact: true }).evaluate(button => button.click());
+      await expect.poll(() => page.evaluate(source => new Function(source)('Text to encode', '&<>"\'/ &amp; Olá 🌍', true), safariInputObservation)).toBe(true);
+      expect(await page.evaluate(() => window.__chimeraUrlReads)).toBe(1);
+    } else if (scenario.source === 'file') {
+      const previousEditor = await editor.elementHandle();
+      const pendingChooser = page.waitForEvent('filechooser');
+      await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+      await (await pendingChooser).setFiles({ name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from(input, 'utf8') });
+      // FileReader completes after setFiles dispatches change. The page then
+      // recreates its editor to discard undo history before enabling mode.
+      await expect.poll(() => previousEditor.evaluate(input => input.isConnected)).toBe(false);
+      await expect(editor).toBeEnabled();
+    }
+    if (scenario.mode !== 'component') {
+      await expect.poll(() => urlScript(page, 'ModeOpen')).toBe(true);
+      await expect.poll(() => urlScript(page, 'ModeSelect', scenario.mode)).toBe(true);
+      await expect(page.getByRole('button', { name: `URL mode ${scenario.mode}`, exact: true })).toBeVisible();
+    } else {
+      await expect(page.getByRole('button', { name: 'URL mode URL component', exact: true })).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Encode', exact: true }).click();
+    const result = page.getByRole('region', { name: 'URL encoded result URL encoding succeeded.', exact: true });
+    await expect(result).toBeVisible();
+    await expect(result).toHaveAttribute('tabindex', '0');
+    await expect.poll(() => urlScript(page, 'Result')).toBe(true);
+    await expect.poll(() => page.evaluate(source => new Function(source)('Text to encode', '', true), safariInputObservation)).toBe(true);
+    await expect.poll(() => urlScript(page, 'Copy')).toBe(true);
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => ({
+      matches: await urlScript(page, 'Copied', scenario.expected, 1),
+      ...await page.evaluate(() => ({ copies: window.__chimeraUrlCopies, text: window.__chimeraUrlCopiedText })),
+    })).toEqual({ matches: true, copies: 1, text: scenario.expected });
+    const pendingDownload = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save encoded text', exact: true }).press('Enter');
+    const download = await pendingDownload;
+    expect(download.suggestedFilename()).toBe('chimera-url-encoded.txt');
+    const chunks = [];
+    for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+    const expectedBytes = Buffer.from(scenario.expected, 'utf8');
+    expect(Buffer.concat(chunks)).toEqual(expectedBytes);
+    await expect.poll(() => urlScript(page, 'Save', [...expectedBytes], 1)).toBe(true);
+    expect(downloads).toHaveLength(1);
+    await expect(result).toBeVisible();
+
+    // Dispatch Safari's real malformed-file helper after success. This also
+    // proves previous output/actions and source cannot survive validation.
+    await page.evaluate(() => {
+      const click = HTMLInputElement.prototype.click;
+      HTMLInputElement.prototype.click = function() {
+        if (this.type === 'file') return;
+        return click.call(this);
+      };
+    });
+    await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+    await expect.poll(() => urlScript(page, 'File', [0xc3, 0x28])).toBe(true);
+    await expect.poll(() => urlScript(page, 'NoResult')).toBe(true);
+    await expect(page.getByRole('button', { name: 'Encode', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Encode', exact: true }).click();
+    await expect(page.locator('span', { hasText: /^The URL encoding request is invalid\.$/ })).toBeVisible();
+    await expect.poll(() => urlScript(page, 'NoResult')).toBe(true);
+    await expect(result).toHaveCount(0);
+    await expect.poll(() => page.evaluate(source => new Function(source)('Text to encode', '', true), safariInputObservation)).toBe(true);
+    expect(await page.evaluate(() => window.__chimeraUrlCopies)).toBe(1);
+    expect(await page.evaluate(() => window.__chimeraSaveCount)).toBe(1);
+    expect(downloads).toHaveLength(1);
+    expect(interactionRequests).toEqual([]);
+    expect(externalRequests).toEqual([]);
+  });
+}
+
+for (const boundary of ['copy', 'save']) {
+  test(`GivenUrlResult_When${boundary}AccessFails_ThenSourceAndOutputAreDiscardedOffline`, async ({ page }) => {
+    const requests = [];
+    const downloads = [];
+    page.on('download', download => downloads.push(download));
+    await page.goto('/');
+    await enableFlutterSemantics(page);
+    await page.getByRole('button', { name: 'Encode URL', exact: true }).click();
+    const editor = page.getByRole('textbox', { name: 'Text to encode', exact: true });
+    await expect(editor).toBeVisible();
+    page.on('request', request => recordHttpRequest(request, requests));
+    await fillFlutterTextBox(editor, 'private /ação');
+    await page.getByRole('button', { name: 'Encode', exact: true }).click();
+    await expect.poll(() => urlScript(page, 'Result')).toBe(true);
+    await page.evaluate(boundary => {
+      if (boundary === 'copy') {
+        Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+          writeText: async () => { throw new Error('private output denial'); },
+        } });
+      } else {
+        URL.createObjectURL = () => { throw new Error('private output denial'); };
+      }
+    }, boundary);
+    await page.getByRole('button', { name: boundary === 'copy' ? 'Copy encoded text' : 'Save encoded text', exact: true }).click();
+    await expect(page.locator('span', { hasText: boundary === 'copy'
+      ? /^The clipboard text could not be written\.$/
+      : /^The URL encoded text could not be saved\.$/ })).toBeVisible();
+    await expect.poll(() => urlScript(page, 'NoResult')).toBe(true);
+    await expect.poll(() => page.evaluate(source => new Function(source)('Text to encode', '', true), safariInputObservation)).toBe(true);
+    expect(downloads).toEqual([]);
+    expect(requests).toEqual([]);
+  });
+}
+
 const safariHtmlScripts = Object.fromEntries([...safariHarness.matchAll(
   /const _html(\w+)Script = r'''([\s\S]*?)''';/g,
 )].map(([, name, source]) => [name, source]));

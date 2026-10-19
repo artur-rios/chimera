@@ -27,4 +27,5 @@ export 'src/text_compare_service.dart';
 export 'src/text_escape_service.dart';
 export 'src/text_transform_service.dart';
 export 'src/text_unescape_service.dart';
+export 'src/url_encode_service.dart';
 export 'src/xml_format_service.dart';
