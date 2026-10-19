@@ -2163,9 +2163,12 @@ for (const invalid of ['%', '%GG', '%C3%28', '%ED%A0%80']) {
     const editor = page.getByRole('textbox', { name: 'Percent-encoded text to decode', exact: true });
     await fillFlutterTextBox(editor, invalid);
     await page.getByRole('button', { name: 'Decode', exact: true }).click();
-    await expect(page.getByText('The URL decoding request is invalid.', { exact: true })).toBeVisible();
+    await expect(page.locator('span', { hasText: /^The URL decoding request is invalid\.$/ })).toBeVisible();
     await expect.poll(() => urlScript(page, 'DecodeNoResult')).toBe(true);
-    await expect(editor).toHaveValue('');
+    await expect.poll(() => page.evaluate(
+      source => new Function(source)('Percent-encoded text to decode', '', true),
+      safariInputObservation,
+    )).toBe(true);
   });
 }
 
@@ -2179,7 +2182,7 @@ test('GivenUrlDecodeCopyDenied_WhenOutputAccessFails_ThenResultIsDiscarded', asy
   await fillFlutterTextBox(page.getByRole('textbox', { name: 'Percent-encoded text to decode', exact: true }), '%3Cprivate%3E');
   await page.getByRole('button', { name: 'Decode', exact: true }).click();
   await page.getByRole('button', { name: 'Copy decoded text', exact: true }).click();
-  await expect(page.getByText('The clipboard text could not be written.', { exact: true })).toBeVisible();
+  await expect(page.locator('span', { hasText: /^The clipboard text could not be written\.$/ })).toBeVisible();
   await expect.poll(() => urlScript(page, 'DecodeNoResult')).toBe(true);
 });
 
@@ -2190,8 +2193,12 @@ test('GivenUrlDecodeSafariHelpers_WhenClipboardDecodedCopiedAndSaved_ThenExactOu
   await page.getByRole('button', { name: 'Decode URL', exact: true }).click();
   await urlScript(page, 'DecodeSetup');
   await page.getByRole('button', { name: 'Paste text', exact: true }).click();
-  const editor = page.getByRole('textbox', { name: 'Percent-encoded text to decode', exact: true });
-  await expect(editor).toHaveValue('%3C%26%41%F0%9F%99%82%253C+');
+  await expect.poll(() => page.evaluate(
+    source => new Function(source)(
+      'Percent-encoded text to decode', '%3C%26%41%F0%9F%99%82%253C+', true,
+    ),
+    safariInputObservation,
+  )).toBe(true);
   await expect.poll(() => urlScript(page, 'DecodeSubmit')).toBe(true);
   await page.keyboard.press('Enter');
   await expect.poll(() => urlScript(page, 'DecodeResult')).toBe(true);
