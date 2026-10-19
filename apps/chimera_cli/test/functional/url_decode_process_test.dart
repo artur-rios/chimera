@@ -1,9 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:test/test.dart';
 
 void main() {
+  late String entryPoint;
+  setUpAll(() async {
+    final library = await Isolate.resolvePackageUri(
+      Uri.parse('package:chimera_cli/chimera_cli.dart'),
+    );
+    entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
+  });
+
   for (final source in ['arguments', 'stdin', 'file']) {
     for (final json in [false, true]) {
       test(
@@ -21,7 +30,7 @@ void main() {
           await output.writeAsString('old bytes', flush: true);
           final process = await Process.start(Platform.resolvedExecutable, [
             'run',
-            'bin/chimera.dart',
+            entryPoint,
             'url',
             'decode',
             if (source == 'arguments') '--input=$encoded',
@@ -65,7 +74,7 @@ void main() {
       final output = File('${directory.path}/output.txt');
       final process = await Process.start(Platform.resolvedExecutable, [
         'run',
-        'bin/chimera.dart',
+        entryPoint,
         'url',
         'decode',
         '--stdin',
