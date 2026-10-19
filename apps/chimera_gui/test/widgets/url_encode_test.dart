@@ -9,6 +9,7 @@ import 'package:file_selector_platform_interface/file_selector_platform_interfac
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 Finder _control(String name) => find.byKey(Key('url-encode-$name'));
 
@@ -64,6 +65,86 @@ void _noSuccess() {
 }
 
 void main() {
+  for (final locale in ['en', 'pt-BR']) {
+    for (final discard in ['failure', 'navigation']) {
+      testWidgets(
+        'Given${locale}Result_When${discard}DiscardsOutput_ThenExactSelectableSemanticsAreRemoved',
+        (tester) async {
+          final semantics = tester.ensureSemantics();
+          try {
+            await tester.pumpWidget(
+              ChimeraApp(
+                initialLocation: '/url/encode',
+                localeTag: locale,
+                urlEncodeClipboardWriter: (_) async =>
+                    throw StateError('SECRET'),
+              ),
+            );
+            await tester.pumpAndSettle();
+            await tester.enterText(_control('input'), 'a b+Olá🙂');
+            await _tap(tester, 'submit');
+
+            const output = 'a%20b%2BOl%C3%A1%F0%9F%99%82';
+            final label = locale == 'en'
+                ? 'URL encoded result'
+                : 'Resultado codificado em URL';
+            final summary = locale == 'en'
+                ? 'URL encoding succeeded.'
+                : 'Codificação URL concluída.';
+            final result = find.semantics.byLabel(label);
+            expect(result, findsOne);
+            expect(
+              result.evaluate().single,
+              isSemantics(value: summary, isLiveRegion: true),
+            );
+            final accessibleOutput = find.semantics.descendant(
+              of: result,
+              matching: find.semantics.byValue(output),
+            );
+            expect(accessibleOutput, findsOne);
+            expect(
+              accessibleOutput.evaluate().single,
+              isSemantics(
+                isReadOnly: true,
+                isTextField: true,
+                isLiveRegion: false,
+              ),
+            );
+            expect(
+              tester.widget<TextField>(_control('input')).controller!.text,
+              isEmpty,
+            );
+
+            if (discard == 'failure') {
+              await _tap(tester, 'copy');
+              expect(_control('error'), findsOneWidget);
+            } else {
+              final router = GoRouter.of(tester.element(_control('input')));
+              router.go('/');
+              await tester.pumpAndSettle();
+              expect(find.semantics.byValue(output), findsNothing);
+              router.go('/url/encode');
+              await tester.pumpAndSettle();
+            }
+            _noSuccess();
+            expect(find.semantics.byValue(output), findsNothing);
+            expect(find.semantics.byValue(summary), findsNothing);
+            expect(
+              find.semantics.byPredicate(
+                (node) =>
+                    node.label.contains('SECRET') ||
+                    node.value.contains('SECRET'),
+              ),
+              findsNothing,
+            );
+          } finally {
+            semantics.dispose();
+          }
+        },
+      );
+    }
+  }
+
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
       'Given${locale}Home_WhenUrlEncodeSelected_ThenLocalizedRouteOpens',

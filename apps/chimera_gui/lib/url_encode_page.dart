@@ -424,7 +424,7 @@ final class _UrlEncodePageState extends State<UrlEncodePage> {
                           container: true,
                           focusable: true,
                           liveRegion: true,
-                          excludeSemantics: true,
+                          explicitChildNodes: true,
                           role: SemanticsRole.region,
                           label: _label('outputLabel'),
                           value: _label('resultSuccess'),
@@ -439,11 +439,13 @@ final class _UrlEncodePageState extends State<UrlEncodePage> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Text(
-                                  _label('outputLabel'),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium,
+                                ExcludeSemantics(
+                                  child: Text(
+                                    _label('outputLabel'),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
                                 ),
                                 const SizedBox(height: 8),
                                 ConstrainedBox(
