@@ -1,15 +1,36 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/qr_encode_page.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
+// The public web library imports browser-only SDKs into this VM test.
+// ignore: implementation_imports
+import 'package:file_picker_web/src/file_picker_web_options.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('GivenQrFilePicker_WhenOpenedOnWeb_ThenPreloadingIsDisabled', () async {
+    FilePickerWebOptions? capturedOptions;
+
+    final result = await pickQrEncodeFile(
+      pickPlatformFile: (options) async {
+        capturedOptions = options;
+        return null;
+      },
+    );
+
+    expect(result, isNull);
+    expect(capturedOptions, isNotNull);
+    // ignore: deprecated_member_use
+    expect(capturedOptions!.withData, isFalse);
+    // ignore: deprecated_member_use
+    expect(capturedOptions!.withReadStream, isTrue);
+  });
+
   testWidgets('GivenHomeAction_WhenActivated_ThenQrEncodeRouteOpens', (
     tester,
   ) async {
@@ -139,6 +160,43 @@ void main() {
     );
   });
 
+  testWidgets(
+    'GivenGeneratedQr_WhenFileOrClipboardIsCancelled_ThenResultRemains',
+    (tester) async {
+      await tester.pumpWidget(_app());
+      await tester.enterText(find.byKey(const Key('qr-encode-input')), 'keep');
+      await tester.tap(find.byKey(const Key('qr-encode-submit')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('qr-encode-preview')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('qr-encode-file')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('qr-encode-preview')), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('qr-encode-paste')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const Key('qr-encode-preview')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'GivenOversizedInvalidFile_WhenLoaded_ThenResourcePrecedesUtf8Validation',
+    (tester) async {
+      await tester.pumpWidget(
+        _app(filePicker: () async => List<int>.filled(8193, 0xFF)),
+      );
+
+      await tester.tap(find.byKey(const Key('qr-encode-file')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('QR encoding exceeded its resource limit.'),
+        findsOneWidget,
+      );
+      expect(find.text('The QR encoding request is invalid.'), findsNothing);
+    },
+  );
+
   testWidgets('GivenInvalidOptions_WhenGenerated_ThenLocalizedErrorAppears', (
     tester,
   ) async {
@@ -207,10 +265,57 @@ void main() {
     await tester.tap(find.byKey(const Key('qr-encode-submit')));
     await tester.pumpAndSettle();
     expect(find.byKey(const Key('qr-encode-preview')), findsOneWidget);
+    final preview = tester.widget<Image>(
+      find.byKey(const Key('qr-encode-preview')),
+    );
+    final provider = preview.image as MemoryImage;
+    expect(
+      PaintingBinding.instance.imageCache.statusForKey(provider).tracked,
+      isTrue,
+    );
 
     await tester.enterText(find.byKey(const Key('qr-encode-input')), 'second');
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byKey(const Key('qr-encode-preview')), findsNothing);
+    expect(
+      PaintingBinding.instance.imageCache.statusForKey(provider).untracked,
+      isTrue,
+    );
+  });
+
+  testWidgets('GivenKeyboardNavigation_WhenTabbing_ThenControlsFollowOrder', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_app());
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('qr-encode-input')), 'keys');
+    expect(_focusedAncestorKey(tester), const Key('qr-encode-input'));
+
+    for (final key in <Key>[
+      const Key('qr-encode-file'),
+      const Key('qr-encode-paste'),
+      const Key('qr-encode-correction'),
+      const Key('qr-encode-size'),
+      const Key('qr-encode-margin'),
+      const Key('qr-encode-foreground'),
+      const Key('qr-encode-background'),
+      const Key('qr-encode-submit'),
+    ]) {
+      await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+      await tester.pump();
+      expect(_focusedAncestorKey(tester), key);
+    }
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await tester.pumpAndSettle();
+    expect(
+      tester.binding.focusManager.primaryFocus?.debugLabel,
+      'QR encode result',
+    );
+
+    await tester.sendKeyEvent(LogicalKeyboardKey.tab);
+    await tester.pump();
+    expect(_focusedAncestorKey(tester), const Key('qr-encode-save'));
   });
 
   testWidgets('GivenPortugueseLocale_WhenOpened_ThenControlsAreLocalized', (
@@ -278,3 +383,22 @@ Widget _app({
     fileSaver: fileSaver ?? (_, _, _) async => true,
   ),
 );
+
+Key? _focusedAncestorKey(WidgetTester tester) {
+  final context = tester.binding.focusManager.primaryFocus?.context;
+  if (context == null) return null;
+  Key? key;
+  void consider(Key? candidate) {
+    if (candidate case ValueKey<String>(value: final value)
+        when value.startsWith('qr-encode-')) {
+      key = candidate;
+    }
+  }
+
+  consider(context.widget.key);
+  context.visitAncestorElements((element) {
+    consider(element.widget.key);
+    return key == null;
+  });
+  return key;
+}

@@ -1123,9 +1123,10 @@ Future<void> main(List<String> arguments) async {
     await _encodeHtml(driver);
     await _decodeHtml(driver);
     await _createJwt(driver);
+    await _encodeQr(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, QR encoding/save/validation, local JWT signing and inspection, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -1147,7 +1148,6 @@ Future<void> _createJwt(WebDriver driver) async {
     "document.querySelector('flt-semantics-placeholder').click();",
     const <Object?>[],
   );
-  await _encodeQr(driver);
   await _clickButton(driver, 'Create JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Claims JSON'),
@@ -1239,6 +1239,20 @@ Future<void> _createJwt(WebDriver driver) async {
 }
 
 Future<void> _encodeQr(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'QR semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
   await _clickButton(driver, 'Encode QR code');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -1247,10 +1261,32 @@ Future<void> _encodeQr(WebDriver driver) async {
   final saveObserver = await _loadGzipSaveObserver();
   await driver.execute(
     '$saveObserver\nobserveGzipSaves({suppressDownloads: true});\n'
-    'performance.clearResourceTimings();',
+    '''
+    window.__chimeraQrClipboardReads = 0;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {readText: async () => {
+        window.__chimeraQrClipboardReads++;
+        return 'Safari Olá 🌍';
+      }},
+    });
+    performance.clearResourceTimings();
+    ''',
     const <Object?>[],
   );
-  await _fillTextBox(driver, 'Text to encode', 'Safari Olá 🌍');
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () =>
+        _inputHasValue(driver, 'Text to encode', 'Safari Olá 🌍', focus: true),
+    'QR UTF-8 clipboard source was not loaded',
+  );
+  final clipboardReads = await driver.execute(
+    'return window.__chimeraQrClipboardReads;',
+    const <Object?>[],
+  );
+  if (clipboardReads != 1) {
+    throw StateError('QR clipboard was not read exactly once');
+  }
   await _fillTextBox(driver, 'Image size (pixels)', '256');
   await _clickButton(driver, 'Generate QR');
   await _waitUntil(
@@ -1312,11 +1348,6 @@ Future<void> _encodeQr(WebDriver driver) async {
     'QR invalid source was not discarded',
   );
   await _assertNoNetworkRequests(driver, flow: 'QR encoding/save/validation');
-  await driver.back();
-  await _waitUntil(
-    () => _pageContains(driver, 'Create JWT'),
-    'Home page did not return after QR encoding',
-  );
 }
 
 Future<String> _createAsymmetricJwt(
@@ -2493,7 +2524,8 @@ Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
 
     var entered = '';
     var attemptSucceeded = true;
-    for (final character in value.split('')) {
+    for (final rune in value.runes) {
+      final character = String.fromCharCode(rune);
       await driver.keyboard.sendKeys(character);
       entered += character;
       try {

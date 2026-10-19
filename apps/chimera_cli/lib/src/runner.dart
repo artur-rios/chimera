@@ -132,8 +132,8 @@ Future<int> runChimera(
         out: out,
         err: err,
         readStandardInputBytes:
-            readStandardInputBytes ?? _readStandardInputBytes,
-        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+            readStandardInputBytes ?? _readQrEncodeStandardInputBytes,
+        readFileBytes: readFileBytes ?? _readQrEncodeFileBytes,
         writeOutputFile:
             writeOutputFile ??
             (path, bytes) => _writeFileTransactionally(
@@ -1095,7 +1095,26 @@ Future<int> _runQrEncode(
       final bytes = useStandardInput
           ? await readStandardInputBytes()
           : await readFileBytes(file!);
+      if (bytes.length > QrEncoder.defaultMaxInputBytes) {
+        _clearBytes(bytes);
+        throw const _QrEncodeInputLimit();
+      }
       input = utf8.decode(bytes, allowMalformed: false);
+    } on _QrEncodeInputLimit {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'resource',
+        code: 'qr-encode.resource-limit',
+        messageKey: 'error.qrEncode.resource',
+        details: const <String, Object?>{
+          'field': 'input',
+          'reason': 'byte-limit',
+        },
+      );
+      return 75;
     } on FormatException {
       _writeFailure(
         err,
@@ -1162,7 +1181,7 @@ Future<int> _runQrEncode(
           stdoutPayload = '${encodeJson(value.toJson())}\n';
         } else {
           stdoutPayload =
-              '${catalog.lookup(localeTag, 'qrEncode.savedResult').replaceAll('{size}', '${value.size}').replaceAll('{version}', '${value.version}').replaceAll('{errorCorrection}', value.errorCorrection.name).replaceAll('{outputByteCount}', '${value.outputByteCount}')}\n';
+              '${catalog.lookup(localeTag, 'qrEncode.savedResult').replaceAll('{size}', '${value.size}').replaceAll('{version}', '${value.version}').replaceAll('{errorCorrection}', catalog.lookup(localeTag, 'qrEncode.correction.${value.errorCorrection.name}')).replaceAll('{outputByteCount}', '${value.outputByteCount}')}\n';
         }
       } on OutOfMemoryError {
         _writeFailure(
@@ -3018,6 +3037,43 @@ void _writeBase64ResourceFailure(
 
 Future<List<int>> _readStandardInputBytes() =>
     stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+
+final class _QrEncodeInputLimit implements Exception {
+  const _QrEncodeInputLimit();
+}
+
+Future<List<int>> _readQrEncodeFileBytes(String path) async {
+  final file = File(path);
+  if (await file.length() > QrEncoder.defaultMaxInputBytes) {
+    throw const _QrEncodeInputLimit();
+  }
+  return _readQrEncodeChunks(
+    file.openRead(0, QrEncoder.defaultMaxInputBytes + 1),
+  );
+}
+
+Future<List<int>> _readQrEncodeStandardInputBytes() =>
+    _readQrEncodeChunks(stdin);
+
+Future<List<int>> _readQrEncodeChunks(Stream<List<int>> chunks) async {
+  final bytes = <int>[];
+  await for (final chunk in chunks) {
+    if (bytes.length + chunk.length > QrEncoder.defaultMaxInputBytes) {
+      _clearBytes(bytes);
+      throw const _QrEncodeInputLimit();
+    }
+    bytes.addAll(chunk);
+  }
+  return bytes;
+}
+
+void _clearBytes(List<int> bytes) {
+  try {
+    bytes.fillRange(0, bytes.length, 0);
+  } on Object {
+    // Immutable collaborator bytes are released when this scope ends.
+  }
+}
 
 final class _JwtInspectInputLimit implements Exception {
   const _JwtInspectInputLimit();

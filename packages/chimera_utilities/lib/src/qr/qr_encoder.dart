@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:image/image.dart' as image;
@@ -123,8 +124,10 @@ final class QrEncoder {
       final payload = qr.QrPayload();
       if (input.codeUnits.any((unit) => unit > 0x7F)) {
         payload.addECI(qr.QrEciValue.utf8);
+        payload.addTypedData(Uint8List.fromList(utf8.encode(input)));
+      } else {
+        payload.addString(input);
       }
-      payload.addString(input);
       final code = qr.QrCode(
         payload: payload,
         errorCorrectLevel: _toPackageLevel(errorCorrection),

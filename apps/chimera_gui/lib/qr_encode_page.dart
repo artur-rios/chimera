@@ -5,6 +5,10 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
+// The public web library imports browser-only SDKs, so VM builds need its
+// standalone options library. Keep this paired with the pinned dependency.
+// ignore: implementation_imports
+import 'package:file_picker_web/src/file_picker_web_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,8 +23,45 @@ typedef QrEncodeFileSaver = Future<bool> Function(
   String mimeType,
 );
 
-Future<List<int>?> pickQrEncodeFile() async =>
-    (await FilePicker.pickFile())?.readAsBytes();
+final class _QrEncodeInputLimit implements Exception {
+  const _QrEncodeInputLimit();
+}
+
+Future<List<int>?> pickQrEncodeFile({
+  Future<PlatformFile?> Function(FilePickerWebOptions options)?
+  pickPlatformFile,
+}) async {
+  final file = await (pickPlatformFile ?? _pickQrEncodePlatformFile)(
+    // Required in file_picker_web 4.2.0, whose defaults eagerly preload files.
+    // ignore: deprecated_member_use
+    const FilePickerWebOptions(withData: false, withReadStream: true),
+  );
+  if (file == null) return null;
+  final knownLength = file.lengthSync();
+  if (knownLength != null && knownLength > QrEncoder.defaultMaxInputBytes) {
+    throw const _QrEncodeInputLimit();
+  }
+  final bytes = <int>[];
+  await for (final chunk in file.readAsByteStream()) {
+    if (bytes.length + chunk.length > QrEncoder.defaultMaxInputBytes) {
+      _clearBytes(bytes);
+      throw const _QrEncodeInputLimit();
+    }
+    bytes.addAll(chunk);
+  }
+  return bytes;
+}
+
+Future<PlatformFile?> _pickQrEncodePlatformFile(FilePickerWebOptions options) =>
+    FilePicker.pickFile(webOptions: options);
+
+void _clearBytes(List<int> bytes) {
+  try {
+    bytes.fillRange(0, bytes.length, 0);
+  } on Object {
+    // Immutable collaborator bytes are released when this scope ends.
+  }
+}
 
 Future<String?> readQrEncodeClipboard() async =>
     (await Clipboard.getData(Clipboard.kTextPlain))?.text;
@@ -83,7 +124,7 @@ final class _QrEncodePageState extends State<QrEncodePage> {
   @override
   void dispose() {
     _clearSource();
-    _output = null;
+    _discardOutput();
     _input.dispose();
     _size.dispose();
     _margin.dispose();
@@ -94,6 +135,14 @@ final class _QrEncodePageState extends State<QrEncodePage> {
     super.dispose();
   }
 
+  void _discardOutput() {
+    final output = _output;
+    if (output != null) {
+      PaintingBinding.instance.imageCache.evict(MemoryImage(output.pngBytes));
+    }
+    _output = null;
+  }
+
   void _clearSource() {
     _input.clear();
     // Rebuild the editor so Flutter drops its UndoHistory snapshots too.
@@ -101,7 +150,7 @@ final class _QrEncodePageState extends State<QrEncodePage> {
   }
 
   void _clearFeedback() {
-    _output = null;
+    _discardOutput();
     _error = null;
     _notice = null;
   }
@@ -149,24 +198,26 @@ final class _QrEncodePageState extends State<QrEncodePage> {
 
   Future<void> _loadFile() async {
     if (_busy) return;
-    setState(() {
-      _busy = true;
-      _clearFeedback();
-    });
+    setState(() => _busy = true);
     try {
       final bytes = await widget.filePicker();
       if (!mounted) return;
-      if (bytes != null && bytes.length > QrEncoder.defaultMaxInputBytes) {
+      if (bytes == null) {
+        setState(() => _busy = false);
+        return;
+      }
+      if (bytes.length > QrEncoder.defaultMaxInputBytes) {
         _adapterFailure('error.qrEncode.resource');
         return;
       }
-      final value = bytes == null
-          ? null
-          : utf8.decode(bytes, allowMalformed: false);
+      final value = utf8.decode(bytes, allowMalformed: false);
       setState(() {
+        _clearFeedback();
         _busy = false;
-        if (value != null) _input.text = value;
+        _input.text = value;
       });
+    } on _QrEncodeInputLimit {
+      _adapterFailure('error.qrEncode.resource');
     } on FormatException {
       _adapterFailure('error.qrEncode.validation');
     } on OutOfMemoryError {
@@ -178,20 +229,22 @@ final class _QrEncodePageState extends State<QrEncodePage> {
 
   Future<void> _paste() async {
     if (_busy) return;
-    setState(() {
-      _busy = true;
-      _clearFeedback();
-    });
+    setState(() => _busy = true);
     try {
       final value = await widget.clipboardReader();
       if (!mounted) return;
-      if (value != null && QrEncoder.inputExceedsByteLimit(value)) {
+      if (value == null) {
+        setState(() => _busy = false);
+        return;
+      }
+      if (QrEncoder.inputExceedsByteLimit(value)) {
         _adapterFailure('error.qrEncode.resource');
         return;
       }
       setState(() {
+        _clearFeedback();
         _busy = false;
-        if (value != null) _input.text = value;
+        _input.text = value;
       });
     } on OutOfMemoryError {
       _adapterFailure('error.qrEncode.resource');
@@ -231,7 +284,7 @@ final class _QrEncodePageState extends State<QrEncodePage> {
     setState(() {
       _busy = false;
       _clearSource();
-      _output = null;
+      _discardOutput();
       _notice = null;
       _error = widget.catalog.lookup(widget.localeTag, key);
     });

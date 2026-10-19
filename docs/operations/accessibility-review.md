@@ -547,8 +547,11 @@ Focused widget coverage exercises home routing, typed/file/clipboard sources,
 every configurable option, exact preview/save bytes, source and undo-history
 discard, stale-result invalidation, safe adapter failures, focus, live
 semantics, localization, target sizes, contrast, and narrow large-text layouts
-in both locales. Focused Windows integration covers both locales with exact PNG
-transfer, invalidation, and zero network access. The compiled Playwright matrix
-and native Safari harness cover local generation, PNG download, validation,
-source discard, and zero external requests. No automated UC-26 accessibility
-finding remains open.
+in both locales. The 14 focused widget tests now include explicit keyboard
+traversal, neutral file/clipboard cancellation, bounded file input, and Flutter
+image-cache eviction. The complete GUI suite passes 647 widget tests and 68
+Windows integration tests. The 195-test Playwright matrix passes across
+Chromium, Firefox, and WebKit; the analyzed native Safari harness covers the
+same local generation, PNG download, validation, source discard, and zero
+external-request contract. No automated UC-26 accessibility finding remains
+open.

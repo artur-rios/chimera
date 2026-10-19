@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:chimera_utilities/chimera_utilities.dart';
+import 'package:image/image.dart' as image;
 import 'package:test/test.dart';
+import 'package:zxing2/qrcode.dart';
 
 void main() {
   group('QrEncoder', () {
@@ -25,14 +30,14 @@ void main() {
     });
 
     for (final level in QrErrorCorrection.values) {
-      test('Given${level.name}_WhenEncoding_ThenPreservesCorrectionLevel', () {
+      test('Given${level.name}_WhenEncoding_ThenIndependentDecoderReadsIt', () {
         final result = encoder.encode(
           'level-${level.name}',
           errorCorrection: level,
         );
 
         expect(result.errorCorrection, level);
-        expect(result.pngBytes, isNotEmpty);
+        expect(_decodeQr(result.pngBytes), 'level-${level.name}');
       });
     }
 
@@ -50,6 +55,27 @@ void main() {
       expect(result.quietZoneModules, 8);
       expect(result.foreground, '#123456');
       expect(result.background, '#FEDCBA');
+      expect(_decodeQr(result.pngBytes), 'Olá, 世界 👋');
+    });
+
+    test('GivenLatin1_WhenEncoding_ThenIndependentDecoderReadsUtf8', () {
+      final result = encoder.encode('ação déjà vu');
+
+      expect(_decodeQr(result.pngBytes), 'ação déjà vu');
+    });
+
+    test('GivenSingleEciVersionFortyBoundary_WhenEncoding_ThenPayloadFitsAndDecodes', () {
+      final input = '界${'a' * 2949}';
+
+      final result = encoder.encode(
+        input,
+        errorCorrection: QrErrorCorrection.low,
+        size: 1850,
+      );
+
+      expect(result.inputByteCount, 2952);
+      expect(result.version, 40);
+      expect(_decodeQr(result.pngBytes), input);
     });
 
     test('GivenLowercaseColors_WhenEncoding_ThenNormalizesMetadata', () {
@@ -163,3 +189,27 @@ int _pngDimension(List<int> bytes, int offset) =>
     (bytes[offset + 1] << 16) |
     (bytes[offset + 2] << 8) |
     bytes[offset + 3];
+
+String _decodeQr(List<int> pngBytes) {
+  final decoded = image.decodePng(Uint8List.fromList(pngBytes))!;
+  final source = RGBLuminanceSource(
+    decoded.width,
+    decoded.height,
+    decoded
+        .convert(numChannels: 4)
+        .getBytes(order: image.ChannelOrder.abgr)
+        .buffer
+        .asInt32List(),
+  );
+  final bitmap = BinaryBitmap(GlobalHistogramBinarizer(source));
+  final hints = DecodeHints()..put(DecodeHintType.pureBarcode);
+  final result = QRCodeReader().decode(bitmap, hints: hints);
+  final segments =
+      result.resultMetadata[ResultMetadataType.byteSegments] as List<Int8List>?;
+  if (segments == null) return result.text;
+  // zxing2 0.2.4 stores decoded bytes in signed Int8List values. Normalize
+  // those values before applying UTF-8 so non-ASCII conformance is testable.
+  return utf8.decode(
+    segments.expand((segment) => segment.map((byte) => byte & 0xFF)).toList(),
+  );
+}

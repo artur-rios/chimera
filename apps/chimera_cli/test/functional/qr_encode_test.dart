@@ -97,6 +97,28 @@ void main() {
     expect(reads, <String>['input.txt']);
   });
 
+  test(
+    'GivenOversizedInvalidFile_WhenRead_ThenResourceLimitPrecedesUtf8Decode',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+
+      final exitCode = await runChimera(
+        <String>['qr', 'encode', '--file=input.txt', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        readFileBytes: (_) async => List<int>.filled(8193, 0xFF),
+      );
+
+      expect(exitCode, 75);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), contains('qr-encode.resource-limit'));
+      expect(err.toString(), contains('byte-limit'));
+      expect(err.toString(), isNot(contains('invalid-utf8')));
+    },
+  );
+
   test('GivenInvalidOptions_WhenRun_ThenValidationPrecedesIo', () async {
     final invalid = <List<String>>[
       <String>['qr', 'encode', '--json'],
@@ -161,12 +183,7 @@ void main() {
     final out = StringBuffer();
     final err = StringBuffer();
     final exitCode = await runChimera(
-      <String>[
-        'qr',
-        'encode',
-        '--file=private.txt',
-        '--output=code.png',
-      ],
+      <String>['qr', 'encode', '--file=private.txt', '--output=code.png'],
       localeTag: 'en',
       out: out,
       err: err,
@@ -216,4 +233,28 @@ void main() {
       expect(out.toString(), contains('--error-correction'));
     }
   });
+
+  test(
+    'GivenPortugueseHumanOutput_WhenEncoded_ThenCorrectionIsLocalized',
+    () async {
+      final out = StringBuffer();
+      final exitCode = await runChimera(
+        <String>[
+          'qr',
+          'encode',
+          '--text=olá',
+          '--error-correction=high',
+          '--output=code.png',
+        ],
+        localeTag: 'pt-BR',
+        out: out,
+        err: StringBuffer(),
+        writeOutputFile: (_, _) async {},
+      );
+
+      expect(exitCode, 0);
+      expect(out.toString(), contains('Alta'));
+      expect(out.toString(), isNot(contains(' high')));
+    },
+  );
 }
