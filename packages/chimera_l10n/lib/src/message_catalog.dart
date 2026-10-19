@@ -3,6 +3,34 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.hashGenerateUsage': "Usage: chimera hash generate (--input=<text>|--stdin|--file=<path>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<path>] [--json]. Files and stdin are exact bytes; text uses UTF-8. JSON: algorithm, lowercase hexadecimal digest, legacy, warning. Saved files contain the digest and a newline. MD5/SHA-1 are legacy and unsuitable for security decisions.",
+    'hashGenerate.pageTitle': "Generate hash",
+    'hashGenerate.openAction': "Generate hash",
+    'hashGenerate.inputLabel': "Text to hash (UTF-8)",
+    'hashGenerate.fileAction': "Choose local file bytes",
+    'hashGenerate.pasteAction': "Paste text",
+    'hashGenerate.algorithmLabel': "Hash algorithm",
+    'hashGenerate.submitAction': "Generate hash",
+    'hashGenerate.outputLabel': "Hash result",
+    'hashGenerate.resultSuccess': "Hash generated.",
+    'hashGenerate.copyAction': "Copy digest",
+    'hashGenerate.saveAction': "Save digest",
+    'hashGenerate.copiedResult': "Digest copied.",
+    'hashGenerate.fileSaved': "Digest saved.",
+    'hashGenerate.savedResult': "Digest saved.",
+    'hashGenerate.legacyWarning': "MD5 and SHA-1 are legacy algorithms and unsuitable for security decisions.",
+    'error.hashGenerate.validation':
+        "The hash algorithm or input source is invalid.",
+    'error.hashGenerate.resource':
+        "Hash generation could not finish with the available resources.",
+    'error.hashGenerate.fileAccess': "The local file could not be read.",
+    'error.hashGenerate.inputAccess': "The standard input could not be read.",
+    'error.hashGenerate.interactiveInputAccess':
+        "The hash input could not be processed.",
+    'error.hashGenerate.clipboardRead': "Clipboard text could not be read.",
+    'error.hashGenerate.clipboardWrite': "The digest could not be copied.",
+    'error.hashGenerate.outputAccess':
+        "The digest could not be saved or written.",
     'cli.qrDecodeUsage': 'Usage: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]. Input: PNG, JPEG or BMP image.',
     'qrDecode.pageTitle': 'Decode QR code',
     'qrDecode.openAction': 'Decode QR code',
@@ -867,6 +895,35 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.hashGenerateUsage': "Uso: chimera hash generate (--input=<texto>|--stdin|--file=<caminho>) [--algorithm=sha256|sha384|sha512|md5|sha1] [--output=<caminho>] [--json]. Arquivos e stdin são bytes exatos; texto usa UTF-8. JSON: algorithm, digest hexadecimal minúsculo, legacy, warning. Arquivos salvos contêm o resumo e uma quebra de linha. MD5/SHA-1 são legados e inadequados para decisões de segurança.",
+    'hashGenerate.pageTitle': "Gerar hash",
+    'hashGenerate.openAction': "Gerar hash",
+    'hashGenerate.inputLabel': "Texto para hash (UTF-8)",
+    'hashGenerate.fileAction': "Escolher bytes de arquivo local",
+    'hashGenerate.pasteAction': "Colar texto",
+    'hashGenerate.algorithmLabel': "Algoritmo de hash",
+    'hashGenerate.submitAction': "Gerar hash",
+    'hashGenerate.outputLabel': "Resultado do hash",
+    'hashGenerate.resultSuccess': "Hash gerado.",
+    'hashGenerate.copyAction': "Copiar resumo",
+    'hashGenerate.saveAction': "Salvar resumo",
+    'hashGenerate.copiedResult': "Resumo copiado.",
+    'hashGenerate.fileSaved': "Resumo salvo.",
+    'hashGenerate.savedResult': "Resumo salvo.",
+    'hashGenerate.legacyWarning': "MD5 e SHA-1 são algoritmos legados e inadequados para decisões de segurança.",
+    'error.hashGenerate.validation':
+        "O algoritmo de hash ou a origem da entrada é inválido.",
+    'error.hashGenerate.resource':
+        "Com os recursos disponíveis, não foi possível gerar o hash.",
+    'error.hashGenerate.fileAccess': "Não foi possível ler o arquivo local.",
+    'error.hashGenerate.inputAccess': "Não foi possível ler a entrada padrão.",
+    'error.hashGenerate.interactiveInputAccess':
+        "Não foi possível processar a entrada do hash.",
+    'error.hashGenerate.clipboardRead':
+        "Não foi possível ler o texto da área de transferência.",
+    'error.hashGenerate.clipboardWrite': "Não foi possível copiar o resumo.",
+    'error.hashGenerate.outputAccess':
+        "Não foi possível salvar ou gravar o resumo.",
     'cli.qrDecodeUsage': 'Uso: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]. Entrada: imagem PNG, JPEG ou BMP.',
     'qrDecode.pageTitle': 'Decodificar código QR',
     'qrDecode.openAction': 'Decodificar código QR',

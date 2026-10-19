@@ -8,6 +8,7 @@ export 'src/cron/cron_evaluator.dart';
 export 'src/date/date_converter.dart';
 export 'src/gzip/gzip_compressor.dart';
 export 'src/gzip/gzip_decompressor.dart';
+export 'src/hash/hash_generator.dart';
 export 'src/html/html_entity_decoder.dart';
 export 'src/html/html_entity_encoder.dart';
 export 'src/json_csv/json_csv_converter.dart';

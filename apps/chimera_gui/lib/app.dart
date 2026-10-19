@@ -14,6 +14,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'hash_generate_page.dart';
 import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
@@ -62,6 +63,12 @@ final class ChimeraApp extends StatelessWidget {
     this.htmlDecodeClipboardWriter,
     this.htmlDecodeFileSaver,
     this.htmlDecodeOutputEncoder,
+    this.hashGenerateService = const HashGenerateService(),
+    this.hashGenerateFilePicker,
+    this.hashGenerateClipboardReader,
+    this.hashGenerateClipboardWriter,
+    this.hashGenerateFileSaver,
+    this.hashGenerateOutputEncoder,
     this.urlDecodeService = const UrlDecodeService(),
     this.urlDecodeFilePicker,
     this.urlDecodeClipboardReader,
@@ -211,6 +218,12 @@ final class ChimeraApp extends StatelessWidget {
   final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
   final HtmlDecodeFileSaver? htmlDecodeFileSaver;
   final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+  final HashGenerateOperationService hashGenerateService;
+  final HashGenerateFilePicker? hashGenerateFilePicker;
+  final HashGenerateClipboardReader? hashGenerateClipboardReader;
+  final HashGenerateClipboardWriter? hashGenerateClipboardWriter;
+  final HashGenerateFileSaver? hashGenerateFileSaver;
+  final HashGenerateOutputEncoder? hashGenerateOutputEncoder;
   final UrlDecodeOperationService urlDecodeService;
   final UrlDecodeFilePicker? urlDecodeFilePicker;
   final UrlDecodeClipboardReader? urlDecodeClipboardReader;
@@ -354,6 +367,12 @@ final class ChimeraApp extends StatelessWidget {
         htmlDecodeClipboardWriter: htmlDecodeClipboardWriter,
         htmlDecodeFileSaver: htmlDecodeFileSaver,
         htmlDecodeOutputEncoder: htmlDecodeOutputEncoder,
+        hashGenerateService: hashGenerateService,
+        hashGenerateFilePicker: hashGenerateFilePicker,
+        hashGenerateClipboardReader: hashGenerateClipboardReader,
+        hashGenerateClipboardWriter: hashGenerateClipboardWriter,
+        hashGenerateFileSaver: hashGenerateFileSaver,
+        hashGenerateOutputEncoder: hashGenerateOutputEncoder,
         urlDecodeService: urlDecodeService,
         urlDecodeFilePicker: urlDecodeFilePicker,
         urlDecodeClipboardReader: urlDecodeClipboardReader,
@@ -500,6 +519,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.htmlDecodeClipboardWriter,
     required this.htmlDecodeFileSaver,
     required this.htmlDecodeOutputEncoder,
+    required this.hashGenerateService,
+    required this.hashGenerateFilePicker,
+    required this.hashGenerateClipboardReader,
+    required this.hashGenerateClipboardWriter,
+    required this.hashGenerateFileSaver,
+    required this.hashGenerateOutputEncoder,
     required this.urlDecodeService,
     required this.urlDecodeFilePicker,
     required this.urlDecodeClipboardReader,
@@ -742,6 +767,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final UrlDecodeFileSaver? urlDecodeFileSaver;
   final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
 
+  final HashGenerateOperationService hashGenerateService;
+  final HashGenerateFilePicker? hashGenerateFilePicker;
+  final HashGenerateClipboardReader? hashGenerateClipboardReader;
+  final HashGenerateClipboardWriter? hashGenerateClipboardWriter;
+  final HashGenerateFileSaver? hashGenerateFileSaver;
+  final HashGenerateOutputEncoder? hashGenerateOutputEncoder;
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
@@ -805,6 +836,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       htmlDecodeFileSaver: widget.htmlDecodeFileSaver ?? saveHtmlDecodeFile,
       htmlDecodeOutputEncoder:
           widget.htmlDecodeOutputEncoder ?? encodeHtmlDecodeOutput,
+      hashGenerateService: widget.hashGenerateService,
+      hashGenerateFilePicker:
+          widget.hashGenerateFilePicker ?? pickHashGenerateFile,
+      hashGenerateClipboardReader:
+          widget.hashGenerateClipboardReader ?? readHashGenerateClipboard,
+      hashGenerateClipboardWriter:
+          widget.hashGenerateClipboardWriter ?? writeHashGenerateClipboard,
+      hashGenerateFileSaver:
+          widget.hashGenerateFileSaver ?? saveHashGenerateFile,
+      hashGenerateOutputEncoder:
+          widget.hashGenerateOutputEncoder ?? encodeHashGenerateOutput,
       urlDecodeService: widget.urlDecodeService,
       urlDecodeFilePicker: widget.urlDecodeFilePicker ?? pickUrlDecodeFile,
       urlDecodeClipboardReader:

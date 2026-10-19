@@ -159,12 +159,10 @@ jobs:
         run: flutter pub get
       - name: Test Windows integration
         if: runner.os == 'Windows'
-        working-directory: apps/chimera_gui
-        run: flutter test integration_test -d windows
+        run: dart run tool/run_native_gui_tests.dart windows
       - name: Test Linux integration
         if: runner.os == 'Linux'
-        working-directory: apps/chimera_gui
-        run: xvfb-run -a flutter test integration_test -d linux
+        run: xvfb-run -a dart run tool/run_native_gui_tests.dart linux
       - name: Build Windows GUI and CLI
         if: runner.os == 'Windows'
         shell: pwsh

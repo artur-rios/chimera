@@ -397,8 +397,17 @@ void main() {
         Uri.parse('package:chimera_cli/chimera_cli.dart'),
       );
       final entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
-      final process = await Process.start(Platform.resolvedExecutable, [
+      final executable =
+          '${directory.path}/chimera-url${Platform.isWindows ? '.exe' : ''}';
+      final compilation = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'exe',
         entryPoint,
+        '-o',
+        executable,
+      ]);
+      expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+      final process = await Process.start(executable, [
         'url',
         'encode',
         '--stdin',
@@ -414,8 +423,7 @@ void main() {
         '{"encoded":"a%20%2Fa%C3%A7%C3%A3o","mode":"component"}\n',
       );
       expect(await stderr, '');
-      final file = await Process.run(Platform.resolvedExecutable, [
-        entryPoint,
+      final file = await Process.run(executable, [
         'url',
         'encode',
         '--file=${source.path}',
@@ -430,6 +438,7 @@ void main() {
         'mode': 'component',
       });
     },
+    timeout: const Timeout(Duration(minutes: 2)),
   );
 }
 

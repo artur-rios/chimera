@@ -3,6 +3,46 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenHashMessages_WhenLookedUp_ThenBothLocalesDescribeLegacySecurityAndAdapters', () {
+    for (final locale in supportedLocaleTags) {
+      for (final key in const [
+        'cli.hashGenerateUsage',
+        'hashGenerate.pageTitle',
+        'hashGenerate.openAction',
+        'hashGenerate.inputLabel',
+        'hashGenerate.fileAction',
+        'hashGenerate.pasteAction',
+        'hashGenerate.algorithmLabel',
+        'hashGenerate.submitAction',
+        'hashGenerate.outputLabel',
+        'hashGenerate.resultSuccess',
+        'hashGenerate.copyAction',
+        'hashGenerate.saveAction',
+        'hashGenerate.copiedResult',
+        'hashGenerate.fileSaved',
+        'hashGenerate.savedResult',
+        'hashGenerate.legacyWarning',
+        'error.hashGenerate.validation',
+        'error.hashGenerate.resource',
+        'error.hashGenerate.fileAccess',
+        'error.hashGenerate.inputAccess',
+        'error.hashGenerate.interactiveInputAccess',
+        'error.hashGenerate.clipboardRead',
+        'error.hashGenerate.clipboardWrite',
+        'error.hashGenerate.outputAccess',
+      ]) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+      }
+      expect(
+        catalog.lookup(locale, 'hashGenerate.legacyWarning'),
+        contains(
+          locale == 'en'
+              ? 'unsuitable for security decisions'
+              : 'inadequados para decisões de segurança',
+        ),
+      );
+    }
+  });
 
   test('GivenQrDecodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
@@ -744,6 +784,31 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.hashGenerateUsage',
+      'hashGenerate.pageTitle',
+      'hashGenerate.openAction',
+      'hashGenerate.inputLabel',
+      'hashGenerate.fileAction',
+      'hashGenerate.pasteAction',
+      'hashGenerate.algorithmLabel',
+      'hashGenerate.submitAction',
+      'hashGenerate.outputLabel',
+      'hashGenerate.resultSuccess',
+      'hashGenerate.copyAction',
+      'hashGenerate.saveAction',
+      'hashGenerate.copiedResult',
+      'hashGenerate.fileSaved',
+      'hashGenerate.savedResult',
+      'hashGenerate.legacyWarning',
+      'error.hashGenerate.validation',
+      'error.hashGenerate.resource',
+      'error.hashGenerate.fileAccess',
+      'error.hashGenerate.inputAccess',
+      'error.hashGenerate.interactiveInputAccess',
+      'error.hashGenerate.clipboardRead',
+      'error.hashGenerate.clipboardWrite',
+      'error.hashGenerate.outputAccess',
+
       'cli.qrDecodeUsage',
       'qrDecode.pageTitle',
       'qrDecode.openAction',
