@@ -8,6 +8,8 @@ import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'output_sink.dart';
+
 typedef TextReader = Future<String> Function();
 typedef FileTextReader = Future<String> Function(String path);
 typedef BytesReader = Future<List<int>> Function();
@@ -60,6 +62,9 @@ Future<int> runChimera(
   JsonObjectEncoder? qrEncodeJsonEncoder,
   QrDecodeService qrDecodeService = const QrDecodeService(),
   JsonObjectEncoder? qrDecodeJsonEncoder,
+  ChecksumGenerateService checksumGenerateService =
+      const ChecksumGenerateService(),
+  JsonObjectEncoder? checksumGenerateJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -84,8 +89,11 @@ Future<int> runChimera(
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       final key =
-          parsed.command?.name == 'qr' &&
-              parsed.command?.command?.name == 'encode'
+          parsed.command?.name == 'checksum' &&
+              parsed.command?.command?.name == 'generate'
+          ? 'cli.checksumGenerateUsage'
+          : parsed.command?.name == 'qr' &&
+                parsed.command?.command?.name == 'encode'
           ? 'cli.qrEncodeUsage'
           : parsed.command?.name == 'qr' &&
                 parsed.command?.command?.name == 'decode'
@@ -118,6 +126,29 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'checksum' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runChecksumGenerate(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: checksumGenerateService,
+        encodeJson: checksumGenerateJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'qr' &&
         parsed.command!.command?.name == 'encode') {
@@ -598,6 +629,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isChecksumGenerate =
+        args.length >= 2 && args[0] == 'checksum' && args[1] == 'generate';
     final isQrDecode =
         args.length >= 2 && args[0] == 'qr' && args[1] == 'decode';
     final isQrEncode =
@@ -656,7 +689,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isQrDecode ||
+          (isChecksumGenerate ||
+              isQrDecode ||
               isQrEncode ||
               isJwtInspect ||
               isJwtCreate ||
@@ -685,7 +719,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isQrDecode
+      code: isChecksumGenerate
+          ? 'checksum-generate.invalid-options'
+          : isQrDecode
           ? 'qr-decode.invalid-options'
           : isQrEncode
           ? 'qr-encode.invalid-options'
@@ -740,7 +776,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isQrDecode
+      messageKey: isChecksumGenerate
+          ? 'error.checksumGenerate.validation'
+          : isQrDecode
           ? 'error.qrDecode.validation'
           : isQrEncode
           ? 'error.qrEncode.validation'
@@ -833,6 +871,14 @@ ArgParser _buildParser() {
     ..addOption('background', defaultsTo: '#FFFFFF')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final checksumGenerate = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('algorithm', defaultsTo: 'crc32')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final checksum = ArgParser()..addCommand('generate', checksumGenerate);
   final qrDecode = ArgParser()
     ..addFlag('stdin', negatable: false)
     ..addOption('file', abbr: 'f')
@@ -1043,6 +1089,7 @@ ArgParser _buildParser() {
     ..addCommand('jwt', jwt)
     ..addCommand('list', list)
     ..addCommand('number', number)
+    ..addCommand('checksum', checksum)
     ..addCommand('qr', qr)
     ..addCommand('sql', sql)
     ..addCommand('text', text)
@@ -5421,4 +5468,156 @@ void _writeHumanCronResult(
       '${occurrence.localIso8601}',
     );
   }
+}
+
+Future<int> _runChecksumGenerate(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required ChecksumGenerateService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final algorithm = parsed.option('algorithm')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !ChecksumGenerator.algorithms.contains(algorithm)
+      ? 'invalid-algorithm'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'checksum-generate.$invalid',
+      messageKey: 'error.checksumGenerate.validation',
+      details: invalid == 'invalid-algorithm'
+          ? {'field': 'algorithm', 'reason': 'unsupported-algorithm'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'checksum-generate.resource-limit',
+    messageKey: 'error.checksumGenerate.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'checksum-generate.output-access',
+    messageKey: 'error.checksumGenerate.outputAccess',
+  );
+
+  late ChecksumGenerateOperationRequest request;
+  try {
+    request = text != null
+        ? ChecksumGenerateOperationRequest.text(text, algorithm: algorithm)
+        : ChecksumGenerateOperationRequest.bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            algorithm: algorithm,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'checksum-generate.input-access'
+          : 'checksum-generate.file-access',
+      messageKey: useStandardInput
+          ? 'error.checksumGenerate.inputAccess'
+          : 'error.checksumGenerate.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'checksumGenerate.savedResult')}\n'
+            : '${value.checksum}\n';
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode('${value.checksum}\n'));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
 }
