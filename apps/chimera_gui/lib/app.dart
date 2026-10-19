@@ -24,6 +24,7 @@ import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
+import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'router.dart';
 import 'sql_format_page.dart';
@@ -45,6 +46,10 @@ final class ChimeraApp extends StatelessWidget {
     this.jwtInspectFilePicker,
     this.jwtInspectClipboardReader,
     this.jwtInspectClipboardWriter,
+    this.qrDecodeService = const QrDecodeService(),
+    this.qrDecodeFilePicker,
+    this.qrDecodeClipboardWriter,
+    this.qrDecodeFileSaver,
     this.qrEncodeService = const QrEncodeService(),
     this.qrEncodeFilePicker,
     this.qrEncodeClipboardReader,
@@ -178,6 +183,10 @@ final class ChimeraApp extends StatelessWidget {
   final JwtInspectFilePicker? jwtInspectFilePicker;
   final JwtInspectClipboardReader? jwtInspectClipboardReader;
   final JwtInspectClipboardWriter? jwtInspectClipboardWriter;
+  final QrDecodeOperationService qrDecodeService;
+  final QrDecodeFilePicker? qrDecodeFilePicker;
+  final QrDecodeClipboardWriter? qrDecodeClipboardWriter;
+  final QrDecodeFileSaver? qrDecodeFileSaver;
   final QrEncodeOperationService qrEncodeService;
   final QrEncodeFilePicker? qrEncodeFilePicker;
   final QrEncodeClipboardReader? qrEncodeClipboardReader;
@@ -305,6 +314,10 @@ final class ChimeraApp extends StatelessWidget {
         jwtInspectFilePicker: jwtInspectFilePicker,
         jwtInspectClipboardReader: jwtInspectClipboardReader,
         jwtInspectClipboardWriter: jwtInspectClipboardWriter,
+        qrDecodeService: qrDecodeService,
+        qrDecodeFilePicker: qrDecodeFilePicker,
+        qrDecodeClipboardWriter: qrDecodeClipboardWriter,
+        qrDecodeFileSaver: qrDecodeFileSaver,
         qrEncodeService: qrEncodeService,
         qrEncodeFilePicker: qrEncodeFilePicker,
         qrEncodeClipboardReader: qrEncodeClipboardReader,
@@ -435,6 +448,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.jwtInspectFilePicker,
     required this.jwtInspectClipboardReader,
     required this.jwtInspectClipboardWriter,
+    required this.qrDecodeService,
+    required this.qrDecodeFilePicker,
+    required this.qrDecodeClipboardWriter,
+    required this.qrDecodeFileSaver,
     required this.qrEncodeService,
     required this.qrEncodeFilePicker,
     required this.qrEncodeClipboardReader,
@@ -561,6 +578,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final JwtInspectFilePicker? jwtInspectFilePicker;
   final JwtInspectClipboardReader? jwtInspectClipboardReader;
   final JwtInspectClipboardWriter? jwtInspectClipboardWriter;
+  final QrDecodeOperationService qrDecodeService;
+  final QrDecodeFilePicker? qrDecodeFilePicker;
+  final QrDecodeClipboardWriter? qrDecodeClipboardWriter;
+  final QrDecodeFileSaver? qrDecodeFileSaver;
   final QrEncodeOperationService qrEncodeService;
   final QrEncodeFilePicker? qrEncodeFilePicker;
   final QrEncodeClipboardReader? qrEncodeClipboardReader;
@@ -703,6 +724,11 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.jwtInspectClipboardReader ?? readJwtInspectClipboard,
       jwtInspectClipboardWriter:
           widget.jwtInspectClipboardWriter ?? writeJwtInspectClipboard,
+      qrDecodeService: widget.qrDecodeService,
+      qrDecodeFilePicker: widget.qrDecodeFilePicker ?? pickQrDecodeFile,
+      qrDecodeClipboardWriter:
+          widget.qrDecodeClipboardWriter ?? writeQrDecodeClipboard,
+      qrDecodeFileSaver: widget.qrDecodeFileSaver ?? saveQrDecodeFile,
       qrEncodeService: widget.qrEncodeService,
       qrEncodeFilePicker: widget.qrEncodeFilePicker ?? pickQrEncodeFile,
       qrEncodeClipboardReader:

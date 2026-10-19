@@ -3016,7 +3016,11 @@ void main() {
       );
 
       expect(exitCode, 0);
-      expect(out.toString(), 'Usage: chimera <command> [options]\n');
+      expect(
+        out.toString(),
+        'Usage: chimera <command> [options]\n'
+        'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]\n',
+      );
       expect(err.toString(), isEmpty);
     },
   );

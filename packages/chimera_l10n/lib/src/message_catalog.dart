@@ -3,6 +3,28 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.qrDecodeUsage': 'Usage: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]. Input: PNG, JPEG or BMP image.',
+    'qrDecode.pageTitle': 'Decode QR code',
+    'qrDecode.openAction': 'Decode QR code',
+    'qrDecode.fileAction': 'Choose PNG, JPEG or BMP image',
+    'qrDecode.inputReady': 'Image ready to decode.',
+    'qrDecode.submitAction': 'Decode QR',
+    'qrDecode.resultLabel': 'Decoded QR result',
+    'qrDecode.resultSuccess': 'QR code decoded.',
+    'qrDecode.formatLabel': 'Image format',
+    'qrDecode.dimensionsLabel': 'Image dimensions',
+    'qrDecode.inputByteCountLabel': 'Input bytes',
+    'qrDecode.copyAction': 'Copy text',
+    'qrDecode.saveAction': 'Save UTF-8 text',
+    'qrDecode.copied': 'Decoded text copied.',
+    'qrDecode.fileSaved': 'Decoded text saved.',
+    'error.qrDecode.validation': 'The QR decoding request is invalid.',
+    'error.qrDecode.decoding': 'The image could not be decoded as a QR code.',
+    'error.qrDecode.resource': 'QR decoding exceeded its resource limit.',
+    'error.qrDecode.inputAccess': 'The standard input could not be read.',
+    'error.qrDecode.fileAccess': 'The QR image could not be read.',
+    'error.qrDecode.clipboardWrite': 'The decoded text could not be copied.',
+    'error.qrDecode.outputAccess': 'The decoded text could not be saved.',
     'cli.qrEncodeUsage':
         'Usage: chimera qr encode (--text=<value>|--stdin|--file=<path>) '
         '[--error-correction=low|medium|quartile|high] [--size=64..4096] '
@@ -326,7 +348,9 @@ _catalogs = <String, Map<String, String>>{
     'error.certificateInspect.resource':
         'Certificate inspection exceeded its resource limit.',
     'cli.noCommand': 'No command provided.',
-    'cli.usage': 'Usage: chimera <command> [options]',
+    'cli.usage':
+        'Usage: chimera <command> [options]\n'
+        'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
     'base64Encode.fileAction': 'Load bytes from file',
@@ -780,6 +804,33 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.qrDecodeUsage': 'Uso: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]. Entrada: imagem PNG, JPEG ou BMP.',
+    'qrDecode.pageTitle': 'Decodificar código QR',
+    'qrDecode.openAction': 'Decodificar código QR',
+    'qrDecode.fileAction': 'Escolher imagem PNG, JPEG ou BMP',
+    'qrDecode.inputReady': 'Imagem pronta para decodificar.',
+    'qrDecode.submitAction': 'Decodificar QR',
+    'qrDecode.resultLabel': 'Resultado QR decodificado',
+    'qrDecode.resultSuccess': 'Código QR decodificado.',
+    'qrDecode.formatLabel': 'Formato da imagem',
+    'qrDecode.dimensionsLabel': 'Dimensões da imagem',
+    'qrDecode.inputByteCountLabel': 'Bytes de entrada',
+    'qrDecode.copyAction': 'Copiar texto',
+    'qrDecode.saveAction': 'Salvar texto UTF-8',
+    'qrDecode.copied': 'Texto decodificado copiado.',
+    'qrDecode.fileSaved': 'Texto decodificado salvo.',
+    'error.qrDecode.validation':
+        'A solicitação de decodificação QR é inválida.',
+    'error.qrDecode.decoding':
+        'Não foi possível decodificar a imagem como código QR.',
+    'error.qrDecode.resource':
+        'A decodificação QR excedeu seu limite de recursos.',
+    'error.qrDecode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.qrDecode.fileAccess': 'Não foi possível ler a imagem QR.',
+    'error.qrDecode.clipboardWrite':
+        'Não foi possível copiar o texto decodificado.',
+    'error.qrDecode.outputAccess':
+        'Não foi possível salvar o texto decodificado.',
     'cli.qrEncodeUsage':
         'Uso: chimera qr encode (--text=<valor>|--stdin|--file=<caminho>) '
         '[--error-correction=low|medium|quartile|high] [--size=64..4096] '
@@ -1128,7 +1179,9 @@ _catalogs = <String, Map<String, String>>{
     'app.name': 'Chimera',
     'app.description': 'Caixa de ferramentas para desenvolvedores',
     'cli.noCommand': 'Nenhum comando foi informado.',
-    'cli.usage': 'Uso: chimera <comando> [opções]',
+    'cli.usage':
+        'Uso: chimera <comando> [opções]\n'
+        'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',
     'base64Encode.fileAction': 'Carregar bytes de um arquivo',

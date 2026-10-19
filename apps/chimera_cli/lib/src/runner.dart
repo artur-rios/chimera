@@ -67,6 +67,8 @@ Future<int> runChimera(
   JsonObjectEncoder? jwtInspectJsonEncoder,
   QrEncodeService qrEncodeService = const QrEncodeService(),
   JsonObjectEncoder? qrEncodeJsonEncoder,
+  QrDecodeService qrDecodeService = const QrDecodeService(),
+  JsonObjectEncoder? qrDecodeJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -94,6 +96,9 @@ Future<int> runChimera(
           parsed.command?.name == 'qr' &&
               parsed.command?.command?.name == 'encode'
           ? 'cli.qrEncodeUsage'
+          : parsed.command?.name == 'qr' &&
+                parsed.command?.command?.name == 'decode'
+          ? 'cli.qrDecodeUsage'
           : parsed.command?.name == 'jwt' &&
                 parsed.command?.command?.name == 'inspect'
           ? 'cli.jwtInspectUsage'
@@ -144,6 +149,29 @@ Future<int> runChimera(
             ),
         service: qrEncodeService,
         encodeJson: qrEncodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'qr' &&
+        parsed.command!.command?.name == 'decode') {
+      return await _runQrDecode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readQrDecodeStandardInputBytes,
+        readFileBytes: readFileBytes ?? _readQrDecodeFileBytes,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: qrDecodeService,
+        encodeJson: qrDecodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'jwt' &&
@@ -579,6 +607,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isQrDecode =
+        args.length >= 2 && args[0] == 'qr' && args[1] == 'decode';
     final isQrEncode =
         args.length >= 2 && args[0] == 'qr' && args[1] == 'encode';
     final isJwtInspect =
@@ -635,7 +665,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isQrEncode ||
+          (isQrDecode ||
+              isQrEncode ||
               isJwtInspect ||
               isJwtCreate ||
               isHtmlDecode ||
@@ -663,7 +694,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isQrEncode
+      code: isQrDecode
+          ? 'qr-decode.invalid-options'
+          : isQrEncode
           ? 'qr-encode.invalid-options'
           : isJwtInspect
           ? 'jwt-inspect.invalid-options'
@@ -716,7 +749,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isQrEncode
+      messageKey: isQrDecode
+          ? 'error.qrDecode.validation'
+          : isQrEncode
           ? 'error.qrEncode.validation'
           : isJwtInspect
           ? 'error.jwtInspect.validation'
@@ -807,7 +842,14 @@ ArgParser _buildParser() {
     ..addOption('background', defaultsTo: '#FFFFFF')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
-  final qr = ArgParser()..addCommand('encode', qrEncode);
+  final qrDecode = ArgParser()
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final qr = ArgParser()
+    ..addCommand('encode', qrEncode)
+    ..addCommand('decode', qrDecode);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -1014,6 +1056,169 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runQrDecode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required QrDecodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+
+  int fail({
+    required int exitCode,
+    required String kind,
+    required String code,
+    required String messageKey,
+    Map<String, Object?> details = const <String, Object?>{},
+  }) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: kind,
+      code: code,
+      messageKey: messageKey,
+      details: details,
+    );
+    return exitCode;
+  }
+
+  int resource(String field, String reason) => fail(
+    exitCode: 75,
+    kind: 'resource',
+    code: 'qr-decode.resource-limit',
+    messageKey: 'error.qrDecode.resource',
+    details: <String, Object?>{'field': field, 'reason': reason},
+  );
+
+  final sourceCount = (file == null ? 0 : 1) + (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || file == '' || outputPath == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : null;
+  if (invalid != null) {
+    return fail(
+      exitCode: 64,
+      kind: 'validation',
+      code: 'qr-decode.$invalid',
+      messageKey: 'error.qrDecode.validation',
+    );
+  }
+
+  late final List<int> bytes;
+  try {
+    bytes = useStandardInput
+        ? await readStandardInputBytes()
+        : await readFileBytes(file!);
+    if (bytes.length > QrDecoder.defaultMaxInputBytes) {
+      _clearBytes(bytes);
+      throw const _QrDecodeInputLimit();
+    }
+  } on _QrDecodeInputLimit {
+    return resource('input', 'byte-limit');
+  } on OutOfMemoryError {
+    return resource('input', 'allocation-limit');
+  } on Object {
+    return fail(
+      exitCode: 74,
+      kind: 'access',
+      code: useStandardInput
+          ? 'qr-decode.input-access'
+          : 'qr-decode.file-access',
+      messageKey: useStandardInput
+          ? 'error.qrDecode.inputAccess'
+          : 'error.qrDecode.fileAccess',
+    );
+  }
+
+  late final ChimeraResult<QrDecodeOutput> result;
+  try {
+    result = await service.execute(QrDecodeOperationRequest(bytes: bytes));
+  } on OutOfMemoryError {
+    return resource('input', 'allocation-limit');
+  } on Object {
+    return fail(
+      exitCode: 70,
+      kind: 'processing',
+      code: 'qr-decode.decoding',
+      messageKey: 'error.qrDecode.decoding',
+    );
+  } finally {
+    _clearBytes(bytes);
+  }
+
+  return await result.fold(
+    onSuccess: (value) async {
+      late final String stdoutPayload;
+      List<int>? outputBytes;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : '${value.text}\n';
+        if (outputPath != null) outputBytes = utf8.encode(value.text);
+      } on OutOfMemoryError {
+        return resource('output', 'allocation-limit');
+      } on Object {
+        return fail(
+          exitCode: 70,
+          kind: 'processing',
+          code: 'qr-decode.decoding',
+          messageKey: 'error.qrDecode.decoding',
+        );
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, outputBytes!);
+        } on OutOfMemoryError {
+          return resource('output', 'allocation-limit');
+        } on Object {
+          return fail(
+            exitCode: 74,
+            kind: 'access',
+            code: 'qr-decode.output-access',
+            messageKey: 'error.qrDecode.outputAccess',
+          );
+        } finally {
+          _clearBytes(outputBytes!);
+        }
+      }
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        return resource('output', 'allocation-limit');
+      } on Object {
+        return fail(
+          exitCode: 74,
+          kind: 'access',
+          code: 'qr-decode.output-access',
+          messageKey: 'error.qrDecode.outputAccess',
+        );
+      }
+      return 0;
+    },
+    onFailure: (failure) async => fail(
+      exitCode: _exitCodeFor(failure.kind),
+      kind: failure.kind.name,
+      code: failure.code,
+      messageKey: failure.messageKey,
+      details: failure.details,
+    ),
+  );
 }
 
 Future<int> _runQrEncode(
@@ -3037,6 +3242,39 @@ void _writeBase64ResourceFailure(
 
 Future<List<int>> _readStandardInputBytes() =>
     stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+
+final class _QrDecodeInputLimit implements Exception {
+  const _QrDecodeInputLimit();
+}
+
+Future<List<int>> _readQrDecodeFileBytes(String path) async {
+  final file = File(path);
+  if (await file.length() > QrDecoder.defaultMaxInputBytes) {
+    throw const _QrDecodeInputLimit();
+  }
+  return _readQrDecodeChunks(
+    file.openRead(0, QrDecoder.defaultMaxInputBytes + 1),
+  );
+}
+
+Future<List<int>> _readQrDecodeStandardInputBytes() =>
+    _readQrDecodeChunks(stdin);
+
+Future<List<int>> _readQrDecodeChunks(Stream<List<int>> chunks) async {
+  final bytes = <int>[];
+  try {
+    await for (final chunk in chunks) {
+      if (bytes.length + chunk.length > QrDecoder.defaultMaxInputBytes) {
+        throw const _QrDecodeInputLimit();
+      }
+      bytes.addAll(chunk);
+    }
+    return bytes;
+  } on Object {
+    _clearBytes(bytes);
+    rethrow;
+  }
+}
 
 final class _QrEncodeInputLimit implements Exception {
   const _QrEncodeInputLimit();

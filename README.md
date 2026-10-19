@@ -256,6 +256,24 @@ release-metadata sidecar. See
 [Release artifacts](docs/operations/release-artifacts.md) for formats and the
 infrastructure-requirement evidence map.
 
+### Decode a QR code
+
+`chimera qr decode` reads a local PNG, JPEG, or BMP image and returns its QR
+text. Supply exactly one binary source, `--file` or `--stdin`. Use `--json`
+for text plus image-format, dimension, and byte-count metadata; `--output`
+saves the exact decoded text as UTF-8 through the transactional file writer.
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart qr decode --file code.png --json
+```
+
+The GUI exposes the same local decoder at `/qr/decode`, with image selection,
+copy, and Save UTF-8 text. Encoded input is limited to 16 MiB, raster images to
+16,777,216 pixels, and decoded text to 8192 UTF-8 bytes. Unsupported, corrupt,
+and QR-free images return typed decoding failures without retaining image data.
+Byte-mode text supports UTF-8, ISO-8859-1, and ASCII; other ECI encodings and
+malformed encoded text return a typed decoding failure.
+
 ## Roadmap
 
 | Milestone | Delivers | Depends on | Issues | Status |
@@ -263,7 +281,7 @@ infrastructure-requirement evidence map.
 | [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
 | [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 7 / 8 closed |
 | [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
-| [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 0 / 14 closed |
+| [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 12 / 14 closed |
 | [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 0 / 8 closed |
 | [M-06 — Ciphers and alphabets](https://github.com/artur-rios/chimera/milestone/6) | Approved cipher and alphabet encoding and decoding | M-01 | 4 | 0 / 4 closed |
 | [M-07 — Experience and distribution](https://github.com/artur-rios/chimera/milestone/7) | Preferences, updates, packaging, and Yggdrasil release delivery | M-01–M-06 | 5 | 0 / 5 closed |
@@ -316,7 +334,7 @@ infrastructure-requirement evidence map.
 | [#25](https://github.com/artur-rios/chimera/issues/25) | UC-24 — Create and Sign JWT | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-24-create-and-sign-jwt) |
 | [#26](https://github.com/artur-rios/chimera/issues/26) | UC-25 — Inspect and Verify JWT | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-25-inspect-and-verify-jwt) |
 | [#27](https://github.com/artur-rios/chimera/issues/27) | UC-26 — Encode QR Code | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-26-encode-qr-code) |
-| [#28](https://github.com/artur-rios/chimera/issues/28) | UC-27 — Decode QR Code | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-27-decode-qr-code) |
+| [#28](https://github.com/artur-rios/chimera/issues/28) | UC-27 — Decode QR Code (done) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-27-decode-qr-code) |
 | [#29](https://github.com/artur-rios/chimera/issues/29) | UC-28 — URL Encode | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-28-url-encode) |
 | [#30](https://github.com/artur-rios/chimera/issues/30) | UC-29 — URL Decode | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-29-url-decode) |
 
