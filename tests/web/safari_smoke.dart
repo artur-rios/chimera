@@ -258,20 +258,26 @@ Future<void> main(List<String> arguments) async {
       'Cron page did not open',
     );
 
-    await _fillTextBox(driver, 'Cron expression', '0 9 * * MON-FRI');
-    await _fillTextBox(driver, 'Time zone', 'UTC');
-    await _fillTextBox(driver, 'Occurrence count', '1');
-    await _fillTextBox(driver, 'Reference instant', '2026-01-05T12:00:00Z');
-    await _clickButton(driver, 'Calculate occurrences');
+    try {
+      await _fillTextBox(driver, 'Cron expression', '0 9 * * MON-FRI');
+      await _fillTextBox(driver, 'Time zone', 'UTC');
+      await _fillTextBox(driver, 'Occurrence count', '1');
+      await _fillTextBox(driver, 'Reference instant', '2026-01-05T12:00:00Z');
+      await _capturePageDiagnostics(driver, 'cron-input');
+      await _clickButton(driver, 'Calculate occurrences');
 
-    await _waitUntil(
-      () => _pageContains(driver, 'Cron schedule: 0 9 * * 1-5'),
-      'Cron result did not render',
-    );
-    await _waitUntil(
-      () => _pageContains(driver, 'Next: 2026-01-06T09:00:00.000+00:00'),
-      'Cron next occurrence was incorrect',
-    );
+      await _waitUntil(
+        () => _pageContains(driver, 'Cron schedule: 0 9 * * 1-5'),
+        'Cron result did not render',
+      );
+      await _waitUntil(
+        () => _pageContains(driver, 'Next: 2026-01-06T09:00:00.000+00:00'),
+        'Cron next occurrence was incorrect',
+      );
+    } on Object {
+      await _capturePageDiagnostics(driver, 'cron-failure');
+      rethrow;
+    }
     await _assertNoExternalRequests(driver, flow: 'cron');
 
     await driver.get('http://127.0.0.1:4173');
@@ -2706,6 +2712,31 @@ Future<bool> _inputHasValue(
     <Object?>[label, expected, focus],
   );
   return result == true;
+}
+
+// Only the public baseline cron fixture calls this; preserve the original
+// failure even if Safari cannot provide one of the diagnostic artifacts.
+Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
+  try {
+    final source = await File.fromUri(
+      Platform.script.resolve('safari_page_diagnostics.js'),
+    ).readAsString();
+    final page = await driver.execute(
+      '$source\nreturn captureSafariPageDiagnostics();',
+      const <Object?>[],
+    );
+    final directory = await Directory('safari-diagnostics')
+        .create(recursive: true);
+    await File('${directory.path}/$name.json').writeAsString(
+      const JsonEncoder.withIndent('  ')
+          .convert({'capabilities': driver.capabilities, 'page': page}),
+    );
+    await File('${directory.path}/$name.png')
+        .writeAsBytes(await driver.captureScreenshotAsList());
+    stdout.writeln('Safari diagnostics saved: ${directory.path}/$name');
+  } on Object catch (error) {
+    stderr.writeln('Safari diagnostics unavailable for $name: $error');
+  }
 }
 
 Future<bool> _pageContains(WebDriver driver, String expected) async {
