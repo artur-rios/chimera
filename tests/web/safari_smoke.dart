@@ -1193,6 +1193,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('QR encode', () => _encodeQr(driver));
     await protocol.stage('QR decode', () => _decodeQr(driver));
     await protocol.stage('Lorem', () => _generateLorem(driver));
+    await protocol.stage('Password', () => _generatePassword(driver));
     try {
       await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
@@ -1204,7 +1205,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -3932,5 +3933,126 @@ Future<void> _generateLorem(WebDriver driver) async {
       'Lorem partial result survived failure',
     );
     await _assertNoNetworkRequests(driver, flow: 'Lorem $failure failure');
+  }
+}
+
+Future<void> _generatePassword(WebDriver driver) async {
+  final source = await File.fromUri(
+    Platform.script.resolve('password_browser.js'),
+  ).readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn passwordProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openPassword() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Password semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate Password');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer length'),
+      'Password configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Password startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  await openPassword();
+  await _clickButton(driver, 'Generate password');
+  String? password;
+  await _waitUntil(() async {
+    final value = await probe('result');
+    if (value is! String) return false;
+    password = value;
+    return true;
+  }, 'Password result missing');
+  if (password!.length != 16 ||
+      !RegExp('[a-z]').hasMatch(password!) ||
+      !RegExp('[A-Z]').hasMatch(password!) ||
+      !RegExp('[0-9]').hasMatch(password!) ||
+      !RegExp(r'[!@#$%^&*()\-_=+\[\]{}:,.?]').hasMatch(password!)) {
+    throw StateError('Password default constraints were not satisfied');
+  }
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'Password copy unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('copied', password) == true,
+    'Password clipboard mismatch',
+  );
+  await _clickButton(driver, 'Save password');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(password!)) == true,
+    'Password saved bytes mismatch',
+  );
+  await _fillTextBox(driver, 'Positive integer length', '20');
+  await _waitUntil(
+    () async => await probe('noResult') == true,
+    'Password remained after configuration changed',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'Password defaults');
+
+  await openPassword();
+  for (final name in ['Lowercase letters', 'Uppercase letters', 'Symbols']) {
+    await _waitUntil(
+      () async => await probe('toggle', name) == true,
+      'Password $name toggle unavailable',
+    );
+  }
+  await _fillTextBox(driver, 'Positive integer length', '8');
+  await _clickButton(driver, 'Generate password');
+  await _waitUntil(() async {
+    final value = await probe('result');
+    return value is String && RegExp(r'^\d{8}$').hasMatch(value);
+  }, 'Password digit-only constraints were not satisfied');
+  await _assertNoNetworkRequests(driver, flow: 'Password digits');
+
+  for (final failure in ['validation', 'copy', 'save']) {
+    await openPassword();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer length', '3');
+    }
+    await _clickButton(driver, 'Generate password');
+    if (failure != 'validation') {
+      await _waitUntil(
+        () async => await probe('result') is String,
+        'Password default result missing',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy' ? 'Copy password' : 'Save password',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        failure == 'validation'
+            ? 'Choose a positive integer length that can include every selected character class, and select at least one class.'
+            : failure == 'copy'
+            ? 'The generated password could not be copied.'
+            : 'The generated password could not be saved or written.',
+      ),
+      'Password localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Password partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Password $failure failure');
   }
 }

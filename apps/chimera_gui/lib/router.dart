@@ -24,6 +24,7 @@ import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'lorem_page.dart';
 import 'number_base_page.dart';
+import 'password_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'sql_format_page.dart';
@@ -41,6 +42,10 @@ GoRouter buildRouter({
   required LoremClipboardWriter loremClipboardWriter,
   required LoremFileSaver loremFileSaver,
   required LoremOutputEncoder loremOutputEncoder,
+  required PasswordOperationService passwordService,
+  required PasswordClipboardWriter passwordClipboardWriter,
+  required PasswordFileSaver passwordFileSaver,
+  required PasswordOutputEncoder passwordOutputEncoder,
   required JwtCreateOperationService jwtCreateService,
   required JwtCreateFilePicker jwtCreateFilePicker,
   required JwtCreateClipboardReader jwtCreateClipboardReader,
@@ -197,6 +202,17 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/password/generate',
+        builder: (context, state) => PasswordPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: passwordService,
+          clipboardWriter: passwordClipboardWriter,
+          fileSaver: passwordFileSaver,
+          outputEncoder: passwordOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/lorem/generate',
         builder: (context, state) => LoremPage(
@@ -565,6 +581,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/lorem/generate'),
                         child: Text(
                           catalog.lookup(localeTag, 'lorem.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-password'),
+                        onPressed: () => context.go('/password/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'password.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

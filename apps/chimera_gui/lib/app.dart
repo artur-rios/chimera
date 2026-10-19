@@ -27,6 +27,7 @@ import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'lorem_page.dart';
 import 'number_base_page.dart';
+import 'password_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'router.dart';
@@ -46,6 +47,10 @@ final class ChimeraApp extends StatelessWidget {
     this.loremClipboardWriter,
     this.loremFileSaver,
     this.loremOutputEncoder,
+    this.passwordService = const PasswordService(),
+    this.passwordClipboardWriter,
+    this.passwordFileSaver,
+    this.passwordOutputEncoder,
     this.jwtCreateService = const JwtCreateService(),
     this.jwtCreateFilePicker,
     this.jwtCreateClipboardReader,
@@ -211,6 +216,10 @@ final class ChimeraApp extends StatelessWidget {
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
   final LoremOutputEncoder? loremOutputEncoder;
+  final PasswordOperationService passwordService;
+  final PasswordClipboardWriter? passwordClipboardWriter;
+  final PasswordFileSaver? passwordFileSaver;
+  final PasswordOutputEncoder? passwordOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -370,6 +379,10 @@ final class ChimeraApp extends StatelessWidget {
         loremClipboardWriter: loremClipboardWriter,
         loremFileSaver: loremFileSaver,
         loremOutputEncoder: loremOutputEncoder,
+        passwordService: passwordService,
+        passwordClipboardWriter: passwordClipboardWriter,
+        passwordFileSaver: passwordFileSaver,
+        passwordOutputEncoder: passwordOutputEncoder,
         jwtCreateService: jwtCreateService,
         jwtCreateFilePicker: jwtCreateFilePicker,
         jwtCreateClipboardReader: jwtCreateClipboardReader,
@@ -532,6 +545,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.loremClipboardWriter,
     required this.loremFileSaver,
     required this.loremOutputEncoder,
+    required this.passwordService,
+    required this.passwordClipboardWriter,
+    required this.passwordFileSaver,
+    required this.passwordOutputEncoder,
     required this.jwtCreateService,
     required this.jwtCreateFilePicker,
     required this.jwtCreateClipboardReader,
@@ -690,6 +707,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
   final LoremOutputEncoder? loremOutputEncoder;
+  final PasswordOperationService passwordService;
+  final PasswordClipboardWriter? passwordClipboardWriter;
+  final PasswordFileSaver? passwordFileSaver;
+  final PasswordOutputEncoder? passwordOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -860,6 +881,12 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       loremClipboardWriter: widget.loremClipboardWriter ?? writeLoremClipboard,
       loremFileSaver: widget.loremFileSaver ?? saveLoremFile,
       loremOutputEncoder: widget.loremOutputEncoder ?? encodeLoremOutput,
+      passwordService: widget.passwordService,
+      passwordClipboardWriter:
+          widget.passwordClipboardWriter ?? writePasswordClipboard,
+      passwordFileSaver: widget.passwordFileSaver ?? savePasswordFile,
+      passwordOutputEncoder:
+          widget.passwordOutputEncoder ?? encodePasswordOutput,
       jwtCreateService: widget.jwtCreateService,
       jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
       jwtCreateClipboardReader:

@@ -575,3 +575,32 @@ Unicode copy/save behavior. Native integration and compiled-browser scenarios
 exercise local image loading, successful decoding, exact UTF-8 output, corrupt
 image rejection, and absence of utility network requests. The native Safari
 harness executes the same fixture through the real browser file adapter.
+
+## UC-33 Generate Password
+
+- Branch: `feature/uc-33-generate-password`
+- Date: 2026-10-19
+- Targets: shared Flutter web, Windows, and Linux password-generation surface
+- Locales: English and Brazilian Portuguese
+
+The length field and each character-class switch expose localized labels and
+follow document-order keyboard traversal. Enter submits the form. Generate,
+copy, and save actions disable while work is pending, while validation and
+processing failures are announced through localized live messages without
+including generated or diagnostic-sensitive data.
+
+Successful generation moves focus to a localized live result region whose
+accessible value is the generated password. Copy and save consume that exact
+result. Configuration changes, failures, late completions, and disposal clear
+stale result state so a previous password cannot remain available through the
+presentation controls.
+
+Focused widget and save-adapter coverage exercises both locales, keyboard
+submission, labeled controls, focus and live semantics, exact copy/save output,
+busy behavior, stale completion, source changes, disposal, and redacted failure
+messages. Six Windows integration tests exercise local generation, exact
+character-class constraints, copy/save/discard behavior, validation and secure
+random failures, and zero network access. Fifteen compiled-browser scenarios
+pass across Chromium, Firefox, and WebKit; the native Safari harness includes
+the same local-generation and no-network contract for its mandatory macOS CI
+job. No automated UC-33 accessibility finding remains open.

@@ -21,6 +21,7 @@ export 'src/list_compare_service.dart';
 export 'src/lorem_service.dart';
 export 'src/number_base_service.dart';
 export 'src/operation_service.dart';
+export 'src/password_service.dart';
 export 'src/qr_decode_service.dart';
 export 'src/qr_encode_service.dart';
 export 'src/result.dart';

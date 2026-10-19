@@ -25,6 +25,31 @@ _catalogs = <String, Map<String, String>>{
     'error.lorem.outputAccess':
         'The generated text could not be saved or written.',
     'error.lorem.clipboardWrite': 'The generated text could not be copied.',
+    'cli.passwordUsage': 'Usage: chimera password generate [--length=<positive integer>] [--[no-]lowercase] [--[no-]uppercase] [--[no-]digits] [--[no-]symbols] [--output=<path>] [--json]. Defaults: length 16 with every character class enabled.',
+    'password.pageTitle': 'Generate Password',
+    'password.openAction': 'Generate Password',
+    'password.lengthLabel': 'Positive integer length',
+    'password.lowercase': 'Lowercase letters',
+    'password.uppercase': 'Uppercase letters',
+    'password.digits': 'Digits',
+    'password.symbols': 'Symbols',
+    'password.semantics': 'Select at least one character class. The length must be at least the number of selected classes. Generation uses secure local randomness.',
+    'password.generate': 'Generate password',
+    'password.resultLabel': 'Generated password',
+    'password.success': 'Password generated.',
+    'password.copy': 'Copy password',
+    'password.save': 'Save password',
+    'password.copied': 'Password copied.',
+    'password.saved': 'Password saved.',
+    'error.password.validation': 'Choose a positive integer length that can include every selected character class, and select at least one class.',
+    'error.password.processing':
+        'Secure random generation failed. No password was produced.',
+    'error.password.resource':
+        'Password generation exceeded available resources.',
+    'error.password.outputAccess':
+        'The generated password could not be saved or written.',
+    'error.password.clipboardWrite':
+        'The generated password could not be copied.',
 
     "cli.checksumGenerateUsage": "Usage: chimera checksum generate [--input <text> | --file <path> | --stdin] [--algorithm crc32|adler32] [--output <path>] [--json]. Default: crc32. Text uses exact UTF-8; file/stdin are exact bytes. JSON: algorithm, checksum (eight lowercase hexadecimal characters). Saved files contain the checksum and one LF.",
     "checksumGenerate.pageTitle": "Generate checksum",
@@ -969,6 +994,30 @@ _catalogs = <String, Map<String, String>>{
     'error.lorem.outputAccess':
         'Não foi possível salvar ou escrever o texto gerado.',
     'error.lorem.clipboardWrite': 'Não foi possível copiar o texto gerado.',
+    'cli.passwordUsage': 'Uso: chimera password generate [--length=<inteiro positivo>] [--[no-]lowercase] [--[no-]uppercase] [--[no-]digits] [--[no-]symbols] [--output=<caminho>] [--json]. Padrões: comprimento 16 com todas as classes de caracteres habilitadas.',
+    'password.pageTitle': 'Gerar Senha',
+    'password.openAction': 'Gerar Senha',
+    'password.lengthLabel': 'Comprimento inteiro positivo',
+    'password.lowercase': 'Letras minúsculas',
+    'password.uppercase': 'Letras maiúsculas',
+    'password.digits': 'Dígitos',
+    'password.symbols': 'Símbolos',
+    'password.semantics': 'Selecione pelo menos uma classe de caracteres. O comprimento deve ser no mínimo o número de classes selecionadas. A geração usa aleatoriedade segura e local.',
+    'password.generate': 'Gerar senha',
+    'password.resultLabel': 'Senha gerada',
+    'password.success': 'Senha gerada.',
+    'password.copy': 'Copiar senha',
+    'password.save': 'Salvar senha',
+    'password.copied': 'Senha copiada.',
+    'password.saved': 'Senha salva.',
+    'error.password.validation': 'Escolha um comprimento inteiro positivo que comporte cada classe de caracteres selecionada e selecione pelo menos uma classe.',
+    'error.password.processing':
+        'A geração aleatória segura falhou. Nenhuma senha foi produzida.',
+    'error.password.resource':
+        'A geração de senha excedeu os recursos disponíveis.',
+    'error.password.outputAccess':
+        'Não foi possível salvar ou escrever a senha gerada.',
+    'error.password.clipboardWrite': 'Não foi possível copiar a senha gerada.',
 
     "cli.checksumGenerateUsage": "Uso: chimera checksum generate [--input <texto> | --file <caminho> | --stdin] [--algorithm crc32|adler32] [--output <caminho>] [--json]. Padrão: crc32. Texto usa UTF-8 exato; arquivo/stdin são bytes exatos. JSON: algorithm, checksum (oito caracteres hexadecimais minúsculos). Arquivos salvos contêm a soma e um LF.",
     "checksumGenerate.pageTitle": "Gerar soma de verificação",
