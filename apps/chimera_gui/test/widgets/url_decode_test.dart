@@ -5,7 +5,7 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/url_decode_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -44,23 +44,14 @@ final class _Service
   }
 }
 
-final class _SavePlatform extends FilePickerPlatform {
+final class _SavePlatform extends FileSelectorPlatform {
   _SavePlatform(this.save);
-
-  final Future<Uri?> Function(String, Uint8List, String) save;
-
+  final Future<FileSaveLocation?> Function(String, List<String>) save;
   @override
-  Future<Uri?> saveFile({
-    required String fileName,
-    required Uint8List bytes,
-    required String mimeType,
-    String? dialogTitle,
-    String? initialDirectory,
-    void Function(FilePickerStatus)? onFileSaving,
-    WindowsOptions windowsOptions = const WindowsOptions(),
-    LinuxOptions linuxOptions = const LinuxOptions(),
-    WebOptions webOptions = const WebOptions(),
-  }) => save(fileName, bytes, mimeType);
+  Future<FileSaveLocation?> getSaveLocation({
+    SaveDialogOptions options = const SaveDialogOptions(),
+    List<XTypeGroup>? acceptedTypeGroups,
+  }) => save(options.suggestedName!, acceptedTypeGroups!.single.extensions!);
 }
 
 void main() {
@@ -461,24 +452,30 @@ void main() {
   });
 
   test('GivenZeroByteOutput_WhenSaved_ThenOneExactSaveHandoffOccurs', () async {
-    final oldPlatform = FilePickerPlatform.instance;
-    addTearDown(() => FilePickerPlatform.instance = oldPlatform);
+    final oldPlatform = FileSelectorPlatform.instance;
+    addTearDown(() => FileSelectorPlatform.instance = oldPlatform);
     var calls = 0;
-    FilePickerPlatform.instance = _SavePlatform((name, bytes, mime) async {
+    var writes = 0;
+    FileSelectorPlatform.instance = _SavePlatform((name, extensions) async {
       calls++;
       expect(name, 'chimera-url-decoded.txt');
-      expect(bytes, isEmpty);
-      expect(mime, 'text/plain; charset=utf-8');
-      return Uri.file('saved.txt');
+      expect(extensions, ['txt']);
+      return const FileSaveLocation('saved.txt');
     });
     expect(
       await saveUrlDecodeFile(
         'chimera-url-decoded.txt',
         Uint8List(0),
         'text/plain; charset=utf-8',
+        writeTransaction: (path, bytes) async {
+          writes++;
+          expect(path, 'saved.txt');
+          expect(bytes, isEmpty);
+        },
       ),
       isTrue,
     );
     expect(calls, 1);
+    expect(writes, 1);
   });
 }

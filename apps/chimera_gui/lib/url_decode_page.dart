@@ -4,11 +4,10 @@ import 'dart:ui' show SemanticsRole;
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'empty_file_save.dart';
+import 'local_file_save.dart';
 
 typedef UrlDecodeOperationService =
     OperationService<UrlDecodeOperationRequest, UrlDecodeOutput>;
@@ -38,19 +37,17 @@ Uint8List encodeUrlDecodeOutput(String value) => utf8.encode(value);
 Future<bool> saveUrlDecodeFile(
   String name,
   Uint8List bytes,
-  String mimeType,
-) async {
-  final emptyWebSave = await trySaveEmptyFile(name, bytes, mimeType);
-  if (emptyWebSave != null) return emptyWebSave;
-  final result = await FilePicker.saveFile(
-    fileName: name,
-    bytes: bytes,
-    mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: ['txt'],
-  );
-  return kIsWeb || result != null;
-}
+  String mimeType, {
+  LocalSaveLocationChooser? chooseLocation,
+  LocalFileTransactionWriter? writeTransaction,
+}) => saveLocalFile(
+  name,
+  bytes,
+  mimeType,
+  extensions: const ['txt'],
+  chooseLocation: chooseLocation,
+  writeTransaction: writeTransaction,
+);
 
 final class UrlDecodePage extends StatefulWidget {
   const UrlDecodePage({

@@ -8,6 +8,8 @@ import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'output_sink.dart';
+
 typedef TextReader = Future<String> Function();
 typedef FileTextReader = Future<String> Function(String path);
 typedef BytesReader = Future<List<int>> Function();
@@ -2718,7 +2720,7 @@ Future<int> _runUrlDecode(
         }
       }
       try {
-        out.write(stdoutPayload);
+        await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('decoded');
         return 75;
