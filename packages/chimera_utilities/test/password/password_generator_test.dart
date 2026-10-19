@@ -3,7 +3,7 @@ import 'package:test/test.dart';
 
 void main() {
   test('GivenDefaults_WhenGenerated_ThenEveryRequestedClassIsPresent', () {
-    final generator = PasswordGenerator.forTesting(randomInt: (_) => 0);
+    final generator = _coveringGenerator();
 
     final result = generator.generate(const PasswordRequest());
 
@@ -62,10 +62,7 @@ void main() {
   }
 
   test('GivenMinimumFeasibleLength_WhenGenerated_ThenEachClassAppearsOnce', () {
-    var call = 0;
-    final generator = PasswordGenerator.forTesting(
-      randomInt: (upperBound) => call++ % upperBound,
-    );
+    final generator = _coveringGenerator();
 
     final result = generator.generate(const PasswordRequest(length: 4));
 
@@ -77,9 +74,9 @@ void main() {
   });
 
   test(
-    'GivenDeterministicEntropy_WhenGenerated_ThenSelectionAndShuffleAreStable',
+    'GivenDeterministicEntropy_WhenGenerated_ThenUniformCandidateIsStable',
     () {
-      final draws = <int>[1, 2, 3, 4, 5, 6, 1, 0, 2, 1, 0];
+      final draws = <int>[1, 27, 54, 65, 5, 6, 7];
       var index = 0;
       final generator = PasswordGenerator.forTesting(
         randomInt: (upperBound) => draws[index++ % draws.length] % upperBound,
@@ -90,9 +87,52 @@ void main() {
       final second = generator.generate(const PasswordRequest(length: 7));
 
       expect(second.password, first.password);
-      expect(index, greaterThan(7));
+      expect(index, 7);
     },
   );
+
+  test('GivenRejectedCandidate_WhenGenerated_ThenAcceptedPasswordIsUniformlySampledFromUnion', () {
+    final draws = <int>[0, 1, 0, 26];
+    var index = 0;
+    final generator = PasswordGenerator.forTesting(
+      randomInt: (_) => draws[index++],
+    );
+
+    final result = generator.generate(
+      const PasswordRequest(length: 2, digits: false, symbols: false),
+    );
+
+    expect(result.password, 'aA');
+    expect(index, 4);
+  });
+
+  test('GivenEntropyNeverCoversClasses_WhenGenerated_ThenBoundedProcessingFailureReturns', () {
+    var draws = 0;
+    final generator = PasswordGenerator.forTesting(
+      randomInt: (_) {
+        draws++;
+        return 0;
+      },
+    );
+
+    expect(
+      () => generator.generate(const PasswordRequest(length: 4)),
+      throwsA(
+        isA<PasswordException>()
+            .having(
+              (error) => error.kind,
+              'kind',
+              PasswordFailureKind.processing,
+            )
+            .having(
+              (error) => error.code,
+              'code',
+              'password.random-unavailable',
+            ),
+      ),
+    );
+    expect(draws, lessThanOrEqualTo(4096));
+  });
 
   for (final entry in <String, PasswordRequest>{
     'ZeroLength': const PasswordRequest(length: 0),
@@ -175,4 +215,12 @@ void main() {
       },
     );
   }
+}
+
+PasswordGenerator _coveringGenerator() {
+  const draws = <int>[0, 26, 52, 62];
+  var index = 0;
+  return PasswordGenerator.forTesting(
+    randomInt: (upperBound) => draws[index++ % draws.length] % upperBound,
+  );
 }

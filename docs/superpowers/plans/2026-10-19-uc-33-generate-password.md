@@ -20,7 +20,10 @@
 
 ## Review Focus
 
-- Random selection and final shuffle must use the injected secure boundary for every choice.
+- Every candidate character must be sampled uniformly from the combined
+  selected alphabet through the injected secure boundary. Reject candidates
+  that omit a selected class so every valid constrained password remains
+  equiprobable; bound rejection to a fixed processing failure.
 - Entropy failures and invalid injected values must become redacted processing failures with no partial password.
 - GUI/CLI adapters must call the shared service rather than implement generation themselves.
 - Copy/save failures and pending async completions must clear or ignore sensitive state consistently.
@@ -37,7 +40,7 @@
 - Modify: `packages/chimera_core/lib/chimera_core.dart`
 - Create: `packages/chimera_core/test/password_service_test.dart`
 
-- [ ] Write failing tests for defaults, every class toggle, minimum feasible length, exact class coverage, deterministic shuffle, invalid/impossible constraints before entropy, entropy failure, invalid random output, and redacted typed service failures.
+- [ ] Write failing tests for defaults, every class toggle, minimum feasible length, exact class coverage, deterministic uniform sampling, invalid/impossible constraints before entropy, entropy failure, invalid random output, and redacted typed service failures.
 - [ ] Implement the smallest generator and service that pass those tests.
 - [ ] Run the two focused suites and keep RED/GREEN evidence.
 

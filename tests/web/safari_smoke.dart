@@ -4021,13 +4021,14 @@ Future<void> _generatePassword(WebDriver driver) async {
   }, 'Password digit-only constraints were not satisfied');
   await _assertNoNetworkRequests(driver, flow: 'Password digits');
 
-  for (final failure in ['validation', 'copy', 'save']) {
+  for (final failure in ['validation', 'processing', 'copy', 'save']) {
     await openPassword();
     if (failure == 'validation') {
       await _fillTextBox(driver, 'Positive integer length', '3');
     }
+    if (failure == 'processing') await probe('entropyFailure');
     await _clickButton(driver, 'Generate password');
-    if (failure != 'validation') {
+    if (failure == 'copy' || failure == 'save') {
       await _waitUntil(
         () async => await probe('result') is String,
         'Password default result missing',
@@ -4039,14 +4040,13 @@ Future<void> _generatePassword(WebDriver driver) async {
       );
     }
     await _waitUntil(
-      () => _pageContains(
-        driver,
-        failure == 'validation'
-            ? 'Choose a positive integer length that can include every selected character class, and select at least one class.'
-            : failure == 'copy'
-            ? 'The generated password could not be copied.'
-            : 'The generated password could not be saved or written.',
-      ),
+      () => _pageContains(driver, switch (failure) {
+        'validation' => 'Choose a positive integer length that can include every selected character class, and select at least one class.',
+        'processing' =>
+          'Secure random generation failed. No password was produced.',
+        'copy' => 'The generated password could not be copied.',
+        _ => 'The generated password could not be saved or written.',
+      }),
       'Password localized failure missing',
     );
     await _waitUntil(

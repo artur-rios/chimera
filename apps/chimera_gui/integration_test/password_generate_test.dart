@@ -15,6 +15,31 @@ void main() {
     generator: PasswordGenerator.forTesting(randomInt: (_) => 0),
   );
 
+  testWidgets(
+    'GivenProductionService_WhenGeneratedNativelyOffline_ThenSecurePasswordContractHolds',
+    (tester) async {
+      final network = _Offline();
+      final previous = HttpOverrides.current;
+      HttpOverrides.global = network;
+      addTearDown(() => HttpOverrides.global = previous);
+      await tester.pumpWidget(
+        const ChimeraApp(initialLocation: '/password/generate'),
+      );
+      await tester.tap(find.byKey(const Key('password-generate')));
+      await tester.pumpAndSettle();
+
+      final password = tester
+          .widget<SelectableText>(find.byKey(const Key('password-output')))
+          .data!;
+      expect(password, hasLength(16));
+      expect(password, matches(RegExp('[a-z]')));
+      expect(password, matches(RegExp('[A-Z]')));
+      expect(password, matches(RegExp('[0-9]')));
+      expect(password, matches(RegExp(r'[!@#$%^&*()\-_=+\[\]{}:,.?]')));
+      expect(network.attempts, 0);
+    },
+  );
+
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
       'Given${locale}PasswordConstraints_WhenGeneratedOffline_ThenExactCopySaveAndDiscard',

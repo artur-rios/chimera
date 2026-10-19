@@ -26,5 +26,12 @@ function passwordProbe(action, value) {
   if (action === 'noResult') return !result() && !button('Copy password') && !button('Save password');
   if (action === 'copyFailure') { window.__chimeraPasswordCopyFailure=true; return true; }
   if (action === 'saveFailure') { URL.createObjectURL = () => { throw Error('PRIVATE'); }; return true; }
+  if (action === 'entropyFailure') {
+    Object.defineProperty(window.crypto, 'getRandomValues', {
+      configurable: true,
+      value: () => { throw Error('PRIVATE'); },
+    });
+    return true;
+  }
   throw Error('Unknown password probe action');
 }

@@ -67,6 +67,7 @@ final class PasswordGenerator {
     'digits': '0123456789',
     'symbols': r'!@#$%^&*()-_=+[]{}:,.?',
   };
+  static const _maximumCandidateAttempts = 1024;
 
   final PasswordRandomInt _randomInt;
 
@@ -104,22 +105,28 @@ final class PasswordGenerator {
 
     try {
       final available = selected.map((entry) => entry.value).join();
-      final characters = <String>[
-        for (final entry in selected) _pick(entry.value),
-      ];
-      while (characters.length < request.length) {
-        characters.add(_pick(available));
+      for (var attempt = 0; attempt < _maximumCandidateAttempts; attempt++) {
+        final characters = List<String>.generate(
+          request.length,
+          (_) => _pick(available),
+          growable: false,
+        );
+        if (!selected.every((entry) => characters.any(entry.value.contains))) {
+          continue;
+        }
+        return PasswordResult(
+          password: characters.join(),
+          length: request.length,
+          characterClasses: List.unmodifiable(
+            selected.map((entry) => entry.key),
+          ),
+        );
       }
-      for (var index = characters.length - 1; index > 0; index--) {
-        final swap = _draw(index + 1);
-        final value = characters[index];
-        characters[index] = characters[swap];
-        characters[swap] = value;
-      }
-      return PasswordResult(
-        password: characters.join(),
-        length: request.length,
-        characterClasses: List.unmodifiable(selected.map((entry) => entry.key)),
+      throw const PasswordException(
+        PasswordFailureKind.processing,
+        'password.random-unavailable',
+        'random',
+        'coverage-attempt-limit',
       );
     } on PasswordException {
       rethrow;

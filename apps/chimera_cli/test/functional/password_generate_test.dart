@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
@@ -8,9 +9,8 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
-  PasswordService deterministic() => PasswordService(
-    generator: PasswordGenerator.forTesting(randomInt: (_) => 0),
-  );
+  PasswordService deterministic() =>
+      PasswordService(generator: _coveringGenerator());
 
   for (final locale in ['en', 'pt-BR']) {
     test(
@@ -89,7 +89,7 @@ void main() {
       expect(jsonDecode(out.toString()), {
         'length': 4,
         'characterClasses': ['digits'],
-        'password': '0000',
+        'password': '0622',
       });
     },
   );
@@ -302,6 +302,96 @@ void main() {
       },
     );
   }
+
+  test('GivenNativeExecutable_WhenPasswordCommandsRun_ThenProductionEntropyAndOutputContractsHold', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'chimera-password-executable-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final library = (await Isolate.resolvePackageUri(
+      Uri.parse('package:chimera_cli/chimera_cli.dart'),
+    ))!;
+    final entrypoint = File.fromUri(library.resolve('../bin/chimera.dart'));
+    final executable =
+        '${directory.path}/chimera-password${Platform.isWindows ? '.exe' : ''}';
+    final compilation = await Process.run(Platform.resolvedExecutable, [
+      'compile',
+      'exe',
+      entrypoint.path,
+      '-o',
+      executable,
+    ]);
+    expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+
+    final defaults = await Process.run(executable, ['password', 'generate']);
+    expect(defaults.exitCode, 0, reason: defaults.stderr.toString());
+    expect(defaults.stderr, isEmpty);
+    final defaultPassword = defaults.stdout.toString();
+    expect(defaultPassword, hasLength(16));
+    expect(defaultPassword, matches(RegExp('[a-z]')));
+    expect(defaultPassword, matches(RegExp('[A-Z]')));
+    expect(defaultPassword, matches(RegExp('[0-9]')));
+    expect(defaultPassword, matches(RegExp(r'[!@#$%^&*()\-_=+\[\]{}:,.?]')));
+
+    final jsonResult = await Process.run(executable, [
+      'password',
+      'generate',
+      '--length=8',
+      '--no-lowercase',
+      '--no-uppercase',
+      '--no-symbols',
+      '--json',
+    ]);
+    expect(jsonResult.exitCode, 0, reason: jsonResult.stderr.toString());
+    final json = jsonDecode(jsonResult.stdout.toString());
+    expect(json, {
+      'length': 8,
+      'characterClasses': ['digits'],
+      'password': (json as Map<String, Object?>)['password'],
+    });
+    expect(json['password'], matches(RegExp(r'^\d{8}$')));
+
+    final invalid = await Process.run(executable, [
+      'password',
+      'generate',
+      '--length=0',
+    ]);
+    expect(invalid.exitCode, 64);
+    expect(invalid.stdout, isEmpty);
+    expect(
+      invalid.stderr.toString(),
+      contains(
+        const MessageCatalog().lookup('en', 'error.password.validation'),
+      ),
+    );
+
+    final saved = File('${directory.path}/result.txt');
+    await saved.writeAsString('previous');
+    final saveResult = await Process.run(executable, [
+      'password',
+      'generate',
+      '--length=8',
+      '--no-lowercase',
+      '--no-uppercase',
+      '--no-symbols',
+      '--output=${saved.path}',
+    ]);
+    expect(saveResult.exitCode, 0, reason: saveResult.stderr.toString());
+    expect(saveResult.stderr, isEmpty);
+    expect(await saved.readAsString(), matches(RegExp(r'^\d{8}$')));
+    expect(
+      directory.listSync().where((entry) => entry.path.contains('.tmp')),
+      isEmpty,
+    );
+  }, timeout: const Timeout(Duration(minutes: 2)));
+}
+
+PasswordGenerator _coveringGenerator() {
+  const draws = <int>[0, 26, 52, 62];
+  var index = 0;
+  return PasswordGenerator.forTesting(
+    randomInt: (upperBound) => draws[index++ % draws.length] % upperBound,
+  );
 }
 
 final class _DeniedSink implements StringSink {

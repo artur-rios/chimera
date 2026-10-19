@@ -6,9 +6,8 @@ void main() {
   test(
     'GivenDefaults_WhenExecuted_ThenStableJsonWithoutRetainedRequest',
     () async {
-      final result = await PasswordService(
-        generator: PasswordGenerator.forTesting(randomInt: (_) => 0),
-      ).execute(const PasswordOperationRequest());
+      final result = await PasswordService(generator: _coveringGenerator())
+          .execute(const PasswordOperationRequest());
 
       final output = (result as ChimeraSuccess<PasswordOutput>).value;
       expect(output.toJson(), {
@@ -94,5 +93,13 @@ void main() {
       expect(failure.messageKey, 'error.password.processing');
       expect(failure.toString(), isNot(contains('PRIVATE')));
     },
+  );
+}
+
+PasswordGenerator _coveringGenerator() {
+  const draws = <int>[0, 26, 52, 62];
+  var index = 0;
+  return PasswordGenerator.forTesting(
+    randomInt: (upperBound) => draws[index++ % draws.length] % upperBound,
   );
 }

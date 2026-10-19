@@ -598,9 +598,11 @@ presentation controls.
 Focused widget and save-adapter coverage exercises both locales, keyboard
 submission, labeled controls, focus and live semantics, exact copy/save output,
 busy behavior, stale completion, source changes, disposal, and redacted failure
-messages. Six Windows integration tests exercise local generation, exact
+messages. Seven Windows integration tests exercise production secure entropy,
+local generation, exact
 character-class constraints, copy/save/discard behavior, validation and secure
-random failures, and zero network access. Fifteen compiled-browser scenarios
+random failures, and zero network access. Eighteen compiled-browser scenarios
 pass across Chromium, Firefox, and WebKit; the native Safari harness includes
-the same local-generation and no-network contract for its mandatory macOS CI
-job. No automated UC-33 accessibility finding remains open.
+the same local-generation, production secure-entropy-failure, and no-network
+contract for its mandatory macOS CI job. No automated UC-33 accessibility
+finding remains open.
