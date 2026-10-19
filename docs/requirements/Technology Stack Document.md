@@ -47,7 +47,8 @@ implementation of an algorithm.
 | **flutter_localizations** | Flutter SDK | GUI | Supplies Flutter localization integration. |
 | **intl** | Latest stable at implementation time | GUI and core | Resolves localized messages, dates, and locale data. |
 | **shared_preferences** | Latest stable at implementation time | GUI | Stores only theme and language preferences. |
-| **file_picker** | Latest stable at implementation time | GUI | Selects local input and output files on supported GUI targets. |
+| **file_picker** | Latest stable at implementation time | GUI | Selects local input files and browser output downloads. |
+| **file_selector** | Latest stable at implementation time (1.1.0 verified 2026-10-19) | GUI native output | Obtains a path-only save location before the project-owned transactional file writer touches the destination. |
 | **cross_file** | Latest stable at implementation time | GUI and core | Normalizes selected files without introducing remote storage. |
 | **path** | Latest stable at implementation time | CLI and desktop | Handles platform-safe local paths. |
 | **http** | Latest stable at implementation time | Update service | Reads GitHub release metadata and downloads accepted updates. |
@@ -169,6 +170,7 @@ locally built container or the explicitly selected deployment environment.
 | Localization | intl | Latest stable at implementation time |
 | Local state | shared_preferences | Latest stable at implementation time |
 | Files | file_picker | Latest stable at implementation time |
+| Native save location | file_selector | Latest stable at implementation time |
 | Files | cross_file | Latest stable at implementation time |
 | Files | path | Latest stable at implementation time |
 | Networking | http | Latest stable at implementation time |
