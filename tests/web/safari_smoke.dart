@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 import '../fixtures/jwt_signing_keys.dart';
+import 'safari_protocol.dart';
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
 const _certificatePem = '''-----BEGIN CERTIFICATE-----
@@ -299,12 +300,28 @@ Future<void> main(List<String> arguments) async {
     );
     return;
   }
+  final directory = Directory('safari-diagnostics')
+    ..createSync(recursive: true);
+  final protocolLog = File('${directory.path}/protocol.jsonl')
+      .openSync(mode: FileMode.write);
+  final protocol = SafariProtocol(
+    record: (event) {
+      final stamped = {
+        'time': DateTime.now().toUtc().toIso8601String(),
+        ...event,
+      };
+      protocolLog.writeStringSync('${jsonEncode(stamped)}\n');
+      if ((event['kind'] as String).startsWith('stage-') &&
+          !(event['stage'] as String).contains(' / probe ')) {
+        stdout.writeln('Safari ${event['kind']}: ${event['stage']}');
+      }
+    },
+  );
   WebDriver? createdDriver;
+  Object? primaryFailure;
   try {
-    final driver = createdDriver = await createDriver(
-      uri: Uri.parse('http://127.0.0.1:4444/'),
-      desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
-      spec: WebDriverSpec.W3c,
+    final driver = createdDriver = await protocol.connect(
+      Uri.parse('http://127.0.0.1:4444/'),
     );
     await driver.get('http://127.0.0.1:4173');
     await _waitUntil(() async {
@@ -1160,31 +1177,55 @@ Future<void> main(List<String> arguments) async {
 
     await _decompressGzip(driver);
     try {
-      await _generateHash(driver);
+      await protocol.stage('Hash flows', () => _generateHash(driver, protocol));
     } on Object {
-      await _capturePageDiagnostics(driver, 'hash-failure');
+      await protocol.stage(
+        'Hash failure diagnostics',
+        () => _capturePageDiagnostics(driver, 'hash-failure'),
+      );
       rethrow;
     }
-    await _encodeHtml(driver);
-    await _decodeHtml(driver);
-    await _encodeUrl(driver);
-    await _decodeUrl(driver);
-    await _createJwt(driver);
-    await _encodeQr(driver);
-    await _decodeQr(driver);
-    await _generateLorem(driver);
+    await protocol.stage('HTML encode', () => _encodeHtml(driver));
+    await protocol.stage('HTML decode', () => _decodeHtml(driver));
+    await protocol.stage('URL encode', () => _encodeUrl(driver));
+    await protocol.stage('URL decode', () => _decodeUrl(driver));
+    await protocol.stage('JWT create', () => _createJwt(driver));
+    await protocol.stage('QR encode', () => _encodeQr(driver));
+    await protocol.stage('QR decode', () => _decodeQr(driver));
+    await protocol.stage('Lorem', () => _generateLorem(driver));
     try {
-      await _generateChecksum(driver);
+      await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
-      await _capturePageDiagnostics(driver, 'checksum-failure');
+      await protocol.stage(
+        'Checksum failure diagnostics',
+        () => _capturePageDiagnostics(driver, 'checksum-failure'),
+      );
       rethrow;
     }
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
+  } on Object catch (error) {
+    primaryFailure = error;
+    stderr.writeln('Safari primary failure: $error');
+    rethrow;
   } finally {
-    await createdDriver?.quit();
+    try {
+      if (createdDriver != null && !protocol.failed) {
+        try {
+          await protocol.stage('session quit', () => createdDriver!.quit());
+        } on Object catch (error) {
+          if (primaryFailure == null) rethrow;
+          stderr.writeln(
+            'Safari cleanup failure after primary failure: $error',
+          );
+        }
+      }
+    } finally {
+      protocol.close();
+      protocolLog.closeSync();
+    }
   }
 }
 
@@ -2996,7 +3037,7 @@ Future<void> _waitUntil(
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
-    if (await predicate()) {
+    if (await SafariProtocol.withinDeadline(deadline, predicate)) {
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -3309,7 +3350,7 @@ const _hashFileReadyScript = r'''
 return hashProbe('fileReady');
 ''';
 
-Future<void> _generateHash(WebDriver driver) async {
+Future<void> _generateHash(WebDriver driver, SafariProtocol protocol) async {
   final source = await File.fromUri(Platform.script.resolve('hash_browser.js'))
       .readAsString();
   final observer = await _loadGzipSaveObserver();
@@ -3318,31 +3359,46 @@ Future<void> _generateHash(WebDriver driver) async {
       Platform.script.resolve('../fixtures/hashes/vectors.json'),
     ).readAsString(),
   ) as List<dynamic>;
-  Future<Object?> probe(String action, [Object? value]) => driver.execute(
-    '$source\nreturn hashProbe(arguments[0], arguments[1]);',
-    <Object?>[action, value],
+  var scenario = 'Hash';
+  Future<T> stage<T>(String name, Future<T> Function() action) =>
+      protocol.stage('$scenario / $name', action);
+  Future<Object?> probe(String action, [Object? value]) => stage(
+    'probe $action',
+    () => driver.execute(
+      '$source\nreturn hashProbe(arguments[0], arguments[1]);',
+      <Object?>[action, value],
+    ),
   );
   Future<void> openHash() async {
-    await driver.get('http://127.0.0.1:4173');
-    await _waitUntil(
-      () async =>
-          await driver.execute(
-            "return document.querySelector('flt-semantics-placeholder') !== null;",
-            const <Object?>[],
-          ) ==
-          true,
-      'Hash semantics placeholder did not load',
+    await stage('navigation', () => driver.get('http://127.0.0.1:4173'));
+    await stage(
+      'semantics placeholder',
+      () => _waitUntil(
+        () async =>
+            await driver.execute(
+              "return document.querySelector('flt-semantics-placeholder') !== null;",
+              const <Object?>[],
+            ) ==
+            true,
+        'Hash semantics placeholder did not load',
+      ),
     );
-    await _enableFlutterSemantics(driver);
-    await _clickButton(driver, 'Generate hash');
-    await _waitUntil(
-      () => _pageContains(driver, 'Text to hash (UTF-8)'),
-      'Hash page did not open',
+    await stage('enable semantics', () => _enableFlutterSemantics(driver));
+    await stage('open feature', () => _clickButton(driver, 'Generate hash'));
+    await stage(
+      'feature ready',
+      () => _waitUntil(
+        () => _pageContains(driver, 'Text to hash (UTF-8)'),
+        'Hash page did not open',
+      ),
     );
     await _assertNoExternalRequests(driver, flow: 'Hash startup');
-    await driver.execute(
-      '$observer\nobserveGzipSaves({suppressDownloads: true});',
-      const <Object?>[],
+    await stage(
+      'install save observer',
+      () => driver.execute(
+        '$observer\nobserveGzipSaves({suppressDownloads: true});',
+        const <Object?>[],
+      ),
     );
     await probe('setup', 'abc');
     // SafariDriver exposes no file chooser endpoint; dispatch a real File.
@@ -3357,179 +3413,192 @@ Future<void> _generateHash(WebDriver driver) async {
 
   for (final algorithm in ['sha256', 'sha384', 'sha512', 'md5', 'sha1']) {
     for (final inputSource in ['clipboard', 'file', 'empty']) {
+      scenario = 'Hash $algorithm $inputSource';
       stdout.writeln('Safari hash scenario: $algorithm $inputSource');
-      await openHash();
-      final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
-        (v) =>
-            v['name'] ==
-            (inputSource == 'empty'
-                ? 'empty'
-                : inputSource == 'file'
-                ? 'binary'
-                : 'abc'),
-      );
-      final expected =
-          (fixture['digests'] as Map<String, dynamic>)[algorithm] as String;
-      if (inputSource == 'clipboard') {
-        await _clickButton(driver, 'Paste text');
-        await _waitUntil(
-          () => _inputHasValue(
+      await stage('scenario', () async {
+        await openHash();
+        final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
+          (v) =>
+              v['name'] ==
+              (inputSource == 'empty'
+                  ? 'empty'
+                  : inputSource == 'file'
+                  ? 'binary'
+                  : 'abc'),
+        );
+        final expected =
+            (fixture['digests'] as Map<String, dynamic>)[algorithm] as String;
+        if (inputSource == 'clipboard') {
+          await _clickButton(driver, 'Paste text');
+          await _waitUntil(
+            () => _inputHasValue(
+              driver,
+              'Text to hash (UTF-8)',
+              'abc',
+              focus: true,
+            ),
+            'Hash clipboard source missing',
+          );
+        }
+        if (inputSource == 'file') {
+          await _clickButton(driver, 'Choose local file bytes');
+          await _waitUntil(
+            () async => await probe('file', fixture['bytes']) == true,
+            'Hash file input missing',
+          );
+          await _waitUntil(
+            () async =>
+                await driver.execute(
+                  '$source\n$_hashFileReadyScript',
+                  const <Object?>[],
+                ) ==
+                true,
+            'Hash file loading did not finish',
+          );
+        }
+        if (algorithm != 'sha256') {
+          await _capturePageDiagnostics(
             driver,
-            'Text to hash (UTF-8)',
-            'abc',
-            focus: true,
-          ),
-          'Hash clipboard source missing',
-        );
-      }
-      if (inputSource == 'file') {
-        await _clickButton(driver, 'Choose local file bytes');
+            'hash-$algorithm-$inputSource-before-selector',
+          );
+          await _waitUntil(
+            () async => await probe('openAlgorithm') == true,
+            'Hash algorithm selector missing',
+          );
+          await _capturePageDiagnostics(
+            driver,
+            'hash-$algorithm-$inputSource-after-selector',
+          );
+          await _waitUntil(
+            () async =>
+                await probe('algorithm', algorithm.toUpperCase()) == true,
+            'Hash algorithm choice missing',
+          );
+        }
+        await _clickButton(driver, 'Generate hash');
         await _waitUntil(
-          () async => await probe('file', fixture['bytes']) == true,
-          'Hash file input missing',
+          () async => await probe('result', expected) == true,
+          'Hash known digest mismatch',
+        );
+        if (algorithm == 'md5' || algorithm == 'sha1') {
+          await _waitUntil(
+            () => _pageContains(driver, 'unsuitable for security decisions'),
+            'Hash legacy security warning missing',
+          );
+        }
+        await _waitUntil(
+          () async => await probe('sourceCleared') == true,
+          'Hash source retained',
         );
         await _waitUntil(
-          () async =>
-              await driver.execute(
-                '$source\n$_hashFileReadyScript',
-                const <Object?>[],
-              ) ==
-              true,
-          'Hash file loading did not finish',
+          () async => await probe('copy') == true,
+          'Hash copy unavailable',
         );
-      }
-      if (algorithm != 'sha256') {
-        await _capturePageDiagnostics(
+        await _waitUntil(
+          () async => await probe('copied', expected) == true,
+          'Hash clipboard result mismatch',
+        );
+        await _clickButton(driver, 'Save digest');
+        await _waitUntil(
+          () async => await probe('saved', utf8.encode('$expected\n')) == true,
+          'Hash saved bytes mismatch',
+        );
+        await _assertNoNetworkRequests(
           driver,
-          'hash-$algorithm-$inputSource-before-selector',
+          flow: 'Hash $algorithm $inputSource',
         );
-        await _waitUntil(
-          () async => await probe('openAlgorithm') == true,
-          'Hash algorithm selector missing',
-        );
-        await _capturePageDiagnostics(
-          driver,
-          'hash-$algorithm-$inputSource-after-selector',
-        );
-        await _waitUntil(
-          () async => await probe('algorithm', algorithm.toUpperCase()) == true,
-          'Hash algorithm choice missing',
-        );
-      }
-      await _clickButton(driver, 'Generate hash');
-      await _waitUntil(
-        () async => await probe('result', expected) == true,
-        'Hash known digest mismatch',
-      );
-      if (algorithm == 'md5' || algorithm == 'sha1') {
-        await _waitUntil(
-          () => _pageContains(driver, 'unsuitable for security decisions'),
-          'Hash legacy security warning missing',
-        );
-      }
-      await _waitUntil(
-        () async => await probe('sourceCleared') == true,
-        'Hash source retained',
-      );
-      await _waitUntil(
-        () async => await probe('copy') == true,
-        'Hash copy unavailable',
-      );
-      await _waitUntil(
-        () async => await probe('copied', expected) == true,
-        'Hash clipboard result mismatch',
-      );
-      await _clickButton(driver, 'Save digest');
-      await _waitUntil(
-        () async => await probe('saved', utf8.encode('$expected\n')) == true,
-        'Hash saved bytes mismatch',
-      );
-      await _assertNoNetworkRequests(
-        driver,
-        flow: 'Hash $algorithm $inputSource',
-      );
+      });
     }
   }
   for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    scenario = 'Hash failure $failure';
     stdout.writeln('Safari hash failure scenario: $failure');
-    await openHash();
-    if (failure == 'file') {
-      await probe('fileFailure');
-      await _clickButton(driver, 'Choose local file bytes');
-      await _waitUntil(
-        () async => await probe('file', <int>[0, 255]) == true,
-        'Hash failure file input missing',
-      );
-      await _waitUntil(
-        () => _pageContains(driver, 'The local file could not be read.'),
-        'Hash file access failure missing',
-      );
-    } else if (failure == 'validation') {
-      await driver.execute(
-        '$source\n$_hashInvalidClipboardScript',
-        const <Object?>[],
-      );
-      await _clickButton(driver, 'Paste text');
-      await _waitUntil(
-        () => _pageContains(
-          driver,
-          'The hash algorithm or input source is invalid.',
-        ),
-        'Hash clipboard validation missing',
-      );
-    } else {
-      if (failure != 'read') {
+    await stage('scenario', () async {
+      await openHash();
+      if (failure == 'file') {
+        await probe('fileFailure');
+        await _clickButton(driver, 'Choose local file bytes');
+        await _waitUntil(
+          () async => await probe('file', <int>[0, 255]) == true,
+          'Hash failure file input missing',
+        );
+        await _waitUntil(
+          () => _pageContains(driver, 'The local file could not be read.'),
+          'Hash file access failure missing',
+        );
+      } else if (failure == 'validation') {
+        await driver.execute(
+          '$source\n$_hashInvalidClipboardScript',
+          const <Object?>[],
+        );
         await _clickButton(driver, 'Paste text');
         await _waitUntil(
-          () => _inputHasValue(
+          () => _pageContains(
             driver,
-            'Text to hash (UTF-8)',
-            'abc',
-            focus: true,
+            'The hash algorithm or input source is invalid.',
           ),
-          'Hash failure source missing',
+          'Hash clipboard validation missing',
         );
-        await _clickButton(driver, 'Generate hash');
-        await _waitUntil(
-          () async =>
-              await probe(
-                'result',
-                'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
-              ) ==
-              true,
-          'Hash failure setup missing',
+      } else {
+        if (failure != 'read') {
+          await _clickButton(driver, 'Paste text');
+          await _waitUntil(
+            () => _inputHasValue(
+              driver,
+              'Text to hash (UTF-8)',
+              'abc',
+              focus: true,
+            ),
+            'Hash failure source missing',
+          );
+          await _clickButton(driver, 'Generate hash');
+          await _waitUntil(
+            () async =>
+                await probe(
+                  'result',
+                  'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+                ) ==
+                true,
+            'Hash failure setup missing',
+          );
+        }
+        await probe('${failure}Failure');
+        await stage(
+          'activate $failure',
+          () => _clickButton(
+            driver,
+            failure == 'read'
+                ? 'Paste text'
+                : failure == 'copy'
+                ? 'Copy digest'
+                : 'Save digest',
+          ),
+        );
+        await stage(
+          'expected $failure error',
+          () => _waitUntil(
+            () => _pageContains(
+              driver,
+              failure == 'read'
+                  ? 'Clipboard text could not be read.'
+                  : failure == 'copy'
+                  ? 'The digest could not be copied.'
+                  : 'The digest could not be saved or written.',
+            ),
+            'Hash adapter failure missing',
+          ),
         );
       }
-      await probe('${failure}Failure');
-      await _clickButton(
-        driver,
-        failure == 'read'
-            ? 'Paste text'
-            : failure == 'copy'
-            ? 'Copy digest'
-            : 'Save digest',
+      await _waitUntil(
+        () async => await probe('noResult') == true,
+        'Hash failure retained partial output',
       );
       await _waitUntil(
-        () => _pageContains(
-          driver,
-          failure == 'read'
-              ? 'Clipboard text could not be read.'
-              : failure == 'copy'
-              ? 'The digest could not be copied.'
-              : 'The digest could not be saved or written.',
-        ),
-        'Hash adapter failure missing',
+        () async => await probe('sourceCleared') == true,
+        'Hash failure retained source',
       );
-    }
-    await _waitUntil(
-      () async => await probe('noResult') == true,
-      'Hash failure retained partial output',
-    );
-    await _waitUntil(
-      () async => await probe('sourceCleared') == true,
-      'Hash failure retained source',
-    );
-    await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+      await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+    });
   }
 }
 
