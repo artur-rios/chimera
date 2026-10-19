@@ -29,6 +29,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_decode_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -49,6 +50,12 @@ GoRouter buildRouter({
   required QrEncodeFilePicker qrEncodeFilePicker,
   required QrEncodeClipboardReader qrEncodeClipboardReader,
   required QrEncodeFileSaver qrEncodeFileSaver,
+  required UrlDecodeOperationService urlDecodeService,
+  required UrlDecodeFilePicker urlDecodeFilePicker,
+  required UrlDecodeClipboardReader urlDecodeClipboardReader,
+  required UrlDecodeClipboardWriter urlDecodeClipboardWriter,
+  required UrlDecodeFileSaver urlDecodeFileSaver,
+  required UrlDecodeOutputEncoder urlDecodeOutputEncoder,
   required HtmlDecodeOperationService htmlDecodeService,
   required HtmlDecodeFilePicker htmlDecodeFilePicker,
   required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
@@ -207,6 +214,19 @@ GoRouter buildRouter({
           filePicker: qrEncodeFilePicker,
           clipboardReader: qrEncodeClipboardReader,
           fileSaver: qrEncodeFileSaver,
+        ),
+      ),
+      GoRoute(
+        path: '/url/decode',
+        builder: (context, state) => UrlDecodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: urlDecodeService,
+          filePicker: urlDecodeFilePicker,
+          clipboardReader: urlDecodeClipboardReader,
+          clipboardWriter: urlDecodeClipboardWriter,
+          fileSaver: urlDecodeFileSaver,
+          outputEncoder: urlDecodeOutputEncoder,
         ),
       ),
       GoRoute(
@@ -458,6 +478,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/html/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'htmlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-url-decode'),
+                        onPressed: () => context.go('/url/decode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'urlDecode.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

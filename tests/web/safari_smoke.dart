@@ -124,6 +124,67 @@ const _htmlNoResultScript = r'''
     !buttons.includes('Copy encoded text') && !buttons.includes('Save encoded text');
 ''';
 
+const _urlDecodeSetupScript = r'''
+  window.__chimeraUrlDecodeCopiedText = null;
+  window.__chimeraUrlDecodeCopies = 0;
+  window.__chimeraUrlDecodeReads = 0;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {
+      readText: async () => {
+        window.__chimeraUrlDecodeReads++;
+        return '%3C%26%41%F0%9F%99%82%253C+';
+      },
+      writeText: async value => {
+        window.__chimeraUrlDecodeCopies++;
+        window.__chimeraUrlDecodeCopiedText = value;
+      },
+    },
+  });
+  performance.clearResourceTimings();
+''';
+const _urlDecodeSubmitScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Decode' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeResultScript = r'''
+  return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+    .some(element => element.getAttribute('aria-label') ===
+      'URL decoded result URL decoding succeeded.');
+''';
+const _urlDecodeCopyScript = r'''
+  const button = [...document.querySelectorAll('[role="button"]')]
+    .find(element => element.textContent.trim() === 'Copy decoded text' &&
+      element.getAttribute('aria-disabled') !== 'true');
+  if (!button) return false;
+  button.focus();
+  return document.activeElement === button;
+''';
+const _urlDecodeCopiedScript = r'''
+  return window.__chimeraUrlDecodeCopies === arguments[1] &&
+    window.__chimeraUrlDecodeCopiedText === arguments[0];
+''';
+const _urlDecodeSaveScript = r'''
+  return window.__chimeraSavedName === 'chimera-url-decoded.txt' &&
+    window.__chimeraSaveCount === arguments[1] &&
+    window.__chimeraSavedMime === 'text/plain; charset=utf-8' &&
+    window.__chimeraLiveDownloadUrlCount === 0 &&
+    window.__chimeraGzipSaveErrors.length === 0 &&
+    JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(arguments[0]);
+''';
+const _urlDecodeNoResultScript = r'''
+  const labels = [...document.querySelectorAll('[aria-label]')]
+    .map(element => element.getAttribute('aria-label'));
+  const buttons = [...document.querySelectorAll('[role="button"]')]
+    .map(element => element.textContent.trim());
+  return !labels.some(label => label.startsWith('URL decoded result')) &&
+    !buttons.includes('Copy decoded text') && !buttons.includes('Save decoded text');
+''';
+
 const _htmlDecodeSetupScript = r'''
   window.__chimeraHtmlDecodeCopiedText = null;
   window.__chimeraHtmlDecodeCopies = 0;
@@ -191,6 +252,22 @@ Future<void> main(List<String> arguments) async {
     final observer = await _loadGzipSaveObserver();
     if (observer.isEmpty) throw StateError('GZIP save observer is empty');
     stdout.writeln('GZIP save observer source loaded successfully.');
+    return;
+  }
+  if (arguments case ['--verify-url-helpers']) {
+    final helpers = [
+      _urlDecodeSetupScript,
+      _urlDecodeSubmitScript,
+      _urlDecodeResultScript,
+      _urlDecodeCopyScript,
+      _urlDecodeCopiedScript,
+      _urlDecodeSaveScript,
+      _urlDecodeNoResultScript,
+    ];
+    if (helpers.any((source) => source.isEmpty)) {
+      throw StateError('URL helpers missing');
+    }
+    stdout.writeln('URL helpers (7) loaded successfully.');
     return;
   }
   if (arguments case ['--verify-html-helpers']) {
@@ -1122,6 +1199,7 @@ Future<void> main(List<String> arguments) async {
     await _decompressGzip(driver);
     await _encodeHtml(driver);
     await _decodeHtml(driver);
+    await _decodeUrl(driver);
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
@@ -1835,6 +1913,201 @@ Future<void> _encodeHtml(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'HTML context/copy/save/validation',
+  );
+}
+
+Future<void> _decodeUrl(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'URL Decode semantics placeholder did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Decode URL');
+  await _waitUntil(
+    () => _pageContains(driver, 'Percent-encoded text to decode'),
+    'URL Decode page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'URL Decode startup');
+  final observer = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$observer\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_urlDecodeSetupScript, const <Object?>[]);
+  await driver.execute('''
+    const click = HTMLInputElement.prototype.click;
+    HTMLInputElement.prototype.click = function() {
+      if (this.type === 'file') return;
+      return click.call(this);
+    };
+  ''', const <Object?>[]);
+  const expected = '<&A🙂%3C+';
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '%3C%26%41%F0%9F%99%82%253C+',
+      focus: true,
+    ),
+    'URL Decode clipboard source was not loaded',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSubmitScript, const <Object?>[]) == true,
+    'URL Decode submit was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode result semantics were incorrect',
+  );
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '',
+      focus: true,
+    ),
+    'URL Decode source was retained',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>[
+          expected,
+          1,
+        ]) ==
+        true,
+    'URL Decode clipboard output was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSaveScript, <Object?>[
+          utf8.encode(expected),
+          1,
+        ]) ==
+        true,
+    'URL Decode non-empty save/URL cleanup was not exact',
+  );
+  await _waitUntil(
+    () => _pageContains(driver, 'URL decoded text saved.'),
+    'URL Decode non-empty save did not finish',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode empty result did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopyScript, const <Object?>[]) == true,
+    'URL Decode empty copy was not keyboard-active',
+  );
+  await driver.keyboard.sendKeys(Keyboard.enter);
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeCopiedScript, const <Object?>['', 2]) ==
+        true,
+    'URL Decode empty copy was not exact',
+  );
+  await _clickButton(driver, 'Save decoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeSaveScript, const <Object?>[
+          <int>[],
+          2,
+        ]) ==
+        true,
+    'URL Decode empty save/URL cleanup was not exact',
+  );
+  await _clickButton(driver, 'Load UTF-8 file');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_htmlFileScript, const <Object?>[
+          <int>[0xc3, 0x28],
+        ]) ==
+        true,
+    'URL Decode malformed UTF-8 fixture could not be dispatched',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode file load did not discard the previous result',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The URL decoding request is invalid.'),
+    'URL Decode UTF-8 validation did not appear',
+  );
+  if (await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) !=
+      true) {
+    throw StateError('URL Decode validation retained an output action');
+  }
+  final reads = await driver.execute(
+    'return window.__chimeraUrlDecodeReads;',
+    const <Object?>[],
+  );
+  if (reads != 1) {
+    throw StateError('URL Decode clipboard source was not read once');
+  }
+  await driver.execute(r'''
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: async () => '%3Cprivate%3E',
+        writeText: async () => { throw new Error('private'); },
+      },
+    });
+  ''', const <Object?>[]);
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Percent-encoded text to decode',
+      '%3Cprivate%3E',
+      focus: true,
+    ),
+    'URL Decode output-denial fixture was not loaded',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeResultScript, const <Object?>[]) == true,
+    'URL Decode output-denial result did not appear',
+  );
+  await _clickButton(driver, 'Copy decoded text');
+  await _waitUntil(
+    () => _pageContains(driver, 'The clipboard text could not be written.'),
+    'URL Decode output access failure did not appear',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(_urlDecodeNoResultScript, const <Object?>[]) ==
+        true,
+    'URL Decode output access retained a result',
+  );
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'URL Decode copy/save/validation',
   );
 }
 
