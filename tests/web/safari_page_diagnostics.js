@@ -7,6 +7,9 @@ function captureSafariPageDiagnostics() {
     rect: element.getBoundingClientRect().toJSON(),
   });
   return {
+    ...(window.__chimeraCronDiagnostics ? {
+      cronInteraction: window.__chimeraCronDiagnostics.snapshot(),
+    } : {}),
     url: location.href,
     userAgent: navigator.userAgent,
     viewport: { width: innerWidth, height: innerHeight, devicePixelRatio },

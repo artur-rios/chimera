@@ -18,6 +18,7 @@ const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.
 
 // Run the native Safari helper's actual observation body against Flutter.
 const safariHarness = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8');
+const safariCronDiagnostics = readFileSync(new URL('./safari_cron_diagnostics.js', import.meta.url), 'utf8');
 const safariTextBoxElementScript = safariHarness.match(/const _textBoxElementScript = r'''([\s\S]*?)''';/)[1];
 const safariInputObservation = safariHarness
   .split('Future<bool> _inputHasValue(')[1]
@@ -1358,6 +1359,7 @@ test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesD
   const requests = [];
   await page.goto('/');
   await enableFlutterSemantics(page);
+  await page.evaluate(`${safariCronDiagnostics}\ninstallCronDiagnostics();`);
   // Match Safari's semantics navigation without a preceding pointer gesture.
   await page.getByRole('button', { name: 'Parse a cron expression', exact: true })
     .evaluate(node => node.click());
@@ -1400,6 +1402,25 @@ test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesD
   expect(text.match(/Previous: /g)).toHaveLength(1);
   expect(text.match(/Next: /g)).toHaveLength(1);
   expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
+  const timeline = await page.evaluate(() => window.__chimeraCronDiagnostics.snapshot());
+  await test.info().attach('cron-interaction', {
+    body: JSON.stringify(timeline, null, 2), contentType: 'application/json',
+  });
+  // Prove the diagnostic observes real Flutter editing connections and submit
+  // delivery while the exact controller-based result above remains unchanged.
+  for (const label of ['Cron expression', 'Time zone', 'Occurrence count', 'Reference instant']) {
+    expect(timeline.records.some(record => record.kind === 'listener-added' &&
+      record.type === 'input' && record.target.label === label)).toBe(true);
+    expect(timeline.records.some(record => record.kind === 'event' &&
+      record.type === 'input' && record.target.label === label &&
+      record.target.inputHandlers > 0)).toBe(true);
+  }
+  expect(timeline.records.some(record => record.kind === 'event' &&
+    record.type === 'click' && record.target.text === 'Calculate occurrences' &&
+    record.trusted === false)).toBe(true);
+  expect(timeline.dropped).toBe(0);
+  await page.evaluate(() => window.__chimeraCronDiagnostics.stop());
+  expect(await page.evaluate(() => '__chimeraCronDiagnostics' in window)).toBe(false);
 });
 
 test('date flow converts locally without external requests', async ({ page }) => {

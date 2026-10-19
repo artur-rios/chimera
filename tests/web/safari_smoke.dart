@@ -329,6 +329,7 @@ Future<void> main(List<String> arguments) async {
       'Flutter semantics did not become available',
     );
 
+    await _startCronDiagnostics(driver);
     await _clickButton(driver, 'Parse a cron expression');
     await _waitUntil(
       () => _pageContains(driver, 'Parse cron expression'),
@@ -354,6 +355,15 @@ Future<void> main(List<String> arguments) async {
     } on Object {
       await _capturePageDiagnostics(driver, 'cron-failure');
       rethrow;
+    } finally {
+      try {
+        await driver.execute(
+          'window.__chimeraCronDiagnostics?.stop();',
+          const <Object?>[],
+        );
+      } on Object catch (error) {
+        stderr.writeln('Safari Cron diagnostics cleanup unavailable: $error');
+      }
     }
     await _assertNoExternalRequests(driver, flow: 'cron');
 
@@ -3005,6 +3015,21 @@ Future<bool> _inputHasValue(
     <Object?>[label, expected, focus],
   );
   return result == true;
+}
+
+// Observe the public Cron fixture without changing input actions or waits.
+Future<void> _startCronDiagnostics(WebDriver driver) async {
+  try {
+    final source = await File.fromUri(
+      Platform.script.resolve('safari_cron_diagnostics.js'),
+    ).readAsString();
+    await driver.execute(
+      '$source\ninstallCronDiagnostics();',
+      const <Object?>[],
+    );
+  } on Object catch (error) {
+    stderr.writeln('Safari Cron diagnostics unavailable: $error');
+  }
 }
 
 // Only public smoke fixtures call this; preserve the original
