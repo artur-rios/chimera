@@ -5,6 +5,7 @@ import { unexpectedHttpRequests } from './network_policy.mjs';
 const hashSource=readFileSync(new URL('./hash_browser.js',import.meta.url),'utf8');
 const saveSource=readFileSync(new URL('./gzip_save_observer.js',import.meta.url),'utf8');
 const safariHarness=readFileSync(new URL('./safari_smoke.dart',import.meta.url),'utf8');
+const fileReadyScript=safariHarness.match(/const _hashFileReadyScript = r'''([\s\S]*?)''';/)[1];
 const invalidClipboardScript=safariHarness.match(/const _hashInvalidClipboardScript = r'''([\s\S]*?)''';/)[1];
 const vectors=JSON.parse(readFileSync(new URL('../fixtures/hashes/vectors.json',import.meta.url),'utf8'));
 async function probe(page, action, value) {
@@ -82,4 +83,37 @@ test('GivenLocalFileAccessFailure_WhenHashFileLoaded_ThenNoPartialResultOrSource
  const requests=[];await openHash(page);await page.context().setOffline(true);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});await probe(page,'setup','abc');await probe(page,'fileFailure');
  const chooser=page.waitForEvent('filechooser');await page.getByRole('button',{name:'Choose local file bytes',exact:true}).click();await(await chooser).setFiles({name:'denied.bin',mimeType:'application/octet-stream',buffer:Buffer.from([0,255])});
  await expect(visibleError(page,'The local file could not be read.')).toBeVisible();await expect.poll(()=>probe(page,'fileFailureObserved')).toBe(true);await expect.poll(()=>probe(page,'noResult')).toBe(true);await expect.poll(()=>probe(page,'sourceCleared')).toBe(true);expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
+});
+
+
+test('GivenDelayedLocalFileRead_WhenSafariChecksReadiness_ThenWaitForReplacementAndExactDigestOffline',async({page})=>{
+ const requests=[];await openHash(page);await page.context().setOffline(true);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});await probe(page,'setup','abc');
+ const vector=vectors.find(v=>v.name==='binary');
+ const editor=page.getByRole('textbox',{name:'Text to hash (UTF-8)',exact:true});
+ await editor.fill('previous source');await editor.press('Tab');
+ // Hold the actual browser read, then release the original method with the
+ // original File. Keep the compiled app's picker and byte processing intact.
+ await page.evaluate(()=>{
+  const read=FileReader.prototype.readAsArrayBuffer;
+  FileReader.prototype.readAsArrayBuffer=function(file){window.__chimeraReleaseHashFile=()=>read.call(this,file);};
+  const click=HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click=function(){if(this.type!=='file')return click.call(this);};
+ });
+ const ready=()=>page.evaluate(({source,script})=>new Function(`${source}\n${script}`)(),{source:hashSource,script:fileReadyScript});
+ // Dispatch in the same task as the click, before Flutter can render busy
+ // semantics. An enabled algorithm still describes the previous source here.
+ const initial=await page.evaluate(({source,script,bytes})=>{
+  const hash=new Function(`${source}\nreturn hashProbe;`)();
+  [...document.querySelectorAll('[role="button"]')].find(node=>node.textContent.trim()==='Choose local file bytes').click();
+  const dispatched=hash('file',bytes);
+  return {dispatched,ready:new Function(`${source}\n${script}`)()};
+ },{source:hashSource,script:fileReadyScript,bytes:vector.bytes});
+ expect(initial.dispatched).toBe(true);expect(initial.ready).toBe(false);
+ await expect(editor).toBeDisabled();expect(await ready()).toBe(false);
+ await page.evaluate(()=>window.__chimeraReleaseHashFile());
+ await expect.poll(ready).toBe(true);
+ await page.getByRole('button',{name:'Generate hash',exact:true}).click();
+ await expect.poll(()=>probe(page,'result',vector.digests.sha256)).toBe(true);
+ await expect.poll(()=>probe(page,'sourceCleared')).toBe(true);
+ expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
 });

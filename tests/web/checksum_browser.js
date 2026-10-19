@@ -3,17 +3,19 @@ function checksumProbe(action, value) {
   const label = node => (node.getAttribute('aria-label') || node.textContent).replace(/\s+/g, ' ').trim();
   const button = name => [...document.querySelectorAll('[role="button"]')].find(node => label(node) === name && node.getAttribute('aria-disabled') !== 'true');
   const result = () => [...document.querySelectorAll('[role="region"][tabindex="0"]')].find(node => label(node).startsWith('Checksum result Checksum generated.'));
+  const input = () => [...document.querySelectorAll('input[aria-label],textarea[aria-label]')]
+    .find(node => node.getAttribute('aria-label') === 'Text for checksum (UTF-8)');
   // Flutter materializes the real editor value when it receives focus.
   // Observe the exact labeled value; never assign it in an observation probe.
   const inputHasValue = expected => {
-    const input = [...document.querySelectorAll('input[aria-label],textarea[aria-label]')]
-      .find(node => node.getAttribute('aria-label') === 'Text for checksum (UTF-8)');
-    if (!input || input.disabled) return false;
-    input.focus();
-    return input.value === expected;
+    const editor = input();
+    if (!editor || editor.disabled) return false;
+    editor.focus();
+    return editor.value === expected;
   };
   if (action === 'setup') {
     window.__chimeraChecksumCopied = null;
+    window.__chimeraChecksumFileEditor = null;
     window.__chimeraChecksumFileReadFailures = 0;
     window.__chimeraChecksumClipboard = value;
     window.__chimeraChecksumCopyFailure = false;
@@ -38,9 +40,16 @@ function checksumProbe(action, value) {
     if (!picker) return false;
     const transfer = new DataTransfer();
     transfer.items.add(new File([new Uint8Array(value)], 'checksum-source.bin', { type: 'application/octet-stream' }));
+    // The app replaces this source editor only after the actual bytes load.
+    window.__chimeraChecksumFileEditor = input();
     picker.files = transfer.files;
     picker.dispatchEvent(new Event('change', { bubbles: true }));
     return true;
+  }
+  if (action === 'fileReady') {
+    const previous = window.__chimeraChecksumFileEditor;
+    const current = input();
+    return Boolean(previous && !previous.isConnected && current && !current.disabled);
   }
   if (action === 'result') return result()?.getAttribute('aria-label')?.includes(value) === true;
   if (action === 'inputHasValue') return inputHasValue(value);
