@@ -61,6 +61,48 @@ Run the GUI with `flutter run` from `apps/chimera_gui`. Run the CLI with
 `dart run apps/chimera_cli/bin/chimera.dart`. Both entry points consume shared
 packages rather than owning utility implementations.
 
+### Generate Lorem Ipsum
+
+Open **Generate Lorem Ipsum** in the GUI, or run:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart lorem generate --unit=words --count=3
+dart run apps/chimera_cli/bin/chimera.dart lorem generate --unit=sentences --count=2 --json
+dart run apps/chimera_cli/bin/chimera.dart lorem generate --unit=paragraphs --count=2 --output=lorem.txt
+```
+
+The defaults are `--unit=paragraphs --count=1`. Unit names are case-sensitive:
+`words`, `sentences`, and `paragraphs`. Count must contain only decimal digits
+and represent a positive integer exactly representable by the target runtime
+(native/Wasm int64 or a finite JavaScript number). Leading zeroes are accepted;
+values that would be rounded are rejected. There is no product count ceiling.
+Requests exceeding available resources return a typed resource failure with no
+partial result. The generator needs no input source and rejects input, file, and
+stdin flags.
+
+Generation is deterministic and local, using these public-domain Latin fragments:
+`Lorem ipsum dolor sit amet.` and `Consectetur adipiscing elit.` Words cycle through
+`Lorem ipsum dolor sit amet consectetur adipiscing elit`, separated by one space
+without punctuation. Sentences alternate the two capitalized, punctuated fragments,
+separated by one space. Each paragraph contains both sentences, separated by one
+space; paragraphs are separated by exactly one blank line (`\n\n`). The requested
+unit count is exact, with no leading or trailing whitespace or terminal newline.
+
+Human CLI stdout contains exactly the generated text. `--json` emits one JSON
+object followed by a newline, with stable keys `unit`, `count`, and `text`, for
+example `{"unit":"words","count":3,"text":"Lorem ipsum dolor"}`. When `--output`
+is supplied, the file contains the exact generated UTF-8 text without a BOM or
+added newline; human stdout confirms the save, and JSON stdout retains the same
+result object. Native file replacement is transactional. Stdout completion is
+awaited; access failures return exit 74, validation failures 64, and resource
+failures 75, with localized diagnostics on stderr.
+
+GUI copy and save use the same exact text and UTF-8 bytes (`chimera-lorem.txt`).
+Changing the unit or count invalidates the previous result. Failed generation,
+copy, or save clears the result; canceling a save preserves it. English and
+Brazilian Portuguese labels and errors are provided. Generation, copying, and
+saving use no network or operation history.
+
 ### Generate a checksum
 
 Open **Generate checksum** in the GUI, or use the CLI:

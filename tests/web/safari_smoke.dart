@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 import '../fixtures/jwt_signing_keys.dart';
+import 'safari_protocol.dart';
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
 const _certificatePem = '''-----BEGIN CERTIFICATE-----
@@ -299,12 +300,28 @@ Future<void> main(List<String> arguments) async {
     );
     return;
   }
+  final directory = Directory('safari-diagnostics')
+    ..createSync(recursive: true);
+  final protocolLog = File('${directory.path}/protocol.jsonl')
+      .openSync(mode: FileMode.write);
+  final protocol = SafariProtocol(
+    record: (event) {
+      final stamped = {
+        'time': DateTime.now().toUtc().toIso8601String(),
+        ...event,
+      };
+      protocolLog.writeStringSync('${jsonEncode(stamped)}\n');
+      if ((event['kind'] as String).startsWith('stage-') &&
+          !(event['stage'] as String).contains(' / probe ')) {
+        stdout.writeln('Safari ${event['kind']}: ${event['stage']}');
+      }
+    },
+  );
   WebDriver? createdDriver;
+  Object? primaryFailure;
   try {
-    final driver = createdDriver = await createDriver(
-      uri: Uri.parse('http://127.0.0.1:4444/'),
-      desired: <String, dynamic>{Capabilities.browserName: Browser.safari},
-      spec: WebDriverSpec.W3c,
+    final driver = createdDriver = await protocol.connect(
+      Uri.parse('http://127.0.0.1:4444/'),
     );
     await driver.get('http://127.0.0.1:4173');
     await _waitUntil(() async {
@@ -315,10 +332,7 @@ Future<void> main(List<String> arguments) async {
       return await driver.title == 'Chimera' && flutterRoot == true;
     }, 'Chimera did not finish loading');
 
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () async =>
           await driver.execute(
@@ -329,6 +343,7 @@ Future<void> main(List<String> arguments) async {
       'Flutter semantics did not become available',
     );
 
+    await _startCronDiagnostics(driver);
     await _clickButton(driver, 'Parse a cron expression');
     await _waitUntil(
       () => _pageContains(driver, 'Parse cron expression'),
@@ -354,6 +369,15 @@ Future<void> main(List<String> arguments) async {
     } on Object {
       await _capturePageDiagnostics(driver, 'cron-failure');
       rethrow;
+    } finally {
+      try {
+        await driver.execute(
+          'window.__chimeraCronDiagnostics?.stop();',
+          const <Object?>[],
+        );
+      } on Object catch (error) {
+        stderr.writeln('Safari Cron diagnostics cleanup unavailable: $error');
+      }
     }
     await _assertNoExternalRequests(driver, flow: 'cron');
 
@@ -365,10 +389,7 @@ Future<void> main(List<String> arguments) async {
       );
       return flutterRoot == true;
     }, 'Chimera did not reload for date flow');
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a date'),
       'Home page did not return for date flow',
@@ -401,10 +422,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for number base flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a number base'),
       'Home page did not return for number base flow',
@@ -436,10 +454,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text escape flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Escape text'),
       'Home page did not return for text escape flow',
@@ -472,10 +487,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text unescape flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Unescape text'),
       'Home page did not return for text unescape flow',
@@ -508,10 +520,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON table flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a JSON array to a table'),
       'Home page did not return for JSON table flow',
@@ -543,10 +552,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON CSV flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a JSON array to CSV'),
       'Home page did not return for JSON CSV flow',
@@ -578,10 +584,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON YAML flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert JSON to YAML'),
       'Home page did not return for JSON YAML flow',
@@ -609,10 +612,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format JSON'),
       'Home page did not return for JSON format flow',
@@ -644,10 +644,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for SQL format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format SQL'),
       'Home page did not return for SQL format flow',
@@ -683,10 +680,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for XML format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format XML'),
       'Home page did not return for XML format flow',
@@ -720,10 +714,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for list comparison flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Compare lists'),
       'Home page did not return for list comparison flow',
@@ -756,10 +747,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text analysis flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Analyze text'),
       'Home page did not return for text analysis flow',
@@ -790,10 +778,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text transformation flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Transform text'),
       'Home page did not return for text transformation flow',
@@ -821,10 +806,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text comparison flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Compare text'),
       'Home page did not return for text comparison flow',
@@ -857,10 +839,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for Base64 encoding flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Encode Base64'),
       'Home page did not return for Base64 encoding flow',
@@ -953,10 +932,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for Base64 decoding flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Decode Base64'),
       'Home page did not return for Base64 decoding flow',
@@ -1061,10 +1037,7 @@ Future<void> main(List<String> arguments) async {
             true,
         'Chimera did not reload for certificate $representation flow',
       );
-      await driver.execute(
-        "document.querySelector('flt-semantics-placeholder')?.click();",
-        const <Object?>[],
-      );
+      await _enableFlutterSemantics(driver);
       await _clickButton(driver, 'Inspect a certificate');
       await _waitUntil(
         () => _pageContains(driver, 'Certificate (PEM or Base64)'),
@@ -1204,30 +1177,55 @@ Future<void> main(List<String> arguments) async {
 
     await _decompressGzip(driver);
     try {
-      await _generateHash(driver);
+      await protocol.stage('Hash flows', () => _generateHash(driver, protocol));
     } on Object {
-      await _capturePageDiagnostics(driver, 'hash-failure');
+      await protocol.stage(
+        'Hash failure diagnostics',
+        () => _capturePageDiagnostics(driver, 'hash-failure'),
+      );
       rethrow;
     }
-    await _encodeHtml(driver);
-    await _decodeHtml(driver);
-    await _encodeUrl(driver);
-    await _decodeUrl(driver);
-    await _createJwt(driver);
-    await _encodeQr(driver);
-    await _decodeQr(driver);
+    await protocol.stage('HTML encode', () => _encodeHtml(driver));
+    await protocol.stage('HTML decode', () => _decodeHtml(driver));
+    await protocol.stage('URL encode', () => _encodeUrl(driver));
+    await protocol.stage('URL decode', () => _decodeUrl(driver));
+    await protocol.stage('JWT create', () => _createJwt(driver));
+    await protocol.stage('QR encode', () => _encodeQr(driver));
+    await protocol.stage('QR decode', () => _decodeQr(driver));
+    await protocol.stage('Lorem', () => _generateLorem(driver));
     try {
-      await _generateChecksum(driver);
+      await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
-      await _capturePageDiagnostics(driver, 'checksum-failure');
+      await protocol.stage(
+        'Checksum failure diagnostics',
+        () => _capturePageDiagnostics(driver, 'checksum-failure'),
+      );
       rethrow;
     }
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
+  } on Object catch (error) {
+    primaryFailure = error;
+    stderr.writeln('Safari primary failure: $error');
+    rethrow;
   } finally {
-    await createdDriver?.quit();
+    try {
+      if (createdDriver != null && !protocol.failed) {
+        try {
+          await protocol.stage('session quit', () => createdDriver!.quit());
+        } on Object catch (error) {
+          if (primaryFailure == null) rethrow;
+          stderr.writeln(
+            'Safari cleanup failure after primary failure: $error',
+          );
+        }
+      }
+    } finally {
+      protocol.close();
+      protocolLog.closeSync();
+    }
   }
 }
 
@@ -1242,10 +1240,7 @@ Future<void> _createJwt(WebDriver driver) async {
         true,
     'JWT semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Create JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Claims JSON'),
@@ -1347,10 +1342,7 @@ Future<void> _decodeQr(WebDriver driver) async {
         true,
     'QR decode semantics did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode QR code');
   await _waitUntil(
     () => _pageContains(driver, 'Choose PNG, JPEG or BMP image'),
@@ -1468,10 +1460,7 @@ Future<void> _encodeQr(WebDriver driver) async {
         true,
     'QR semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode QR code');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -1584,10 +1573,7 @@ Future<String> _createAsymmetricJwt(
         true,
     '$algorithm JWT semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Create JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Claims JSON'),
@@ -1696,10 +1682,7 @@ Future<void> _openJwtInspectPage(WebDriver driver) async {
         true,
     'JWT inspection semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Inspect JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Optional verification key'),
@@ -1785,10 +1768,7 @@ Future<void> _encodeHtml(WebDriver driver) async {
         true,
     'HTML semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode HTML');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -1946,10 +1926,7 @@ Future<void> _decodeUrl(WebDriver driver) async {
         true,
     'URL Decode semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode URL');
   await _waitUntil(
     () => _pageContains(driver, 'Percent-encoded text to decode'),
@@ -2141,10 +2118,7 @@ Future<void> _decodeHtml(WebDriver driver) async {
         true,
     'HTML Decode semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode HTML');
   await _waitUntil(
     () => _pageContains(driver, 'HTML entities to decode'),
@@ -2304,10 +2278,7 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
         true,
     'GZIP semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Compress to GZIP');
   await _waitUntil(
     () => _pageContains(driver, 'Text to compress'),
@@ -2494,10 +2465,7 @@ Future<void> _decompressGzip(WebDriver driver) async {
         true,
     'GZIP decompression semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decompress GZIP');
   await _waitUntil(
     () => _pageContains(driver, 'Load GZIP file'),
@@ -2617,10 +2585,7 @@ Future<void> _convertCertificate(WebDriver driver, String source) async {
         true,
     'Chimera did not reload for certificate $source conversion',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder')?.click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Convert a certificate');
   await _waitUntil(
     () => _pageContains(driver, 'Certificate (PEM or Base64)'),
@@ -2933,23 +2898,35 @@ Future<void> _clickCheckbox(WebDriver driver, String text) async {
   }, 'Checkbox did not become selected: $text');
 }
 
+Future<String> _loadSafariTextInput() =>
+    File.fromUri(Platform.script.resolve('safari_text_input.js'))
+        .readAsString();
+
+Future<void> _enableFlutterSemantics(WebDriver driver) async {
+  final source = await _loadSafariTextInput();
+  await driver.execute(
+    '$source\ninstallSafariTextInputReadiness();\n'
+    "document.querySelector('flt-semantics-placeholder')?.click();",
+    const <Object?>[],
+  );
+}
+
 Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
+  final source = await _loadSafariTextInput();
   for (var attempt = 0; attempt < 3; attempt++) {
-    await _waitUntil(() async {
-      final result = await driver.execute(
-        '''
-          const label = arguments[0];
-          const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
-            .find(element => element.getAttribute('aria-label') === label);
-          if (!input) return false;
-          input.focus();
-          input.select();
-          return document.activeElement === input;
-        ''',
-        <Object?>[label],
-      );
-      return result == true;
-    }, 'Text box did not become active: $label');
+    // SafariDriver pointer events can use a different clock from DOM click().
+    // Keep activation on the semantics path and await the real input listener.
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            '$source\nreturn prepareSafariTextInput(arguments[0]);',
+            <Object?>[label],
+          ) ==
+          true,
+      'Text box did not connect for editing: $label',
+    );
+    // Native Safari runs on macOS. sendChord releases both A and Command.
+    await driver.keyboard.sendChord(<String>[Keyboard.command, 'a']);
 
     var entered = '';
     var attemptSucceeded = true;
@@ -2999,6 +2976,21 @@ Future<bool> _inputHasValue(
   return result == true;
 }
 
+// Observe the public Cron fixture without changing input actions or waits.
+Future<void> _startCronDiagnostics(WebDriver driver) async {
+  try {
+    final source = await File.fromUri(
+      Platform.script.resolve('safari_cron_diagnostics.js'),
+    ).readAsString();
+    await driver.execute(
+      '$source\ninstallCronDiagnostics();',
+      const <Object?>[],
+    );
+  } on Object catch (error) {
+    stderr.writeln('Safari Cron diagnostics unavailable: $error');
+  }
+}
+
 // Only public smoke fixtures call this; preserve the original
 // failure even if Safari cannot provide one of the diagnostic artifacts.
 Future<void> _capturePageDiagnostics(WebDriver driver, String name) async {
@@ -3045,7 +3037,7 @@ Future<void> _waitUntil(
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
-    if (await predicate()) {
+    if (await SafariProtocol.withinDeadline(deadline, predicate)) {
       return;
     }
     await Future<void>.delayed(const Duration(milliseconds: 250));
@@ -3145,10 +3137,7 @@ Future<void> _encodeUrl(WebDriver driver) async {
         true,
     'URL semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode URL');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -3361,7 +3350,7 @@ const _hashFileReadyScript = r'''
 return hashProbe('fileReady');
 ''';
 
-Future<void> _generateHash(WebDriver driver) async {
+Future<void> _generateHash(WebDriver driver, SafariProtocol protocol) async {
   final source = await File.fromUri(Platform.script.resolve('hash_browser.js'))
       .readAsString();
   final observer = await _loadGzipSaveObserver();
@@ -3370,34 +3359,46 @@ Future<void> _generateHash(WebDriver driver) async {
       Platform.script.resolve('../fixtures/hashes/vectors.json'),
     ).readAsString(),
   ) as List<dynamic>;
-  Future<Object?> probe(String action, [Object? value]) => driver.execute(
-    '$source\nreturn hashProbe(arguments[0], arguments[1]);',
-    <Object?>[action, value],
+  var scenario = 'Hash';
+  Future<T> stage<T>(String name, Future<T> Function() action) =>
+      protocol.stage('$scenario / $name', action);
+  Future<Object?> probe(String action, [Object? value]) => stage(
+    'probe $action',
+    () => driver.execute(
+      '$source\nreturn hashProbe(arguments[0], arguments[1]);',
+      <Object?>[action, value],
+    ),
   );
   Future<void> openHash() async {
-    await driver.get('http://127.0.0.1:4173');
-    await _waitUntil(
-      () async =>
-          await driver.execute(
-            "return document.querySelector('flt-semantics-placeholder') !== null;",
-            const <Object?>[],
-          ) ==
-          true,
-      'Hash semantics placeholder did not load',
+    await stage('navigation', () => driver.get('http://127.0.0.1:4173'));
+    await stage(
+      'semantics placeholder',
+      () => _waitUntil(
+        () async =>
+            await driver.execute(
+              "return document.querySelector('flt-semantics-placeholder') !== null;",
+              const <Object?>[],
+            ) ==
+            true,
+        'Hash semantics placeholder did not load',
+      ),
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder').click();",
-      const <Object?>[],
-    );
-    await _clickButton(driver, 'Generate hash');
-    await _waitUntil(
-      () => _pageContains(driver, 'Text to hash (UTF-8)'),
-      'Hash page did not open',
+    await stage('enable semantics', () => _enableFlutterSemantics(driver));
+    await stage('open feature', () => _clickButton(driver, 'Generate hash'));
+    await stage(
+      'feature ready',
+      () => _waitUntil(
+        () => _pageContains(driver, 'Text to hash (UTF-8)'),
+        'Hash page did not open',
+      ),
     );
     await _assertNoExternalRequests(driver, flow: 'Hash startup');
-    await driver.execute(
-      '$observer\nobserveGzipSaves({suppressDownloads: true});',
-      const <Object?>[],
+    await stage(
+      'install save observer',
+      () => driver.execute(
+        '$observer\nobserveGzipSaves({suppressDownloads: true});',
+        const <Object?>[],
+      ),
     );
     await probe('setup', 'abc');
     // SafariDriver exposes no file chooser endpoint; dispatch a real File.
@@ -3412,179 +3413,192 @@ Future<void> _generateHash(WebDriver driver) async {
 
   for (final algorithm in ['sha256', 'sha384', 'sha512', 'md5', 'sha1']) {
     for (final inputSource in ['clipboard', 'file', 'empty']) {
+      scenario = 'Hash $algorithm $inputSource';
       stdout.writeln('Safari hash scenario: $algorithm $inputSource');
-      await openHash();
-      final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
-        (v) =>
-            v['name'] ==
-            (inputSource == 'empty'
-                ? 'empty'
-                : inputSource == 'file'
-                ? 'binary'
-                : 'abc'),
-      );
-      final expected =
-          (fixture['digests'] as Map<String, dynamic>)[algorithm] as String;
-      if (inputSource == 'clipboard') {
-        await _clickButton(driver, 'Paste text');
-        await _waitUntil(
-          () => _inputHasValue(
+      await stage('scenario', () async {
+        await openHash();
+        final fixture = vectors.cast<Map<String, dynamic>>().singleWhere(
+          (v) =>
+              v['name'] ==
+              (inputSource == 'empty'
+                  ? 'empty'
+                  : inputSource == 'file'
+                  ? 'binary'
+                  : 'abc'),
+        );
+        final expected =
+            (fixture['digests'] as Map<String, dynamic>)[algorithm] as String;
+        if (inputSource == 'clipboard') {
+          await _clickButton(driver, 'Paste text');
+          await _waitUntil(
+            () => _inputHasValue(
+              driver,
+              'Text to hash (UTF-8)',
+              'abc',
+              focus: true,
+            ),
+            'Hash clipboard source missing',
+          );
+        }
+        if (inputSource == 'file') {
+          await _clickButton(driver, 'Choose local file bytes');
+          await _waitUntil(
+            () async => await probe('file', fixture['bytes']) == true,
+            'Hash file input missing',
+          );
+          await _waitUntil(
+            () async =>
+                await driver.execute(
+                  '$source\n$_hashFileReadyScript',
+                  const <Object?>[],
+                ) ==
+                true,
+            'Hash file loading did not finish',
+          );
+        }
+        if (algorithm != 'sha256') {
+          await _capturePageDiagnostics(
             driver,
-            'Text to hash (UTF-8)',
-            'abc',
-            focus: true,
-          ),
-          'Hash clipboard source missing',
-        );
-      }
-      if (inputSource == 'file') {
-        await _clickButton(driver, 'Choose local file bytes');
+            'hash-$algorithm-$inputSource-before-selector',
+          );
+          await _waitUntil(
+            () async => await probe('openAlgorithm') == true,
+            'Hash algorithm selector missing',
+          );
+          await _capturePageDiagnostics(
+            driver,
+            'hash-$algorithm-$inputSource-after-selector',
+          );
+          await _waitUntil(
+            () async =>
+                await probe('algorithm', algorithm.toUpperCase()) == true,
+            'Hash algorithm choice missing',
+          );
+        }
+        await _clickButton(driver, 'Generate hash');
         await _waitUntil(
-          () async => await probe('file', fixture['bytes']) == true,
-          'Hash file input missing',
+          () async => await probe('result', expected) == true,
+          'Hash known digest mismatch',
+        );
+        if (algorithm == 'md5' || algorithm == 'sha1') {
+          await _waitUntil(
+            () => _pageContains(driver, 'unsuitable for security decisions'),
+            'Hash legacy security warning missing',
+          );
+        }
+        await _waitUntil(
+          () async => await probe('sourceCleared') == true,
+          'Hash source retained',
         );
         await _waitUntil(
-          () async =>
-              await driver.execute(
-                '$source\n$_hashFileReadyScript',
-                const <Object?>[],
-              ) ==
-              true,
-          'Hash file loading did not finish',
+          () async => await probe('copy') == true,
+          'Hash copy unavailable',
         );
-      }
-      if (algorithm != 'sha256') {
-        await _capturePageDiagnostics(
+        await _waitUntil(
+          () async => await probe('copied', expected) == true,
+          'Hash clipboard result mismatch',
+        );
+        await _clickButton(driver, 'Save digest');
+        await _waitUntil(
+          () async => await probe('saved', utf8.encode('$expected\n')) == true,
+          'Hash saved bytes mismatch',
+        );
+        await _assertNoNetworkRequests(
           driver,
-          'hash-$algorithm-$inputSource-before-selector',
+          flow: 'Hash $algorithm $inputSource',
         );
-        await _waitUntil(
-          () async => await probe('openAlgorithm') == true,
-          'Hash algorithm selector missing',
-        );
-        await _capturePageDiagnostics(
-          driver,
-          'hash-$algorithm-$inputSource-after-selector',
-        );
-        await _waitUntil(
-          () async => await probe('algorithm', algorithm.toUpperCase()) == true,
-          'Hash algorithm choice missing',
-        );
-      }
-      await _clickButton(driver, 'Generate hash');
-      await _waitUntil(
-        () async => await probe('result', expected) == true,
-        'Hash known digest mismatch',
-      );
-      if (algorithm == 'md5' || algorithm == 'sha1') {
-        await _waitUntil(
-          () => _pageContains(driver, 'unsuitable for security decisions'),
-          'Hash legacy security warning missing',
-        );
-      }
-      await _waitUntil(
-        () async => await probe('sourceCleared') == true,
-        'Hash source retained',
-      );
-      await _waitUntil(
-        () async => await probe('copy') == true,
-        'Hash copy unavailable',
-      );
-      await _waitUntil(
-        () async => await probe('copied', expected) == true,
-        'Hash clipboard result mismatch',
-      );
-      await _clickButton(driver, 'Save digest');
-      await _waitUntil(
-        () async => await probe('saved', utf8.encode('$expected\n')) == true,
-        'Hash saved bytes mismatch',
-      );
-      await _assertNoNetworkRequests(
-        driver,
-        flow: 'Hash $algorithm $inputSource',
-      );
+      });
     }
   }
   for (final failure in ['validation', 'file', 'read', 'copy', 'save']) {
+    scenario = 'Hash failure $failure';
     stdout.writeln('Safari hash failure scenario: $failure');
-    await openHash();
-    if (failure == 'file') {
-      await probe('fileFailure');
-      await _clickButton(driver, 'Choose local file bytes');
-      await _waitUntil(
-        () async => await probe('file', <int>[0, 255]) == true,
-        'Hash failure file input missing',
-      );
-      await _waitUntil(
-        () => _pageContains(driver, 'The local file could not be read.'),
-        'Hash file access failure missing',
-      );
-    } else if (failure == 'validation') {
-      await driver.execute(
-        '$source\n$_hashInvalidClipboardScript',
-        const <Object?>[],
-      );
-      await _clickButton(driver, 'Paste text');
-      await _waitUntil(
-        () => _pageContains(
-          driver,
-          'The hash algorithm or input source is invalid.',
-        ),
-        'Hash clipboard validation missing',
-      );
-    } else {
-      if (failure != 'read') {
+    await stage('scenario', () async {
+      await openHash();
+      if (failure == 'file') {
+        await probe('fileFailure');
+        await _clickButton(driver, 'Choose local file bytes');
+        await _waitUntil(
+          () async => await probe('file', <int>[0, 255]) == true,
+          'Hash failure file input missing',
+        );
+        await _waitUntil(
+          () => _pageContains(driver, 'The local file could not be read.'),
+          'Hash file access failure missing',
+        );
+      } else if (failure == 'validation') {
+        await driver.execute(
+          '$source\n$_hashInvalidClipboardScript',
+          const <Object?>[],
+        );
         await _clickButton(driver, 'Paste text');
         await _waitUntil(
-          () => _inputHasValue(
+          () => _pageContains(
             driver,
-            'Text to hash (UTF-8)',
-            'abc',
-            focus: true,
+            'The hash algorithm or input source is invalid.',
           ),
-          'Hash failure source missing',
+          'Hash clipboard validation missing',
         );
-        await _clickButton(driver, 'Generate hash');
-        await _waitUntil(
-          () async =>
-              await probe(
-                'result',
-                'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
-              ) ==
-              true,
-          'Hash failure setup missing',
+      } else {
+        if (failure != 'read') {
+          await _clickButton(driver, 'Paste text');
+          await _waitUntil(
+            () => _inputHasValue(
+              driver,
+              'Text to hash (UTF-8)',
+              'abc',
+              focus: true,
+            ),
+            'Hash failure source missing',
+          );
+          await _clickButton(driver, 'Generate hash');
+          await _waitUntil(
+            () async =>
+                await probe(
+                  'result',
+                  'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+                ) ==
+                true,
+            'Hash failure setup missing',
+          );
+        }
+        await probe('${failure}Failure');
+        await stage(
+          'activate $failure',
+          () => _clickButton(
+            driver,
+            failure == 'read'
+                ? 'Paste text'
+                : failure == 'copy'
+                ? 'Copy digest'
+                : 'Save digest',
+          ),
+        );
+        await stage(
+          'expected $failure error',
+          () => _waitUntil(
+            () => _pageContains(
+              driver,
+              failure == 'read'
+                  ? 'Clipboard text could not be read.'
+                  : failure == 'copy'
+                  ? 'The digest could not be copied.'
+                  : 'The digest could not be saved or written.',
+            ),
+            'Hash adapter failure missing',
+          ),
         );
       }
-      await probe('${failure}Failure');
-      await _clickButton(
-        driver,
-        failure == 'read'
-            ? 'Paste text'
-            : failure == 'copy'
-            ? 'Copy digest'
-            : 'Save digest',
+      await _waitUntil(
+        () async => await probe('noResult') == true,
+        'Hash failure retained partial output',
       );
       await _waitUntil(
-        () => _pageContains(
-          driver,
-          failure == 'read'
-              ? 'Clipboard text could not be read.'
-              : failure == 'copy'
-              ? 'The digest could not be copied.'
-              : 'The digest could not be saved or written.',
-        ),
-        'Hash adapter failure missing',
+        () async => await probe('sourceCleared') == true,
+        'Hash failure retained source',
       );
-    }
-    await _waitUntil(
-      () async => await probe('noResult') == true,
-      'Hash failure retained partial output',
-    );
-    await _waitUntil(
-      () async => await probe('sourceCleared') == true,
-      'Hash failure retained source',
-    );
-    await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+      await _assertNoNetworkRequests(driver, flow: 'Hash $failure failure');
+    });
   }
 }
 
@@ -3622,10 +3636,7 @@ Future<void> _generateChecksum(WebDriver driver) async {
           true,
       'Checksum semantics placeholder did not load',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder').click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _clickButton(driver, 'Generate checksum');
     await _waitUntil(
       () => _pageContains(driver, 'Text for checksum (UTF-8)'),
@@ -3805,5 +3816,121 @@ Future<void> _generateChecksum(WebDriver driver) async {
       'Checksum failure retained source',
     );
     await _assertNoNetworkRequests(driver, flow: 'Checksum $failure failure');
+  }
+}
+
+// Keep new operations outside the JWT inspection helper interval.
+Future<void> _generateLorem(WebDriver driver) async {
+  final source = await File.fromUri(Platform.script.resolve('lorem_browser.js'))
+      .readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn loremProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openLorem() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Lorem semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate Lorem Ipsum');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'Lorem configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Lorem startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  const paragraph = 'Lorem ipsum dolor sit amet. Consectetur adipiscing elit.';
+  for (final unit in ['words', 'sentences', 'paragraphs']) {
+    await openLorem();
+    if (unit != 'paragraphs') {
+      await _waitUntil(
+        () async => await probe('openUnit') == true,
+        'Lorem unit selector missing',
+      );
+      await _waitUntil(
+        () async =>
+            await probe('unit', unit == 'words' ? 'Words' : 'Sentences') ==
+            true,
+        'Lorem unit choice missing',
+      );
+    }
+    await _fillTextBox(driver, 'Positive integer count', '2');
+    await _clickButton(driver, 'Generate text');
+    final expected = unit == 'words'
+        ? 'Lorem ipsum'
+        : unit == 'sentences'
+        ? paragraph
+        : '$paragraph\n\n$paragraph';
+    await _waitUntil(
+      () async => await probe('result', expected) == true,
+      'Lorem exact generated result mismatch',
+    );
+    await _waitUntil(
+      () async => await probe('copy') == true,
+      'Lorem copy unavailable',
+    );
+    await _waitUntil(
+      () async => await probe('copied', expected) == true,
+      'Lorem clipboard mismatch',
+    );
+    await _clickButton(driver, 'Save UTF-8 text');
+    await _waitUntil(
+      () async => await probe('saved', utf8.encode(expected)) == true,
+      'Lorem saved UTF-8 mismatch',
+    );
+    await _fillTextBox(driver, 'Positive integer count', '3');
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Lorem stale result retained after configuration changed',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Lorem $unit');
+  }
+  for (final failure in ['validation', 'copy', 'save']) {
+    await openLorem();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    await _clickButton(driver, 'Generate text');
+    if (failure != 'validation') {
+      await _waitUntil(
+        () async => await probe('result', paragraph) == true,
+        'Lorem default paragraph mismatch',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy' ? 'Copy text' : 'Save UTF-8 text',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        failure == 'validation'
+            ? 'Choose words, sentences or paragraphs and a positive integer count.'
+            : failure == 'copy'
+            ? 'The generated text could not be copied.'
+            : 'The generated text could not be saved or written.',
+      ),
+      'Lorem localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Lorem partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Lorem $failure failure');
   }
 }

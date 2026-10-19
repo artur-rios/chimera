@@ -37,6 +37,8 @@ Future<int> runChimera(
   FileBytesWriter? writeOutputStage,
   TransactionalFileOperations outputFileOperations =
       const TransactionalFileOperations(),
+  LoremService loremService = const LoremService(),
+  JsonObjectEncoder? loremJsonEncoder,
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -94,9 +96,10 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key =
-          parsed.command?.name == 'checksum' &&
-              parsed.command?.command?.name == 'generate'
+      final key = parsed.command?.name == 'lorem'
+          ? 'cli.loremUsage'
+          : parsed.command?.name == 'checksum' &&
+                parsed.command?.command?.name == 'generate'
           ? 'cli.checksumGenerateUsage'
           : parsed.command?.name == 'qr' &&
                 parsed.command?.command?.name == 'encode'
@@ -141,6 +144,26 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'lorem' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runLorem(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        service: loremService,
+        encodeJson: loremJsonEncoder ?? jsonEncode,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+      );
     }
     if (parsed.command!.name == 'checksum' &&
         parsed.command!.command?.name == 'generate') {
@@ -713,6 +736,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isLorem =
+        args.length >= 2 && args[0] == 'lorem' && args[1] == 'generate';
     final isChecksumGenerate =
         args.length >= 2 && args[0] == 'checksum' && args[1] == 'generate';
     final isQrDecode =
@@ -779,7 +804,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isChecksumGenerate ||
+          (isLorem ||
+              isChecksumGenerate ||
               isQrDecode ||
               isQrEncode ||
               isJwtInspect ||
@@ -812,7 +838,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isChecksumGenerate
+      code: isLorem
+          ? 'lorem.invalid-options'
+          : isChecksumGenerate
           ? 'checksum-generate.invalid-options'
           : isQrDecode
           ? 'qr-decode.invalid-options'
@@ -875,7 +903,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isChecksumGenerate
+      messageKey: isLorem
+          ? 'error.lorem.validation'
+          : isChecksumGenerate
           ? 'error.checksumGenerate.validation'
           : isQrDecode
           ? 'error.qrDecode.validation'
@@ -944,6 +974,15 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final lorem = ArgParser()
+    ..addCommand(
+      'generate',
+      ArgParser()
+        ..addOption('unit', defaultsTo: 'paragraphs')
+        ..addOption('count', defaultsTo: '1')
+        ..addOption('output', abbr: 'o')
+        ..addFlag('json', negatable: false),
+    );
   final jwtCreate = ArgParser()
     ..addOption('algorithm', abbr: 'a')
     ..addOption('header')
@@ -1219,6 +1258,7 @@ ArgParser _buildParser() {
     ..addCommand('json', json)
     ..addCommand('jwt', jwt)
     ..addCommand('list', list)
+    ..addCommand('lorem', lorem)
     ..addCommand('number', number)
     ..addCommand('checksum', checksum)
     ..addCommand('qr', qr)
@@ -6196,6 +6236,74 @@ Future<int> _runChecksumGenerate(
         code: failure.code,
         messageKey: failure.messageKey,
         details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runLorem(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required LoremService service,
+  required JsonObjectEncoder encodeJson,
+  required FileBytesWriter writeOutputFile,
+}) async {
+  final json = parsed.flag('json');
+  final path = parsed.option('output');
+  void fail(
+    String kind,
+    String code,
+    String messageKey, [
+    Map<String, Object?> details = const {},
+  ]) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+  if (parsed.rest.isNotEmpty || path == '') {
+    fail('validation', 'lorem.invalid-options', 'error.lorem.validation');
+    return 64;
+  }
+  final result = await service.execute(
+    LoremOperationRequest(
+      unit: parsed.option('unit')!,
+      count: parsed.option('count')!,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : path != null
+            ? '${catalog.lookup(localeTag, 'lorem.saved')}\n'
+            : value.text;
+        if (path != null) await writeOutputFile(path, utf8.encode(value.text));
+        await writeSinkAndFlush(out, payload);
+        return 0;
+      } on OutOfMemoryError {
+        fail('resource', 'lorem.resource-limit', 'error.lorem.resource');
+        return 75;
+      } on Object {
+        fail('access', 'lorem.output-access', 'error.lorem.outputAccess');
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      fail(
+        failure.kind.name,
+        failure.code,
+        failure.messageKey,
+        failure.details,
       );
       return _exitCodeFor(failure.kind);
     },

@@ -18,6 +18,7 @@ export 'src/json_yaml_service.dart';
 export 'src/jwt_create_service.dart';
 export 'src/jwt_inspect_service.dart';
 export 'src/list_compare_service.dart';
+export 'src/lorem_service.dart';
 export 'src/number_base_service.dart';
 export 'src/operation_service.dart';
 export 'src/qr_decode_service.dart';

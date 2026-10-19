@@ -3,6 +3,29 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'cli.loremUsage': 'Usage: chimera lorem generate [--unit=words|sentences|paragraphs] [--count=<positive integer>] [--output=<path>] [--json]. Defaults: paragraphs, 1. Words: Latin tokens; sentences: capitalized with punctuation; paragraphs: two sentences each, with one blank line between paragraphs.',
+    'lorem.pageTitle': 'Generate Lorem Ipsum',
+    'lorem.openAction': 'Generate Lorem Ipsum',
+    'lorem.unitLabel': 'Unit',
+    'lorem.words': 'Words',
+    'lorem.sentences': 'Sentences',
+    'lorem.paragraphs': 'Paragraphs',
+    'lorem.countLabel': 'Positive integer count',
+    'lorem.semantics': 'Words are Latin tokens. Sentences start with a capital and end with punctuation. Each paragraph contains two sentences; paragraphs are separated by one blank line.',
+    'lorem.generate': 'Generate text',
+    'lorem.resultLabel': 'Generated Lorem Ipsum',
+    'lorem.success': 'Text generated.',
+    'lorem.copy': 'Copy text',
+    'lorem.save': 'Save UTF-8 text',
+    'lorem.copied': 'Text copied.',
+    'lorem.saved': 'Text saved.',
+    'error.lorem.validation':
+        'Choose words, sentences or paragraphs and a positive integer count.',
+    'error.lorem.resource': 'Text generation exceeded available resources.',
+    'error.lorem.outputAccess':
+        'The generated text could not be saved or written.',
+    'error.lorem.clipboardWrite': 'The generated text could not be copied.',
+
     "cli.checksumGenerateUsage": "Usage: chimera checksum generate [--input <text> | --file <path> | --stdin] [--algorithm crc32|adler32] [--output <path>] [--json]. Default: crc32. Text uses exact UTF-8; file/stdin are exact bytes. JSON: algorithm, checksum (eight lowercase hexadecimal characters). Saved files contain the checksum and one LF.",
     "checksumGenerate.pageTitle": "Generate checksum",
     "checksumGenerate.openAction": "Generate checksum",
@@ -924,6 +947,29 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'cli.loremUsage': 'Uso: chimera lorem generate [--unit=words|sentences|paragraphs] [--count=<inteiro positivo>] [--output=<caminho>] [--json]. Padrão: paragraphs, 1. Palavras: termos latinos; frases: inicial maiúscula e pontuação; parágrafos: duas frases cada, com uma linha em branco entre parágrafos.',
+    'lorem.pageTitle': 'Gerar Lorem Ipsum',
+    'lorem.openAction': 'Gerar Lorem Ipsum',
+    'lorem.unitLabel': 'Unidade',
+    'lorem.words': 'Palavras',
+    'lorem.sentences': 'Frases',
+    'lorem.paragraphs': 'Parágrafos',
+    'lorem.countLabel': 'Quantidade inteira positiva',
+    'lorem.semantics': 'Palavras são termos latinos. Frases começam com maiúscula e terminam com pontuação. Cada parágrafo contém duas frases; parágrafos são separados por uma linha em branco.',
+    'lorem.generate': 'Gerar texto',
+    'lorem.resultLabel': 'Lorem Ipsum gerado',
+    'lorem.success': 'Texto gerado.',
+    'lorem.copy': 'Copiar texto',
+    'lorem.save': 'Salvar texto UTF-8',
+    'lorem.copied': 'Texto copiado.',
+    'lorem.saved': 'Texto salvo.',
+    'error.lorem.validation': 'Escolha palavras, frases ou parágrafos e uma quantidade inteira positiva.',
+    'error.lorem.resource':
+        'A geração de texto excedeu os recursos disponíveis.',
+    'error.lorem.outputAccess':
+        'Não foi possível salvar ou escrever o texto gerado.',
+    'error.lorem.clipboardWrite': 'Não foi possível copiar o texto gerado.',
+
     "cli.checksumGenerateUsage": "Uso: chimera checksum generate [--input <texto> | --file <caminho> | --stdin] [--algorithm crc32|adler32] [--output <caminho>] [--json]. Padrão: crc32. Texto usa UTF-8 exato; arquivo/stdin são bytes exatos. JSON: algorithm, checksum (oito caracteres hexadecimais minúsculos). Arquivos salvos contêm a soma e um LF.",
     "checksumGenerate.pageTitle": "Gerar soma de verificação",
     "checksumGenerate.openAction": "Gerar soma de verificação",
