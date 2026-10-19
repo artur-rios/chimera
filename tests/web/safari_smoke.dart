@@ -2934,23 +2934,30 @@ Future<void> _clickCheckbox(WebDriver driver, String text) async {
   }, 'Checkbox did not become selected: $text');
 }
 
+const _textBoxElementScript = r'''
+  const label = arguments[0];
+  const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
+    .find(element => element.getAttribute('aria-label') === label);
+  return input && !input.disabled ? input : null;
+''';
+
 Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
   for (var attempt = 0; attempt < 3; attempt++) {
     await _waitUntil(() async {
-      final result = await driver.execute(
-        '''
-          const label = arguments[0];
-          const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
-            .find(element => element.getAttribute('aria-label') === label);
-          if (!input) return false;
-          input.focus();
-          input.select();
-          return document.activeElement === input;
-        ''',
-        <Object?>[label],
-      );
-      return result == true;
+      final input = await driver.execute(_textBoxElementScript, <Object?>[
+        label,
+      ]);
+      if (input is! WebElement) return false;
+      // DOM focus/select can update semantics without activating Dart editing.
+      await input.click();
+      return await driver.execute(
+            'return document.activeElement === arguments[0];',
+            <Object?>[input],
+          ) ==
+          true;
     }, 'Text box did not become active: $label');
+    // Native Safari runs on macOS. sendChord releases both A and Command.
+    await driver.keyboard.sendChord(<String>[Keyboard.command, 'a']);
 
     var entered = '';
     var attemptSucceeded = true;

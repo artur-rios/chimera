@@ -18,6 +18,7 @@ const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.
 
 // Run the native Safari helper's actual observation body against Flutter.
 const safariHarness = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8');
+const safariTextBoxElementScript = safariHarness.match(/const _textBoxElementScript = r'''([\s\S]*?)''';/)[1];
 const safariInputObservation = safariHarness
   .split('Future<bool> _inputHasValue(')[1]
   .match(/driver\.execute\(\s*'''([\s\S]*?)'''/)[1];
@@ -1351,6 +1352,54 @@ test('cron flow calculates locally without external requests', async ({ page }) 
     page.getByText(/Next: 2026-01-06T09:00:00.000\+00:00/).last(),
   ).toBeVisible();
   expect(externalRequests).toEqual([]);
+});
+
+test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesDetermineExactOccurrences', async ({ page }) => {
+  const requests = [];
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  // Match Safari's semantics navigation without a preceding pointer gesture.
+  await page.getByRole('button', { name: 'Parse a cron expression', exact: true })
+    .evaluate(node => node.click());
+  await expect(page.getByRole('textbox', { name: 'Reference instant', exact: true })).toBeVisible();
+  await page.context().setOffline(true);
+  page.on('request', request => recordHttpRequest(request, requests));
+  for (const [label, value] of [
+    ['Cron expression', '0 9 * * MON-FRI'],
+    ['Time zone', 'UTC'],
+    ['Occurrence count', '1'],
+    ['Reference instant', '2026-01-05T12:00:00Z'],
+  ]) {
+    // Resolve the exact element returned to SafariDriver, then use real native
+    // input actions. ControlOrMeta maps Select All to the browser's platform.
+    const handle = await page.evaluateHandle(({ script, label }) =>
+      new Function(script)(label), { script: safariTextBoxElementScript, label });
+    const editor = handle.asElement();
+    expect(editor).not.toBeNull();
+    await editor.click();
+    await page.keyboard.press('ControlOrMeta+A');
+    let entered = '';
+    for (const character of value) {
+      await page.keyboard.type(character);
+      entered += character;
+      await expect.poll(() => page.evaluate(({ script, label, value }) =>
+        new Function(script)(label, value, false),
+      { script: safariInputObservation, label, value: entered }), { timeout: 3000 }).toBe(true);
+    }
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('textbox', { name: label, exact: true })).toHaveValue(value);
+    await handle.dispose();
+  }
+  await page.getByRole('button', { name: 'Calculate occurrences', exact: true })
+    .evaluate(node => node.click());
+  const result = page.locator('span', { hasText: /^Cron schedule:/ }).last();
+  await expect(result).toContainText('Cron schedule: 0 9 * * 1-5');
+  await expect(result).toContainText('Previous: 2026-01-05T09:00:00.000+00:00');
+  await expect(result).toContainText('Next: 2026-01-06T09:00:00.000+00:00');
+  const text = await result.textContent();
+  expect(text.match(/Previous: /g)).toHaveLength(1);
+  expect(text.match(/Next: /g)).toHaveLength(1);
+  expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
 });
 
 test('date flow converts locally without external requests', async ({ page }) => {
