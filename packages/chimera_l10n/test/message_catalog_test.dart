@@ -159,6 +159,66 @@ void main() {
   });
 
   test(
+    'GivenUrlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      for (final locale in supportedLocaleTags) {
+        for (final name in [
+          'pageTitle',
+          'openAction',
+          'inputLabel',
+          'fileAction',
+          'pasteAction',
+          'modeLabel',
+          'modeComponent',
+          'modeFull',
+          'submitAction',
+          'outputLabel',
+          'resultSuccess',
+          'copyAction',
+          'saveAction',
+          'copiedResult',
+          'fileSaved',
+        ]) {
+          final key = 'urlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+        for (final name in [
+          'clipboardRead',
+          'clipboardWrite',
+          'interactiveInputAccess',
+        ]) {
+          final key = 'error.urlEncode.$name';
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test('GivenUrlEncodeCliMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = {
+      'cli.urlEncodeUsage',
+      'urlEncode.savedResult',
+      'error.urlEncode.validation',
+      'error.urlEncode.inputAccess',
+      'error.urlEncode.fileAccess',
+      'error.urlEncode.outputAccess',
+      'error.urlEncode.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+    expect(
+      catalog.lookup('pt-BR', 'error.urlEncode.resource'),
+      'A codificação URL excedeu o limite de recursos.',
+    );
+  });
+
+  test(
     'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       for (final locale in supportedLocaleTags) {
@@ -798,6 +858,31 @@ void main() {
       'error.jwtCreate.clipboardRead',
       'error.jwtCreate.clipboardWrite',
       'error.jwtCreate.interactiveInputAccess',
+      'urlEncode.pageTitle',
+      'urlEncode.openAction',
+      'urlEncode.inputLabel',
+      'urlEncode.fileAction',
+      'urlEncode.pasteAction',
+      'urlEncode.modeLabel',
+      'urlEncode.modeComponent',
+      'urlEncode.modeFull',
+      'urlEncode.submitAction',
+      'urlEncode.outputLabel',
+      'urlEncode.resultSuccess',
+      'urlEncode.copyAction',
+      'urlEncode.saveAction',
+      'urlEncode.copiedResult',
+      'urlEncode.fileSaved',
+      'error.urlEncode.clipboardRead',
+      'error.urlEncode.clipboardWrite',
+      'error.urlEncode.interactiveInputAccess',
+      'cli.urlEncodeUsage',
+      'urlEncode.savedResult',
+      'error.urlEncode.validation',
+      'error.urlEncode.inputAccess',
+      'error.urlEncode.fileAccess',
+      'error.urlEncode.outputAccess',
+      'error.urlEncode.resource',
       'htmlEncode.pageTitle',
       'htmlEncode.openAction',
       'htmlEncode.inputLabel',

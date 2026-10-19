@@ -33,6 +33,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_encode_page.dart';
 import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
@@ -66,6 +67,12 @@ final class ChimeraApp extends StatelessWidget {
     this.htmlEncodeClipboardWriter,
     this.htmlEncodeFileSaver,
     this.htmlEncodeOutputEncoder,
+    this.urlEncodeService = const UrlEncodeService(),
+    this.urlEncodeFilePicker,
+    this.urlEncodeClipboardReader,
+    this.urlEncodeClipboardWriter,
+    this.urlEncodeFileSaver,
+    this.urlEncodeOutputEncoder,
     this.gzipCompressService = const GzipCompressService(),
     this.gzipCompressFilePicker,
     this.gzipCompressClipboardReader,
@@ -203,6 +210,12 @@ final class ChimeraApp extends StatelessWidget {
   final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
   final HtmlEncodeFileSaver? htmlEncodeFileSaver;
   final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
+  final UrlEncodeOperationService urlEncodeService;
+  final UrlEncodeFilePicker? urlEncodeFilePicker;
+  final UrlEncodeClipboardReader? urlEncodeClipboardReader;
+  final UrlEncodeClipboardWriter? urlEncodeClipboardWriter;
+  final UrlEncodeFileSaver? urlEncodeFileSaver;
+  final UrlEncodeOutputEncoder? urlEncodeOutputEncoder;
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
   final GzipCompressClipboardReader? gzipCompressClipboardReader;
@@ -334,6 +347,12 @@ final class ChimeraApp extends StatelessWidget {
         htmlEncodeClipboardWriter: htmlEncodeClipboardWriter,
         htmlEncodeFileSaver: htmlEncodeFileSaver,
         htmlEncodeOutputEncoder: htmlEncodeOutputEncoder,
+        urlEncodeService: urlEncodeService,
+        urlEncodeFilePicker: urlEncodeFilePicker,
+        urlEncodeClipboardReader: urlEncodeClipboardReader,
+        urlEncodeClipboardWriter: urlEncodeClipboardWriter,
+        urlEncodeFileSaver: urlEncodeFileSaver,
+        urlEncodeOutputEncoder: urlEncodeOutputEncoder,
         gzipCompressService: gzipCompressService,
         gzipCompressFilePicker: gzipCompressFilePicker,
         gzipCompressClipboardReader: gzipCompressClipboardReader,
@@ -468,6 +487,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.htmlEncodeClipboardWriter,
     required this.htmlEncodeFileSaver,
     required this.htmlEncodeOutputEncoder,
+    required this.urlEncodeService,
+    required this.urlEncodeFilePicker,
+    required this.urlEncodeClipboardReader,
+    required this.urlEncodeClipboardWriter,
+    required this.urlEncodeFileSaver,
+    required this.urlEncodeOutputEncoder,
     required this.gzipCompressService,
     required this.gzipCompressFilePicker,
     required this.gzipCompressClipboardReader,
@@ -692,6 +717,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
   final HtmlEncodeFileSaver? htmlEncodeFileSaver;
   final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
+  final UrlEncodeOperationService urlEncodeService;
+  final UrlEncodeFilePicker? urlEncodeFilePicker;
+  final UrlEncodeClipboardReader? urlEncodeClipboardReader;
+  final UrlEncodeClipboardWriter? urlEncodeClipboardWriter;
+  final UrlEncodeFileSaver? urlEncodeFileSaver;
+  final UrlEncodeOutputEncoder? urlEncodeOutputEncoder;
 
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
@@ -752,6 +783,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       htmlEncodeFileSaver: widget.htmlEncodeFileSaver ?? saveHtmlEncodeFile,
       htmlEncodeOutputEncoder:
           widget.htmlEncodeOutputEncoder ?? encodeHtmlEncodeOutput,
+      urlEncodeService: widget.urlEncodeService,
+      urlEncodeFilePicker: widget.urlEncodeFilePicker ?? pickUrlEncodeFile,
+      urlEncodeClipboardReader:
+          widget.urlEncodeClipboardReader ?? readUrlEncodeClipboard,
+      urlEncodeClipboardWriter:
+          widget.urlEncodeClipboardWriter ?? writeUrlEncodeClipboard,
+      urlEncodeFileSaver: widget.urlEncodeFileSaver ?? saveUrlEncodeFile,
+      urlEncodeOutputEncoder:
+          widget.urlEncodeOutputEncoder ?? encodeUrlEncodeOutput,
       gzipCompressService: widget.gzipCompressService,
       gzipCompressFilePicker:
           widget.gzipCompressFilePicker ?? pickGzipCompressFile,

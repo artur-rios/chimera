@@ -4,7 +4,11 @@ import 'dart:io';
 import 'package:args/args.dart';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
+import 'package:chimera_platform/transactional_file_writer.dart'
+    as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
+
+import 'output_sink.dart';
 
 typedef TextReader = Future<String> Function();
 typedef FileTextReader = Future<String> Function(String path);
@@ -17,19 +21,8 @@ typedef CopyFile = Future<void> Function(File source, File destination);
 typedef RenameFile = Future<void> Function(File source, String destinationPath);
 typedef DeleteFile = Future<void> Function(File file);
 
-final class TransactionalFileOperations {
-  const TransactionalFileOperations({
-    this.tryReserve,
-    this.copy,
-    this.rename,
-    this.delete,
-  });
-
-  final TryReserveFile? tryReserve;
-  final CopyFile? copy;
-  final RenameFile? rename;
-  final DeleteFile? delete;
-}
+// Preserve the public CLI test/injection contract while sharing native writes.
+typedef TransactionalFileOperations = native_output.FileTransactionOperations;
 
 Future<int> runChimera(
   List<String> args, {
@@ -55,6 +48,8 @@ Future<int> runChimera(
   JsonObjectEncoder? htmlDecodeJsonEncoder,
   HtmlEncodeService htmlEncodeService = const HtmlEncodeService(),
   JsonObjectEncoder? htmlEncodeJsonEncoder,
+  UrlEncodeService urlEncodeService = const UrlEncodeService(),
+  JsonObjectEncoder? urlEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -111,6 +106,9 @@ Future<int> runChimera(
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.htmlEncodeUsage'
+          : parsed.command?.name == 'url' &&
+                parsed.command?.command?.name == 'encode'
+          ? 'cli.urlEncodeUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
@@ -256,6 +254,29 @@ Future<int> runChimera(
             ),
         service: htmlEncodeService,
         encodeJson: htmlEncodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'url' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runUrlEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: urlEncodeService,
+        encodeJson: urlEncodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'gzip' &&
@@ -617,6 +638,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
     final isHtmlDecode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'decode';
+    final isUrlEncode =
+        args.length >= 2 && args[0] == 'url' && args[1] == 'encode';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -671,6 +694,7 @@ Future<int> runChimera(
               isJwtCreate ||
               isHtmlDecode ||
               isHtmlEncode ||
+              isUrlEncode ||
               isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
@@ -706,6 +730,8 @@ Future<int> runChimera(
           ? 'html-decode.invalid-options'
           : isHtmlEncode
           ? 'html-encode.invalid-options'
+          : isUrlEncode
+          ? 'url-encode.invalid-options'
           : isGzipCompress
           ? 'gzip-compress.invalid-options'
           : isGzipDecompress
@@ -761,6 +787,8 @@ Future<int> runChimera(
           ? 'error.htmlDecode.validation'
           : isHtmlEncode
           ? 'error.htmlEncode.validation'
+          : isUrlEncode
+          ? 'error.urlEncode.validation'
           : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
@@ -863,6 +891,14 @@ ArgParser _buildParser() {
     ..addOption('context', defaultsTo: 'all')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final urlEncode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('mode', defaultsTo: 'component')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final url = ArgParser()..addCommand('encode', urlEncode);
   final html = ArgParser()
     ..addCommand('decode', htmlDecode)
     ..addCommand('encode', htmlEncode);
@@ -1048,6 +1084,7 @@ ArgParser _buildParser() {
     ..addCommand('date', date)
     ..addCommand('gzip', gzip)
     ..addCommand('html', html)
+    ..addCommand('url', url)
     ..addCommand('json', json)
     ..addCommand('jwt', jwt)
     ..addCommand('list', list)
@@ -2842,6 +2879,158 @@ Future<int> _runHtmlEncode(
       }
       try {
         out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runUrlEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required UrlEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final mode = parsed.option('mode')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !const ['component', 'full'].contains(mode)
+      ? 'invalid-mode'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'url-encode.$invalid',
+      messageKey: 'error.urlEncode.validation',
+      details: invalid == 'invalid-mode'
+          ? {'field': 'mode', 'reason': 'unsupported-mode'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'url-encode.resource-limit',
+    messageKey: 'error.urlEncode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'url-encode.output-access',
+    messageKey: 'error.urlEncode.outputAccess',
+  );
+
+  late UrlEncodeOperationRequest request;
+  try {
+    request = text != null
+        ? UrlEncodeOperationRequest.text(text, mode: mode)
+        : UrlEncodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            mode: mode,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'url-encode.input-access'
+          : 'url-encode.file-access',
+      messageKey: useStandardInput
+          ? 'error.urlEncode.inputAccess'
+          : 'error.urlEncode.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'urlEncode.savedResult')}\n'
+            : value.encoded;
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.encoded));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;
@@ -4990,178 +5179,18 @@ Future<void> _writeFileExactly(String path, List<int> bytes) async {
   }
 }
 
-var _transactionFileSequence = 0;
-
 Future<void> _writeFileTransactionally(
   String path,
   List<int> bytes, {
   required FileBytesWriter writeStage,
   required TransactionalFileOperations operations,
-}) async {
-  final target = File(path);
-  final stage = await _reserveTransactionSibling(target, 'stage', operations);
-  File? backup;
-  try {
-    await writeStage(stage.path, bytes);
-    if (!await stage.exists()) {
-      throw const FileSystemException('Output stage was not created');
-    }
+}) => native_output.TransactionalFileWriter(
+  writeStage: writeStage,
+  operations: operations,
+).write(path, bytes);
 
-    final hadTarget = await target.exists();
-    if (hadTarget) {
-      backup = await _reserveTransactionSibling(target, 'backup', operations);
-      await _copyTransactionFile(target, backup, operations);
-      await _deleteTransactionFile(target, operations);
-    }
-
-    try {
-      await _renameTransactionFile(stage, target.path, operations);
-    } on Object catch (error, stackTrace) {
-      await _restoreTransactionTarget(
-        target,
-        backup: backup,
-        hadTarget: hadTarget,
-        operations: operations,
-      );
-      backup = null;
-      Error.throwWithStackTrace(error, stackTrace);
-    }
-
-    if (backup != null) {
-      try {
-        await _deleteTransactionFile(backup, operations);
-        backup = null;
-      } on Object catch (error, stackTrace) {
-        await _restoreTransactionTarget(
-          target,
-          backup: backup,
-          hadTarget: true,
-          operations: operations,
-        );
-        backup = null;
-        Error.throwWithStackTrace(error, stackTrace);
-      }
-    }
-  } on Object catch (error, stackTrace) {
-    await _deleteTransactionFileIfPresent(stage, operations);
-    if (backup != null) {
-      if (await target.exists()) {
-        await _deleteTransactionFileIfPresent(backup, operations);
-      } else {
-        await _renameTransactionFile(backup, target.path, operations);
-      }
-    }
-    Error.throwWithStackTrace(error, stackTrace);
-  }
-}
-
-Future<File> _reserveTransactionSibling(
-  File target,
-  String role,
-  TransactionalFileOperations operations,
-) async {
-  while (true) {
-    final sequence = _transactionFileSequence++;
-    final candidate = File(
-      '${target.parent.path}${Platform.pathSeparator}'
-      '.chimera-$role-$pid-$sequence',
-    );
-    final reserved =
-        await (operations.tryReserve ?? _tryReserveTransactionFile)(candidate);
-    if (reserved) return candidate;
-  }
-}
-
-Future<void> _writeFileStageExactly(String path, List<int> bytes) async {
-  final stage = File(path);
-  await stage.writeAsBytes(bytes, flush: true);
-}
-
-Future<bool> _tryReserveTransactionFile(File candidate) async {
-  try {
-    await candidate.create(exclusive: true);
-    return true;
-  } on FileSystemException catch (error) {
-    if (switch (error.osError?.errorCode) {
-      17 || 80 || 183 => true,
-      _ => false,
-    }) {
-      return false;
-    }
-    rethrow;
-  }
-}
-
-Future<void> _copyTransactionFile(
-  File source,
-  File destination,
-  TransactionalFileOperations operations,
-) => (operations.copy ?? _copyTransactionFileFlushed)(source, destination);
-
-Future<void> _copyTransactionFileFlushed(File source, File destination) async {
-  final input = await source.open();
-  final output = await destination.open(mode: FileMode.write);
-  try {
-    while (true) {
-      final chunk = await input.read(64 * 1024);
-      if (chunk.isEmpty) break;
-      await output.writeFrom(chunk);
-    }
-    await output.flush();
-  } finally {
-    await input.close();
-    await output.close();
-  }
-}
-
-Future<void> _renameTransactionFile(
-  File source,
-  String destinationPath,
-  TransactionalFileOperations operations,
-) async {
-  final rename = operations.rename;
-  if (rename != null) {
-    await rename(source, destinationPath);
-  } else {
-    await source.rename(destinationPath);
-  }
-}
-
-Future<void> _deleteTransactionFile(
-  File file,
-  TransactionalFileOperations operations,
-) async {
-  final delete = operations.delete;
-  if (delete != null) {
-    await delete(file);
-  } else {
-    await file.delete();
-  }
-}
-
-Future<void> _deleteTransactionFileIfPresent(
-  File file,
-  TransactionalFileOperations operations,
-) async {
-  if (await file.exists()) {
-    await _deleteTransactionFile(file, operations);
-  }
-}
-
-Future<void> _restoreTransactionTarget(
-  File target, {
-  required File? backup,
-  required bool hadTarget,
-  required TransactionalFileOperations operations,
-}) async {
-  await _deleteTransactionFileIfPresent(target, operations);
-  if (hadTarget) {
-    if (backup == null || !await backup.exists()) {
-      throw const FileSystemException('Output backup is unavailable');
-    }
-    await _renameTransactionFile(backup, target.path, operations);
-  }
-}
+Future<void> _writeFileStageExactly(String path, List<int> bytes) =>
+    native_output.writeFileStageExactly(path, bytes);
 
 Future<int> _runJsonArrayToTable(
   ArgResults parsed, {

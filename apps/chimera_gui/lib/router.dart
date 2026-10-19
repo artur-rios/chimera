@@ -29,6 +29,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_encode_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -61,6 +62,12 @@ GoRouter buildRouter({
   required HtmlEncodeClipboardWriter htmlEncodeClipboardWriter,
   required HtmlEncodeFileSaver htmlEncodeFileSaver,
   required HtmlEncodeOutputEncoder htmlEncodeOutputEncoder,
+  required UrlEncodeOperationService urlEncodeService,
+  required UrlEncodeFilePicker urlEncodeFilePicker,
+  required UrlEncodeClipboardReader urlEncodeClipboardReader,
+  required UrlEncodeClipboardWriter urlEncodeClipboardWriter,
+  required UrlEncodeFileSaver urlEncodeFileSaver,
+  required UrlEncodeOutputEncoder urlEncodeOutputEncoder,
   required GzipCompressOperationService gzipCompressService,
   required GzipCompressFilePicker gzipCompressFilePicker,
   required GzipCompressClipboardReader gzipCompressClipboardReader,
@@ -233,6 +240,19 @@ GoRouter buildRouter({
           clipboardWriter: htmlEncodeClipboardWriter,
           fileSaver: htmlEncodeFileSaver,
           outputEncoder: htmlEncodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/url/encode',
+        builder: (context, state) => UrlEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: urlEncodeService,
+          filePicker: urlEncodeFilePicker,
+          clipboardReader: urlEncodeClipboardReader,
+          clipboardWriter: urlEncodeClipboardWriter,
+          fileSaver: urlEncodeFileSaver,
+          outputEncoder: urlEncodeOutputEncoder,
         ),
       ),
       GoRoute(
@@ -458,6 +478,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/html/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'htmlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-url-encode'),
+                        onPressed: () => context.go('/url/encode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'urlEncode.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

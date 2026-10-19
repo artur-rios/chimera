@@ -26,4 +26,5 @@ export 'src/text_compare/text_comparer.dart';
 export 'src/text_escape/text_escaper.dart';
 export 'src/text_transform/text_transformer.dart';
 export 'src/text_unescape/text_unescaper.dart';
+export 'src/url/url_encoder.dart';
 export 'src/xml_format/xml_formatter.dart';
