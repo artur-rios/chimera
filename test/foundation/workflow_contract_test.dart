@@ -97,19 +97,26 @@ void main() {
     expect(continuousIntegration, contains('target: windows'));
     expect(continuousIntegration, contains('os: ubuntu-latest'));
     expect(continuousIntegration, contains('target: linux'));
-    expect(
-      continuousIntegration,
-      contains('working-directory: apps/chimera_gui'),
-      reason: 'Flutter integration tests must run from the GUI package.',
+    final workflow = loadYaml(continuousIntegration) as YamlMap;
+    final jobs = workflow['jobs'] as YamlMap;
+    final native = jobs['native-tests'] as YamlMap;
+    final steps = (native['steps'] as YamlList).cast<YamlMap>();
+    final windows = steps.singleWhere(
+      (step) => step['name'] == 'Test Windows integration',
     );
-    expect(
-      continuousIntegration,
-      contains('flutter test integration_test -d windows'),
+    final linux = steps.singleWhere(
+      (step) => step['name'] == 'Test Linux integration',
     );
+    expect(windows['run'], 'dart run tool/run_native_gui_tests.dart windows');
     expect(
-      continuousIntegration,
-      contains('flutter test integration_test -d linux'),
+      linux['run'],
+      'xvfb-run -a dart run tool/run_native_gui_tests.dart linux',
     );
+    expect(windows['working-directory'], isNull);
+    expect(linux['working-directory'], isNull);
+    final local = _readNormalized('tool/run_gui_tests.dart');
+    expect(local, contains("const <String>['test', 'test']"));
+    expect(local, contains('runNativeGuiTests(device: device)'));
     expect(
       continuousIntegration,
       contains(
