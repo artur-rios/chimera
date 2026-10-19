@@ -1330,6 +1330,7 @@ Future<void> _decodeQr(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'QR decoding/copy/save/validation',
+    allowFontFallback: true,
   );
 }
 
@@ -2498,19 +2499,34 @@ Future<void> _assertNoResourceRequests(
   }
 }
 
+// Shared with Playwright; other flows keep rejecting every HTTP request.
+const _networkRequestPolicyScript = r'''
+  const urls = arguments[0] ?? performance.getEntriesByType('resource').map(entry => entry.name);
+  const applicationOrigin = new URL(arguments[1] ?? location.href).origin;
+  const allowFontFallback = arguments[2] === true;
+  return urls.filter(value => {
+    let url;
+    try { url = new URL(value); } catch { return true; }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const fontPath = /^\/font-fallback\/[a-z0-9]+\/v[0-9]+\/[A-Za-z0-9_.-]+\.woff2$/;
+    const allowedFont = allowFontFallback && url.origin === applicationOrigin &&
+      !url.username && !url.password && !url.search && !url.hash &&
+      !value.includes('%') && fontPath.test(url.pathname);
+    return !allowedFont;
+  });
+''';
+
 Future<void> _assertNoNetworkRequests(
   WebDriver driver, {
   required String flow,
+  bool allowFontFallback = false,
 }) async {
   final resourceUrls = await driver.execute(
-    "return performance.getEntriesByType('resource').map(entry => entry.name);",
-    const <Object?>[],
+    _networkRequestPolicyScript,
+    <Object?>[null, null, allowFontFallback],
   );
   final urls = resourceUrls is List
-      ? resourceUrls.map((entry) => entry.toString()).where((url) {
-          final scheme = Uri.parse(url).scheme;
-          return scheme == 'http' || scheme == 'https';
-        }).toList()
+      ? resourceUrls.map((entry) => entry.toString()).toList()
       : <String>[];
   if (urls.isNotEmpty) {
     throw StateError('Safari $flow made network requests: $urls');

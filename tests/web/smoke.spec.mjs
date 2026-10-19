@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test';
 import { createHmac, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
+import { networkPolicyCases, networkRequestPolicyScript, unexpectedHttpRequests } from './network_policy.mjs';
+
+for (const value of networkPolicyCases) {
+  test(`GivenNetworkPolicy${value.name}_WhenRequestsAreChecked_ThenOnlyUnexpectedRequestsRemain`, async ({ page }) => {
+    const actual = await page.evaluate(({ script, value }) =>
+      new Function(script)(value.urls, value.applicationUrl, value.allow),
+    { script: networkRequestPolicyScript, value });
+    expect(actual).toEqual(value.expected);
+  });
+}
 
 // The native Safari harness executes this exact source, resolved from its script.
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
@@ -1977,5 +1987,5 @@ test('QR decoding reads a local image, copies and saves exact Unicode, and rejec
   await page.getByRole('button', { name: 'Decode QR', exact: true }).click();
   await expect(page.locator('span', { hasText: /^The image could not be decoded as a QR code\.$/ })).toBeVisible();
   await expect(page.getByRole('region', { name: /Decoded QR result/ })).toHaveCount(0);
-  expect(requests.filter(url => !new URL(url).pathname.startsWith('/font-fallback/'))).toEqual([]);
+  expect(unexpectedHttpRequests(requests, page.url(), true)).toEqual([]);
 });
