@@ -65,6 +65,8 @@ Future<int> runChimera(
   JsonObjectEncoder? jwtCreateJsonEncoder,
   JwtInspectService jwtInspectService = const JwtInspectService(),
   JsonObjectEncoder? jwtInspectJsonEncoder,
+  QrEncodeService qrEncodeService = const QrEncodeService(),
+  JsonObjectEncoder? qrEncodeJsonEncoder,
   CronService cronService = const CronService(),
   DateService dateService = const DateService(),
   JsonCsvService jsonCsvService = const JsonCsvService(),
@@ -89,8 +91,11 @@ Future<int> runChimera(
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
       final key =
-          parsed.command?.name == 'jwt' &&
-              parsed.command?.command?.name == 'inspect'
+          parsed.command?.name == 'qr' &&
+              parsed.command?.command?.name == 'encode'
+          ? 'cli.qrEncodeUsage'
+          : parsed.command?.name == 'jwt' &&
+                parsed.command?.command?.name == 'inspect'
           ? 'cli.jwtInspectUsage'
           : parsed.command?.name == 'jwt' &&
                 parsed.command?.command?.name == 'create'
@@ -117,6 +122,29 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'qr' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runQrEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readQrEncodeStandardInputBytes,
+        readFileBytes: readFileBytes ?? _readQrEncodeFileBytes,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: qrEncodeService,
+        encodeJson: qrEncodeJsonEncoder ?? jsonEncode,
+      );
     }
     if (parsed.command!.name == 'jwt' &&
         parsed.command!.command?.name == 'create') {
@@ -551,6 +579,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isQrEncode =
+        args.length >= 2 && args[0] == 'qr' && args[1] == 'encode';
     final isJwtInspect =
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'inspect';
     final isJwtCreate =
@@ -605,7 +635,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isJwtInspect ||
+          (isQrEncode ||
+              isJwtInspect ||
               isJwtCreate ||
               isHtmlDecode ||
               isHtmlEncode ||
@@ -632,7 +663,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isJwtInspect
+      code: isQrEncode
+          ? 'qr-encode.invalid-options'
+          : isJwtInspect
           ? 'jwt-inspect.invalid-options'
           : isJwtCreate
           ? 'jwt-create.invalid-options'
@@ -683,7 +716,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isJwtInspect
+      messageKey: isQrEncode
+          ? 'error.qrEncode.validation'
+          : isJwtInspect
           ? 'error.jwtInspect.validation'
           : isJwtCreate
           ? 'error.jwtCreate.validation'
@@ -761,6 +796,18 @@ ArgParser _buildParser() {
   final jwt = ArgParser()
     ..addCommand('create', jwtCreate)
     ..addCommand('inspect', jwtInspect);
+  final qrEncode = ArgParser()
+    ..addOption('text')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('error-correction', defaultsTo: 'medium')
+    ..addOption('size', defaultsTo: '512')
+    ..addOption('margin', defaultsTo: '4')
+    ..addOption('foreground', defaultsTo: '#000000')
+    ..addOption('background', defaultsTo: '#FFFFFF')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final qr = ArgParser()..addCommand('encode', qrEncode);
   final htmlDecode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -963,9 +1010,247 @@ ArgParser _buildParser() {
     ..addCommand('jwt', jwt)
     ..addCommand('list', list)
     ..addCommand('number', number)
+    ..addCommand('qr', qr)
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runQrEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required QrEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('text');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final correction = switch (parsed.option('error-correction')) {
+    'low' => QrErrorCorrection.low,
+    'medium' => QrErrorCorrection.medium,
+    'quartile' => QrErrorCorrection.quartile,
+    'high' => QrErrorCorrection.high,
+    _ => null,
+  };
+  final sizeText = parsed.option('size')!;
+  final marginText = parsed.option('margin')!;
+  final size = RegExp(r'^[0-9]+$').hasMatch(sizeText)
+      ? int.tryParse(sizeText)
+      : null;
+  final margin = RegExp(r'^[0-9]+$').hasMatch(marginText)
+      ? int.tryParse(marginText)
+      : null;
+  final foreground = parsed.option('foreground')!;
+  final background = parsed.option('background')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid =
+      parsed.rest.isNotEmpty ||
+          outputPath == '' ||
+          file == '' ||
+          foreground.isEmpty ||
+          background.isEmpty
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : correction == null
+      ? 'invalid-error-correction'
+      : size == null
+      ? 'invalid-size'
+      : margin == null
+      ? 'invalid-margin'
+      : outputPath == null && !json
+      ? 'output-required'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'qr-encode.$invalid',
+      messageKey: 'error.qrEncode.validation',
+    );
+    return 64;
+  }
+
+  late final String input;
+  if (text != null) {
+    input = text;
+  } else {
+    try {
+      final bytes = useStandardInput
+          ? await readStandardInputBytes()
+          : await readFileBytes(file!);
+      if (bytes.length > QrEncoder.defaultMaxInputBytes) {
+        _clearBytes(bytes);
+        throw const _QrEncodeInputLimit();
+      }
+      input = utf8.decode(bytes, allowMalformed: false);
+    } on _QrEncodeInputLimit {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'resource',
+        code: 'qr-encode.resource-limit',
+        messageKey: 'error.qrEncode.resource',
+        details: const <String, Object?>{
+          'field': 'input',
+          'reason': 'byte-limit',
+        },
+      );
+      return 75;
+    } on FormatException {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'validation',
+        code: 'qr-encode.invalid-input',
+        messageKey: 'error.qrEncode.validation',
+        details: const <String, Object?>{
+          'field': 'input',
+          'reason': 'invalid-utf8',
+        },
+      );
+      return 64;
+    } on OutOfMemoryError {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'resource',
+        code: 'qr-encode.resource-limit',
+        messageKey: 'error.qrEncode.resource',
+        details: const <String, Object?>{
+          'field': 'input',
+          'reason': 'allocation-limit',
+        },
+      );
+      return 75;
+    } on Object {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: 'access',
+        code: useStandardInput
+            ? 'qr-encode.input-access'
+            : 'qr-encode.file-access',
+        messageKey: useStandardInput
+            ? 'error.qrEncode.inputAccess'
+            : 'error.qrEncode.fileAccess',
+      );
+      return 74;
+    }
+  }
+
+  final result = await service.execute(
+    QrEncodeOperationRequest(
+      text: input,
+      errorCorrection: correction!,
+      size: size!,
+      quietZoneModules: margin!,
+      foreground: foreground,
+      background: background,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      late final String stdoutPayload;
+      try {
+        if (json) {
+          stdoutPayload = '${encodeJson(value.toJson())}\n';
+        } else {
+          stdoutPayload =
+              '${catalog.lookup(localeTag, 'qrEncode.savedResult').replaceAll('{size}', '${value.size}').replaceAll('{version}', '${value.version}').replaceAll('{errorCorrection}', catalog.lookup(localeTag, 'qrEncode.correction.${value.errorCorrection.name}')).replaceAll('{outputByteCount}', '${value.outputByteCount}')}\n';
+        }
+      } on OutOfMemoryError {
+        _writeFailure(
+          err,
+          catalog: catalog,
+          localeTag: localeTag,
+          json: json,
+          kind: 'resource',
+          code: 'qr-encode.resource-limit',
+          messageKey: 'error.qrEncode.resource',
+          details: const <String, Object?>{
+            'field': 'output',
+            'reason': 'allocation-limit',
+          },
+        );
+        return 75;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, value.pngBytes);
+        } on OutOfMemoryError {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'resource',
+            code: 'qr-encode.resource-limit',
+            messageKey: 'error.qrEncode.resource',
+            details: const <String, Object?>{
+              'field': 'output',
+              'reason': 'allocation-limit',
+            },
+          );
+          return 75;
+        } on Object {
+          _writeFailure(
+            err,
+            catalog: catalog,
+            localeTag: localeTag,
+            json: json,
+            kind: 'access',
+            code: 'qr-encode.output-access',
+            messageKey: 'error.qrEncode.outputAccess',
+          );
+          return 74;
+        }
+      }
+      out.write(stdoutPayload);
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return switch (failure.kind) {
+        FailureKind.validation || FailureKind.range => 64,
+        FailureKind.resource => 75,
+        _ => 70,
+      };
+    },
+  );
 }
 
 Future<int> _runCertificateConvert(
@@ -2752,6 +3037,43 @@ void _writeBase64ResourceFailure(
 
 Future<List<int>> _readStandardInputBytes() =>
     stdin.fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+
+final class _QrEncodeInputLimit implements Exception {
+  const _QrEncodeInputLimit();
+}
+
+Future<List<int>> _readQrEncodeFileBytes(String path) async {
+  final file = File(path);
+  if (await file.length() > QrEncoder.defaultMaxInputBytes) {
+    throw const _QrEncodeInputLimit();
+  }
+  return _readQrEncodeChunks(
+    file.openRead(0, QrEncoder.defaultMaxInputBytes + 1),
+  );
+}
+
+Future<List<int>> _readQrEncodeStandardInputBytes() =>
+    _readQrEncodeChunks(stdin);
+
+Future<List<int>> _readQrEncodeChunks(Stream<List<int>> chunks) async {
+  final bytes = <int>[];
+  await for (final chunk in chunks) {
+    if (bytes.length + chunk.length > QrEncoder.defaultMaxInputBytes) {
+      _clearBytes(bytes);
+      throw const _QrEncodeInputLimit();
+    }
+    bytes.addAll(chunk);
+  }
+  return bytes;
+}
+
+void _clearBytes(List<int> bytes) {
+  try {
+    bytes.fillRange(0, bytes.length, 0);
+  } on Object {
+    // Immutable collaborator bytes are released when this scope ends.
+  }
+}
 
 final class _JwtInspectInputLimit implements Exception {
   const _JwtInspectInputLimit();

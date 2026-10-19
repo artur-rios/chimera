@@ -21,6 +21,7 @@ import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
+import 'qr_encode_page.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
 import 'text_compare_page.dart';
@@ -39,6 +40,10 @@ GoRouter buildRouter({
   required JwtInspectFilePicker jwtInspectFilePicker,
   required JwtInspectClipboardReader jwtInspectClipboardReader,
   required JwtInspectClipboardWriter jwtInspectClipboardWriter,
+  required QrEncodeOperationService qrEncodeService,
+  required QrEncodeFilePicker qrEncodeFilePicker,
+  required QrEncodeClipboardReader qrEncodeClipboardReader,
+  required QrEncodeFileSaver qrEncodeFileSaver,
   required HtmlDecodeOperationService htmlDecodeService,
   required HtmlDecodeFilePicker htmlDecodeFilePicker,
   required HtmlDecodeClipboardReader htmlDecodeClipboardReader,
@@ -175,6 +180,17 @@ GoRouter buildRouter({
           filePicker: jwtInspectFilePicker,
           clipboardReader: jwtInspectClipboardReader,
           clipboardWriter: jwtInspectClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/qr/encode',
+        builder: (context, state) => QrEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: qrEncodeService,
+          filePicker: qrEncodeFilePicker,
+          clipboardReader: qrEncodeClipboardReader,
+          fileSaver: qrEncodeFileSaver,
         ),
       ),
       GoRoute(
@@ -450,6 +466,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/jwt/inspect'),
                         child: Text(
                           catalog.lookup(localeTag, 'jwtInspect.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-qr-encode'),
+                        onPressed: () => context.go('/qr/encode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'qrEncode.openAction'),
                         ),
                       ),
                     ],

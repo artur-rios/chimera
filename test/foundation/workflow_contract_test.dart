@@ -64,7 +64,7 @@ void main() {
   );
 
   test('GivenSafariFileInput_WhenBinarySmokeRuns_ThenItIsBoundedAndDoesNotUseTheHangingUploadEndpoint', () {
-    expect(continuousIntegration, contains('timeout-minutes: 5'));
+    expect(continuousIntegration, contains('timeout-minutes: 8'));
     expect(safariSmoke, contains('new DataTransfer()'));
     expect(safariSmoke, contains('new Uint8Array([0x00, 0xff])'));
     expect(safariSmoke, contains("new File([bytes], 'bytes.bin'"));

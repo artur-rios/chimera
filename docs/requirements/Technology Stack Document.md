@@ -66,7 +66,8 @@ implementation of an algorithm.
 | **timezone** | Latest stable at implementation time | Date conversion | Resolves IANA time zones and daylight-saving transitions. |
 | **jose** | Latest stable at implementation time | JWT | Creates, signs, decodes, and verifies tokens locally. |
 | **x509** | Latest stable at implementation time | Certificates | Parses and inspects supported certificate structures. |
-| **qr_flutter** | Latest stable at implementation time | QR encoding | Renders QR images from local text. |
+| **qr** | Latest stable at implementation time | QR encoding | Builds platform-neutral QR matrices from local text. |
+| **image** | Latest stable at implementation time | QR images | Renders shared QR matrices as portable PNG bytes. |
 | **zxing2** | Latest stable at implementation time | QR decoding | Decodes QR images locally. |
 | **diff_match_patch** | Latest stable at implementation time | Text comparison | Produces word- and character-level differences. |
 | **uuid** | Latest stable at implementation time | Identifiers | Generates supported UUID and GUID values. |
@@ -181,7 +182,7 @@ locally built container or the explicitly selected deployment environment.
 | Date and time | timezone | Latest stable at implementation time |
 | Tokens | jose | Latest stable at implementation time |
 | Certificates | x509 | Latest stable at implementation time |
-| QR | qr_flutter | Latest stable at implementation time |
+| QR | qr and image | Latest stable at implementation time |
 | QR | zxing2 | Latest stable at implementation time |
 | Text comparison | diff_match_patch | Latest stable at implementation time |
 | Identifiers | uuid | Latest stable at implementation time |

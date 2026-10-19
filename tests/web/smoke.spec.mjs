@@ -1856,3 +1856,79 @@ test('JWT inspection decodes and verifies HMAC RSA ECDSA and failed signatures l
   )).toEqual([]);
   expect(externalRequests).toEqual([]);
 });
+
+test('QR encoding generates and downloads an exact local PNG then clears invalid state', async ({ page }) => {
+  const externalRequests = [];
+  const interactionRequests = [];
+  let recordInteractions = false;
+  page.on('request', request => {
+    if (
+      recordInteractions &&
+      /^https?:/.test(request.url()) &&
+      new URL(request.url()).hostname !== '127.0.0.1'
+    ) {
+      externalRequests.push(request.url());
+    }
+    if (recordInteractions) recordHttpRequest(request, interactionRequests);
+  });
+
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Encode QR code', exact: true }).click();
+  recordInteractions = true;
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Text to encode', exact: true }),
+    'browser Olá 🌍',
+  );
+  await page.getByRole('button', { name: 'Error correction Medium', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'High', exact: true }).click();
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Image size (pixels)', exact: true }),
+    '256',
+  );
+  await page.getByRole('button', { name: 'Generate QR', exact: true }).click();
+
+  await expect(page.getByRole('region', {
+    name: /QR encoding result QR encoding succeeded\. 256 x 256, QR version \d+, High\./,
+  })).toBeVisible();
+  await expect(page.getByRole('img', {
+    name: 'Generated QR code preview',
+    exact: true,
+  })).toBeVisible();
+  await expect(
+    page.getByRole('textbox', { name: 'Text to encode', exact: true }),
+  ).toHaveValue('');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save PNG', exact: true }).press('Enter');
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe('chimera-qr.png');
+  const stream = await download.createReadStream();
+  const chunks = [];
+  for await (const chunk of stream) chunks.push(chunk);
+  const png = Buffer.concat(chunks);
+  expect(png.subarray(0, 8)).toEqual(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  expect(png.readUInt32BE(16)).toBe(256);
+  expect(png.readUInt32BE(20)).toBe(256);
+
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Text to encode', exact: true }),
+    'discard this source',
+  );
+  await fillFlutterTextBox(
+    page.getByRole('textbox', { name: 'Image size (pixels)', exact: true }),
+    '10',
+  );
+  await page.getByRole('button', { name: 'Generate QR', exact: true }).click();
+  await expect(page.locator('span', {
+    hasText: /^The QR encoding request is invalid\.$/,
+  })).toBeVisible();
+  await expect(page.getByRole('region', { name: /QR encoding result/ })).toHaveCount(0);
+  await expect(
+    page.getByRole('textbox', { name: 'Text to encode', exact: true }),
+  ).toHaveValue('');
+  expect(interactionRequests.filter(
+    url => !new URL(url).pathname.startsWith('/font-fallback/'),
+  )).toEqual([]);
+  expect(externalRequests).toEqual([]);
+});
