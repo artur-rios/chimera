@@ -102,8 +102,8 @@ void main() {
             );
             expect(await outputFile.readAsBytes(), utf8.encode('$expected\n'));
             expect(
-              directory.listSync().map((file) => file.path),
-              unorderedEquals([inputFile.path, outputFile.path]),
+              directory.listSync().map((file) => file.uri),
+              unorderedEquals([inputFile.uri, outputFile.uri]),
             );
             await tester.pumpWidget(const SizedBox());
             await tester.pumpAndSettle();
