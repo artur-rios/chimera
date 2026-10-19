@@ -2768,6 +2768,11 @@ Future<void> _waitUntil(
   throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
 }
 
+// Create invalid UTF-16 after WebDriver has decoded its well-formed request.
+const _checksumInvalidClipboardScript = r'''
+return checksumProbe('setup', String.fromCharCode(0xd800));
+''';
+
 Future<void> _generateChecksum(WebDriver driver) async {
   final source = await File.fromUri(
     Platform.script.resolve('checksum_browser.js'),
@@ -2913,7 +2918,10 @@ Future<void> _generateChecksum(WebDriver driver) async {
         'Checksum file access failure missing',
       );
     } else if (failure == 'validation') {
-      await probe('setup', String.fromCharCode(0xd800));
+      await driver.execute(
+        '$source\n$_checksumInvalidClipboardScript',
+        const <Object?>[],
+      );
       await _clickButton(driver, 'Paste text');
       await _waitUntil(
         () => _pageContains(
