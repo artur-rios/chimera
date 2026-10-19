@@ -601,8 +601,8 @@ busy behavior, stale completion, source changes, disposal, and redacted failure
 messages. Seven Windows integration tests exercise production secure entropy,
 local generation, exact
 character-class constraints, copy/save/discard behavior, validation and secure
-random failures, and zero network access. Eighteen compiled-browser scenarios
+random failures, and zero network access. Twenty-one compiled-browser scenarios
 pass across Chromium, Firefox, and WebKit; the native Safari harness includes
-the same local-generation, production secure-entropy-failure, and no-network
-contract for its mandatory macOS CI job. No automated UC-33 accessibility
-finding remains open.
+the same local-generation, production secure-entropy-failure, resource-limit,
+and no-network contract for its mandatory macOS CI job. No automated UC-33
+accessibility finding remains open.

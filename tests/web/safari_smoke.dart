@@ -4021,10 +4021,19 @@ Future<void> _generatePassword(WebDriver driver) async {
   }, 'Password digit-only constraints were not satisfied');
   await _assertNoNetworkRequests(driver, flow: 'Password digits');
 
-  for (final failure in ['validation', 'processing', 'copy', 'save']) {
+  for (final failure in [
+    'validation',
+    'processing',
+    'resource',
+    'copy',
+    'save',
+  ]) {
     await openPassword();
     if (failure == 'validation') {
       await _fillTextBox(driver, 'Positive integer length', '3');
+    }
+    if (failure == 'resource') {
+      await _fillTextBox(driver, 'Positive integer length', '4294967296');
     }
     if (failure == 'processing') await probe('entropyFailure');
     await _clickButton(driver, 'Generate password');
@@ -4044,6 +4053,7 @@ Future<void> _generatePassword(WebDriver driver) async {
         'validation' => 'Choose a positive integer length that can include every selected character class, and select at least one class.',
         'processing' =>
           'Secure random generation failed. No password was produced.',
+        'resource' => 'Password generation exceeded available resources.',
         'copy' => 'The generated password could not be copied.',
         _ => 'The generated password could not be saved or written.',
       }),

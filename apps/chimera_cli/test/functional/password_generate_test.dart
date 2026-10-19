@@ -379,8 +379,23 @@ void main() {
     expect(saveResult.exitCode, 0, reason: saveResult.stderr.toString());
     expect(saveResult.stderr, isEmpty);
     expect(await saved.readAsString(), matches(RegExp(r'^\d{8}$')));
+    final remainingNames = directory
+        .listSync()
+        .map((entry) => entry.uri.pathSegments.last)
+        .toList();
     expect(
-      directory.listSync().where((entry) => entry.path.contains('.tmp')),
+      remainingNames,
+      unorderedEquals([
+        File(executable).uri.pathSegments.last,
+        'result.txt',
+      ]),
+    );
+    expect(
+      remainingNames.where(
+        (name) =>
+            name.startsWith('.chimera-stage-') ||
+            name.startsWith('.chimera-backup-'),
+      ),
       isEmpty,
     );
   }, timeout: const Timeout(Duration(minutes: 2)));

@@ -43,14 +43,15 @@ test('GivenOnlyDigits_WhenGeneratedOffline_ThenAllConstraintsAreHonored',async({
   await expect.poll(()=>probe(page,'result')).not.toBeNull();const password=await probe(page,'result');expect(password).toMatch(/^\d{8}$/);
 });
 
-for(const failure of ['validation','processing','copy','save']) {
+for(const failure of ['validation','processing','resource','copy','save']) {
   test(`Given${failure}Failure_WhenActionRunsOffline_ThenVisibleErrorWithoutPartialPassword`,async({page})=>{
     const requests=[];await openPassword(page);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});
     if(failure==='validation') await fillLength(page.getByRole('textbox',{name:'Positive integer length',exact:true}),'3');
+    if(failure==='resource') await fillLength(page.getByRole('textbox',{name:'Positive integer length',exact:true}),'4294967296');
     if(failure==='processing') await probe(page,'entropyFailure');
     await page.getByRole('button',{name:'Generate password',exact:true}).click();
     if(failure==='copy'||failure==='save') {await expect.poll(()=>probe(page,'result')).not.toBeNull();await probe(page,`${failure}Failure`);await page.getByRole('button',{name:failure==='copy'?'Copy password':'Save password',exact:true}).evaluate(node=>node.click());}
-    const message={validation:'Choose a positive integer length that can include every selected character class, and select at least one class.',processing:'Secure random generation failed. No password was produced.',copy:'The generated password could not be copied.',save:'The generated password could not be saved or written.'}[failure];
+    const message={validation:'Choose a positive integer length that can include every selected character class, and select at least one class.',processing:'Secure random generation failed. No password was produced.',resource:'Password generation exceeded available resources.',copy:'The generated password could not be copied.',save:'The generated password could not be saved or written.'}[failure];
     await expect(visibleText(page,message)).toBeVisible();
     await expect.poll(()=>probe(page,'noResult')).toBe(true);expect(unexpectedHttpRequests(requests,page.url())).toEqual([]);
   });

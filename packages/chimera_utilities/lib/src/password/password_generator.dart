@@ -106,11 +106,10 @@ final class PasswordGenerator {
     try {
       final available = selected.map((entry) => entry.value).join();
       for (var attempt = 0; attempt < _maximumCandidateAttempts; attempt++) {
-        final characters = List<String>.generate(
-          request.length,
-          (_) => _pick(available),
-          growable: false,
-        );
+        final characters = _allocateCandidate(request.length);
+        for (var index = 0; index < characters.length; index++) {
+          characters[index] = _pick(available);
+        }
         if (!selected.every((entry) => characters.any(entry.value.contains))) {
           continue;
         }
@@ -147,6 +146,17 @@ final class PasswordGenerator {
     }
   }
 
+  List<String> _allocateCandidate(int length) {
+    try {
+      return List<String>.filled(length, '', growable: false);
+    } on OutOfMemoryError {
+      _throwAllocationLimit();
+    } on RangeError {
+      // dart2js reports arrays above the JavaScript length limit this way.
+      _throwAllocationLimit();
+    }
+  }
+
   String _pick(String characters) => characters[_draw(characters.length)];
 
   int _draw(int upperBound) {
@@ -162,3 +172,10 @@ final class PasswordGenerator {
     return value;
   }
 }
+
+Never _throwAllocationLimit() => throw const PasswordException(
+  PasswordFailureKind.resource,
+  'password.resource-limit',
+  'password',
+  'allocation-limit',
+);
