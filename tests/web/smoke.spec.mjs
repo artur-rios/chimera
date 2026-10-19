@@ -2210,3 +2210,18 @@ test('GivenUrlDecodeSafariHelpers_WhenClipboardDecodedCopiedAndSaved_ThenExactOu
   await download;
   await expect.poll(() => urlScript(page, 'DecodeSave', [...Buffer.from('<&A🙂%3C+', 'utf8')], 1)).toBe(true);
 });
+
+test('Safari diagnostics capture live values and offscreen semantics without mutating the page', async ({ page }) => {
+  const source = readFileSync(new URL('./safari_page_diagnostics.js', import.meta.url), 'utf8');
+  await page.setContent('<input aria-label="Reference instant" value="initial"><div style="height: 2000px"></div><div role="status" aria-label="Offscreen result">Next: fixture</div>');
+  const input = page.getByRole('textbox', { name: 'Reference instant' });
+  await input.fill('2026-01-05T12:00:00Z');
+  const before = await page.evaluate(() => ({ active: document.activeElement.outerHTML, scroll: scrollY, html: document.documentElement.outerHTML }));
+  const snapshot = await page.evaluate(source => new Function(`${source}\nreturn captureSafariPageDiagnostics();`)(), source);
+  expect(snapshot.inputs[0].value).toBe('2026-01-05T12:00:00Z');
+  expect(snapshot.activeElement.label).toBe('Reference instant');
+  expect(snapshot.textContent).toContain('Next: fixture');
+  expect(snapshot.semantics.find(element => element.label === 'Offscreen result').rect.top).toBeGreaterThan(snapshot.viewport.height);
+  expect(snapshot.html).toContain('value="initial"');
+  expect(await page.evaluate(() => ({ active: document.activeElement.outerHTML, scroll: scrollY, html: document.documentElement.outerHTML }))).toEqual(before);
+});
