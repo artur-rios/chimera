@@ -5,7 +5,7 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/url_encode_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
-import 'package:file_picker/file_picker.dart';
+import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,21 +46,14 @@ final class _Service
   }
 }
 
-final class _SavePlatform extends FilePickerPlatform {
+final class _SavePlatform extends FileSelectorPlatform {
   _SavePlatform(this.save);
-  final Future<Uri?> Function(String, Uint8List, String) save;
+  final Future<FileSaveLocation?> Function(String, List<String>) save;
   @override
-  Future<Uri?> saveFile({
-    required String fileName,
-    required Uint8List bytes,
-    required String mimeType,
-    String? dialogTitle,
-    String? initialDirectory,
-    void Function(FilePickerStatus)? onFileSaving,
-    WindowsOptions windowsOptions = const WindowsOptions(),
-    LinuxOptions linuxOptions = const LinuxOptions(),
-    WebOptions webOptions = const WebOptions(),
-  }) => save(fileName, bytes, mimeType);
+  Future<FileSaveLocation?> getSaveLocation({
+    SaveDialogOptions options = const SaveDialogOptions(),
+    List<XTypeGroup>? acceptedTypeGroups,
+  }) => save(options.suggestedName!, acceptedTypeGroups!.single.extensions!);
 }
 
 void _noSuccess() {
@@ -507,28 +500,37 @@ void main() {
   ]) {
     for (final canceled in [false, true]) {
       test(
-        'GivenNative${bytes.length}Bytes_WhenDefaultSave${canceled ? 'Canceled' : 'Completes'}_ThenOneExactPickerHandoffOccurs',
+        'GivenNative${bytes.length}Bytes_WhenDefaultSave${canceled ? 'Canceled' : 'Completes'}_ThenPathSelectionPrecedesExactTransactionalHandoff',
         () async {
-          final original = FilePickerPlatform.instance;
-          addTearDown(() => FilePickerPlatform.instance = original);
+          final original = FileSelectorPlatform.instance;
+          addTearDown(() => FileSelectorPlatform.instance = original);
           final payload = Uint8List.fromList(bytes);
           var calls = 0;
-          FilePickerPlatform.instance = _SavePlatform((name, data, mime) async {
+          var writes = 0;
+          FileSelectorPlatform.instance = _SavePlatform((
+            name,
+            extensions,
+          ) async {
             calls++;
             expect(name, 'chimera-url-encoded.txt');
-            expect(mime, 'text/plain; charset=utf-8');
-            expect(identical(data, payload), isTrue);
-            return canceled ? null : Uri.file('result.txt');
+            expect(extensions, ['txt']);
+            return canceled ? null : const FileSaveLocation('result.txt');
           });
           expect(
             await saveUrlEncodeFile(
               'chimera-url-encoded.txt',
               payload,
               'text/plain; charset=utf-8',
+              writeTransaction: (path, data) async {
+                writes++;
+                expect(path, 'result.txt');
+                expect(data, bytes);
+              },
             ),
             !canceled,
           );
           expect(calls, 1);
+          expect(writes, canceled ? 0 : 1);
         },
       );
     }
