@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['smoke.spec.mjs', 'fonts.spec.mjs'],
+  testMatch: ['smoke.spec.mjs', 'fonts.spec.mjs', 'lorem.spec.mjs'],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,

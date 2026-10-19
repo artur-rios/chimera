@@ -23,6 +23,7 @@ import 'json_yaml_page.dart';
 import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
+import 'lorem_page.dart';
 import 'number_base_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
@@ -37,6 +38,10 @@ import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
   const ChimeraApp({
+    this.loremService = const LoremService(),
+    this.loremClipboardWriter,
+    this.loremFileSaver,
+    this.loremOutputEncoder,
     this.jwtCreateService = const JwtCreateService(),
     this.jwtCreateFilePicker,
     this.jwtCreateClipboardReader,
@@ -174,6 +179,10 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final LoremOperationService loremService;
+  final LoremClipboardWriter? loremClipboardWriter;
+  final LoremFileSaver? loremFileSaver;
+  final LoremOutputEncoder? loremOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -305,6 +314,10 @@ final class ChimeraApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ProviderScope(
       child: _RoutedChimeraApp(
+        loremService: loremService,
+        loremClipboardWriter: loremClipboardWriter,
+        loremFileSaver: loremFileSaver,
+        loremOutputEncoder: loremOutputEncoder,
         jwtCreateService: jwtCreateService,
         jwtCreateFilePicker: jwtCreateFilePicker,
         jwtCreateClipboardReader: jwtCreateClipboardReader,
@@ -439,6 +452,10 @@ final class ChimeraApp extends StatelessWidget {
 
 final class _RoutedChimeraApp extends StatefulWidget {
   const _RoutedChimeraApp({
+    required this.loremService,
+    required this.loremClipboardWriter,
+    required this.loremFileSaver,
+    required this.loremOutputEncoder,
     required this.jwtCreateService,
     required this.jwtCreateFilePicker,
     required this.jwtCreateClipboardReader,
@@ -569,6 +586,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   });
 
   final String localeTag;
+  final LoremOperationService loremService;
+  final LoremClipboardWriter? loremClipboardWriter;
+  final LoremFileSaver? loremFileSaver;
+  final LoremOutputEncoder? loremOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -711,6 +732,10 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _router = buildRouter(
+      loremService: widget.loremService,
+      loremClipboardWriter: widget.loremClipboardWriter ?? writeLoremClipboard,
+      loremFileSaver: widget.loremFileSaver ?? saveLoremFile,
+      loremOutputEncoder: widget.loremOutputEncoder ?? encodeLoremOutput,
       jwtCreateService: widget.jwtCreateService,
       jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
       jwtCreateClipboardReader:

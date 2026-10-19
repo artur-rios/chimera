@@ -1125,6 +1125,7 @@ Future<void> main(List<String> arguments) async {
     await _createJwt(driver);
     await _encodeQr(driver);
     await _decodeQr(driver);
+    await _generateLorem(driver);
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
@@ -2734,4 +2735,123 @@ Future<void> _waitUntil(
     await Future<void>.delayed(const Duration(milliseconds: 250));
   }
   throw StateError('$failureMessage within ${timeout.inSeconds} seconds.');
+}
+
+// Keep new operations outside the JWT inspection helper interval.
+Future<void> _generateLorem(WebDriver driver) async {
+  final source = await File.fromUri(Platform.script.resolve('lorem_browser.js'))
+      .readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn loremProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openLorem() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Lorem semantics placeholder missing',
+    );
+    await driver.execute(
+      "document.querySelector('flt-semantics-placeholder').click();",
+      const <Object?>[],
+    );
+    await _clickButton(driver, 'Generate Lorem Ipsum');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'Lorem configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Lorem startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  const paragraph = 'Lorem ipsum dolor sit amet. Consectetur adipiscing elit.';
+  for (final unit in ['words', 'sentences', 'paragraphs']) {
+    await openLorem();
+    if (unit != 'paragraphs') {
+      await _waitUntil(
+        () async => await probe('openUnit') == true,
+        'Lorem unit selector missing',
+      );
+      await _waitUntil(
+        () async =>
+            await probe('unit', unit == 'words' ? 'Words' : 'Sentences') ==
+            true,
+        'Lorem unit choice missing',
+      );
+    }
+    await _fillTextBox(driver, 'Positive integer count', '2');
+    await _clickButton(driver, 'Generate text');
+    final expected = unit == 'words'
+        ? 'Lorem ipsum'
+        : unit == 'sentences'
+        ? paragraph
+        : '$paragraph\n\n$paragraph';
+    await _waitUntil(
+      () async => await probe('result', expected) == true,
+      'Lorem exact generated result mismatch',
+    );
+    await _waitUntil(
+      () async => await probe('copy') == true,
+      'Lorem copy unavailable',
+    );
+    await _waitUntil(
+      () async => await probe('copied', expected) == true,
+      'Lorem clipboard mismatch',
+    );
+    await _clickButton(driver, 'Save UTF-8 text');
+    await _waitUntil(
+      () async => await probe('saved', utf8.encode(expected)) == true,
+      'Lorem saved UTF-8 mismatch',
+    );
+    await _fillTextBox(driver, 'Positive integer count', '3');
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Lorem stale result retained after configuration changed',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Lorem $unit');
+  }
+  for (final failure in ['validation', 'copy', 'save']) {
+    await openLorem();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    await _clickButton(driver, 'Generate text');
+    if (failure != 'validation') {
+      await _waitUntil(
+        () async => await probe('result', paragraph) == true,
+        'Lorem default paragraph mismatch',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy' ? 'Copy text' : 'Save UTF-8 text',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(
+        driver,
+        failure == 'validation'
+            ? 'Choose words, sentences or paragraphs and a positive integer count.'
+            : failure == 'copy'
+            ? 'The generated text could not be copied.'
+            : 'The generated text could not be saved or written.',
+      ),
+      'Lorem localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Lorem partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Lorem $failure failure');
+  }
 }

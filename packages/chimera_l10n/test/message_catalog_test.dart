@@ -684,6 +684,27 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.loremUsage',
+      'lorem.pageTitle',
+      'lorem.openAction',
+      'lorem.unitLabel',
+      'lorem.words',
+      'lorem.sentences',
+      'lorem.paragraphs',
+      'lorem.countLabel',
+      'lorem.semantics',
+      'lorem.generate',
+      'lorem.resultLabel',
+      'lorem.success',
+      'lorem.copy',
+      'lorem.save',
+      'lorem.copied',
+      'lorem.saved',
+      'error.lorem.validation',
+      'error.lorem.resource',
+      'error.lorem.outputAccess',
+      'error.lorem.clipboardWrite',
+
       'cli.qrDecodeUsage',
       'qrDecode.pageTitle',
       'qrDecode.openAction',

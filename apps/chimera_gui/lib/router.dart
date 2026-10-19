@@ -20,6 +20,7 @@ import 'json_yaml_page.dart';
 import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
+import 'lorem_page.dart';
 import 'number_base_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
@@ -32,6 +33,10 @@ import 'text_unescape_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
+  required LoremOperationService loremService,
+  required LoremClipboardWriter loremClipboardWriter,
+  required LoremFileSaver loremFileSaver,
+  required LoremOutputEncoder loremOutputEncoder,
   required JwtCreateOperationService jwtCreateService,
   required JwtCreateFilePicker jwtCreateFilePicker,
   required JwtCreateClipboardReader jwtCreateClipboardReader,
@@ -164,6 +169,17 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/lorem/generate',
+        builder: (context, state) => LoremPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: loremService,
+          clipboardWriter: loremClipboardWriter,
+          fileSaver: loremFileSaver,
+          outputEncoder: loremOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/jwt/create',
         builder: (context, state) => JwtCreatePage(
@@ -450,6 +466,14 @@ GoRouter buildRouter({
                             localeTag,
                             'gzipDecompress.openAction',
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-lorem'),
+                        onPressed: () => context.go('/lorem/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'lorem.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
