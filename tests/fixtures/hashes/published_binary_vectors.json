@@ -1,0 +1,32 @@
+[
+  {
+    "algorithm": "sha1",
+    "hex": "5e",
+    "digest": "5e6f80a34a9798cafc6a5db96cc57ba4c4db59c2",
+    "source": "https://www.rfc-editor.org/rfc/rfc6234#section-8.5 (SHA1 test 6)"
+  },
+  {
+    "algorithm": "sha256",
+    "hex": "19",
+    "digest": "68aa2e2ee5dff96e3355e6c7ee373e3d6a4e17f75f9518d843709c0c9bc3e3d4",
+    "source": "https://www.rfc-editor.org/rfc/rfc6234#section-8.5 (SHA256 test 6)"
+  },
+  {
+    "algorithm": "sha384",
+    "hex": "b9",
+    "digest": "bc8089a19007c0b14195f4ecc74094fec64f01f90929282c2fb392881578208ad466828b1c6c283d2722cf0ad1ab6938",
+    "source": "https://www.rfc-editor.org/rfc/rfc6234#section-8.5 (SHA384 test 6)"
+  },
+  {
+    "algorithm": "sha512",
+    "hex": "d0",
+    "digest": "9992202938e882e73e20f6b69e68a0a7149090423d93c81bab3f21678d4aceeee50e4e8cafada4c85a54ea8306826c4ad6e74cece9631bfa8a549b4ab3fbba15",
+    "source": "https://www.rfc-editor.org/rfc/rfc6234#section-8.5 (SHA512 test 6)"
+  },
+  {
+    "algorithm": "md5",
+    "hex": "d131dd02c5e6eec4693d9a0698aff95c2fcab58712467eab4004583eb8fb7f8955ad340609f4b30283e488832571415a085125e8f7cdc99fd91dbdf280373c5bd8823e3156348f5bae6dacd436c919c6dd53e2b487da03fd02396306d248cda0e99f33420f577ee8ce54b67080a80d1ec69821bcb6a8839396f9652b6ff72a70",
+    "digest": "79054025255fb1a26e4bc422aef54eb4",
+    "source": "https://www.mscs.dal.ca/~selinger/md5collision/ (first published collision block)"
+  }
+]

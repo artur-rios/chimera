@@ -15,6 +15,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'hash_generate_page.dart';
 import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
@@ -34,6 +35,8 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'url_decode_page.dart';
+import 'url_encode_page.dart';
 import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
@@ -67,12 +70,30 @@ final class ChimeraApp extends StatelessWidget {
     this.checksumGenerateClipboardWriter,
     this.checksumGenerateFileSaver,
     this.checksumGenerateOutputEncoder,
+    this.hashGenerateService = const HashGenerateService(),
+    this.hashGenerateFilePicker,
+    this.hashGenerateClipboardReader,
+    this.hashGenerateClipboardWriter,
+    this.hashGenerateFileSaver,
+    this.hashGenerateOutputEncoder,
+    this.urlDecodeService = const UrlDecodeService(),
+    this.urlDecodeFilePicker,
+    this.urlDecodeClipboardReader,
+    this.urlDecodeClipboardWriter,
+    this.urlDecodeFileSaver,
+    this.urlDecodeOutputEncoder,
     this.htmlEncodeService = const HtmlEncodeService(),
     this.htmlEncodeFilePicker,
     this.htmlEncodeClipboardReader,
     this.htmlEncodeClipboardWriter,
     this.htmlEncodeFileSaver,
     this.htmlEncodeOutputEncoder,
+    this.urlEncodeService = const UrlEncodeService(),
+    this.urlEncodeFilePicker,
+    this.urlEncodeClipboardReader,
+    this.urlEncodeClipboardWriter,
+    this.urlEncodeFileSaver,
+    this.urlEncodeOutputEncoder,
     this.gzipCompressService = const GzipCompressService(),
     this.gzipCompressFilePicker,
     this.gzipCompressClipboardReader,
@@ -210,12 +231,30 @@ final class ChimeraApp extends StatelessWidget {
   final ChecksumGenerateClipboardWriter? checksumGenerateClipboardWriter;
   final ChecksumGenerateFileSaver? checksumGenerateFileSaver;
   final ChecksumGenerateOutputEncoder? checksumGenerateOutputEncoder;
+  final HashGenerateOperationService hashGenerateService;
+  final HashGenerateFilePicker? hashGenerateFilePicker;
+  final HashGenerateClipboardReader? hashGenerateClipboardReader;
+  final HashGenerateClipboardWriter? hashGenerateClipboardWriter;
+  final HashGenerateFileSaver? hashGenerateFileSaver;
+  final HashGenerateOutputEncoder? hashGenerateOutputEncoder;
+  final UrlDecodeOperationService urlDecodeService;
+  final UrlDecodeFilePicker? urlDecodeFilePicker;
+  final UrlDecodeClipboardReader? urlDecodeClipboardReader;
+  final UrlDecodeClipboardWriter? urlDecodeClipboardWriter;
+  final UrlDecodeFileSaver? urlDecodeFileSaver;
+  final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
   final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
   final HtmlEncodeFileSaver? htmlEncodeFileSaver;
   final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
+  final UrlEncodeOperationService urlEncodeService;
+  final UrlEncodeFilePicker? urlEncodeFilePicker;
+  final UrlEncodeClipboardReader? urlEncodeClipboardReader;
+  final UrlEncodeClipboardWriter? urlEncodeClipboardWriter;
+  final UrlEncodeFileSaver? urlEncodeFileSaver;
+  final UrlEncodeOutputEncoder? urlEncodeOutputEncoder;
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
   final GzipCompressClipboardReader? gzipCompressClipboardReader;
@@ -347,12 +386,30 @@ final class ChimeraApp extends StatelessWidget {
         checksumGenerateClipboardWriter: checksumGenerateClipboardWriter,
         checksumGenerateFileSaver: checksumGenerateFileSaver,
         checksumGenerateOutputEncoder: checksumGenerateOutputEncoder,
+        hashGenerateService: hashGenerateService,
+        hashGenerateFilePicker: hashGenerateFilePicker,
+        hashGenerateClipboardReader: hashGenerateClipboardReader,
+        hashGenerateClipboardWriter: hashGenerateClipboardWriter,
+        hashGenerateFileSaver: hashGenerateFileSaver,
+        hashGenerateOutputEncoder: hashGenerateOutputEncoder,
+        urlDecodeService: urlDecodeService,
+        urlDecodeFilePicker: urlDecodeFilePicker,
+        urlDecodeClipboardReader: urlDecodeClipboardReader,
+        urlDecodeClipboardWriter: urlDecodeClipboardWriter,
+        urlDecodeFileSaver: urlDecodeFileSaver,
+        urlDecodeOutputEncoder: urlDecodeOutputEncoder,
         htmlEncodeService: htmlEncodeService,
         htmlEncodeFilePicker: htmlEncodeFilePicker,
         htmlEncodeClipboardReader: htmlEncodeClipboardReader,
         htmlEncodeClipboardWriter: htmlEncodeClipboardWriter,
         htmlEncodeFileSaver: htmlEncodeFileSaver,
         htmlEncodeOutputEncoder: htmlEncodeOutputEncoder,
+        urlEncodeService: urlEncodeService,
+        urlEncodeFilePicker: urlEncodeFilePicker,
+        urlEncodeClipboardReader: urlEncodeClipboardReader,
+        urlEncodeClipboardWriter: urlEncodeClipboardWriter,
+        urlEncodeFileSaver: urlEncodeFileSaver,
+        urlEncodeOutputEncoder: urlEncodeOutputEncoder,
         gzipCompressService: gzipCompressService,
         gzipCompressFilePicker: gzipCompressFilePicker,
         gzipCompressClipboardReader: gzipCompressClipboardReader,
@@ -487,12 +544,30 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.checksumGenerateClipboardWriter,
     required this.checksumGenerateFileSaver,
     required this.checksumGenerateOutputEncoder,
+    required this.hashGenerateService,
+    required this.hashGenerateFilePicker,
+    required this.hashGenerateClipboardReader,
+    required this.hashGenerateClipboardWriter,
+    required this.hashGenerateFileSaver,
+    required this.hashGenerateOutputEncoder,
+    required this.urlDecodeService,
+    required this.urlDecodeFilePicker,
+    required this.urlDecodeClipboardReader,
+    required this.urlDecodeClipboardWriter,
+    required this.urlDecodeFileSaver,
+    required this.urlDecodeOutputEncoder,
     required this.htmlEncodeService,
     required this.htmlEncodeFilePicker,
     required this.htmlEncodeClipboardReader,
     required this.htmlEncodeClipboardWriter,
     required this.htmlEncodeFileSaver,
     required this.htmlEncodeOutputEncoder,
+    required this.urlEncodeService,
+    required this.urlEncodeFilePicker,
+    required this.urlEncodeClipboardReader,
+    required this.urlEncodeClipboardWriter,
+    required this.urlEncodeFileSaver,
+    required this.urlEncodeOutputEncoder,
     required this.gzipCompressService,
     required this.gzipCompressFilePicker,
     required this.gzipCompressClipboardReader,
@@ -710,6 +785,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final HtmlDecodeClipboardWriter? htmlDecodeClipboardWriter;
   final HtmlDecodeFileSaver? htmlDecodeFileSaver;
   final HtmlDecodeOutputEncoder? htmlDecodeOutputEncoder;
+  final UrlDecodeOperationService urlDecodeService;
+  final UrlDecodeFilePicker? urlDecodeFilePicker;
+  final UrlDecodeClipboardReader? urlDecodeClipboardReader;
+  final UrlDecodeClipboardWriter? urlDecodeClipboardWriter;
+  final UrlDecodeFileSaver? urlDecodeFileSaver;
+  final UrlDecodeOutputEncoder? urlDecodeOutputEncoder;
 
   final ChecksumGenerateOperationService checksumGenerateService;
   final ChecksumGenerateFilePicker? checksumGenerateFilePicker;
@@ -717,12 +798,24 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final ChecksumGenerateClipboardWriter? checksumGenerateClipboardWriter;
   final ChecksumGenerateFileSaver? checksumGenerateFileSaver;
   final ChecksumGenerateOutputEncoder? checksumGenerateOutputEncoder;
+  final HashGenerateOperationService hashGenerateService;
+  final HashGenerateFilePicker? hashGenerateFilePicker;
+  final HashGenerateClipboardReader? hashGenerateClipboardReader;
+  final HashGenerateClipboardWriter? hashGenerateClipboardWriter;
+  final HashGenerateFileSaver? hashGenerateFileSaver;
+  final HashGenerateOutputEncoder? hashGenerateOutputEncoder;
   final HtmlEncodeOperationService htmlEncodeService;
   final HtmlEncodeFilePicker? htmlEncodeFilePicker;
   final HtmlEncodeClipboardReader? htmlEncodeClipboardReader;
   final HtmlEncodeClipboardWriter? htmlEncodeClipboardWriter;
   final HtmlEncodeFileSaver? htmlEncodeFileSaver;
   final HtmlEncodeOutputEncoder? htmlEncodeOutputEncoder;
+  final UrlEncodeOperationService urlEncodeService;
+  final UrlEncodeFilePicker? urlEncodeFilePicker;
+  final UrlEncodeClipboardReader? urlEncodeClipboardReader;
+  final UrlEncodeClipboardWriter? urlEncodeClipboardWriter;
+  final UrlEncodeFileSaver? urlEncodeFileSaver;
+  final UrlEncodeOutputEncoder? urlEncodeOutputEncoder;
 
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
@@ -787,6 +880,26 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.checksumGenerateFileSaver ?? saveChecksumGenerateFile,
       checksumGenerateOutputEncoder:
           widget.checksumGenerateOutputEncoder ?? encodeChecksumGenerateOutput,
+      hashGenerateService: widget.hashGenerateService,
+      hashGenerateFilePicker:
+          widget.hashGenerateFilePicker ?? pickHashGenerateFile,
+      hashGenerateClipboardReader:
+          widget.hashGenerateClipboardReader ?? readHashGenerateClipboard,
+      hashGenerateClipboardWriter:
+          widget.hashGenerateClipboardWriter ?? writeHashGenerateClipboard,
+      hashGenerateFileSaver:
+          widget.hashGenerateFileSaver ?? saveHashGenerateFile,
+      hashGenerateOutputEncoder:
+          widget.hashGenerateOutputEncoder ?? encodeHashGenerateOutput,
+      urlDecodeService: widget.urlDecodeService,
+      urlDecodeFilePicker: widget.urlDecodeFilePicker ?? pickUrlDecodeFile,
+      urlDecodeClipboardReader:
+          widget.urlDecodeClipboardReader ?? readUrlDecodeClipboard,
+      urlDecodeClipboardWriter:
+          widget.urlDecodeClipboardWriter ?? writeUrlDecodeClipboard,
+      urlDecodeFileSaver: widget.urlDecodeFileSaver ?? saveUrlDecodeFile,
+      urlDecodeOutputEncoder:
+          widget.urlDecodeOutputEncoder ?? encodeUrlDecodeOutput,
       htmlEncodeService: widget.htmlEncodeService,
       htmlEncodeFilePicker: widget.htmlEncodeFilePicker ?? pickHtmlEncodeFile,
       htmlEncodeClipboardReader:
@@ -796,6 +909,15 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       htmlEncodeFileSaver: widget.htmlEncodeFileSaver ?? saveHtmlEncodeFile,
       htmlEncodeOutputEncoder:
           widget.htmlEncodeOutputEncoder ?? encodeHtmlEncodeOutput,
+      urlEncodeService: widget.urlEncodeService,
+      urlEncodeFilePicker: widget.urlEncodeFilePicker ?? pickUrlEncodeFile,
+      urlEncodeClipboardReader:
+          widget.urlEncodeClipboardReader ?? readUrlEncodeClipboard,
+      urlEncodeClipboardWriter:
+          widget.urlEncodeClipboardWriter ?? writeUrlEncodeClipboard,
+      urlEncodeFileSaver: widget.urlEncodeFileSaver ?? saveUrlEncodeFile,
+      urlEncodeOutputEncoder:
+          widget.urlEncodeOutputEncoder ?? encodeUrlEncodeOutput,
       gzipCompressService: widget.gzipCompressService,
       gzipCompressFilePicker:
           widget.gzipCompressFilePicker ?? pickGzipCompressFile,
