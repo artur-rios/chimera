@@ -21,6 +21,7 @@ import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
 import 'list_compare_page.dart';
 import 'number_base_page.dart';
+import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
@@ -40,6 +41,10 @@ GoRouter buildRouter({
   required JwtInspectFilePicker jwtInspectFilePicker,
   required JwtInspectClipboardReader jwtInspectClipboardReader,
   required JwtInspectClipboardWriter jwtInspectClipboardWriter,
+  required QrDecodeOperationService qrDecodeService,
+  required QrDecodeFilePicker qrDecodeFilePicker,
+  required QrDecodeClipboardWriter qrDecodeClipboardWriter,
+  required QrDecodeFileSaver qrDecodeFileSaver,
   required QrEncodeOperationService qrEncodeService,
   required QrEncodeFilePicker qrEncodeFilePicker,
   required QrEncodeClipboardReader qrEncodeClipboardReader,
@@ -180,6 +185,17 @@ GoRouter buildRouter({
           filePicker: jwtInspectFilePicker,
           clipboardReader: jwtInspectClipboardReader,
           clipboardWriter: jwtInspectClipboardWriter,
+        ),
+      ),
+      GoRoute(
+        path: '/qr/decode',
+        builder: (context, state) => QrDecodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: qrDecodeService,
+          filePicker: qrDecodeFilePicker,
+          clipboardWriter: qrDecodeClipboardWriter,
+          fileSaver: qrDecodeFileSaver,
         ),
       ),
       GoRoute(
@@ -474,6 +490,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/qr/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'qrEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-qr-decode'),
+                        onPressed: () => context.go('/qr/decode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'qrDecode.openAction'),
                         ),
                       ),
                     ],

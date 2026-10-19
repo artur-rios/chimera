@@ -1124,9 +1124,10 @@ Future<void> main(List<String> arguments) async {
     await _decodeHtml(driver);
     await _createJwt(driver);
     await _encodeQr(driver);
+    await _decodeQr(driver);
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } finally {
     await createdDriver?.quit();
@@ -1237,6 +1238,127 @@ Future<void> _createJwt(WebDriver driver) async {
     status: 'verified',
   );
 }
+
+Future<void> _decodeQr(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'QR decode semantics did not load',
+  );
+  await driver.execute(
+    "document.querySelector('flt-semantics-placeholder').click();",
+    const <Object?>[],
+  );
+  await _clickButton(driver, 'Decode QR code');
+  await _waitUntil(
+    () => _pageContains(driver, 'Choose PNG, JPEG or BMP image'),
+    'QR decode page did not open',
+  );
+  final saveObserver = await _loadGzipSaveObserver();
+  await driver.execute(
+    '$saveObserver\nobserveGzipSaves({suppressDownloads: true});',
+    const <Object?>[],
+  );
+  await driver.execute(_qrDecodeSetupScript, const <Object?>[]);
+  final png = await File.fromUri(
+    Platform.script.resolve('../fixtures/encoded/qr/unicode.png'),
+  ).readAsBytes();
+  for (final valid in <bool>[true, false]) {
+    await _clickButton(driver, 'Choose PNG, JPEG or BMP image');
+    await _waitUntil(
+      () async =>
+          await driver.execute(_qrDecodeLoadScript, <Object?>[
+            base64Encode(valid ? png : <int>[1, 2, 3]),
+          ]) ==
+          true,
+      'QR image source was not supplied',
+    );
+    await _waitUntil(
+      () => _pageContains(driver, 'Image ready to decode.'),
+      'QR image was not ready',
+    );
+    await _clickButton(driver, 'Decode QR');
+    if (!valid) {
+      await _waitUntil(
+        () => _pageContains(
+          driver,
+          'The image could not be decoded as a QR code.',
+        ),
+        'Corrupt QR image did not fail safely',
+      );
+      final stale = await driver.execute(r'''
+        return [...document.querySelectorAll('[role="region"]')]
+          .some(e => (e.getAttribute('aria-label') || '').startsWith('Decoded QR result'));
+      ''', const <Object?>[]);
+      if (stale == true) {
+        throw StateError('Corrupt QR image retained stale output');
+      }
+      continue;
+    }
+    await _waitUntil(
+      () => _pageContains(driver, 'QR code decoded.'),
+      'QR decoding did not succeed',
+    );
+    await _clickButton(driver, 'Copy text');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return window.__chimeraQrDecodedText === 'QR Olá 世界 🌍';",
+            const <Object?>[],
+          ) ==
+          true,
+      'QR decoded Unicode copy was not exact',
+    );
+    await _clickButton(driver, 'Save UTF-8 text');
+    await _waitUntil(
+      () async =>
+          await driver.execute(r'''
+        return window.__chimeraSavedName === 'chimera-qr-decoded.txt' &&
+          new TextDecoder().decode(new Uint8Array(window.__chimeraSavedBytes || [])) === 'QR Olá 世界 🌍' &&
+          window.__chimeraSaveCount === 1 && window.__chimeraLiveDownloadUrlCount === 0 &&
+          window.__chimeraGzipSaveErrors.length === 0;
+      ''', const <Object?>[]) ==
+          true,
+      'QR decoded UTF-8 save was not exact',
+    );
+  }
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'QR decoding/copy/save/validation',
+    allowFontFallback: true,
+  );
+}
+
+const _qrDecodeSetupScript = r'''
+  window.__chimeraQrDecodedText = null;
+  Object.defineProperty(navigator, 'clipboard', {
+    configurable: true,
+    value: {writeText: async value => { window.__chimeraQrDecodedText = value; }},
+  });
+  const original = HTMLInputElement.prototype.click;
+  HTMLInputElement.prototype.click = function() {
+    if (this.type === 'file') { window.__chimeraQrImageInput = this; return; }
+    return original.call(this);
+  };
+  performance.clearResourceTimings();
+''';
+
+const _qrDecodeLoadScript = r'''
+  const input = window.__chimeraQrImageInput;
+  if (!input) return false;
+  const bytes = Uint8Array.from(atob(arguments[0]), char => char.charCodeAt(0));
+  const transfer = new DataTransfer();
+  transfer.items.add(new File([bytes], 'source.png', {type: 'image/png'}));
+  input.files = transfer.files;
+  input.dispatchEvent(new Event('change', {bubbles: true}));
+  window.__chimeraQrImageInput = null;
+  return true;
+''';
 
 Future<void> _encodeQr(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
@@ -2377,19 +2499,34 @@ Future<void> _assertNoResourceRequests(
   }
 }
 
+// Shared with Playwright; other flows keep rejecting every HTTP request.
+const _networkRequestPolicyScript = r'''
+  const urls = arguments[0] ?? performance.getEntriesByType('resource').map(entry => entry.name);
+  const applicationOrigin = new URL(arguments[1] ?? location.href).origin;
+  const allowFontFallback = arguments[2] === true;
+  return urls.filter(value => {
+    let url;
+    try { url = new URL(value); } catch { return true; }
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return false;
+    const fontPath = /^\/font-fallback\/[a-z0-9]+\/v[0-9]+\/[A-Za-z0-9_.-]+\.woff2$/;
+    const allowedFont = allowFontFallback && url.origin === applicationOrigin &&
+      !url.username && !url.password && !url.search && !url.hash &&
+      !value.includes('%') && fontPath.test(url.pathname);
+    return !allowedFont;
+  });
+''';
+
 Future<void> _assertNoNetworkRequests(
   WebDriver driver, {
   required String flow,
+  bool allowFontFallback = false,
 }) async {
   final resourceUrls = await driver.execute(
-    "return performance.getEntriesByType('resource').map(entry => entry.name);",
-    const <Object?>[],
+    _networkRequestPolicyScript,
+    <Object?>[null, null, allowFontFallback],
   );
   final urls = resourceUrls is List
-      ? resourceUrls.map((entry) => entry.toString()).where((url) {
-          final scheme = Uri.parse(url).scheme;
-          return scheme == 'http' || scheme == 'https';
-        }).toList()
+      ? resourceUrls.map((entry) => entry.toString()).toList()
       : <String>[];
   if (urls.isNotEmpty) {
     throw StateError('Safari $flow made network requests: $urls');

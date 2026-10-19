@@ -4,6 +4,42 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
 
+  test('GivenQrDecodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.qrDecodeUsage',
+      'qrDecode.pageTitle',
+      'qrDecode.openAction',
+      'qrDecode.fileAction',
+      'qrDecode.inputReady',
+      'qrDecode.submitAction',
+      'qrDecode.resultLabel',
+      'qrDecode.resultSuccess',
+      'qrDecode.formatLabel',
+      'qrDecode.dimensionsLabel',
+      'qrDecode.inputByteCountLabel',
+      'qrDecode.copyAction',
+      'qrDecode.saveAction',
+      'qrDecode.copied',
+      'qrDecode.fileSaved',
+      'error.qrDecode.validation',
+      'error.qrDecode.decoding',
+      'error.qrDecode.resource',
+      'error.qrDecode.inputAccess',
+      'error.qrDecode.fileAccess',
+      'error.qrDecode.clipboardWrite',
+      'error.qrDecode.outputAccess',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+      for (final format in ['PNG', 'JPEG', 'BMP']) {
+        expect(catalog.lookup(locale, 'cli.qrDecodeUsage'), contains(format));
+      }
+    }
+  });
+
   test('GivenQrEncodeCliMessages_WhenLookedUp_ThenLocalesAreComplete', () {
     const keys = <String>{
       'cli.qrEncodeUsage',
@@ -648,6 +684,28 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.qrDecodeUsage',
+      'qrDecode.pageTitle',
+      'qrDecode.openAction',
+      'qrDecode.fileAction',
+      'qrDecode.inputReady',
+      'qrDecode.submitAction',
+      'qrDecode.resultLabel',
+      'qrDecode.resultSuccess',
+      'qrDecode.formatLabel',
+      'qrDecode.dimensionsLabel',
+      'qrDecode.inputByteCountLabel',
+      'qrDecode.copyAction',
+      'qrDecode.saveAction',
+      'qrDecode.copied',
+      'qrDecode.fileSaved',
+      'error.qrDecode.validation',
+      'error.qrDecode.decoding',
+      'error.qrDecode.resource',
+      'error.qrDecode.inputAccess',
+      'error.qrDecode.fileAccess',
+      'error.qrDecode.clipboardWrite',
+      'error.qrDecode.outputAccess',
       'cli.qrEncodeUsage',
       'qrEncode.savedResult',
       'qrEncode.pageTitle',

@@ -1715,6 +1715,76 @@ void main() {
       },
     );
   }
+  for (final locale in <String>['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}QrImage_WhenDecodedCopiedSavedThenCorrupt_ThenExactTextTransfersOffline',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        try {
+          final network = _RejectConversionNetwork();
+          final previous = HttpOverrides.current;
+          HttpOverrides.global = network;
+          addTearDown(() => HttpOverrides.global = previous);
+          const text = 'QR Olá 世界 🌍';
+          List<int> source = List<int>.of(
+            const QrEncoder().encode(text, size: 256).pngBytes,
+          );
+          String? copied;
+          List<int>? saved;
+          await tester.pumpWidget(
+            ChimeraApp(
+              localeTag: locale,
+              initialLocation: '/qr/decode',
+              qrDecodeFilePicker: () async => source,
+              qrDecodeClipboardWriter: (value) async {
+                copied = value;
+              },
+              qrDecodeFileSaver: (name, bytes, mime) async {
+                expect(name, 'chimera-qr-decoded.txt');
+                expect(mime, 'text/plain');
+                saved = List<int>.of(bytes);
+                return true;
+              },
+            ),
+          );
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('qr-decode-file')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('qr-decode-submit')));
+          await tester.pumpAndSettle();
+          expect(
+            tester
+                .widget<SelectableText>(
+                  find.byKey(const Key('qr-decode-result')),
+                )
+                .data,
+            text,
+          );
+          expect(find.byKey(const Key('qr-decode-input-ready')), findsNothing);
+          await tester.ensureVisible(find.byKey(const Key('qr-decode-copy')));
+          await tester.tap(find.byKey(const Key('qr-decode-copy')));
+          await tester.pumpAndSettle();
+          expect(copied, text);
+          await tester.ensureVisible(find.byKey(const Key('qr-decode-save')));
+          await tester.tap(find.byKey(const Key('qr-decode-save')));
+          await tester.pumpAndSettle();
+          expect(saved, utf8.encode(text));
+          source = <int>[1, 2, 3];
+          await tester.ensureVisible(find.byKey(const Key('qr-decode-file')));
+          await tester.tap(find.byKey(const Key('qr-decode-file')));
+          await tester.pumpAndSettle();
+          await tester.tap(find.byKey(const Key('qr-decode-submit')));
+          await tester.pumpAndSettle();
+          expect(find.byKey(const Key('qr-decode-error')), findsOneWidget);
+          expect(find.byKey(const Key('qr-decode-result')), findsNothing);
+          expect(find.byKey(const Key('qr-decode-input-ready')), findsNothing);
+          expect(network.attempts, 0);
+        } finally {
+          semantics.dispose();
+        }
+      },
+    );
+  }
 }
 
 String _jwtToken(String algorithm, String key, String scenario) =>

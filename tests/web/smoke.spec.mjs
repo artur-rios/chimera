@@ -2,6 +2,16 @@ import { expect, test } from '@playwright/test';
 import { createHmac, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
+import { networkPolicyCases, networkRequestPolicyScript, unexpectedHttpRequests } from './network_policy.mjs';
+
+for (const value of networkPolicyCases) {
+  test(`GivenNetworkPolicy${value.name}_WhenRequestsAreChecked_ThenOnlyUnexpectedRequestsRemain`, async ({ page }) => {
+    const actual = await page.evaluate(({ script, value }) =>
+      new Function(script)(value.urls, value.applicationUrl, value.allow),
+    { script: networkRequestPolicyScript, value });
+    expect(actual).toEqual(value.expected);
+  });
+}
 
 // The native Safari harness executes this exact source, resolved from its script.
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
@@ -1931,4 +1941,51 @@ test('QR encoding generates and downloads an exact local PNG then clears invalid
     url => !new URL(url).pathname.startsWith('/font-fallback/'),
   )).toEqual([]);
   expect(externalRequests).toEqual([]);
+});
+
+test('QR decoding reads a local image, copies and saves exact Unicode, and rejects corrupt input offline', async ({ page }) => {
+  const requests = [];
+  let record = false;
+  page.on('request', request => { if (record) recordHttpRequest(request, requests); });
+  await page.addInitScript(`${gzipSaveObserver}\nobserveGzipSaves();`);
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Decode QR code', exact: true }).click();
+  record = true;
+  await page.evaluate(() => {
+    window.__chimeraQrDecodedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: async text => { window.__chimeraQrDecodedText = text; } },
+    });
+  });
+  const choose = page.getByRole('button', { name: 'Choose PNG, JPEG or BMP image', exact: true });
+  const pendingFile = page.waitForEvent('filechooser');
+  await choose.click();
+  await (await pendingFile).setFiles({
+    name: 'unicode.png', mimeType: 'image/png',
+    buffer: readFileSync(new URL('../fixtures/encoded/qr/unicode.png', import.meta.url)),
+  });
+  await expect(page.locator('span', { hasText: /^Image ready to decode\.$/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Decode QR', exact: true }).press('Enter');
+  await expect(page.getByRole('region', { name: /Decoded QR result QR code decoded\./ })).toBeVisible();
+  await expect(page.locator('span', { hasText: /^Image ready to decode\.$/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Copy text', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__chimeraQrDecodedText)).toBe('QR Olá 世界 🌍');
+  const pendingSave = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save UTF-8 text', exact: true }).press('Enter');
+  const saved = await pendingSave;
+  expect(saved.suggestedFilename()).toBe('chimera-qr-decoded.txt');
+  const chunks = [];
+  for await (const chunk of await saved.createReadStream()) chunks.push(chunk);
+  expect(Buffer.concat(chunks)).toEqual(Buffer.from('QR Olá 世界 🌍', 'utf8'));
+  await expect.poll(() => page.evaluate(() => window.__chimeraLiveDownloadUrlCount)).toBe(0);
+  const pendingCorrupt = page.waitForEvent('filechooser');
+  await choose.click();
+  await (await pendingCorrupt).setFiles({ name: 'corrupt.png', mimeType: 'image/png', buffer: Buffer.from('corrupt') });
+  await expect(page.locator('span', { hasText: /^Image ready to decode\.$/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Decode QR', exact: true }).click();
+  await expect(page.locator('span', { hasText: /^The image could not be decoded as a QR code\.$/ })).toBeVisible();
+  await expect(page.getByRole('region', { name: /Decoded QR result/ })).toHaveCount(0);
+  expect(unexpectedHttpRequests(requests, page.url(), true)).toEqual([]);
 });

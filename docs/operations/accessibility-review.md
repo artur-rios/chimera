@@ -555,3 +555,23 @@ Chromium, Firefox, and WebKit; the analyzed native Safari harness covers the
 same local generation, PNG download, validation, source discard, and zero
 external-request contract. No automated UC-26 accessibility finding remains
 open.
+
+## UC-27 QR Decode
+
+- Branch: `feature/uc-27-qr-decode`
+- Date: 2026-10-19
+- Targets: shared Flutter web, Windows, and Linux image-decoding surface
+- Locales: English and Brazilian Portuguese
+
+The image picker, decode, focusable result, copy, and save controls follow
+keyboard order. Successful decoding moves focus to a localized live result
+region; errors and notices use live announcements. Decoded text remains
+selectable within a bounded scrolling region. Metadata labels, actions, safe
+errors, and notices are localized in both catalogs.
+
+Widget coverage checks cancellation, stale-result cleanup, busy controls,
+resource and access failures, disposal of pending file/service work, and exact
+Unicode copy/save behavior. Native integration and compiled-browser scenarios
+exercise local image loading, successful decoding, exact UTF-8 output, corrupt
+image rejection, and absence of utility network requests. The native Safari
+harness executes the same fixture through the real browser file adapter.
