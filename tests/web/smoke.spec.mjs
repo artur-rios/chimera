@@ -19,7 +19,7 @@ const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.
 // Run the native Safari helper's actual observation body against Flutter.
 const safariHarness = readFileSync(new URL('./safari_smoke.dart', import.meta.url), 'utf8');
 const safariCronDiagnostics = readFileSync(new URL('./safari_cron_diagnostics.js', import.meta.url), 'utf8');
-const safariTextBoxElementScript = safariHarness.match(/const _textBoxElementScript = r'''([\s\S]*?)''';/)[1];
+const safariTextInput = readFileSync(new URL('./safari_text_input.js', import.meta.url), 'utf8');
 const safariInputObservation = safariHarness
   .split('Future<bool> _inputHasValue(')[1]
   .match(/driver\.execute\(\s*'''([\s\S]*?)'''/)[1];
@@ -1355,9 +1355,48 @@ test('cron flow calculates locally without external requests', async ({ page }) 
   expect(externalRequests).toEqual([]);
 });
 
-test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesDetermineExactOccurrences', async ({ page }) => {
+async function emulateSafariPointerClock(page) {
+  await page.addInitScript(() => {
+    window.__safariClockPointerUps = 0;
+    window.addEventListener('pointerup', event => {
+      if (!event.isTrusted) return;
+      window.__safariClockPointerUps++;
+      // Actual SafariDriver offset from PR80 run 39307753712. Change only the
+      // test event clock; the browser still delivers the real pointer event.
+      Object.defineProperty(event, 'timeStamp', { value: event.timeStamp + 814129349438 });
+    }, { capture: true });
+  });
+}
+
+async function safariTextInputReady(page, label) {
+  return page.evaluate(({ source, label }) =>
+    new Function(`${source}\nreturn prepareSafariTextInput(arguments[0]);`)(label),
+  { source: safariTextInput, label });
+}
+
+async function fillSafariTextBox(page, label, value) {
+  await expect.poll(() => safariTextInputReady(page, label), { timeout: 30000 }).toBe(true);
+  await page.keyboard.press('ControlOrMeta+A');
+  let entered = '';
+  for (const character of value) {
+    await page.keyboard.type(character);
+    entered += character;
+    await expect.poll(() => page.evaluate(({ script, label, value }) =>
+      new Function(script)(label, value, false),
+    { script: safariInputObservation, label, value: entered }), { timeout: 3000 }).toBe(true);
+  }
+  await page.keyboard.press('Tab');
+  await expect(page.getByRole('textbox', { name: label, exact: true })).toHaveValue(value);
+}
+
+test('GivenSafariPointerClock_WhenConnectedKeyboardEditing_ThenExactCronOccurrencesRender', async ({ page }) => {
   const requests = [];
+  await emulateSafariPointerClock(page);
   await page.goto('/');
+  await page.evaluate(`${safariTextInput}\ninstallSafariTextInputReadiness();`);
+  const readinessMethods = await page.evaluateHandle(() => [
+    EventTarget.prototype.addEventListener, EventTarget.prototype.removeEventListener,
+  ]);
   await enableFlutterSemantics(page);
   await page.evaluate(`${safariCronDiagnostics}\ninstallCronDiagnostics();`);
   // Match Safari's semantics navigation without a preceding pointer gesture.
@@ -1366,31 +1405,39 @@ test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesD
   await expect(page.getByRole('textbox', { name: 'Reference instant', exact: true })).toBeVisible();
   await page.context().setOffline(true);
   page.on('request', request => recordHttpRequest(request, requests));
+  // Hold the actual engine's first input-listener registration. DOM focus
+  // alone must not report editing-ready while that connection is absent.
+  await page.evaluate(() => {
+    const original = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, callback, options) {
+      if (type === 'input' && this instanceof HTMLInputElement &&
+          this.getAttribute('aria-label') === 'Cron expression') {
+        window.__releaseCronInput = () => {
+          original.call(this, type, callback, options);
+          EventTarget.prototype.addEventListener = original;
+          delete window.__releaseCronInput;
+        };
+        return;
+      }
+      return original.call(this, type, callback, options);
+    };
+  });
+  expect(await safariTextInputReady(page, 'Cron expression')).toBe(false);
+  await expect.poll(() => page.evaluate(() => typeof window.__releaseCronInput)).toBe('function');
+  await expect(page.getByRole('textbox', { name: 'Cron expression', exact: true })).toBeFocused();
+  expect(await safariTextInputReady(page, 'Cron expression')).toBe(false);
+  await page.evaluate(() => window.__releaseCronInput());
   for (const [label, value] of [
     ['Cron expression', '0 9 * * MON-FRI'],
     ['Time zone', 'UTC'],
     ['Occurrence count', '1'],
     ['Reference instant', '2026-01-05T12:00:00Z'],
   ]) {
-    // Resolve the exact element returned to SafariDriver, then use real native
-    // input actions. ControlOrMeta maps Select All to the browser's platform.
-    const handle = await page.evaluateHandle(({ script, label }) =>
-      new Function(script)(label), { script: safariTextBoxElementScript, label });
-    const editor = handle.asElement();
-    expect(editor).not.toBeNull();
-    await editor.click();
-    await page.keyboard.press('ControlOrMeta+A');
-    let entered = '';
-    for (const character of value) {
-      await page.keyboard.type(character);
-      entered += character;
-      await expect.poll(() => page.evaluate(({ script, label, value }) =>
-        new Function(script)(label, value, false),
-      { script: safariInputObservation, label, value: entered }), { timeout: 3000 }).toBe(true);
+    if (label === 'Occurrence count') {
+      // Tab from Time zone has already focused and connected the next editor.
+      await expect(page.getByRole('textbox', { name: label, exact: true })).toBeFocused();
     }
-    await page.keyboard.press('Tab');
-    await expect(page.getByRole('textbox', { name: label, exact: true })).toHaveValue(value);
-    await handle.dispose();
+    await fillSafariTextBox(page, label, value);
   }
   await page.getByRole('button', { name: 'Calculate occurrences', exact: true })
     .evaluate(node => node.click());
@@ -1421,6 +1468,45 @@ test('GivenUnfocusedCronInputs_WhenSafariUsesNativeEditing_ThenControllerValuesD
   expect(timeline.dropped).toBe(0);
   await page.evaluate(() => window.__chimeraCronDiagnostics.stop());
   expect(await page.evaluate(() => '__chimeraCronDiagnostics' in window)).toBe(false);
+  expect(await readinessMethods.evaluate(([add, remove]) =>
+    EventTarget.prototype.addEventListener === add &&
+    EventTarget.prototype.removeEventListener === remove)).toBe(true);
+  await readinessMethods.dispose();
+  // Removing optional diagnostics must preserve functional readiness tracking.
+  await fillSafariTextBox(page, 'Occurrence count', '2');
+  await page.getByRole('button', { name: 'Calculate occurrences', exact: true }).evaluate(node => node.click());
+  await expect(result).toContainText('Next: 2026-01-07T09:00:00.000+00:00');
+  expect((await result.textContent()).match(/Next: /g)).toHaveLength(2);
+  expect(await page.evaluate(() => window.__safariClockPointerUps)).toBe(0);
+  expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
+});
+
+test('GivenAutofocusedTextarea_WhenSafariReadinessPrecedesSemantics_ThenExactMultilineUrlEncodes', async ({ page }) => {
+  const requests = [];
+  await emulateSafariPointerClock(page);
+  await page.goto('/');
+  await page.evaluate(`${safariTextInput}\ninstallSafariTextInputReadiness();`);
+  await enableFlutterSemantics(page);
+  await page.getByRole('button', { name: 'Encode URL', exact: true }).evaluate(node => node.click());
+  const editor = page.getByRole('textbox', { name: 'Text to encode', exact: true });
+  await expect(editor).toBeFocused();
+  expect(await editor.evaluate(input => input.tagName)).toBe('TEXTAREA');
+  await page.context().setOffline(true);
+  page.on('request', request => recordHttpRequest(request, requests));
+  await urlScript(page, 'Setup');
+  await fillSafariTextBox(page, 'Text to encode', 'A\nB');
+  await page.getByRole('button', { name: 'Encode', exact: true }).evaluate(node => node.click());
+  const result = page.getByRole('region', { name: 'URL encoded result URL encoding succeeded.', exact: true });
+  await expect(result).toBeVisible();
+  await expect.poll(() => urlScript(page, 'Copy')).toBe(true);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => page.evaluate(() => ({
+    value: window.__chimeraUrlCopiedText, copies: window.__chimeraUrlCopies,
+  }))).toEqual({ value: 'A%0AB', copies: 1 });
+  await expect.poll(() => page.evaluate(source =>
+    new Function(source)('Text to encode', '', false), safariInputObservation)).toBe(true);
+  expect(await page.evaluate(() => window.__safariClockPointerUps)).toBe(0);
+  expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
 });
 
 test('date flow converts locally without external requests', async ({ page }) => {

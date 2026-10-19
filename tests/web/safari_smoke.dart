@@ -315,10 +315,7 @@ Future<void> main(List<String> arguments) async {
       return await driver.title == 'Chimera' && flutterRoot == true;
     }, 'Chimera did not finish loading');
 
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () async =>
           await driver.execute(
@@ -375,10 +372,7 @@ Future<void> main(List<String> arguments) async {
       );
       return flutterRoot == true;
     }, 'Chimera did not reload for date flow');
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a date'),
       'Home page did not return for date flow',
@@ -411,10 +405,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for number base flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a number base'),
       'Home page did not return for number base flow',
@@ -446,10 +437,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text escape flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Escape text'),
       'Home page did not return for text escape flow',
@@ -482,10 +470,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text unescape flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Unescape text'),
       'Home page did not return for text unescape flow',
@@ -518,10 +503,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON table flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a JSON array to a table'),
       'Home page did not return for JSON table flow',
@@ -553,10 +535,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON CSV flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert a JSON array to CSV'),
       'Home page did not return for JSON CSV flow',
@@ -588,10 +567,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON YAML flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Convert JSON to YAML'),
       'Home page did not return for JSON YAML flow',
@@ -619,10 +595,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for JSON format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format JSON'),
       'Home page did not return for JSON format flow',
@@ -654,10 +627,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for SQL format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format SQL'),
       'Home page did not return for SQL format flow',
@@ -693,10 +663,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for XML format flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Format XML'),
       'Home page did not return for XML format flow',
@@ -730,10 +697,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for list comparison flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Compare lists'),
       'Home page did not return for list comparison flow',
@@ -766,10 +730,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text analysis flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Analyze text'),
       'Home page did not return for text analysis flow',
@@ -800,10 +761,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text transformation flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Transform text'),
       'Home page did not return for text transformation flow',
@@ -831,10 +789,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for text comparison flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Compare text'),
       'Home page did not return for text comparison flow',
@@ -867,10 +822,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for Base64 encoding flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Encode Base64'),
       'Home page did not return for Base64 encoding flow',
@@ -963,10 +915,7 @@ Future<void> main(List<String> arguments) async {
           true,
       'Chimera did not reload for Base64 decoding flow',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder')?.click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _waitUntil(
       () => _pageContains(driver, 'Decode Base64'),
       'Home page did not return for Base64 decoding flow',
@@ -1071,10 +1020,7 @@ Future<void> main(List<String> arguments) async {
             true,
         'Chimera did not reload for certificate $representation flow',
       );
-      await driver.execute(
-        "document.querySelector('flt-semantics-placeholder')?.click();",
-        const <Object?>[],
-      );
+      await _enableFlutterSemantics(driver);
       await _clickButton(driver, 'Inspect a certificate');
       await _waitUntil(
         () => _pageContains(driver, 'Certificate (PEM or Base64)'),
@@ -1253,10 +1199,7 @@ Future<void> _createJwt(WebDriver driver) async {
         true,
     'JWT semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Create JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Claims JSON'),
@@ -1358,10 +1301,7 @@ Future<void> _decodeQr(WebDriver driver) async {
         true,
     'QR decode semantics did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode QR code');
   await _waitUntil(
     () => _pageContains(driver, 'Choose PNG, JPEG or BMP image'),
@@ -1479,10 +1419,7 @@ Future<void> _encodeQr(WebDriver driver) async {
         true,
     'QR semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode QR code');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -1595,10 +1532,7 @@ Future<String> _createAsymmetricJwt(
         true,
     '$algorithm JWT semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Create JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Claims JSON'),
@@ -1707,10 +1641,7 @@ Future<void> _openJwtInspectPage(WebDriver driver) async {
         true,
     'JWT inspection semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Inspect JWT');
   await _waitUntil(
     () => _pageContains(driver, 'Optional verification key'),
@@ -1796,10 +1727,7 @@ Future<void> _encodeHtml(WebDriver driver) async {
         true,
     'HTML semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode HTML');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -1957,10 +1885,7 @@ Future<void> _decodeUrl(WebDriver driver) async {
         true,
     'URL Decode semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode URL');
   await _waitUntil(
     () => _pageContains(driver, 'Percent-encoded text to decode'),
@@ -2152,10 +2077,7 @@ Future<void> _decodeHtml(WebDriver driver) async {
         true,
     'HTML Decode semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decode HTML');
   await _waitUntil(
     () => _pageContains(driver, 'HTML entities to decode'),
@@ -2315,10 +2237,7 @@ Future<void> _compressGzip(WebDriver driver, String source) async {
         true,
     'GZIP semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Compress to GZIP');
   await _waitUntil(
     () => _pageContains(driver, 'Text to compress'),
@@ -2505,10 +2424,7 @@ Future<void> _decompressGzip(WebDriver driver) async {
         true,
     'GZIP decompression semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Decompress GZIP');
   await _waitUntil(
     () => _pageContains(driver, 'Load GZIP file'),
@@ -2628,10 +2544,7 @@ Future<void> _convertCertificate(WebDriver driver, String source) async {
         true,
     'Chimera did not reload for certificate $source conversion',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder')?.click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Convert a certificate');
   await _waitUntil(
     () => _pageContains(driver, 'Certificate (PEM or Base64)'),
@@ -2944,28 +2857,33 @@ Future<void> _clickCheckbox(WebDriver driver, String text) async {
   }, 'Checkbox did not become selected: $text');
 }
 
-const _textBoxElementScript = r'''
-  const label = arguments[0];
-  const input = [...document.querySelectorAll('input[aria-label], textarea[aria-label]')]
-    .find(element => element.getAttribute('aria-label') === label);
-  return input && !input.disabled ? input : null;
-''';
+Future<String> _loadSafariTextInput() =>
+    File.fromUri(Platform.script.resolve('safari_text_input.js'))
+        .readAsString();
+
+Future<void> _enableFlutterSemantics(WebDriver driver) async {
+  final source = await _loadSafariTextInput();
+  await driver.execute(
+    '$source\ninstallSafariTextInputReadiness();\n'
+    "document.querySelector('flt-semantics-placeholder')?.click();",
+    const <Object?>[],
+  );
+}
 
 Future<void> _fillTextBox(WebDriver driver, String label, String value) async {
+  final source = await _loadSafariTextInput();
   for (var attempt = 0; attempt < 3; attempt++) {
-    await _waitUntil(() async {
-      final input = await driver.execute(_textBoxElementScript, <Object?>[
-        label,
-      ]);
-      if (input is! WebElement) return false;
-      // DOM focus/select can update semantics without activating Dart editing.
-      await input.click();
-      return await driver.execute(
-            'return document.activeElement === arguments[0];',
-            <Object?>[input],
+    // SafariDriver pointer events can use a different clock from DOM click().
+    // Keep activation on the semantics path and await the real input listener.
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            '$source\nreturn prepareSafariTextInput(arguments[0]);',
+            <Object?>[label],
           ) ==
-          true;
-    }, 'Text box did not become active: $label');
+          true,
+      'Text box did not connect for editing: $label',
+    );
     // Native Safari runs on macOS. sendChord releases both A and Command.
     await driver.keyboard.sendChord(<String>[Keyboard.command, 'a']);
 
@@ -3178,10 +3096,7 @@ Future<void> _encodeUrl(WebDriver driver) async {
         true,
     'URL semantics placeholder did not load',
   );
-  await driver.execute(
-    "document.querySelector('flt-semantics-placeholder').click();",
-    const <Object?>[],
-  );
+  await _enableFlutterSemantics(driver);
   await _clickButton(driver, 'Encode URL');
   await _waitUntil(
     () => _pageContains(driver, 'Text to encode'),
@@ -3418,10 +3333,7 @@ Future<void> _generateHash(WebDriver driver) async {
           true,
       'Hash semantics placeholder did not load',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder').click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _clickButton(driver, 'Generate hash');
     await _waitUntil(
       () => _pageContains(driver, 'Text to hash (UTF-8)'),
@@ -3655,10 +3567,7 @@ Future<void> _generateChecksum(WebDriver driver) async {
           true,
       'Checksum semantics placeholder did not load',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder').click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _clickButton(driver, 'Generate checksum');
     await _waitUntil(
       () => _pageContains(driver, 'Text for checksum (UTF-8)'),
@@ -3861,10 +3770,7 @@ Future<void> _generateLorem(WebDriver driver) async {
           true,
       'Lorem semantics placeholder missing',
     );
-    await driver.execute(
-      "document.querySelector('flt-semantics-placeholder').click();",
-      const <Object?>[],
-    );
+    await _enableFlutterSemantics(driver);
     await _clickButton(driver, 'Generate Lorem Ipsum');
     await _waitUntil(
       () => _pageContains(driver, 'Positive integer count'),
