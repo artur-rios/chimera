@@ -11,6 +11,7 @@ import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
+import 'hash_generate_page.dart';
 import 'html_decode_page.dart';
 import 'html_encode_page.dart';
 import 'json_csv_page.dart';
@@ -55,6 +56,12 @@ GoRouter buildRouter({
   required HtmlDecodeClipboardWriter htmlDecodeClipboardWriter,
   required HtmlDecodeFileSaver htmlDecodeFileSaver,
   required HtmlDecodeOutputEncoder htmlDecodeOutputEncoder,
+  required HashGenerateOperationService hashGenerateService,
+  required HashGenerateFilePicker hashGenerateFilePicker,
+  required HashGenerateClipboardReader hashGenerateClipboardReader,
+  required HashGenerateClipboardWriter hashGenerateClipboardWriter,
+  required HashGenerateFileSaver hashGenerateFileSaver,
+  required HashGenerateOutputEncoder hashGenerateOutputEncoder,
   required HtmlEncodeOperationService htmlEncodeService,
   required HtmlEncodeFilePicker htmlEncodeFilePicker,
   required HtmlEncodeClipboardReader htmlEncodeClipboardReader,
@@ -220,6 +227,19 @@ GoRouter buildRouter({
           clipboardWriter: htmlDecodeClipboardWriter,
           fileSaver: htmlDecodeFileSaver,
           outputEncoder: htmlDecodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/hash/generate',
+        builder: (context, state) => HashGeneratePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: hashGenerateService,
+          filePicker: hashGenerateFilePicker,
+          clipboardReader: hashGenerateClipboardReader,
+          clipboardWriter: hashGenerateClipboardWriter,
+          fileSaver: hashGenerateFileSaver,
+          outputEncoder: hashGenerateOutputEncoder,
         ),
       ),
       GoRoute(
@@ -450,6 +470,14 @@ GoRouter buildRouter({
                             localeTag,
                             'gzipDecompress.openAction',
                           ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-hash-generate'),
+                        onPressed: () => context.go('/hash/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'hashGenerate.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

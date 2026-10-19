@@ -53,6 +53,8 @@ Future<int> runChimera(
   JsonObjectEncoder? gzipDecompressJsonEncoder,
   HtmlDecodeService htmlDecodeService = const HtmlDecodeService(),
   JsonObjectEncoder? htmlDecodeJsonEncoder,
+  HashGenerateService hashGenerateService = const HashGenerateService(),
+  JsonObjectEncoder? hashGenerateJsonEncoder,
   HtmlEncodeService htmlEncodeService = const HtmlEncodeService(),
   JsonObjectEncoder? htmlEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
@@ -105,6 +107,9 @@ Future<int> runChimera(
           : parsed.command?.name == 'jwt' &&
                 parsed.command?.command?.name == 'create'
           ? 'cli.jwtCreateUsage'
+          : parsed.command?.name == 'hash' &&
+                parsed.command?.command?.name == 'generate'
+          ? 'cli.hashGenerateUsage'
           : parsed.command?.name == 'html' &&
                 parsed.command?.command?.name == 'decode'
           ? 'cli.htmlDecodeUsage'
@@ -233,6 +238,29 @@ Future<int> runChimera(
             ),
         service: htmlDecodeService,
         encodeJson: htmlDecodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'hash' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runHashGenerate(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: hashGenerateService,
+        encodeJson: hashGenerateJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'html' &&
@@ -617,6 +645,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'jwt' && args[1] == 'create';
     final isHtmlDecode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'decode';
+    final isHashGenerate =
+        args.length >= 2 && args[0] == 'hash' && args[1] == 'generate';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -670,6 +700,7 @@ Future<int> runChimera(
               isJwtInspect ||
               isJwtCreate ||
               isHtmlDecode ||
+              isHashGenerate ||
               isHtmlEncode ||
               isBase64Encode ||
               isGzipCompress ||
@@ -704,6 +735,8 @@ Future<int> runChimera(
           ? 'jwt-create.invalid-options'
           : isHtmlDecode
           ? 'html-decode.invalid-options'
+          : isHashGenerate
+          ? 'hash-generate.invalid-options'
           : isHtmlEncode
           ? 'html-encode.invalid-options'
           : isGzipCompress
@@ -759,6 +792,8 @@ Future<int> runChimera(
           ? 'error.jwtCreate.validation'
           : isHtmlDecode
           ? 'error.htmlDecode.validation'
+          : isHashGenerate
+          ? 'error.hashGenerate.validation'
           : isHtmlEncode
           ? 'error.htmlEncode.validation'
           : isGzipCompress
@@ -856,6 +891,14 @@ ArgParser _buildParser() {
     ..addOption('file', abbr: 'f')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
+  final hashGenerate = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('algorithm', defaultsTo: 'sha256')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final hash = ArgParser()..addCommand('generate', hashGenerate);
   final htmlEncode = ArgParser()
     ..addOption('input', abbr: 'i')
     ..addFlag('stdin', negatable: false)
@@ -1047,6 +1090,7 @@ ArgParser _buildParser() {
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('gzip', gzip)
+    ..addCommand('hash', hash)
     ..addCommand('html', html)
     ..addCommand('json', json)
     ..addCommand('jwt', jwt)
@@ -2687,6 +2731,158 @@ Future<int> _runHtmlDecode(
         out.write(stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runHashGenerate(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required HashGenerateService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final algorithm = parsed.option('algorithm')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : !HashGenerator.algorithms.contains(algorithm)
+      ? 'invalid-algorithm'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'hash-generate.$invalid',
+      messageKey: 'error.hashGenerate.validation',
+      details: invalid == 'invalid-algorithm'
+          ? {'field': 'algorithm', 'reason': 'unsupported-algorithm'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'hash-generate.resource-limit',
+    messageKey: 'error.hashGenerate.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'hash-generate.output-access',
+    messageKey: 'error.hashGenerate.outputAccess',
+  );
+
+  late HashGenerateOperationRequest request;
+  try {
+    request = text != null
+        ? HashGenerateOperationRequest.text(text, algorithm: algorithm)
+        : HashGenerateOperationRequest.bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            algorithm: algorithm,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput
+          ? 'hash-generate.input-access'
+          : 'hash-generate.file-access',
+      messageKey: useStandardInput
+          ? 'error.hashGenerate.inputAccess'
+          : 'error.hashGenerate.fileAccess',
+    );
+    return 74;
+  }
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson({'algorithm': value.algorithm, 'digest': value.digest, 'legacy': value.legacy, 'warning': value.warningKey == null ? null : catalog.lookup(localeTag, value.warningKey!)})}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'hashGenerate.savedResult')}\n${value.warningKey == null ? '' : '${catalog.lookup(localeTag, value.warningKey!)}\n'}'
+            : '${value.digest}\n${value.warningKey == null ? '' : '${catalog.lookup(localeTag, value.warningKey!)}\n'}';
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode('${value.digest}\n'));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
         return 75;
       } on Object {
         outputAccessFailure();

@@ -11,6 +11,7 @@ dependencies:
   archive: 4.5.2
   asn1lib: 1.6.5
   characters: 1.4.1
+  crypto: 3.0.7
   csv: 8.0.0
   diff_match_patch: 0.4.1
   image: 4.12.0
