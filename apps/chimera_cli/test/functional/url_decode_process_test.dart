@@ -54,8 +54,8 @@ void main() {
           // readAsString strips a leading BOM; byte comparison preserves it.
           expect(await output.readAsBytes(), utf8.encode(expected));
           expect(
-            await directory.list().map((entry) => entry.path).toList(),
-            unorderedEquals([input.path, output.path]),
+            await directory.list().map((entry) => entry.uri).toList(),
+            unorderedEquals([input.uri, output.uri]),
           );
         },
       );
