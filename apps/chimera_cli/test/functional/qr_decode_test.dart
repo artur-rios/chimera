@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
@@ -446,37 +447,69 @@ void main() {
     },
   );
 
-  test(
-    'GivenOversizedOpenStdin_WhenRead_ThenLimitReturnsWithoutWaitingForEof',
-    () async {
-      final process = await Process.start(
-        Platform.resolvedExecutable,
-        _cliArguments(['qr', 'decode', '--stdin', '--json']),
-      );
+  group('Native bounded stdin', () {
+    late Directory buildDirectory;
+    late String executable;
+    setUpAll(() async {
+      buildDirectory = await Directory.systemTemp.createTemp('chimera-qr-cli-');
+      addTearDown(() => buildDirectory.delete(recursive: true));
+      executable =
+          '${buildDirectory.path}/chimera${Platform.isWindows ? '.exe' : ''}';
+      // Keep cold source compilation outside the open-input rejection deadline.
+      final build = await Process.run(Platform.resolvedExecutable, [
+        'compile',
+        'exe',
+        _cliEntrypoint(),
+        '-o',
+        executable,
+      ]);
+      expect(build.exitCode, 0, reason: '${build.stdout}\n${build.stderr}');
+    });
+    test('GivenOversizedOpenStdin_WhenRead_ThenLimitReturnsWithoutWaitingForEof', () async {
+      final process = await Process.start(executable, [
+        'qr',
+        'decode',
+        '--stdin',
+        '--json',
+      ]);
       final out = process.stdout.transform(utf8.decoder).join();
       final err = process.stderr.transform(utf8.decoder).join();
-      // A rejected stream may close its pipe while this producer is still open.
+      // Observe early pipe closure without making producer flush a prerequisite
+      // for the exit deadline. IOSink.add starts delivery while stdin stays open.
       final done = process.stdin.done.then<void>(
         (_) {},
         onError: (Object _) {},
       );
-      process.stdin.add(List<int>.filled(16 * 1024 * 1024 + 1, 0));
       try {
-        await process.stdin.flush();
-      } on Object {
-        // Early pipe closure is expected once the input bound is reached.
+        process.stdin.add(Uint8List(16 * 1024 * 1024 + 1));
+        expect(await process.exitCode.timeout(const Duration(seconds: 20)), 75);
+        expect(await out, isEmpty);
+        expect(jsonDecode(await err), {
+          'error': {
+            'kind': 'resource',
+            'code': 'qr-decode.resource-limit',
+            'message': 'QR decoding exceeded its resource limit.',
+            'location': {'field': 'input', 'reason': 'byte-limit'},
+          },
+        });
+      } finally {
+        // Also reap a child that failed to reject input; never send EOF before
+        // the assertion above has observed its exit with stdin still open.
+        process.kill();
+        final closed = process.stdin.close().then<void>(
+          (_) {},
+          onError: (Object _) {},
+        );
+        await Future.wait<void>([
+          closed,
+          done,
+          process.exitCode.then<void>((_) {}),
+          out.then<void>((_) {}),
+          err.then<void>((_) {}),
+        ]).timeout(const Duration(seconds: 5));
       }
-      expect(await process.exitCode.timeout(const Duration(seconds: 20)), 75);
-      try {
-        await process.stdin.close();
-      } on Object {
-        // The bounded reader already stopped consuming the producer.
-      }
-      await done;
-      expect(await out, isEmpty);
-      expect(await err, contains('byte-limit'));
-    },
-  );
+    }, timeout: const Timeout(Duration(seconds: 30)));
+  }, timeout: const Timeout(Duration(minutes: 2)));
 
   test(
     'GivenHelp_WhenRunInBothLocales_ThenFormatsAndSourcesAreDocumented',
