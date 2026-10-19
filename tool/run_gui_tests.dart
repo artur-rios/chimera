@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'run_native_gui_tests.dart';
+
 Future<void> main() async {
   final device =
       Platform.environment['CHIMERA_GUI_DEVICE'] ??
@@ -12,12 +14,7 @@ Future<void> main() async {
     return;
   }
 
-  exitCode = await _run(flutter, <String>[
-    'test',
-    'integration_test',
-    '-d',
-    device,
-  ]);
+  exitCode = await runNativeGuiTests(device: device);
 }
 
 Future<int> _run(String executable, List<String> arguments) async {
