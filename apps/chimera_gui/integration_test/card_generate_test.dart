@@ -102,7 +102,7 @@ void main() {
 
     for (final failure in ['validation', 'processing']) {
       testWidgets(
-        'Given${locale}${failure}Failure_WhenGeneratedOffline_ThenLocalizedErrorWithoutPartialPan',
+        'Given$locale${failure}Failure_WhenGeneratedOffline_ThenLocalizedErrorWithoutPartialPan',
         (tester) async {
           final network = _Offline();
           final previous = HttpOverrides.current;

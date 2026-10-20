@@ -92,7 +92,7 @@ void main() {
       ['unexpected'],
     ]) {
       test(
-        'Given${locale}${args}_WhenInvalid_Then64AndLocalizedFailure',
+        'Given$locale${args}_WhenInvalid_Then64AndLocalizedFailure',
         () async {
           final out = StringBuffer(), err = StringBuffer();
           final code = await runChimera(
