@@ -77,7 +77,7 @@ for (const [format, pattern] of Object.entries({
     await select(page, 'Country or locale', 'Brazil');
     await select(page, 'Document type', 'CNPJ');
     await select(page, 'CNPJ format', format);
-    await page.getByRole('button', { name: 'Generate synthetic documents', exact: true }).click();
+    await expect.poll(() => probe(page, 'button', 'Generate synthetic documents')).toBe(true);
     await expect.poll(() => probe(page, 'values')).not.toBeNull();
     expect(await probe(page, 'values')).toMatch(pattern);
   });

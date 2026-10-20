@@ -27,6 +27,7 @@ function identityDocumentProbe(action, value) {
     const node = [...document.querySelectorAll('[role="menuitem"]')].find(item => label(item) === value);
     if (!node) return false; node.click(); return true;
   }
+  if (action === 'button') { const node = button(value); if (!node) return false; node.click(); return true; }
   if (action === 'copy') { const node = button('Copy labeled identity data'); if (!node) return false; node.click(); return true; }
   if (action === 'copied') return window.__chimeraIdentityDocumentCopied === value;
   if (action === 'saved') return window.__chimeraSavedName === 'chimera-synthetic-identity-documents.txt' && JSON.stringify(window.__chimeraSavedBytes) === JSON.stringify(value) && window.__chimeraSaveCount === 1 && window.__chimeraLiveDownloadUrlCount === 0;
