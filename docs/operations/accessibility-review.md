@@ -634,3 +634,30 @@ production generation, RFC version and variant shapes, v7 time ordering,
 uniqueness, exact transfer, discard behavior, and zero network access. The
 native Safari harness covers the same local-only path. No automated UC-34
 accessibility finding remains open.
+
+## UC-35 Generate Credit Card
+
+- Branch: `feature/uc-35-generate-credit-card`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux synthetic-card surface
+- Locales: English and Brazilian Portuguese
+
+The network selector, positive-integer count field, and generate, copy, and save
+actions expose localized labels in document-order keyboard traversal. Enter
+submits the count field. Actions disable while work is pending. Validation,
+processing, resource, and adapter failures are announced through localized live
+messages without exposing partial card numbers or private diagnostics.
+
+Successful generation moves focus to a localized live result region. A visible
+and accessible warning labels every value as synthetic test data that must not
+be used for real transactions. Copy and save include that warning before the
+same newline-delimited values. Configuration changes, failures, late
+completions, and disposal clear stale result state.
+
+Focused widget and save-adapter coverage exercises both locales, all four
+networks, positive counts, keyboard submission, focus and live semantics,
+exact labeled multi-value copy/save output, busy behavior, stale completion,
+and redacted failures. Native and compiled-browser scenarios exercise the
+closed published sandbox catalogue, exact transfer, discard behavior, and zero
+network access. The native Safari harness covers the same local-only path. No
+automated UC-35 accessibility finding remains open.

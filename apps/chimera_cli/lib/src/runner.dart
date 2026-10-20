@@ -43,6 +43,8 @@ Future<int> runChimera(
   JsonObjectEncoder? passwordJsonEncoder,
   UuidService uuidService = const UuidService(),
   JsonObjectEncoder? uuidJsonEncoder,
+  CardService cardService = const CardService(),
+  JsonObjectEncoder? cardJsonEncoder,
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -100,7 +102,9 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'uuid'
+      final key = parsed.command?.name == 'card'
+          ? 'cli.cardUsage'
+          : parsed.command?.name == 'uuid'
           ? 'cli.uuidUsage'
           : parsed.command?.name == 'password'
           ? 'cli.passwordUsage'
@@ -203,6 +207,26 @@ Future<int> runChimera(
         err: err,
         service: uuidService,
         encodeJson: uuidJsonEncoder ?? jsonEncode,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+      );
+    }
+    if (parsed.command!.name == 'card' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runCard(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        service: cardService,
+        encodeJson: cardJsonEncoder ?? jsonEncode,
         writeOutputFile:
             writeOutputFile ??
             (path, bytes) => _writeFileTransactionally(
@@ -784,6 +808,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isCard =
+        args.length >= 2 && args[0] == 'card' && args[1] == 'generate';
     final isUuid =
         args.length >= 2 && args[0] == 'uuid' && args[1] == 'generate';
     final isPassword =
@@ -856,7 +882,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isUuid ||
+          (isCard ||
+              isUuid ||
               isPassword ||
               isLorem ||
               isChecksumGenerate ||
@@ -892,7 +919,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isUuid
+      code: isCard
+          ? 'card.invalid-options'
+          : isUuid
           ? 'uuid.invalid-options'
           : isPassword
           ? 'password.invalid-options'
@@ -961,7 +990,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isUuid
+      messageKey: isCard
+          ? 'error.card.validation'
+          : isUuid
           ? 'error.uuid.validation'
           : isPassword
           ? 'error.password.validation'
@@ -1036,6 +1067,15 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final card = ArgParser()
+    ..addCommand(
+      'generate',
+      ArgParser()
+        ..addOption('network', defaultsTo: 'visa')
+        ..addOption('count', defaultsTo: '1')
+        ..addOption('output', abbr: 'o')
+        ..addFlag('json', negatable: false),
+    );
   final uuid = ArgParser()
     ..addCommand(
       'generate',
@@ -1332,6 +1372,7 @@ ArgParser _buildParser() {
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('base64', base64)
+    ..addCommand('card', card)
     ..addCommand('certificate', certificate)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
@@ -6322,6 +6363,80 @@ Future<int> _runChecksumGenerate(
         code: failure.code,
         messageKey: failure.messageKey,
         details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runCard(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required CardService service,
+  required JsonObjectEncoder encodeJson,
+  required FileBytesWriter writeOutputFile,
+}) async {
+  final json = parsed.flag('json');
+  final path = parsed.option('output');
+  void fail(
+    String kind,
+    String code,
+    String messageKey, [
+    Map<String, Object?> details = const {},
+  ]) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+  if (parsed.rest.isNotEmpty || path == '') {
+    fail('validation', 'card.invalid-options', 'error.card.validation');
+    return 64;
+  }
+  final result = await service.execute(
+    CardOperationRequest(
+      network: parsed.option('network')!,
+      count: parsed.option('count')!,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        final human = [
+          catalog.lookup(localeTag, 'card.syntheticLabel'),
+          ...value.values,
+        ].join('\n');
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : path != null
+            ? '${catalog.lookup(localeTag, 'card.saved')}\n'
+            : human;
+        if (path != null) {
+          await writeOutputFile(path, utf8.encode(human));
+        }
+        await writeSinkAndFlush(out, payload);
+        return 0;
+      } on OutOfMemoryError {
+        fail('resource', 'card.resource-limit', 'error.card.resource');
+        return 75;
+      } on Object {
+        fail('access', 'card.output-access', 'error.card.outputAccess');
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      fail(
+        failure.kind.name,
+        failure.code,
+        failure.messageKey,
+        failure.details,
       );
       return _exitCodeFor(failure.kind);
     },

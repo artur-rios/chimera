@@ -3,6 +3,40 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenCardMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.cardUsage',
+      'card.syntheticLabel',
+      'card.pageTitle',
+      'card.openAction',
+      'card.networkLabel',
+      'card.network.visa',
+      'card.network.mastercard',
+      'card.network.amex',
+      'card.network.discover',
+      'card.countLabel',
+      'card.semantics',
+      'card.generate',
+      'card.resultLabel',
+      'card.success',
+      'card.copy',
+      'card.save',
+      'card.copied',
+      'card.saved',
+      'error.card.validation',
+      'error.card.processing',
+      'error.card.resource',
+      'error.card.outputAccess',
+      'error.card.clipboardWrite',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenUuidMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.uuidUsage',
@@ -891,6 +925,29 @@ void main() {
       'error.password.resource',
       'error.password.outputAccess',
       'error.password.clipboardWrite',
+      'cli.cardUsage',
+      'card.syntheticLabel',
+      'card.pageTitle',
+      'card.openAction',
+      'card.networkLabel',
+      'card.network.visa',
+      'card.network.mastercard',
+      'card.network.amex',
+      'card.network.discover',
+      'card.countLabel',
+      'card.semantics',
+      'card.generate',
+      'card.resultLabel',
+      'card.success',
+      'card.copy',
+      'card.save',
+      'card.copied',
+      'card.saved',
+      'error.card.validation',
+      'error.card.processing',
+      'error.card.resource',
+      'error.card.outputAccess',
+      'error.card.clipboardWrite',
       'cli.uuidUsage',
       'uuid.pageTitle',
       'uuid.openAction',
