@@ -34,10 +34,8 @@ final class AlphabetEncoder {
       _validateSupported(scalars);
       final mapping = alphabetMappingFor(request.alphabet);
       final encoded = switch (request.alphabet) {
-        AlphabetKind.morse || AlphabetKind.nato => _encodeTokens(
-          scalars,
-          mapping.symbols,
-        ),
+        AlphabetKind.morse ||
+        AlphabetKind.nato => _encodeTokens(scalars, mapping.symbols),
         AlphabetKind.braille => _encodeBraille(scalars, mapping.symbols),
       };
 
@@ -146,8 +144,7 @@ final class AlphabetEncoder {
       scalar >= 0x61 && scalar <= 0x7a ? scalar - 0x20 : scalar;
 
   bool _isAsciiLetter(int scalar) =>
-      (scalar >= 0x41 && scalar <= 0x5a) ||
-      (scalar >= 0x61 && scalar <= 0x7a);
+      (scalar >= 0x41 && scalar <= 0x5a) || (scalar >= 0x61 && scalar <= 0x7a);
 
   bool _isAsciiDigit(int scalar) => scalar >= 0x30 && scalar <= 0x39;
 
