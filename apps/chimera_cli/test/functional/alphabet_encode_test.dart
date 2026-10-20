@@ -20,7 +20,7 @@ void main() {
   for (final locale in ['en', 'pt-BR']) {
     for (final fixture in knownAnswers) {
       test(
-        'Given${locale}${fixture.alphabet}_WhenAlphabetEncoded_ThenKnownAnswerAndReferenceReturn',
+        'Given$locale${fixture.alphabet}_WhenAlphabetEncoded_ThenKnownAnswerAndReferenceReturn',
         () async {
           final out = StringBuffer();
           final err = StringBuffer();
@@ -236,10 +236,9 @@ void main() {
     );
 
     expect(exit, 74);
-    expect(
-      (jsonDecode(err.toString()) as Map)['error']['code'],
-      'alphabet.input-access',
-    );
+    final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+    final error = envelope['error'] as Map<String, dynamic>;
+    expect(error['code'], 'alphabet.input-access');
     expect(err.toString(), isNot(contains('private')));
   });
 
@@ -264,10 +263,9 @@ void main() {
 
     expect(exit, 74);
     expect(out.toString(), isEmpty);
-    expect(
-      (jsonDecode(err.toString()) as Map)['error']['code'],
-      'alphabet.output-access',
-    );
+    final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+    final error = envelope['error'] as Map<String, dynamic>;
+    expect(error['code'], 'alphabet.output-access');
   });
 
   test('GivenResourceFailure_WhenEncoded_ThenNoOutputIsSaved', () async {
@@ -295,10 +293,9 @@ void main() {
     expect(exit, 75);
     expect(saves, 0);
     expect(out.toString(), isEmpty);
-    expect(
-      (jsonDecode(err.toString()) as Map)['error']['code'],
-      'alphabet.resource-limit',
-    );
+    final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+    final error = envelope['error'] as Map<String, dynamic>;
+    expect(error['code'], 'alphabet.resource-limit');
   });
 
   test(

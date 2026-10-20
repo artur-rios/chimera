@@ -717,3 +717,32 @@ unsupported-symbol rejection, discard behavior, and zero network attempts.
 Compiled Chromium, Firefox, and WebKit plus the native Safari harness cover the
 same main and alternate flows. No automated UC-39 accessibility finding remains
 open.
+
+## UC-40 Encode with Alphabet
+
+- Branch: `feature/uc-40-encode-alphabet`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux alphabet-encoding surface
+- Locales: English and Brazilian Portuguese
+
+The source editor, file and clipboard actions, alphabet selector, encode action,
+focusable result, exact mapping reference, copy, and save controls expose
+localized labels in document-order keyboard traversal. Every interactive target
+remains at least 48 logical pixels, and the page remains usable at 200% text
+scale.
+
+Successful encoding moves focus to a localized live result region. The encoded
+text remains selectable, while a separately labeled mapping region exposes the
+published mapping identifier, edition, source links, complete symbol table, and
+rules. Copy and save transfer only the exact encoded result. Source text is
+discarded when the request starts; failures, late completions, and disposal do
+not restore source or stale output.
+
+Focused widget coverage exercises both locales, all three alphabets, typed,
+file, and clipboard input, exact mapping display, exact copy/save, redacted
+adapter and validation failures, disposal of pending work, large text, and
+minimum target sizes. Native Windows integration and compiled Chromium,
+Firefox, and WebKit scenarios verify representative output, alternate input
+flows, discard behavior, mapping metadata, and zero network attempts. The
+native Safari harness covers the same local encoding and validation contract.
+No automated UC-40 accessibility finding remains open.

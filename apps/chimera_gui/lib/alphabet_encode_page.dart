@@ -294,6 +294,11 @@ final class _AlphabetEncodePageState extends State<AlphabetEncodePage> {
       .map((entry) => '${entry.key} = ${entry.value}')
       .join('\n');
 
+  String _mappingSemanticsValue(AlphabetEncodeOutput output) =>
+      '${output.mapping.id}; ${output.mapping.edition}; '
+      '${output.mapping.sources.join('; ')}; '
+      '${_symbolReference(output)}; ${output.mapping.rules.join('; ')}';
+
   @override
   void dispose() {
     _generation++;
@@ -465,6 +470,7 @@ final class _AlphabetEncodePageState extends State<AlphabetEncodePage> {
                       explicitChildNodes: true,
                       role: SemanticsRole.region,
                       label: _label('mappingLabel'),
+                      value: _mappingSemanticsValue(output),
                       child: Card(
                         child: Padding(
                           padding: const EdgeInsets.all(16),

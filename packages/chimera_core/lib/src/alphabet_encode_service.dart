@@ -27,13 +27,11 @@ final class AlphabetEncodeOperationRequest {
   );
 
   const AlphabetEncodeOperationRequest._({
-    required _AlphabetEncodeSource source,
-    String? text,
-    List<int>? bytes,
+    required this._source,
+    this._text,
+    this._bytes,
     required this.alphabet,
-  }) : _source = source,
-       _text = text,
-       _bytes = bytes;
+  });
 
   final _AlphabetEncodeSource _source;
   final String? _text;

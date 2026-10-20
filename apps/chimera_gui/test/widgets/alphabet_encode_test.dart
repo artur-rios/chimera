@@ -100,6 +100,13 @@ void main() {
       expect(find.byKey(const Key('alphabet-encode-mapping')), findsOneWidget);
       expect(
         tester
+            .getSemantics(find.byKey(const Key('alphabet-encode-mapping')))
+            .getSemanticsData()
+            .value,
+        contains(fixture.id),
+      );
+      expect(
+        tester
             .widget<TextField>(find.byKey(const Key('alphabet-encode-input')))
             .controller!
             .text,

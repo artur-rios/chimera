@@ -64,13 +64,19 @@ void main() {
       expect(mapping.rules, isNotEmpty);
     });
 
-    test('GivenMappingMetadata_WhenMutationIsAttempted_ThenItRemainsImmutable', () {
-      final mapping = alphabetMappingFor(AlphabetKind.morse);
+    test(
+      'GivenMappingMetadata_WhenMutationIsAttempted_ThenItRemainsImmutable',
+      () {
+        final mapping = alphabetMappingFor(AlphabetKind.morse);
 
-      expect(() => mapping.sources.add('https://example.test'), throwsUnsupportedError);
-      expect(() => mapping.rules.add('changed'), throwsUnsupportedError);
-      expect(() => mapping.symbols['A'] = 'changed', throwsUnsupportedError);
-    });
+        expect(
+          () => mapping.sources.add('https://example.test'),
+          throwsUnsupportedError,
+        );
+        expect(() => mapping.rules.add('changed'), throwsUnsupportedError);
+        expect(() => mapping.symbols['A'] = 'changed', throwsUnsupportedError);
+      },
+    );
   });
 
   group('AlphabetEncoder known answers', () {
@@ -94,7 +100,8 @@ void main() {
           input: 'Ab 12c Z90',
           alphabet: AlphabetKind.braille,
         ),
-        encoded: '\u2820\u2801\u2803 \u283c\u2801\u2803\u2830\u2809 '
+        encoded:
+            '\u2820\u2801\u2803 \u283c\u2801\u2803\u2830\u2809 '
             '\u2820\u2835\u283c\u280a\u281a',
       ),
     ];
@@ -113,31 +120,37 @@ void main() {
     }
   });
 
-  test('GivenEverySupportedLetterAndDigit_WhenMorseEncoded_ThenTableMatches', () {
-    final source = '${_morseSymbols.keys.where((key) => key.length == 1).join()}';
-    final expected = _morseSymbols.values
-        .where((value) => value != '/' && value != '<preserved>')
-        .join(' ');
+  test(
+    'GivenEverySupportedLetterAndDigit_WhenMorseEncoded_ThenTableMatches',
+    () {
+      final source = _morseSymbols.keys.where((key) => key.length == 1).join();
+      final expected = _morseSymbols.values
+          .where((value) => value != '/' && value != '<preserved>')
+          .join(' ');
 
-    final result = encoder.encode(
-      AlphabetEncodeRequest(input: source, alphabet: AlphabetKind.morse),
-    );
+      final result = encoder.encode(
+        AlphabetEncodeRequest(input: source, alphabet: AlphabetKind.morse),
+      );
 
-    expect(result.encoded, expected);
-  });
+      expect(result.encoded, expected);
+    },
+  );
 
-  test('GivenEverySupportedLetterAndDigit_WhenNatoEncoded_ThenTableMatches', () {
-    final source = '${_natoSymbols.keys.where((key) => key.length == 1).join()}';
-    final expected = _natoSymbols.values
-        .where((value) => value != '/' && value != '<preserved>')
-        .join(' ');
+  test(
+    'GivenEverySupportedLetterAndDigit_WhenNatoEncoded_ThenTableMatches',
+    () {
+      final source = _natoSymbols.keys.where((key) => key.length == 1).join();
+      final expected = _natoSymbols.values
+          .where((value) => value != '/' && value != '<preserved>')
+          .join(' ');
 
-    final result = encoder.encode(
-      AlphabetEncodeRequest(input: source, alphabet: AlphabetKind.nato),
-    );
+      final result = encoder.encode(
+        AlphabetEncodeRequest(input: source, alphabet: AlphabetKind.nato),
+      );
 
-    expect(result.encoded, expected);
-  });
+      expect(result.encoded, expected);
+    },
+  );
 
   test('GivenLowercaseLetters_WhenTokenAlphabetEncoded_ThenCaseIsFolded', () {
     expect(
@@ -164,35 +177,41 @@ void main() {
     );
   });
 
-  test('GivenRepeatedSpaces_WhenTokenAlphabetEncoded_ThenEachSpaceIsPreserved', () {
-    expect(
-      encoder
-          .encode(
-            const AlphabetEncodeRequest(
-              input: ' A  B ',
-              alphabet: AlphabetKind.morse,
-            ),
-          )
-          .encoded,
-      '/ .- / / -... /',
-    );
-  });
+  test(
+    'GivenRepeatedSpaces_WhenTokenAlphabetEncoded_ThenEachSpaceIsPreserved',
+    () {
+      expect(
+        encoder
+            .encode(
+              const AlphabetEncodeRequest(
+                input: ' A  B ',
+                alphabet: AlphabetKind.morse,
+              ),
+            )
+            .encoded,
+        '/ .- / / -... /',
+      );
+    },
+  );
 
-  test('GivenBrailleCaseAndNumericTransitions_WhenEncoded_ThenUebIsUnambiguous', () {
-    final result = encoder.encode(
-      const AlphabetEncodeRequest(
-        input: 'aA 10a 2k 3B\r\n0',
-        alphabet: AlphabetKind.braille,
-      ),
-    );
+  test(
+    'GivenBrailleCaseAndNumericTransitions_WhenEncoded_ThenUebIsUnambiguous',
+    () {
+      final result = encoder.encode(
+        const AlphabetEncodeRequest(
+          input: 'aA 10a 2k 3B\r\n0',
+          alphabet: AlphabetKind.braille,
+        ),
+      );
 
-    expect(
-      result.encoded,
-      '\u2801\u2820\u2801 \u283c\u2801\u281a\u2830\u2801 '
-      '\u283c\u2803\u2805 \u283c\u2809\u2820\u2803\r\n'
-      '\u283c\u281a',
-    );
-  });
+      expect(
+        result.encoded,
+        '\u2801\u2820\u2801 \u283c\u2801\u281a\u2830\u2801 '
+        '\u283c\u2803\u2805 \u283c\u2809\u2820\u2803\r\n'
+        '\u283c\u281a',
+      );
+    },
+  );
 
   test('GivenEmptyText_WhenEncoded_ThenEmptyResultWithMapping', () {
     final result = encoder.encode(
@@ -203,93 +222,128 @@ void main() {
     expect(result.mapping.id, 'ueb-uncontracted-unicode');
   });
 
-  test('GivenUnsupportedBmpSymbol_WhenEncoded_ThenTypedScalarPositionReturns', () {
-    expect(
-      () => encoder.encode(
-        const AlphabetEncodeRequest(
-          input: 'AB\tC',
-          alphabet: AlphabetKind.nato,
+  test(
+    'GivenUnsupportedBmpSymbol_WhenEncoded_ThenTypedScalarPositionReturns',
+    () {
+      expect(
+        () => encoder.encode(
+          const AlphabetEncodeRequest(
+            input: 'AB\tC',
+            alphabet: AlphabetKind.nato,
+          ),
         ),
-      ),
-      throwsA(
-        isA<AlphabetException>()
-            .having((error) => error.kind, 'kind', AlphabetFailureKind.validation)
-            .having((error) => error.code, 'code', 'alphabet.unsupported-symbol')
-            .having((error) => error.field, 'field', 'input')
-            .having((error) => error.reason, 'reason', 'unsupported-symbol')
-            .having((error) => error.position, 'position', 2),
-      ),
-    );
-  });
-
-  test('GivenUnsupportedSupplementarySymbol_WhenEncoded_ThenScalarPositionReturns', () {
-    expect(
-      () => encoder.encode(
-        const AlphabetEncodeRequest(
-          input: 'AB\u{1f600}C',
-          alphabet: AlphabetKind.morse,
+        throwsA(
+          isA<AlphabetException>()
+              .having(
+                (error) => error.kind,
+                'kind',
+                AlphabetFailureKind.validation,
+              )
+              .having(
+                (error) => error.code,
+                'code',
+                'alphabet.unsupported-symbol',
+              )
+              .having((error) => error.field, 'field', 'input')
+              .having((error) => error.reason, 'reason', 'unsupported-symbol')
+              .having((error) => error.position, 'position', 2),
         ),
-      ),
-      throwsA(
-        isA<AlphabetException>()
-            .having((error) => error.code, 'code', 'alphabet.unsupported-symbol')
-            .having((error) => error.position, 'position', 2),
-      ),
-    );
-  });
+      );
+    },
+  );
 
-  test('GivenMalformedUnicode_WhenEncoded_ThenTypedValidationFailureReturns', () {
-    expect(
-      () => encoder.encode(
-        const AlphabetEncodeRequest(
-          input: '\uD800',
-          alphabet: AlphabetKind.braille,
+  test(
+    'GivenUnsupportedSupplementarySymbol_WhenEncoded_ThenScalarPositionReturns',
+    () {
+      expect(
+        () => encoder.encode(
+          const AlphabetEncodeRequest(
+            input: 'AB\u{1f600}C',
+            alphabet: AlphabetKind.morse,
+          ),
         ),
-      ),
-      throwsA(
-        isA<AlphabetException>()
-            .having((error) => error.code, 'code', 'alphabet.invalid-input')
-            .having((error) => error.field, 'field', 'input')
-            .having((error) => error.reason, 'reason', 'invalid-unicode'),
-      ),
-    );
-  });
-
-  test('GivenNatoPunctuation_WhenEncoded_ThenNoPartialOutputEscapesFailure', () {
-    expect(
-      () => encoder.encode(
-        const AlphabetEncodeRequest(
-          input: 'SECRET!',
-          alphabet: AlphabetKind.nato,
+        throwsA(
+          isA<AlphabetException>()
+              .having(
+                (error) => error.code,
+                'code',
+                'alphabet.unsupported-symbol',
+              )
+              .having((error) => error.position, 'position', 2),
         ),
-      ),
-      throwsA(
-        isA<AlphabetException>()
-            .having((error) => error.code, 'code', 'alphabet.unsupported-symbol')
-            .having((error) => error.position, 'position', 6),
-      ),
-    );
-  });
+      );
+    },
+  );
 
-  test('GivenOutputBudgetExceeded_WhenEncoded_ThenTypedResourceFailureReturns', () {
-    const limited = AlphabetEncoder(maxOutputCharacters: 6);
-
-    expect(
-      () => limited.encode(
-        const AlphabetEncodeRequest(
-          input: 'AB',
-          alphabet: AlphabetKind.morse,
+  test(
+    'GivenMalformedUnicode_WhenEncoded_ThenTypedValidationFailureReturns',
+    () {
+      expect(
+        () => encoder.encode(
+          const AlphabetEncodeRequest(
+            input: '\uD800',
+            alphabet: AlphabetKind.braille,
+          ),
         ),
-      ),
-      throwsA(
-        isA<AlphabetException>()
-            .having((error) => error.kind, 'kind', AlphabetFailureKind.resource)
-            .having((error) => error.code, 'code', 'alphabet.resource-limit')
-            .having((error) => error.field, 'field', 'output')
-            .having((error) => error.reason, 'reason', 'output-limit'),
-      ),
-    );
-  });
+        throwsA(
+          isA<AlphabetException>()
+              .having((error) => error.code, 'code', 'alphabet.invalid-input')
+              .having((error) => error.field, 'field', 'input')
+              .having((error) => error.reason, 'reason', 'invalid-unicode'),
+        ),
+      );
+    },
+  );
+
+  test(
+    'GivenNatoPunctuation_WhenEncoded_ThenNoPartialOutputEscapesFailure',
+    () {
+      expect(
+        () => encoder.encode(
+          const AlphabetEncodeRequest(
+            input: 'SECRET!',
+            alphabet: AlphabetKind.nato,
+          ),
+        ),
+        throwsA(
+          isA<AlphabetException>()
+              .having(
+                (error) => error.code,
+                'code',
+                'alphabet.unsupported-symbol',
+              )
+              .having((error) => error.position, 'position', 6),
+        ),
+      );
+    },
+  );
+
+  test(
+    'GivenOutputBudgetExceeded_WhenEncoded_ThenTypedResourceFailureReturns',
+    () {
+      const limited = AlphabetEncoder(maxOutputCharacters: 6);
+
+      expect(
+        () => limited.encode(
+          const AlphabetEncodeRequest(
+            input: 'AB',
+            alphabet: AlphabetKind.morse,
+          ),
+        ),
+        throwsA(
+          isA<AlphabetException>()
+              .having(
+                (error) => error.kind,
+                'kind',
+                AlphabetFailureKind.resource,
+              )
+              .having((error) => error.code, 'code', 'alphabet.resource-limit')
+              .having((error) => error.field, 'field', 'output')
+              .having((error) => error.reason, 'reason', 'output-limit'),
+        ),
+      );
+    },
+  );
 }
 
 const _morseSymbols = <String, String>{

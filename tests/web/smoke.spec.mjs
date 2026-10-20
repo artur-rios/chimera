@@ -255,6 +255,78 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   expect(requests).toEqual([]);
 });
 
+test('GivenAlphabetSources_WhenEncodedAndRejected_ThenMappingAndFlowStayOffline', async ({ page }) => {
+  const requests = [];
+  await page.addInitScript(() => {
+    window.__chimeraAlphabetCopiedText = null;
+    window.__chimeraAlphabetClipboardText = 'A?B';
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        readText: async () => window.__chimeraAlphabetClipboardText,
+        writeText: async value => {
+          window.__chimeraAlphabetCopiedText = value;
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:')
+        && url.hostname !== '127.0.0.1') {
+      requests.push(request.url());
+    }
+  });
+  await page.getByRole('button', { name: 'Encode with Alphabet', exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'Text to encode', exact: true });
+  await fillFlutterTextBox(editor, 'SOS 2');
+  await activateFlutterButton(page.getByRole('button', { name: 'Encode', exact: true }));
+  const result = page.getByRole('region', {
+    name: 'Alphabet-encoded result Alphabet encoding completed.',
+    exact: true,
+  });
+  await expect(result).toBeVisible();
+  await expect(result).toHaveAttribute('tabindex', '0');
+  let mapping = page.getByRole('region', {
+    name: /Mapping itu-r-m\.1677-1; 10\/2009;/,
+  });
+  await expect(mapping).toBeVisible();
+  await page.getByRole('button', { name: 'Copy result', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__chimeraAlphabetCopiedText))
+    .toBe('... --- ... / ..---');
+
+  const pendingChooser = page.waitForEvent('filechooser');
+  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await (await pendingChooser).setFiles({
+    name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from('AZ', 'utf8'),
+  });
+  await expect(page.getByRole('button', { name: 'Encode', exact: true })).toBeEnabled();
+  await page.getByRole('button', { name: 'Alphabet Morse', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'NATO/ICAO phonetic', exact: true }).click();
+  await activateFlutterButton(page.getByRole('button', { name: 'Encode', exact: true }));
+  mapping = page.getByRole('region', {
+    name: /Mapping icao-radiotelephony-spelling-alphabet; 1956;/,
+  });
+  await expect(mapping).toBeVisible();
+  await page.getByRole('button', { name: 'Copy result', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__chimeraAlphabetCopiedText))
+    .toBe('Alfa Zulu');
+
+  await page.getByRole('button', { name: 'Paste text', exact: true })
+    .evaluate(button => button.click());
+  await expect.poll(() => page.evaluate(source =>
+    new Function(source)('Text to encode', 'A?B', true), safariInputObservation))
+    .toBe(true);
+  await activateFlutterButton(page.getByRole('button', { name: 'Encode', exact: true }));
+  await expect(page.getByText('The alphabet encoding request is invalid.', { exact: true }).last())
+    .toBeVisible();
+  await expect(result).toHaveCount(0);
+  await expect(page.getByText('A?B', { exact: true })).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
 test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', async ({ page }) => {
   const requests = [];
   await page.addInitScript(() => {
