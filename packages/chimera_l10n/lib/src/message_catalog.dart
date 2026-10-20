@@ -455,6 +455,26 @@ _catalogs = <String, Map<String, String>>{
     'error.cipherEncode.resource':
         'Cipher encoding exceeded its resource limit.',
     'error.cipherEncode.processing': 'Cipher encoding failed.',
+    'cli.alphabetEncodeUsage':
+        'Usage: chimera alphabet encode '
+        '(--input=<text>|--stdin|--file=<path>) '
+        '--alphabet=morse|nato|braille [--output=<path>] [--json]\n'
+        'Human output includes the exact mapping identifier, edition, and '
+        'source links. Output files contain only the UTF-8 encoded text; JSON '
+        'includes the complete mapping reference. Exit codes: 64 validation, '
+        '70 processing, 74 access, 75 resource.',
+    'alphabetEncode.savedResult': 'Alphabet-encoded text saved.',
+    'alphabetEncode.mappingLabel': 'Mapping',
+    'alphabetEncode.mappingSourcesLabel': 'Sources',
+    'error.alphabetEncode.validation':
+        'The alphabet encoding request is invalid.',
+    'error.alphabetEncode.inputAccess': 'The standard input could not be read.',
+    'error.alphabetEncode.fileAccess': 'The input file could not be read.',
+    'error.alphabetEncode.outputAccess':
+        'The alphabet-encoded text could not be saved.',
+    'error.alphabetEncode.resource':
+        'Alphabet encoding exceeded the resource limit.',
+    'error.alphabetEncode.processing': 'Alphabet encoding failed.',
     'cipherEncode.pageTitle': 'Encode with Cipher',
     'cipherEncode.openAction': 'Encode with Cipher',
     'cipherEncode.inputLabel': 'Text to encode',
@@ -1677,6 +1697,29 @@ _catalogs = <String, Map<String, String>>{
         'A codificação de cifra excedeu o limite de recursos.',
     'error.cipherEncode.processing':
         'Não foi possível concluir a codificação de cifra.',
+    'cli.alphabetEncodeUsage':
+        'Uso: chimera alphabet encode '
+        '(--input=<texto>|--stdin|--file=<caminho>) '
+        '--alphabet=morse|nato|braille [--output=<caminho>] [--json]\n'
+        'A saída humana inclui o identificador exato, a edição e os links das '
+        'fontes do mapeamento. O arquivo contém apenas o texto codificado em '
+        'UTF-8; o JSON inclui a referência completa. Códigos de saída: 64 '
+        'validação, 70 processamento, 74 acesso, 75 recursos.',
+    'alphabetEncode.savedResult': 'Texto codificado com alfabeto salvo.',
+    'alphabetEncode.mappingLabel': 'Mapeamento',
+    'alphabetEncode.mappingSourcesLabel': 'Fontes',
+    'error.alphabetEncode.validation':
+        'A solicitação de codificação com alfabeto é inválida.',
+    'error.alphabetEncode.inputAccess':
+        'Não foi possível ler a entrada padrão.',
+    'error.alphabetEncode.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.alphabetEncode.outputAccess':
+        'Não foi possível salvar o texto codificado com alfabeto.',
+    'error.alphabetEncode.resource':
+        'A codificação com alfabeto excedeu o limite de recursos.',
+    'error.alphabetEncode.processing':
+        'Não foi possível concluir a codificação com alfabeto.',
     'cipherEncode.pageTitle': 'Codificar com cifra',
     'cipherEncode.openAction': 'Codificar com cifra',
     'cipherEncode.inputLabel': 'Texto para codificar',

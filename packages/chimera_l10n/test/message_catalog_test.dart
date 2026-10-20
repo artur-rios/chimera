@@ -467,6 +467,32 @@ void main() {
   });
 
   test(
+    'GivenAlphabetEncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.alphabetEncodeUsage',
+        'alphabetEncode.savedResult',
+        'alphabetEncode.mappingLabel',
+        'alphabetEncode.mappingSourcesLabel',
+        'error.alphabetEncode.validation',
+        'error.alphabetEncode.inputAccess',
+        'error.alphabetEncode.fileAccess',
+        'error.alphabetEncode.outputAccess',
+        'error.alphabetEncode.resource',
+        'error.alphabetEncode.processing',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test(
     'GivenCipherEncodeGuiMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       const keys = <String>{
@@ -1436,6 +1462,16 @@ void main() {
       'error.cipherEncode.outputAccess',
       'error.cipherEncode.resource',
       'error.cipherEncode.processing',
+      'cli.alphabetEncodeUsage',
+      'alphabetEncode.savedResult',
+      'alphabetEncode.mappingLabel',
+      'alphabetEncode.mappingSourcesLabel',
+      'error.alphabetEncode.validation',
+      'error.alphabetEncode.inputAccess',
+      'error.alphabetEncode.fileAccess',
+      'error.alphabetEncode.outputAccess',
+      'error.alphabetEncode.resource',
+      'error.alphabetEncode.processing',
       'cipherEncode.pageTitle',
       'cipherEncode.openAction',
       'cipherEncode.inputLabel',
