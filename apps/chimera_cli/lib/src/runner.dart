@@ -67,6 +67,8 @@ Future<int> runChimera(
   JsonObjectEncoder? htmlEncodeJsonEncoder,
   UrlEncodeService urlEncodeService = const UrlEncodeService(),
   JsonObjectEncoder? urlEncodeJsonEncoder,
+  CipherEncodeService cipherEncodeService = const CipherEncodeService(),
+  JsonObjectEncoder? cipherEncodeJsonEncoder,
   CertificateInspectService certificateInspectService =
       const CertificateInspectService(),
   JsonObjectEncoder? certificateInspectJsonEncoder,
@@ -149,6 +151,9 @@ Future<int> runChimera(
           : parsed.command?.name == 'url' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.urlEncodeUsage'
+          : parsed.command?.name == 'cipher' &&
+                parsed.command?.command?.name == 'encode'
+          ? 'cli.cipherEncodeUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
@@ -506,6 +511,29 @@ Future<int> runChimera(
             ),
         service: urlEncodeService,
         encodeJson: urlEncodeJsonEncoder ?? jsonEncode,
+      );
+    }
+    if (parsed.command!.name == 'cipher' &&
+        parsed.command!.command?.name == 'encode') {
+      return await _runCipherEncode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: cipherEncodeService,
+        encodeJson: cipherEncodeJsonEncoder ?? jsonEncode,
       );
     }
     if (parsed.command!.name == 'gzip' &&
@@ -887,6 +915,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'hash' && args[1] == 'generate';
     final isUrlEncode =
         args.length >= 2 && args[0] == 'url' && args[1] == 'encode';
+    final isCipherEncode =
+        args.length >= 2 && args[0] == 'cipher' && args[1] == 'encode';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -951,6 +981,7 @@ Future<int> runChimera(
               isHashGenerate ||
               isHtmlEncode ||
               isUrlEncode ||
+              isCipherEncode ||
               isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
@@ -1006,6 +1037,8 @@ Future<int> runChimera(
           ? 'html-encode.invalid-options'
           : isUrlEncode
           ? 'url-encode.invalid-options'
+          : isCipherEncode
+          ? 'cipher.invalid-options'
           : isGzipCompress
           ? 'gzip-compress.invalid-options'
           : isGzipDecompress
@@ -1081,6 +1114,8 @@ Future<int> runChimera(
           ? 'error.htmlEncode.validation'
           : isUrlEncode
           ? 'error.urlEncode.validation'
+          : isCipherEncode
+          ? 'error.cipherEncode.validation'
           : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
@@ -1277,6 +1312,20 @@ ArgParser _buildParser() {
   final url = ArgParser()
     ..addCommand('encode', urlEncode)
     ..addCommand('decode', urlDecode);
+  final cipherEncode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('cipher')
+    ..addOption('character-policy', defaultsTo: 'preserve')
+    ..addOption('shift')
+    ..addOption('key')
+    ..addOption('a')
+    ..addOption('b')
+    ..addOption('rails')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final cipher = ArgParser()..addCommand('encode', cipherEncode);
   final html = ArgParser()
     ..addCommand('decode', htmlDecode)
     ..addCommand('encode', htmlEncode);
@@ -1459,6 +1508,7 @@ ArgParser _buildParser() {
     ..addCommand('base64', base64)
     ..addCommand('card', card)
     ..addCommand('certificate', certificate)
+    ..addCommand('cipher', cipher)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
     ..addCommand('document', document)
@@ -3562,6 +3612,186 @@ Future<int> _runHtmlEncode(
       }
       try {
         out.write(stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runCipherEncode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required CipherEncodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final cipher = parsed.option('cipher');
+  final characterPolicy = parsed.option('character-policy')!;
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  const supportedCiphers = <String>{
+    'caesar',
+    'rot13',
+    'vigenere',
+    'atbash',
+    'affine',
+    'bacon',
+    'rail-fence',
+  };
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : cipher == null || !supportedCiphers.contains(cipher)
+      ? 'invalid-cipher'
+      : !const {'preserve', 'reject'}.contains(characterPolicy)
+      ? 'invalid-character-policy'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'cipher.$invalid',
+      messageKey: 'error.cipherEncode.validation',
+      details: invalid == 'invalid-cipher'
+          ? const {'field': 'cipher', 'reason': 'unsupported-cipher'}
+          : invalid == 'invalid-character-policy'
+          ? const {'field': 'characterPolicy', 'reason': 'unsupported-policy'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'cipher.resource-limit',
+    messageKey: 'error.cipherEncode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'cipher.output-access',
+    messageKey: 'error.cipherEncode.outputAccess',
+  );
+
+  late CipherEncodeOperationRequest request;
+  try {
+    request = text != null
+        ? CipherEncodeOperationRequest.text(
+            text,
+            cipher: cipher!,
+            characterPolicy: characterPolicy,
+            shift: parsed.option('shift'),
+            key: parsed.option('key'),
+            affineA: parsed.option('a'),
+            affineB: parsed.option('b'),
+            rails: parsed.option('rails'),
+          )
+        : CipherEncodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            cipher: cipher!,
+            characterPolicy: characterPolicy,
+            shift: parsed.option('shift'),
+            key: parsed.option('key'),
+            affineA: parsed.option('a'),
+            affineB: parsed.option('b'),
+            rails: parsed.option('rails'),
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput ? 'cipher.input-access' : 'cipher.file-access',
+      messageKey: useStandardInput
+          ? 'error.cipherEncode.inputAccess'
+          : 'error.cipherEncode.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        stdoutPayload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : outputPath != null
+            ? '${catalog.lookup(localeTag, 'cipherEncode.savedResult')}\n'
+            : value.encoded;
+      } on OutOfMemoryError {
+        resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.encoded));
+        } on OutOfMemoryError {
+          resourceFailure('encoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('encoded');
         return 75;

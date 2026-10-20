@@ -445,6 +445,75 @@ void main() {
     );
   });
 
+  test('GivenCipherEncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = {
+      'cli.cipherEncodeUsage',
+      'cipherEncode.savedResult',
+      'error.cipherEncode.validation',
+      'error.cipherEncode.inputAccess',
+      'error.cipherEncode.fileAccess',
+      'error.cipherEncode.outputAccess',
+      'error.cipherEncode.resource',
+      'error.cipherEncode.processing',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
+  test(
+    'GivenCipherEncodeGuiMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = <String>{
+        'cipherEncode.pageTitle',
+        'cipherEncode.openAction',
+        'cipherEncode.inputLabel',
+        'cipherEncode.fileAction',
+        'cipherEncode.pasteAction',
+        'cipherEncode.cipherLabel',
+        'cipherEncode.cipher.caesar',
+        'cipherEncode.cipher.rot13',
+        'cipherEncode.cipher.vigenere',
+        'cipherEncode.cipher.atbash',
+        'cipherEncode.cipher.affine',
+        'cipherEncode.cipher.bacon',
+        'cipherEncode.cipher.rail-fence',
+        'cipherEncode.policyLabel',
+        'cipherEncode.policy.preserve',
+        'cipherEncode.policy.reject',
+        'cipherEncode.shiftLabel',
+        'cipherEncode.keyLabel',
+        'cipherEncode.aLabel',
+        'cipherEncode.bLabel',
+        'cipherEncode.railsLabel',
+        'cipherEncode.submitAction',
+        'cipherEncode.outputLabel',
+        'cipherEncode.resultSuccess',
+        'cipherEncode.copyAction',
+        'cipherEncode.saveAction',
+        'cipherEncode.copiedResult',
+        'cipherEncode.fileSaved',
+        'error.cipherEncode.clipboardRead',
+        'error.cipherEncode.clipboardWrite',
+        'error.cipherEncode.interactiveInputAccess',
+      };
+
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in ['en', 'pt-BR']) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
   test(
     'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
@@ -1307,6 +1376,45 @@ void main() {
       'error.urlEncode.fileAccess',
       'error.urlEncode.outputAccess',
       'error.urlEncode.resource',
+      'cli.cipherEncodeUsage',
+      'cipherEncode.savedResult',
+      'error.cipherEncode.validation',
+      'error.cipherEncode.inputAccess',
+      'error.cipherEncode.fileAccess',
+      'error.cipherEncode.outputAccess',
+      'error.cipherEncode.resource',
+      'error.cipherEncode.processing',
+      'cipherEncode.pageTitle',
+      'cipherEncode.openAction',
+      'cipherEncode.inputLabel',
+      'cipherEncode.fileAction',
+      'cipherEncode.pasteAction',
+      'cipherEncode.cipherLabel',
+      'cipherEncode.cipher.caesar',
+      'cipherEncode.cipher.rot13',
+      'cipherEncode.cipher.vigenere',
+      'cipherEncode.cipher.atbash',
+      'cipherEncode.cipher.affine',
+      'cipherEncode.cipher.bacon',
+      'cipherEncode.cipher.rail-fence',
+      'cipherEncode.policyLabel',
+      'cipherEncode.policy.preserve',
+      'cipherEncode.policy.reject',
+      'cipherEncode.shiftLabel',
+      'cipherEncode.keyLabel',
+      'cipherEncode.aLabel',
+      'cipherEncode.bLabel',
+      'cipherEncode.railsLabel',
+      'cipherEncode.submitAction',
+      'cipherEncode.outputLabel',
+      'cipherEncode.resultSuccess',
+      'cipherEncode.copyAction',
+      'cipherEncode.saveAction',
+      'cipherEncode.copiedResult',
+      'cipherEncode.fileSaved',
+      'error.cipherEncode.clipboardRead',
+      'error.cipherEncode.clipboardWrite',
+      'error.cipherEncode.interactiveInputAccess',
       'htmlEncode.pageTitle',
       'htmlEncode.openAction',
       'htmlEncode.inputLabel',

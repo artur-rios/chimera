@@ -436,6 +436,58 @@ _catalogs = <String, Map<String, String>>{
     'error.urlEncode.fileAccess': 'The input file could not be read.',
     'error.urlEncode.outputAccess': 'The URL encoded text could not be saved.',
     'error.urlEncode.resource': 'URL encoding exceeded its resource limit.',
+    'cli.cipherEncodeUsage':
+        'Usage: chimera cipher encode (--input=<text>|--stdin|--file=<path>) '
+        '--cipher=caesar|rot13|vigenere|atbash|affine|bacon|rail-fence '
+        '[--character-policy=preserve|reject] [--shift=<0..25>] '
+        '[--key=<letters>] [--a=<integer>] [--b=<integer>] '
+        '[--rails=<integer>] [--output=<path>] [--json]\n'
+        'Default character policy: preserve. Cipher parameters are accepted '
+        'only by their matching cipher. Human stdout is exact text without a '
+        'newline. Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 70 processing, 74 access, 75 resource.',
+    'cipherEncode.savedResult': 'Cipher encoded text saved.',
+    'error.cipherEncode.validation': 'The cipher encoding request is invalid.',
+    'error.cipherEncode.inputAccess': 'The standard input could not be read.',
+    'error.cipherEncode.fileAccess': 'The input file could not be read.',
+    'error.cipherEncode.outputAccess':
+        'The cipher encoded text could not be saved.',
+    'error.cipherEncode.resource':
+        'Cipher encoding exceeded its resource limit.',
+    'error.cipherEncode.processing': 'Cipher encoding failed.',
+    'cipherEncode.pageTitle': 'Encode with Cipher',
+    'cipherEncode.openAction': 'Encode with Cipher',
+    'cipherEncode.inputLabel': 'Text to encode',
+    'cipherEncode.fileAction': 'Load UTF-8 file',
+    'cipherEncode.pasteAction': 'Paste text',
+    'cipherEncode.cipherLabel': 'Cipher',
+    'cipherEncode.cipher.caesar': 'Caesar',
+    'cipherEncode.cipher.rot13': 'ROT13',
+    'cipherEncode.cipher.vigenere': 'Vigenere',
+    'cipherEncode.cipher.atbash': 'Atbash',
+    'cipherEncode.cipher.affine': 'Affine',
+    'cipherEncode.cipher.bacon': 'Bacon',
+    'cipherEncode.cipher.rail-fence': 'Rail Fence',
+    'cipherEncode.policyLabel': 'Unsupported symbols',
+    'cipherEncode.policy.preserve': 'Preserve unsupported symbols',
+    'cipherEncode.policy.reject': 'Reject unsupported symbols',
+    'cipherEncode.shiftLabel': 'Shift (0-25)',
+    'cipherEncode.keyLabel': 'Key (ASCII letters)',
+    'cipherEncode.aLabel': 'Multiplier a (coprime with 26)',
+    'cipherEncode.bLabel': 'Offset b (0-25)',
+    'cipherEncode.railsLabel': 'Rails (2 or more)',
+    'cipherEncode.submitAction': 'Encode',
+    'cipherEncode.outputLabel': 'Cipher encoded result',
+    'cipherEncode.resultSuccess': 'Cipher encoding succeeded.',
+    'cipherEncode.copyAction': 'Copy encoded text',
+    'cipherEncode.saveAction': 'Save encoded text',
+    'cipherEncode.copiedResult': 'Cipher encoded text copied.',
+    'cipherEncode.fileSaved': 'Cipher encoded text saved.',
+    'error.cipherEncode.clipboardRead': 'The clipboard text could not be read.',
+    'error.cipherEncode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.cipherEncode.interactiveInputAccess':
+        'The input could not be processed.',
     'htmlDecode.pageTitle': 'Decode HTML',
     'htmlDecode.openAction': 'Decode HTML',
     'htmlDecode.inputLabel': 'HTML entities to decode',
@@ -1550,6 +1602,63 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto codificado em URL.',
     'error.urlEncode.resource':
         'A codificação URL excedeu o limite de recursos.',
+    'cli.cipherEncodeUsage':
+        'Uso: chimera cipher encode (--input=<texto>|--stdin|--file=<caminho>) '
+        '--cipher=caesar|rot13|vigenere|atbash|affine|bacon|rail-fence '
+        '[--character-policy=preserve|reject] [--shift=<0..25>] '
+        '[--key=<letras>] [--a=<inteiro>] [--b=<inteiro>] '
+        '[--rails=<inteiro>] [--output=<caminho>] [--json]\n'
+        'Política de caracteres padrão: preserve. Os parâmetros de cifra são '
+        'aceitos apenas pela cifra correspondente. A saída de texto é exata, '
+        'sem nova linha. O arquivo salva texto UTF-8; JSON emite o resultado '
+        'após salvar. Códigos de saída: 64 validação, 70 processamento, '
+        '74 acesso, 75 recursos.',
+    'cipherEncode.savedResult': 'Texto cifrado salvo.',
+    'error.cipherEncode.validation':
+        'A solicitação de codificação de cifra é inválida.',
+    'error.cipherEncode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.cipherEncode.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.cipherEncode.outputAccess':
+        'Não foi possível salvar o texto cifrado.',
+    'error.cipherEncode.resource':
+        'A codificação de cifra excedeu o limite de recursos.',
+    'error.cipherEncode.processing':
+        'Não foi possível concluir a codificação de cifra.',
+    'cipherEncode.pageTitle': 'Codificar com cifra',
+    'cipherEncode.openAction': 'Codificar com cifra',
+    'cipherEncode.inputLabel': 'Texto para codificar',
+    'cipherEncode.fileAction': 'Carregar arquivo UTF-8',
+    'cipherEncode.pasteAction': 'Colar texto',
+    'cipherEncode.cipherLabel': 'Cifra',
+    'cipherEncode.cipher.caesar': 'César',
+    'cipherEncode.cipher.rot13': 'ROT13',
+    'cipherEncode.cipher.vigenere': 'Vigenère',
+    'cipherEncode.cipher.atbash': 'Atbash',
+    'cipherEncode.cipher.affine': 'Afim',
+    'cipherEncode.cipher.bacon': 'Bacon',
+    'cipherEncode.cipher.rail-fence': 'Cerca de trilhos',
+    'cipherEncode.policyLabel': 'Símbolos não compatíveis',
+    'cipherEncode.policy.preserve': 'Preservar símbolos não compatíveis',
+    'cipherEncode.policy.reject': 'Rejeitar símbolos não compatíveis',
+    'cipherEncode.shiftLabel': 'Deslocamento (0-25)',
+    'cipherEncode.keyLabel': 'Chave (letras ASCII)',
+    'cipherEncode.aLabel': 'Multiplicador a (coprimo com 26)',
+    'cipherEncode.bLabel': 'Deslocamento b (0-25)',
+    'cipherEncode.railsLabel': 'Trilhos (2 ou mais)',
+    'cipherEncode.submitAction': 'Codificar',
+    'cipherEncode.outputLabel': 'Resultado cifrado',
+    'cipherEncode.resultSuccess': 'Codificação por cifra concluída.',
+    'cipherEncode.copyAction': 'Copiar texto cifrado',
+    'cipherEncode.saveAction': 'Salvar texto cifrado',
+    'cipherEncode.copiedResult': 'Texto cifrado copiado.',
+    'cipherEncode.fileSaved': 'Texto cifrado salvo.',
+    'error.cipherEncode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.cipherEncode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.cipherEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
     'htmlDecode.pageTitle': 'Decodificar HTML',
     'htmlDecode.openAction': 'Decodificar HTML',
     'htmlDecode.inputLabel': 'Entidades HTML para decodificar',

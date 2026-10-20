@@ -1188,6 +1188,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('HTML encode', () => _encodeHtml(driver));
     await protocol.stage('HTML decode', () => _decodeHtml(driver));
     await protocol.stage('URL encode', () => _encodeUrl(driver));
+    await protocol.stage('Cipher encode', () => _encodeCipher(driver));
     await protocol.stage('URL decode', () => _decodeUrl(driver));
     await protocol.stage('JWT create', () => _createJwt(driver));
     await protocol.stage('QR encode', () => _encodeQr(driver));
@@ -1212,7 +1213,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding, URL encoding, classical cipher encoding, and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -3347,6 +3348,143 @@ Future<void> _encodeUrl(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'URL context/copy/save/validation',
+  );
+}
+
+Future<void> _encodeCipher(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Cipher semantics placeholder did not load',
+  );
+  await _enableFlutterSemantics(driver);
+  await _clickButton(driver, 'Encode with Cipher');
+  await _waitUntil(
+    () => _pageContains(driver, 'Text to encode'),
+    'Cipher page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'cipher startup');
+  await driver.execute(r'''
+      window.__chimeraCipherCopiedText = null;
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          writeText: async value => {
+            window.__chimeraCipherCopiedText = value;
+          },
+        },
+      });
+      performance.clearResourceTimings();
+    ''', const <Object?>[]);
+  await _fillTextBox(driver, 'Text to encode', 'Attack!');
+  await _selectMenuValue(driver, 'Cipher Caesar', 'Atbash');
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () async =>
+        await driver.execute(r'''
+            return [...document.querySelectorAll('[role="region"][tabindex="0"]')]
+              .some(element => element.getAttribute('aria-label') ===
+                'Cipher encoded result Cipher encoding succeeded.');
+          ''', const <Object?>[]) ==
+        true,
+    'Cipher result semantics were incorrect',
+  );
+  await _clickButton(driver, 'Copy encoded text');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          'return window.__chimeraCipherCopiedText === arguments[0];',
+          const <Object?>['Zggzxp!'],
+        ) ==
+        true,
+    'Cipher clipboard output was not exact',
+  );
+
+  await _fillTextBox(driver, 'Text to encode', 'Attack');
+  await _selectMenuValue(driver, 'Cipher Atbash', 'Vigenere');
+  await _fillTextBox(driver, 'Key (ASCII letters)', 'K3Y');
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The cipher encoding request is invalid.'),
+    'Cipher invalid-key validation did not appear',
+  );
+  var retained = await driver.execute(r'''
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => (element.getAttribute('aria-label') || '')
+          .startsWith('Cipher encoded result'));
+    ''', const <Object?>[]);
+  if (retained == true) {
+    throw StateError('Cipher invalid-key validation retained a prior result');
+  }
+
+  await _fillTextBox(driver, 'Text to encode', 'A?B');
+  await _selectMenuValue(driver, 'Cipher Vigenere', 'Atbash');
+  await _selectMenuValue(
+    driver,
+    'Unsupported symbols Preserve unsupported symbols',
+    'Reject unsupported symbols',
+  );
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The cipher encoding request is invalid.'),
+    'Cipher unsupported-symbol validation did not appear',
+  );
+  retained = await driver.execute(r'''
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => (element.getAttribute('aria-label') || '')
+          .startsWith('Cipher encoded result'));
+    ''', const <Object?>[]);
+  if (retained == true) {
+    throw StateError('Cipher validation retained a prior result');
+  }
+  await _assertNoNetworkRequests(driver, flow: 'cipher encode and validation');
+}
+
+Future<void> _selectMenuValue(
+  WebDriver driver,
+  String buttonLabel,
+  String optionLabel,
+) async {
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+            const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+            const expected = normalize(arguments[0]);
+            const button = [...document.querySelectorAll('[role="button"]')]
+              .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === expected &&
+                element.getAttribute('aria-disabled') !== 'true');
+            if (!button) return false;
+            button.click();
+            return true;
+          ''',
+          <Object?>[buttonLabel],
+        ) ==
+        true,
+    'Cipher selector did not open: $buttonLabel',
+  );
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+            const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+            const expected = normalize(arguments[0]);
+            const option = [...document.querySelectorAll('[role="menuitem"]')]
+              .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === expected &&
+                element.getAttribute('aria-disabled') !== 'true');
+            if (!option) return false;
+            option.click();
+            return true;
+          ''',
+          <Object?>[optionLabel],
+        ) ==
+        true,
+    'Cipher selector option did not activate: $optionLabel',
   );
 }
 
