@@ -1194,6 +1194,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('QR decode', () => _decodeQr(driver));
     await protocol.stage('Lorem', () => _generateLorem(driver));
     await protocol.stage('Password', () => _generatePassword(driver));
+    await protocol.stage('UUID', () => _generateUuid(driver));
     try {
       await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
@@ -1205,7 +1206,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -4064,5 +4065,167 @@ Future<void> _generatePassword(WebDriver driver) async {
       'Password partial result survived failure',
     );
     await _assertNoNetworkRequests(driver, flow: 'Password $failure failure');
+  }
+}
+
+Future<void> _generateUuid(WebDriver driver) async {
+  final source = await File.fromUri(Platform.script.resolve('uuid_browser.js'))
+      .readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn uuidProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openUuid() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'UUID semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate UUID or GUID');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'UUID configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'UUID startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  await openUuid();
+  await _clickButton(driver, 'Generate identifiers');
+  String? identifier;
+  await _waitUntil(() async {
+    final value = await probe('result');
+    if (value is! String) return false;
+    identifier = value;
+    return true;
+  }, 'UUID result missing');
+  if (!RegExp(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+  ).hasMatch(identifier!)) {
+    throw StateError('UUID v4 shape is invalid');
+  }
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'UUID copy unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('copied', identifier) == true,
+    'UUID clipboard mismatch',
+  );
+  await _clickButton(driver, 'Save identifiers');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(identifier!)) == true,
+    'UUID saved bytes mismatch',
+  );
+  await _fillTextBox(driver, 'Positive integer count', '2');
+  await _waitUntil(
+    () async => await probe('noResult') == true,
+    'UUID remained after configuration changed',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'UUID defaults');
+
+  await openUuid();
+  await _waitUntil(
+    () async => await probe('openVersion') == true,
+    'UUID version selector unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('option', 'Version 7 (time ordered)') == true,
+    'UUID v7 option unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('openRepresentation') == true,
+    'UUID representation selector unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('option', 'GUID (uppercase braces)') == true,
+    'GUID option unavailable',
+  );
+  await _fillTextBox(driver, 'Positive integer count', '2');
+  final beforeGeneration = DateTime.now().millisecondsSinceEpoch;
+  await _clickButton(driver, 'Generate identifiers');
+  await _waitUntil(() async {
+    final value = await probe('result');
+    if (value is! String) return false;
+    final identifiers = RegExp(r'\{[0-9A-F-]+\}').allMatches(value).toList();
+    return identifiers.length == 2 &&
+        identifiers.map((match) => match.group(0)).toSet().length == 2 &&
+        identifiers.every((match) {
+          final identifier = match.group(0)!;
+          final shape = RegExp(
+            r'^\{[0-9A-F]{8}-[0-9A-F]{4}-7[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}\}$',
+          ).hasMatch(identifier);
+          final timestamp = int.parse(
+            identifier.substring(1, 14).replaceAll('-', ''),
+            radix: 16,
+          );
+          return shape &&
+              timestamp >= beforeGeneration &&
+              timestamp <= DateTime.now().millisecondsSinceEpoch;
+        });
+  }, 'UUID v7 GUID batch was invalid');
+  final guidBatch = RegExp(r'\{[0-9A-F-]+\}')
+      .allMatches(await probe('result') as String)
+      .map((match) => match.group(0)!)
+      .join('\n');
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'UUID v7 GUID copy unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('copied', guidBatch) == true,
+    'UUID v7 GUID clipboard mismatch',
+  );
+  await _clickButton(driver, 'Save identifiers');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(guidBatch)) == true,
+    'UUID v7 GUID saved bytes mismatch',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'UUID v7 GUID');
+
+  for (final failure in ['validation', 'processing', 'copy', 'save']) {
+    await openUuid();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    if (failure == 'processing') await probe('entropyFailure');
+    await _clickButton(driver, 'Generate identifiers');
+    if (failure == 'copy' || failure == 'save') {
+      await _waitUntil(
+        () async => await probe('result') is String,
+        'UUID default result missing',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy' ? 'Copy identifiers' : 'Save identifiers',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(driver, switch (failure) {
+        'validation' => 'Choose version 4 or 7, UUID or GUID representation, and a positive integer count.',
+        'processing' =>
+          'Secure identifier generation failed. No identifiers were produced.',
+        'copy' => 'The generated identifiers could not be copied.',
+        _ => 'The generated identifiers could not be saved or written.',
+      }),
+      'UUID localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'UUID partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'UUID $failure failure');
   }
 }

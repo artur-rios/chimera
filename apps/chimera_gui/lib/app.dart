@@ -39,6 +39,7 @@ import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
+import 'uuid_page.dart';
 import 'xml_format_page.dart';
 
 final class ChimeraApp extends StatelessWidget {
@@ -51,6 +52,10 @@ final class ChimeraApp extends StatelessWidget {
     this.passwordClipboardWriter,
     this.passwordFileSaver,
     this.passwordOutputEncoder,
+    this.uuidService = const UuidService(),
+    this.uuidClipboardWriter,
+    this.uuidFileSaver,
+    this.uuidOutputEncoder,
     this.jwtCreateService = const JwtCreateService(),
     this.jwtCreateFilePicker,
     this.jwtCreateClipboardReader,
@@ -220,6 +225,10 @@ final class ChimeraApp extends StatelessWidget {
   final PasswordClipboardWriter? passwordClipboardWriter;
   final PasswordFileSaver? passwordFileSaver;
   final PasswordOutputEncoder? passwordOutputEncoder;
+  final UuidOperationService uuidService;
+  final UuidClipboardWriter? uuidClipboardWriter;
+  final UuidFileSaver? uuidFileSaver;
+  final UuidOutputEncoder? uuidOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -383,6 +392,10 @@ final class ChimeraApp extends StatelessWidget {
         passwordClipboardWriter: passwordClipboardWriter,
         passwordFileSaver: passwordFileSaver,
         passwordOutputEncoder: passwordOutputEncoder,
+        uuidService: uuidService,
+        uuidClipboardWriter: uuidClipboardWriter,
+        uuidFileSaver: uuidFileSaver,
+        uuidOutputEncoder: uuidOutputEncoder,
         jwtCreateService: jwtCreateService,
         jwtCreateFilePicker: jwtCreateFilePicker,
         jwtCreateClipboardReader: jwtCreateClipboardReader,
@@ -549,6 +562,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.passwordClipboardWriter,
     required this.passwordFileSaver,
     required this.passwordOutputEncoder,
+    required this.uuidService,
+    required this.uuidClipboardWriter,
+    required this.uuidFileSaver,
+    required this.uuidOutputEncoder,
     required this.jwtCreateService,
     required this.jwtCreateFilePicker,
     required this.jwtCreateClipboardReader,
@@ -711,6 +728,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final PasswordClipboardWriter? passwordClipboardWriter;
   final PasswordFileSaver? passwordFileSaver;
   final PasswordOutputEncoder? passwordOutputEncoder;
+  final UuidOperationService uuidService;
+  final UuidClipboardWriter? uuidClipboardWriter;
+  final UuidFileSaver? uuidFileSaver;
+  final UuidOutputEncoder? uuidOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -887,6 +908,10 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       passwordFileSaver: widget.passwordFileSaver ?? savePasswordFile,
       passwordOutputEncoder:
           widget.passwordOutputEncoder ?? encodePasswordOutput,
+      uuidService: widget.uuidService,
+      uuidClipboardWriter: widget.uuidClipboardWriter ?? writeUuidClipboard,
+      uuidFileSaver: widget.uuidFileSaver ?? saveUuidFile,
+      uuidOutputEncoder: widget.uuidOutputEncoder ?? encodeUuidOutput,
       jwtCreateService: widget.jwtCreateService,
       jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
       jwtCreateClipboardReader:

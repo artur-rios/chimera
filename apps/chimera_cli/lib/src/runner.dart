@@ -41,6 +41,8 @@ Future<int> runChimera(
   JsonObjectEncoder? loremJsonEncoder,
   PasswordService passwordService = const PasswordService(),
   JsonObjectEncoder? passwordJsonEncoder,
+  UuidService uuidService = const UuidService(),
+  JsonObjectEncoder? uuidJsonEncoder,
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -98,7 +100,9 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'password'
+      final key = parsed.command?.name == 'uuid'
+          ? 'cli.uuidUsage'
+          : parsed.command?.name == 'password'
           ? 'cli.passwordUsage'
           : parsed.command?.name == 'lorem'
           ? 'cli.loremUsage'
@@ -179,6 +183,26 @@ Future<int> runChimera(
         err: err,
         service: passwordService,
         encodeJson: passwordJsonEncoder ?? jsonEncode,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+      );
+    }
+    if (parsed.command!.name == 'uuid' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runUuid(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        service: uuidService,
+        encodeJson: uuidJsonEncoder ?? jsonEncode,
         writeOutputFile:
             writeOutputFile ??
             (path, bytes) => _writeFileTransactionally(
@@ -760,6 +784,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isUuid =
+        args.length >= 2 && args[0] == 'uuid' && args[1] == 'generate';
     final isPassword =
         args.length >= 2 && args[0] == 'password' && args[1] == 'generate';
     final isLorem =
@@ -830,7 +856,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isPassword ||
+          (isUuid ||
+              isPassword ||
               isLorem ||
               isChecksumGenerate ||
               isQrDecode ||
@@ -865,7 +892,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isPassword
+      code: isUuid
+          ? 'uuid.invalid-options'
+          : isPassword
           ? 'password.invalid-options'
           : isLorem
           ? 'lorem.invalid-options'
@@ -932,7 +961,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isPassword
+      messageKey: isUuid
+          ? 'error.uuid.validation'
+          : isPassword
           ? 'error.password.validation'
           : isLorem
           ? 'error.lorem.validation'
@@ -1005,6 +1036,16 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final uuid = ArgParser()
+    ..addCommand(
+      'generate',
+      ArgParser()
+        ..addOption('version', defaultsTo: 'v4')
+        ..addOption('representation', defaultsTo: 'uuid')
+        ..addOption('count', defaultsTo: '1')
+        ..addOption('output', abbr: 'o')
+        ..addFlag('json', negatable: false),
+    );
   final password = ArgParser()
     ..addCommand(
       'generate',
@@ -1308,6 +1349,7 @@ ArgParser _buildParser() {
     ..addCommand('qr', qr)
     ..addCommand('sql', sql)
     ..addCommand('text', text)
+    ..addCommand('uuid', uuid)
     ..addCommand('xml', xml);
 }
 
@@ -6280,6 +6322,78 @@ Future<int> _runChecksumGenerate(
         code: failure.code,
         messageKey: failure.messageKey,
         details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runUuid(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required UuidService service,
+  required JsonObjectEncoder encodeJson,
+  required FileBytesWriter writeOutputFile,
+}) async {
+  final json = parsed.flag('json');
+  final path = parsed.option('output');
+  void fail(
+    String kind,
+    String code,
+    String messageKey, [
+    Map<String, Object?> details = const {},
+  ]) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+  if (parsed.rest.isNotEmpty || path == '') {
+    fail('validation', 'uuid.invalid-options', 'error.uuid.validation');
+    return 64;
+  }
+  final result = await service.execute(
+    UuidOperationRequest(
+      version: parsed.option('version')!,
+      representation: parsed.option('representation')!,
+      count: parsed.option('count')!,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        final identifiers = value.values.join('\n');
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : path != null
+            ? '${catalog.lookup(localeTag, 'uuid.saved')}\n'
+            : identifiers;
+        if (path != null) {
+          await writeOutputFile(path, utf8.encode(identifiers));
+        }
+        await writeSinkAndFlush(out, payload);
+        return 0;
+      } on OutOfMemoryError {
+        fail('resource', 'uuid.resource-limit', 'error.uuid.resource');
+        return 75;
+      } on Object {
+        fail('access', 'uuid.output-access', 'error.uuid.outputAccess');
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      fail(
+        failure.kind.name,
+        failure.code,
+        failure.messageKey,
+        failure.details,
       );
       return _exitCodeFor(failure.kind);
     },

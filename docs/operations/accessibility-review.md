@@ -606,3 +606,31 @@ pass across Chromium, Firefox, and WebKit; the native Safari harness includes
 the same local-generation, production secure-entropy-failure, resource-limit,
 and no-network contract for its mandatory macOS CI job. No automated UC-33
 accessibility finding remains open.
+
+## UC-34 Generate UUID or GUID
+
+- Branch: `feature/uc-34-generate-uuid`
+- Date: 2026-10-19
+- Targets: shared Flutter web, Windows, and Linux identifier-generation surface
+- Locales: English and Brazilian Portuguese
+
+The version and representation selectors, positive-integer count field, and generate,
+copy, and save actions expose localized labels in document-order keyboard
+traversal. Enter submits the count field. Actions disable while work is
+pending, while validation, processing, resource, and adapter failures are
+announced through localized live messages without exposing partial values or
+private diagnostics.
+
+Successful generation moves focus to a localized live result region whose
+accessible value contains the complete generated batch. Copy and save consume
+the same newline-delimited value. Configuration changes, failures, late
+completions, and disposal clear stale result state.
+
+Focused widget and save-adapter coverage exercises both locales, v4/v7 and
+UUID/GUID choices, positive counts, keyboard submission, focus and live
+semantics, exact multi-value copy/save output, busy behavior, stale completion,
+and redacted failures. Native and compiled-browser scenarios exercise secure
+production generation, RFC version and variant shapes, v7 time ordering,
+uniqueness, exact transfer, discard behavior, and zero network access. The
+native Safari harness covers the same local-only path. No automated UC-34
+accessibility finding remains open.
