@@ -3422,7 +3422,7 @@ Future<void> _encodeCipher(WebDriver driver) async {
     throw StateError('Cipher invalid-key validation retained a prior result');
   }
 
-  await _fillTextBox(driver, 'Text to encode', 'A🌍B');
+  await _fillTextBox(driver, 'Text to encode', 'A?B');
   await _selectMenuValue(driver, 'Cipher Vigenere', 'Atbash');
   await _selectMenuValue(
     driver,
