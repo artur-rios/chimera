@@ -16,6 +16,7 @@ import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
 import 'html_decode_page.dart';
 import 'html_encode_page.dart';
+import 'identity_document_page.dart';
 import 'json_csv_page.dart';
 import 'json_format_page.dart';
 import 'json_table_page.dart';
@@ -56,6 +57,10 @@ GoRouter buildRouter({
   required CardClipboardWriter cardClipboardWriter,
   required CardFileSaver cardFileSaver,
   required CardOutputEncoder cardOutputEncoder,
+  required IdentityDocumentOperationService identityDocumentService,
+  required IdentityDocumentClipboardWriter identityDocumentClipboardWriter,
+  required IdentityDocumentFileSaver identityDocumentFileSaver,
+  required IdentityDocumentOutputEncoder identityDocumentOutputEncoder,
   required JwtCreateOperationService jwtCreateService,
   required JwtCreateFilePicker jwtCreateFilePicker,
   required JwtCreateClipboardReader jwtCreateClipboardReader,
@@ -221,6 +226,17 @@ GoRouter buildRouter({
           clipboardWriter: cardClipboardWriter,
           fileSaver: cardFileSaver,
           outputEncoder: cardOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/document/generate',
+        builder: (context, state) => IdentityDocumentPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: identityDocumentService,
+          clipboardWriter: identityDocumentClipboardWriter,
+          fileSaver: identityDocumentFileSaver,
+          outputEncoder: identityDocumentOutputEncoder,
         ),
       ),
       GoRoute(
@@ -637,6 +653,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/card/generate'),
                         child: Text(
                           catalog.lookup(localeTag, 'card.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-identity-document'),
+                        onPressed: () => context.go('/document/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'document.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
