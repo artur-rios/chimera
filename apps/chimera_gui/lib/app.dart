@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
+import 'card_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'checksum_generate_page.dart';
@@ -56,6 +57,10 @@ final class ChimeraApp extends StatelessWidget {
     this.uuidClipboardWriter,
     this.uuidFileSaver,
     this.uuidOutputEncoder,
+    this.cardService = const CardService(),
+    this.cardClipboardWriter,
+    this.cardFileSaver,
+    this.cardOutputEncoder,
     this.jwtCreateService = const JwtCreateService(),
     this.jwtCreateFilePicker,
     this.jwtCreateClipboardReader,
@@ -229,6 +234,10 @@ final class ChimeraApp extends StatelessWidget {
   final UuidClipboardWriter? uuidClipboardWriter;
   final UuidFileSaver? uuidFileSaver;
   final UuidOutputEncoder? uuidOutputEncoder;
+  final CardOperationService cardService;
+  final CardClipboardWriter? cardClipboardWriter;
+  final CardFileSaver? cardFileSaver;
+  final CardOutputEncoder? cardOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -396,6 +405,10 @@ final class ChimeraApp extends StatelessWidget {
         uuidClipboardWriter: uuidClipboardWriter,
         uuidFileSaver: uuidFileSaver,
         uuidOutputEncoder: uuidOutputEncoder,
+        cardService: cardService,
+        cardClipboardWriter: cardClipboardWriter,
+        cardFileSaver: cardFileSaver,
+        cardOutputEncoder: cardOutputEncoder,
         jwtCreateService: jwtCreateService,
         jwtCreateFilePicker: jwtCreateFilePicker,
         jwtCreateClipboardReader: jwtCreateClipboardReader,
@@ -566,6 +579,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.uuidClipboardWriter,
     required this.uuidFileSaver,
     required this.uuidOutputEncoder,
+    required this.cardService,
+    required this.cardClipboardWriter,
+    required this.cardFileSaver,
+    required this.cardOutputEncoder,
     required this.jwtCreateService,
     required this.jwtCreateFilePicker,
     required this.jwtCreateClipboardReader,
@@ -732,6 +749,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final UuidClipboardWriter? uuidClipboardWriter;
   final UuidFileSaver? uuidFileSaver;
   final UuidOutputEncoder? uuidOutputEncoder;
+  final CardOperationService cardService;
+  final CardClipboardWriter? cardClipboardWriter;
+  final CardFileSaver? cardFileSaver;
+  final CardOutputEncoder? cardOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -912,6 +933,10 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       uuidClipboardWriter: widget.uuidClipboardWriter ?? writeUuidClipboard,
       uuidFileSaver: widget.uuidFileSaver ?? saveUuidFile,
       uuidOutputEncoder: widget.uuidOutputEncoder ?? encodeUuidOutput,
+      cardService: widget.cardService,
+      cardClipboardWriter: widget.cardClipboardWriter ?? writeCardClipboard,
+      cardFileSaver: widget.cardFileSaver ?? saveCardFile,
+      cardOutputEncoder: widget.cardOutputEncoder ?? encodeCardOutput,
       jwtCreateService: widget.jwtCreateService,
       jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
       jwtCreateClipboardReader:
