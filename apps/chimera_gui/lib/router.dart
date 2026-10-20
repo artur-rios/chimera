@@ -35,6 +35,7 @@ import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
+import 'uuid_page.dart';
 import 'xml_format_page.dart';
 
 GoRouter buildRouter({
@@ -46,6 +47,10 @@ GoRouter buildRouter({
   required PasswordClipboardWriter passwordClipboardWriter,
   required PasswordFileSaver passwordFileSaver,
   required PasswordOutputEncoder passwordOutputEncoder,
+  required UuidOperationService uuidService,
+  required UuidClipboardWriter uuidClipboardWriter,
+  required UuidFileSaver uuidFileSaver,
+  required UuidOutputEncoder uuidOutputEncoder,
   required JwtCreateOperationService jwtCreateService,
   required JwtCreateFilePicker jwtCreateFilePicker,
   required JwtCreateClipboardReader jwtCreateClipboardReader,
@@ -202,6 +207,17 @@ GoRouter buildRouter({
   return GoRouter(
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/uuid/generate',
+        builder: (context, state) => UuidPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: uuidService,
+          clipboardWriter: uuidClipboardWriter,
+          fileSaver: uuidFileSaver,
+          outputEncoder: uuidOutputEncoder,
+        ),
+      ),
       GoRoute(
         path: '/password/generate',
         builder: (context, state) => PasswordPage(
@@ -589,6 +605,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/password/generate'),
                         child: Text(
                           catalog.lookup(localeTag, 'password.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-uuid'),
+                        onPressed: () => context.go('/uuid/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'uuid.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),

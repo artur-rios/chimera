@@ -3,6 +3,40 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenUuidMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.uuidUsage',
+      'uuid.pageTitle',
+      'uuid.openAction',
+      'uuid.versionLabel',
+      'uuid.version4',
+      'uuid.version7',
+      'uuid.representationLabel',
+      'uuid.uuidRepresentation',
+      'uuid.guidRepresentation',
+      'uuid.countLabel',
+      'uuid.semantics',
+      'uuid.generate',
+      'uuid.resultLabel',
+      'uuid.success',
+      'uuid.copy',
+      'uuid.save',
+      'uuid.copied',
+      'uuid.saved',
+      'error.uuid.validation',
+      'error.uuid.processing',
+      'error.uuid.resource',
+      'error.uuid.outputAccess',
+      'error.uuid.clipboardWrite',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenPasswordMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.passwordUsage',
@@ -857,6 +891,29 @@ void main() {
       'error.password.resource',
       'error.password.outputAccess',
       'error.password.clipboardWrite',
+      'cli.uuidUsage',
+      'uuid.pageTitle',
+      'uuid.openAction',
+      'uuid.versionLabel',
+      'uuid.version4',
+      'uuid.version7',
+      'uuid.representationLabel',
+      'uuid.uuidRepresentation',
+      'uuid.guidRepresentation',
+      'uuid.countLabel',
+      'uuid.semantics',
+      'uuid.generate',
+      'uuid.resultLabel',
+      'uuid.success',
+      'uuid.copy',
+      'uuid.save',
+      'uuid.copied',
+      'uuid.saved',
+      'error.uuid.validation',
+      'error.uuid.processing',
+      'error.uuid.resource',
+      'error.uuid.outputAccess',
+      'error.uuid.clipboardWrite',
       'cli.checksumGenerateUsage',
       'checksumGenerate.pageTitle',
       'checksumGenerate.openAction',

@@ -50,6 +50,33 @@ _catalogs = <String, Map<String, String>>{
         'The generated password could not be saved or written.',
     'error.password.clipboardWrite':
         'The generated password could not be copied.',
+    'cli.uuidUsage': 'Usage: chimera uuid generate [--version=v4|v7] [--representation=uuid|guid] [--count=<positive integer>] [--output=<path>] [--json]. Defaults: v4, uuid, count 1. UUID uses lowercase canonical text; GUID uses uppercase text in braces.',
+    'uuid.pageTitle': 'Generate UUID or GUID',
+    'uuid.openAction': 'Generate UUID or GUID',
+    'uuid.versionLabel': 'Identifier version',
+    'uuid.version4': 'Version 4 (random)',
+    'uuid.version7': 'Version 7 (time ordered)',
+    'uuid.representationLabel': 'Text representation',
+    'uuid.uuidRepresentation': 'UUID (lowercase)',
+    'uuid.guidRepresentation': 'GUID (uppercase braces)',
+    'uuid.countLabel': 'Positive integer count',
+    'uuid.semantics': 'Version 4 uses secure local randomness. Version 7 combines local time with secure randomness. Values are generated as one batch.',
+    'uuid.generate': 'Generate identifiers',
+    'uuid.resultLabel': 'Generated identifiers',
+    'uuid.success': 'Identifiers generated.',
+    'uuid.copy': 'Copy identifiers',
+    'uuid.save': 'Save identifiers',
+    'uuid.copied': 'Identifiers copied.',
+    'uuid.saved': 'Identifiers saved.',
+    'error.uuid.validation': 'Choose version 4 or 7, UUID or GUID representation, and a positive integer count.',
+    'error.uuid.processing':
+        'Secure identifier generation failed. No identifiers were produced.',
+    'error.uuid.resource':
+        'Identifier generation exceeded available resources.',
+    'error.uuid.outputAccess':
+        'The generated identifiers could not be saved or written.',
+    'error.uuid.clipboardWrite':
+        'The generated identifiers could not be copied.',
 
     "cli.checksumGenerateUsage": "Usage: chimera checksum generate [--input <text> | --file <path> | --stdin] [--algorithm crc32|adler32] [--output <path>] [--json]. Default: crc32. Text uses exact UTF-8; file/stdin are exact bytes. JSON: algorithm, checksum (eight lowercase hexadecimal characters). Saved files contain the checksum and one LF.",
     "checksumGenerate.pageTitle": "Generate checksum",
@@ -1018,6 +1045,32 @@ _catalogs = <String, Map<String, String>>{
     'error.password.outputAccess':
         'Não foi possível salvar ou escrever a senha gerada.',
     'error.password.clipboardWrite': 'Não foi possível copiar a senha gerada.',
+    'cli.uuidUsage': 'Uso: chimera uuid generate [--version=v4|v7] [--representation=uuid|guid] [--count=<inteiro positivo>] [--output=<caminho>] [--json]. Padrões: v4, uuid, quantidade 1. UUID usa texto canônico minúsculo; GUID usa texto maiúsculo entre chaves.',
+    'uuid.pageTitle': 'Gerar UUID ou GUID',
+    'uuid.openAction': 'Gerar UUID ou GUID',
+    'uuid.versionLabel': 'Versão do identificador',
+    'uuid.version4': 'Versão 4 (aleatória)',
+    'uuid.version7': 'Versão 7 (ordenada por tempo)',
+    'uuid.representationLabel': 'Representação textual',
+    'uuid.uuidRepresentation': 'UUID (minúsculo)',
+    'uuid.guidRepresentation': 'GUID (maiúsculo entre chaves)',
+    'uuid.countLabel': 'Quantidade inteira positiva',
+    'uuid.semantics': 'A versão 4 usa aleatoriedade local segura. A versão 7 combina o horário local com aleatoriedade segura. Os valores são gerados como um único lote.',
+    'uuid.generate': 'Gerar identificadores',
+    'uuid.resultLabel': 'Identificadores gerados',
+    'uuid.success': 'Identificadores gerados.',
+    'uuid.copy': 'Copiar identificadores',
+    'uuid.save': 'Salvar identificadores',
+    'uuid.copied': 'Identificadores copiados.',
+    'uuid.saved': 'Identificadores salvos.',
+    'error.uuid.validation': 'Escolha a versão 4 ou 7, representação UUID ou GUID e uma quantidade inteira positiva.',
+    'error.uuid.processing': 'A geração segura de identificadores falhou. Nenhum identificador foi produzido.',
+    'error.uuid.resource':
+        'A geração de identificadores excedeu os recursos disponíveis.',
+    'error.uuid.outputAccess':
+        'Não foi possível salvar ou escrever os identificadores gerados.',
+    'error.uuid.clipboardWrite':
+        'Não foi possível copiar os identificadores gerados.',
 
     "cli.checksumGenerateUsage": "Uso: chimera checksum generate [--input <texto> | --file <caminho> | --stdin] [--algorithm crc32|adler32] [--output <caminho>] [--json]. Padrão: crc32. Texto usa UTF-8 exato; arquivo/stdin são bytes exatos. JSON: algorithm, checksum (oito caracteres hexadecimais minúsculos). Arquivos salvos contêm a soma e um LF.",
     "checksumGenerate.pageTitle": "Gerar soma de verificação",
