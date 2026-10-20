@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'alphabet_decode_page.dart';
 import 'alphabet_encode_page.dart';
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
@@ -139,6 +140,12 @@ final class ChimeraApp extends StatelessWidget {
     this.alphabetEncodeClipboardWriter,
     this.alphabetEncodeFileSaver,
     this.alphabetEncodeOutputEncoder,
+    this.alphabetDecodeService = const AlphabetDecodeService(),
+    this.alphabetDecodeFilePicker,
+    this.alphabetDecodeClipboardReader,
+    this.alphabetDecodeClipboardWriter,
+    this.alphabetDecodeFileSaver,
+    this.alphabetDecodeOutputEncoder,
     this.cipherDecodeService = const CipherDecodeService(),
     this.cipherDecodeFilePicker,
     this.cipherDecodeClipboardReader,
@@ -342,6 +349,12 @@ final class ChimeraApp extends StatelessWidget {
   final AlphabetEncodeClipboardWriter? alphabetEncodeClipboardWriter;
   final AlphabetEncodeFileSaver? alphabetEncodeFileSaver;
   final AlphabetEncodeOutputEncoder? alphabetEncodeOutputEncoder;
+  final AlphabetDecodeOperationService alphabetDecodeService;
+  final AlphabetDecodeFilePicker? alphabetDecodeFilePicker;
+  final AlphabetDecodeClipboardReader? alphabetDecodeClipboardReader;
+  final AlphabetDecodeClipboardWriter? alphabetDecodeClipboardWriter;
+  final AlphabetDecodeFileSaver? alphabetDecodeFileSaver;
+  final AlphabetDecodeOutputEncoder? alphabetDecodeOutputEncoder;
   final CipherDecodeOperationService cipherDecodeService;
   final CipherDecodeFilePicker? cipherDecodeFilePicker;
   final CipherDecodeClipboardReader? cipherDecodeClipboardReader;
@@ -539,6 +552,12 @@ final class ChimeraApp extends StatelessWidget {
         alphabetEncodeClipboardWriter: alphabetEncodeClipboardWriter,
         alphabetEncodeFileSaver: alphabetEncodeFileSaver,
         alphabetEncodeOutputEncoder: alphabetEncodeOutputEncoder,
+        alphabetDecodeService: alphabetDecodeService,
+        alphabetDecodeFilePicker: alphabetDecodeFilePicker,
+        alphabetDecodeClipboardReader: alphabetDecodeClipboardReader,
+        alphabetDecodeClipboardWriter: alphabetDecodeClipboardWriter,
+        alphabetDecodeFileSaver: alphabetDecodeFileSaver,
+        alphabetDecodeOutputEncoder: alphabetDecodeOutputEncoder,
         cipherDecodeService: cipherDecodeService,
         cipherDecodeFilePicker: cipherDecodeFilePicker,
         cipherDecodeClipboardReader: cipherDecodeClipboardReader,
@@ -739,6 +758,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.alphabetEncodeClipboardWriter,
     required this.alphabetEncodeFileSaver,
     required this.alphabetEncodeOutputEncoder,
+    required this.alphabetDecodeService,
+    required this.alphabetDecodeFilePicker,
+    required this.alphabetDecodeClipboardReader,
+    required this.alphabetDecodeClipboardWriter,
+    required this.alphabetDecodeFileSaver,
+    required this.alphabetDecodeOutputEncoder,
     required this.cipherDecodeService,
     required this.cipherDecodeFilePicker,
     required this.cipherDecodeClipboardReader,
@@ -1029,6 +1054,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final AlphabetEncodeClipboardWriter? alphabetEncodeClipboardWriter;
   final AlphabetEncodeFileSaver? alphabetEncodeFileSaver;
   final AlphabetEncodeOutputEncoder? alphabetEncodeOutputEncoder;
+  final AlphabetDecodeOperationService alphabetDecodeService;
+  final AlphabetDecodeFilePicker? alphabetDecodeFilePicker;
+  final AlphabetDecodeClipboardReader? alphabetDecodeClipboardReader;
+  final AlphabetDecodeClipboardWriter? alphabetDecodeClipboardWriter;
+  final AlphabetDecodeFileSaver? alphabetDecodeFileSaver;
+  final AlphabetDecodeOutputEncoder? alphabetDecodeOutputEncoder;
   final CipherDecodeOperationService cipherDecodeService;
   final CipherDecodeFilePicker? cipherDecodeFilePicker;
   final CipherDecodeClipboardReader? cipherDecodeClipboardReader;
@@ -1190,6 +1221,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.alphabetEncodeFileSaver ?? saveAlphabetEncodeFile,
       alphabetEncodeOutputEncoder:
           widget.alphabetEncodeOutputEncoder ?? encodeAlphabetEncodeOutput,
+      alphabetDecodeService: widget.alphabetDecodeService,
+      alphabetDecodeFilePicker:
+          widget.alphabetDecodeFilePicker ?? pickAlphabetDecodeFile,
+      alphabetDecodeClipboardReader:
+          widget.alphabetDecodeClipboardReader ?? readAlphabetDecodeClipboard,
+      alphabetDecodeClipboardWriter:
+          widget.alphabetDecodeClipboardWriter ?? writeAlphabetDecodeClipboard,
+      alphabetDecodeFileSaver:
+          widget.alphabetDecodeFileSaver ?? saveAlphabetDecodeFile,
+      alphabetDecodeOutputEncoder:
+          widget.alphabetDecodeOutputEncoder ?? encodeAlphabetDecodeOutput,
       cipherDecodeService: widget.cipherDecodeService,
       cipherDecodeFilePicker:
           widget.cipherDecodeFilePicker ?? pickCipherDecodeFile,
