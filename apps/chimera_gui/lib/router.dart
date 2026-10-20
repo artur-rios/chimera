@@ -3,6 +3,7 @@ import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'alphabet_encode_page.dart';
 import 'base64_decode_page.dart';
 import 'base64_encode_page.dart';
 import 'card_page.dart';
@@ -127,6 +128,12 @@ GoRouter buildRouter({
   required CipherEncodeClipboardWriter cipherEncodeClipboardWriter,
   required CipherEncodeFileSaver cipherEncodeFileSaver,
   required CipherEncodeOutputEncoder cipherEncodeOutputEncoder,
+  required AlphabetEncodeOperationService alphabetEncodeService,
+  required AlphabetEncodeFilePicker alphabetEncodeFilePicker,
+  required AlphabetEncodeClipboardReader alphabetEncodeClipboardReader,
+  required AlphabetEncodeClipboardWriter alphabetEncodeClipboardWriter,
+  required AlphabetEncodeFileSaver alphabetEncodeFileSaver,
+  required AlphabetEncodeOutputEncoder alphabetEncodeOutputEncoder,
   required CipherDecodeOperationService cipherDecodeService,
   required CipherDecodeFilePicker cipherDecodeFilePicker,
   required CipherDecodeClipboardReader cipherDecodeClipboardReader,
@@ -452,6 +459,19 @@ GoRouter buildRouter({
         ),
       ),
       GoRoute(
+        path: '/alphabet/encode',
+        builder: (context, state) => AlphabetEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: alphabetEncodeService,
+          filePicker: alphabetEncodeFilePicker,
+          clipboardReader: alphabetEncodeClipboardReader,
+          clipboardWriter: alphabetEncodeClipboardWriter,
+          fileSaver: alphabetEncodeFileSaver,
+          outputEncoder: alphabetEncodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
         path: '/gzip/compress',
         builder: (context, state) => GzipCompressPage(
           catalog: catalog,
@@ -765,6 +785,17 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/cipher/decode'),
                         child: Text(
                           catalog.lookup(localeTag, 'cipherDecode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-alphabet-encode'),
+                        onPressed: () => context.go('/alphabet/encode'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag,
+                            'alphabetEncode.openAction',
+                          ),
                         ),
                       ),
                       const SizedBox(height: 12),

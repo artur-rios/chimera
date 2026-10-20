@@ -467,6 +467,55 @@ void main() {
   });
 
   test(
+    'GivenAlphabetEncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.alphabetEncodeUsage',
+        'alphabetEncode.savedResult',
+        'alphabetEncode.mappingLabel',
+        'alphabetEncode.mappingSourcesLabel',
+        'error.alphabetEncode.validation',
+        'error.alphabetEncode.inputAccess',
+        'error.alphabetEncode.fileAccess',
+        'error.alphabetEncode.outputAccess',
+        'error.alphabetEncode.resource',
+        'error.alphabetEncode.processing',
+        'alphabetEncode.pageTitle',
+        'alphabetEncode.openAction',
+        'alphabetEncode.inputLabel',
+        'alphabetEncode.fileAction',
+        'alphabetEncode.pasteAction',
+        'alphabetEncode.alphabetLabel',
+        'alphabetEncode.alphabet.morse',
+        'alphabetEncode.alphabet.nato',
+        'alphabetEncode.alphabet.braille',
+        'alphabetEncode.submitAction',
+        'alphabetEncode.outputLabel',
+        'alphabetEncode.resultSuccess',
+        'alphabetEncode.mappingIdLabel',
+        'alphabetEncode.mappingEditionLabel',
+        'alphabetEncode.mappingSymbolsLabel',
+        'alphabetEncode.mappingRulesLabel',
+        'alphabetEncode.copyAction',
+        'alphabetEncode.saveAction',
+        'alphabetEncode.copiedResult',
+        'alphabetEncode.fileSaved',
+        'error.alphabetEncode.clipboardRead',
+        'error.alphabetEncode.clipboardWrite',
+        'error.alphabetEncode.interactiveInputAccess',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test(
     'GivenCipherEncodeGuiMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       const keys = <String>{
@@ -1436,6 +1485,39 @@ void main() {
       'error.cipherEncode.outputAccess',
       'error.cipherEncode.resource',
       'error.cipherEncode.processing',
+      'cli.alphabetEncodeUsage',
+      'alphabetEncode.savedResult',
+      'alphabetEncode.mappingLabel',
+      'alphabetEncode.mappingSourcesLabel',
+      'error.alphabetEncode.validation',
+      'error.alphabetEncode.inputAccess',
+      'error.alphabetEncode.fileAccess',
+      'error.alphabetEncode.outputAccess',
+      'error.alphabetEncode.resource',
+      'error.alphabetEncode.processing',
+      'alphabetEncode.pageTitle',
+      'alphabetEncode.openAction',
+      'alphabetEncode.inputLabel',
+      'alphabetEncode.fileAction',
+      'alphabetEncode.pasteAction',
+      'alphabetEncode.alphabetLabel',
+      'alphabetEncode.alphabet.morse',
+      'alphabetEncode.alphabet.nato',
+      'alphabetEncode.alphabet.braille',
+      'alphabetEncode.submitAction',
+      'alphabetEncode.outputLabel',
+      'alphabetEncode.resultSuccess',
+      'alphabetEncode.mappingIdLabel',
+      'alphabetEncode.mappingEditionLabel',
+      'alphabetEncode.mappingSymbolsLabel',
+      'alphabetEncode.mappingRulesLabel',
+      'alphabetEncode.copyAction',
+      'alphabetEncode.saveAction',
+      'alphabetEncode.copiedResult',
+      'alphabetEncode.fileSaved',
+      'error.alphabetEncode.clipboardRead',
+      'error.alphabetEncode.clipboardWrite',
+      'error.alphabetEncode.interactiveInputAccess',
       'cipherEncode.pageTitle',
       'cipherEncode.openAction',
       'cipherEncode.inputLabel',

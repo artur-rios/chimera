@@ -1,3 +1,4 @@
+export 'src/alphabet_encode_service.dart';
 export 'src/base64_decode_service.dart';
 export 'src/base64_encode_service.dart';
 export 'src/card_service.dart';
