@@ -157,6 +157,35 @@ void main() {
     expect(err.toString(), isNot(contains('PRIVATE')));
   });
 
+  test('GivenValidFirstCardThenRetryExhaustion_WhenGenerated_Then70WithoutPartialPan', () async {
+    var attempts = 0;
+    final out = StringBuffer(), err = StringBuffer();
+    final code = await runChimera(
+      ['card', 'generate', '--count=2', '--json'],
+      localeTag: 'en',
+      out: out,
+      err: err,
+      cardService: CardService(
+        generator: CardGenerator.forTesting(
+          candidate: (_) => ++attempts == 1
+              ? '4242424242424242'
+              : 'PRIVATE INVALID CANDIDATE',
+        ),
+      ),
+    );
+
+    expect(code, 70);
+    expect(attempts, 33);
+    expect(out.toString(), isEmpty);
+    final error =
+        (jsonDecode(err.toString()) as Map<String, Object?>)['error']
+            as Map<String, Object?>;
+    expect(error['code'], 'card.generation-failed');
+    expect(error['kind'], 'processing');
+    expect(err.toString(), isNot(contains('4242424242424242')));
+    expect(err.toString(), isNot(contains('PRIVATE')));
+  });
+
   test(
     'GivenOutputPath_WhenGenerated_ThenExactLabeledBatchAndNotice',
     () async {

@@ -4265,6 +4265,7 @@ Future<void> _generateCard(WebDriver driver) async {
   }
 
   await openCard();
+  await _fillTextBox(driver, 'Positive integer count', '2');
   await _clickButton(driver, 'Generate synthetic cards');
   await _waitUntil(
     () => _pageContains(
@@ -4278,11 +4279,15 @@ Future<void> _generateCard(WebDriver driver) async {
     final value = await probe('values');
     if (value is! String) return false;
     values = value;
-    return const {
-      '4005520201264821',
-      '4242424242424242',
-      '4000056655665556',
-    }.contains(value);
+    final cards = value.split('\n');
+    return cards.length == 2 &&
+        cards.every(
+          const {
+            '4005520201264821',
+            '4242424242424242',
+            '4000056655665556',
+          }.contains,
+        );
   }, 'Safe Visa sandbox value missing');
   final transferred =
       'Synthetic test data - not for real transactions\n$values';
@@ -4299,7 +4304,7 @@ Future<void> _generateCard(WebDriver driver) async {
     () async => await probe('saved', utf8.encode(transferred)) == true,
     'Card saved bytes mismatch',
   );
-  await _fillTextBox(driver, 'Positive integer count', '2');
+  await _fillTextBox(driver, 'Positive integer count', '3');
   await _waitUntil(
     () async => await probe('noResult') == true,
     'Card result remained after configuration changed',

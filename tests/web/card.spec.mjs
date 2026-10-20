@@ -42,13 +42,16 @@ test('GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSafeTransfer', as
   await page.addInitScript(`${saveSource}\nobserveGzipSaves();`);
   await openCard(page);
   page.on('request', request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
+  await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '2');
   await page.getByRole('button', { name: 'Generate synthetic cards', exact: true }).click();
   await expect(page.getByRole('region', {
     name: new RegExp(`^Generated synthetic cards Synthetic cards generated\\. ${syntheticLabel}`),
   })).toBeVisible();
   await expect.poll(() => probe(page, 'values')).not.toBeNull();
   const values = await probe(page, 'values');
-  expect(['4005520201264821', '4242424242424242', '4000056655665556']).toContain(values);
+  const cards = values.split('\n');
+  expect(cards).toHaveLength(2);
+  for (const card of cards) expect(['4005520201264821', '4242424242424242', '4000056655665556']).toContain(card);
   const transferred = `${syntheticLabel}\n${values}`;
   await expect.poll(() => probe(page, 'copy')).toBe(true);
   await expect.poll(() => probe(page, 'copied', transferred)).toBe(true);
@@ -60,7 +63,7 @@ test('GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSafeTransfer', as
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   expect(Buffer.concat(chunks)).toEqual(Buffer.from(transferred));
   await expect.poll(() => probe(page, 'saved', [...Buffer.from(transferred)])).toBe(true);
-  await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '2');
+  await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '3');
   await expect.poll(() => probe(page, 'noResult')).toBe(true);
   expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
 });

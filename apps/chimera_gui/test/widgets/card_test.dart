@@ -151,6 +151,39 @@ void main() {
   }
 
   testWidgets(
+    'GivenValidFirstCardThenRetryExhaustion_WhenGenerated_ThenLocalizedFailureWithoutPartialPan',
+    (tester) async {
+      var attempts = 0;
+      await tester.pumpWidget(
+        ChimeraApp(
+          initialLocation: '/card/generate',
+          cardService: CardService(
+            generator: CardGenerator.forTesting(
+              candidate: (_) => ++attempts == 1
+                  ? '4242424242424242'
+                  : 'PRIVATE INVALID CANDIDATE',
+            ),
+          ),
+        ),
+      );
+      await tester.enterText(find.byKey(const Key('card-count')), '2');
+      await tester.tap(find.byKey(const Key('card-generate')));
+      await tester.pumpAndSettle();
+
+      expect(attempts, 33);
+      expect(
+        find.text(
+          'Synthetic card generation failed. No card numbers were produced.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('card-output')), findsNothing);
+      expect(find.textContaining('4242424242424242'), findsNothing);
+      expect(find.textContaining('PRIVATE'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'GivenPendingGeneration_WhenConfigurationChanges_ThenLateCompletionIsIgnored',
     (tester) async {
       final service = _Pending();
@@ -225,6 +258,116 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  for (final action in ['copy', 'save']) {
+    testWidgets(
+      'GivenPending${action}_WhenDisposed_ThenLateCompletionIsIgnored',
+      (tester) async {
+        final clipboard = Completer<void>();
+        final saver = Completer<bool>();
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/card/generate',
+            cardService: _service('4242424242424242'),
+            cardClipboardWriter: (_) => clipboard.future,
+            cardFileSaver: (_, _, _) => saver.future,
+          ),
+        );
+        await tester.tap(find.byKey(const Key('card-generate')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(Key('card-$action')));
+        await tester.tap(find.byKey(Key('card-$action')));
+        await tester.pump();
+        await tester.pumpWidget(const SizedBox());
+        if (action == 'copy') {
+          clipboard.complete();
+        } else {
+          saver.complete(true);
+        }
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'GivenPending${action}_WhenConfigurationChanges_ThenLateCompletionIsIgnored',
+      (tester) async {
+        final clipboard = Completer<void>();
+        final saver = Completer<bool>();
+        await tester.pumpWidget(
+          ChimeraApp(
+            initialLocation: '/card/generate',
+            cardService: _service('4242424242424242'),
+            cardClipboardWriter: (_) => clipboard.future,
+            cardFileSaver: (_, _, _) => saver.future,
+          ),
+        );
+        await tester.tap(find.byKey(const Key('card-generate')));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(Key('card-$action')));
+        await tester.tap(find.byKey(Key('card-$action')));
+        await tester.pump();
+        await tester.ensureVisible(find.byKey(const Key('card-count')));
+        await tester.enterText(find.byKey(const Key('card-count')), '2');
+        if (action == 'copy') {
+          clipboard.complete();
+        } else {
+          saver.complete(true);
+        }
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(const Key('card-output')), findsNothing);
+        expect(find.byKey(const Key('card-notice')), findsNothing);
+        expect(find.byKey(const Key('card-error')), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final action in ['copy', 'save']) {
+    for (final invalidation in ['dispose', 'configuration']) {
+      testWidgets(
+        'GivenPending${action}Failure_When${invalidation}Invalidates_ThenLateFailureIsIgnored',
+        (tester) async {
+          final clipboard = Completer<void>();
+          final saver = Completer<bool>();
+          await tester.pumpWidget(
+            ChimeraApp(
+              initialLocation: '/card/generate',
+              cardService: _service('4242424242424242'),
+              cardClipboardWriter: (_) => clipboard.future,
+              cardFileSaver: (_, _, _) => saver.future,
+            ),
+          );
+          await tester.tap(find.byKey(const Key('card-generate')));
+          await tester.pumpAndSettle();
+          await tester.ensureVisible(find.byKey(Key('card-$action')));
+          await tester.tap(find.byKey(Key('card-$action')));
+          await tester.pump();
+          if (invalidation == 'dispose') {
+            await tester.pumpWidget(const SizedBox());
+          } else {
+            await tester.ensureVisible(find.byKey(const Key('card-count')));
+            await tester.enterText(find.byKey(const Key('card-count')), '2');
+          }
+          if (action == 'copy') {
+            clipboard.completeError(StateError('PRIVATE'));
+          } else {
+            saver.completeError(StateError('PRIVATE'));
+          }
+          await tester.pumpAndSettle();
+
+          if (invalidation == 'configuration') {
+            expect(find.byKey(const Key('card-output')), findsNothing);
+            expect(find.byKey(const Key('card-notice')), findsNothing);
+            expect(find.byKey(const Key('card-error')), findsNothing);
+          }
+          expect(tester.takeException(), isNull);
+        },
+      );
+    }
+  }
 
   testWidgets('GivenHome_WhenOpened_ThenCardConfigurationIsAvailable', (
     tester,
