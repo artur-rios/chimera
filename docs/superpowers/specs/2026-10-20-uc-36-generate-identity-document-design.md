@@ -68,4 +68,3 @@ partial output. Unit fixtures include primary-source known answers and every
 checksum mutation. Full-flow tests cover Windows/Linux-native contracts,
 Chromium/Firefox/WebKit/Safari, both locales, accessibility, offline behavior,
 and unexpected-network detection.
-

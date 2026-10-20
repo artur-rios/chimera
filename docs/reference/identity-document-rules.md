@@ -42,4 +42,3 @@ real identity.
   selects and sources one jurisdiction:
   https://www.planalto.gov.br/ccivil_03/_ato2023-2026/2023/lei/l14534.htm
   and https://www.gov.br/gestao/pt-br/identidade-nacional
-

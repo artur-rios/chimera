@@ -86,4 +86,3 @@ FR-PL-09-FR-PL-11, BR-01-BR-05, BR-10-BR-13, BR-19, issue #37
 - [ ] Obtain independent review and resolve every Critical or Important finding.
 - [ ] Push, open an issue-closing PR to `develop`, require all CI green, squash
   merge, delete the branch, mark #37 Done, verify closure, and sync `develop`.
-
