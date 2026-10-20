@@ -83,6 +83,47 @@ void main() {
     },
   );
 
+  test('GivenPersonMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.personUsage',
+      'person.syntheticLabel',
+      'person.pageTitle',
+      'person.openAction',
+      'person.localeLabel',
+      'person.locale.us',
+      'person.locale.br',
+      'person.minAgeLabel',
+      'person.maxAgeLabel',
+      'person.countLabel',
+      'person.semantics',
+      'person.generate',
+      'person.resultLabel',
+      'person.success',
+      'person.entryLabel',
+      'person.nameLabel',
+      'person.birthDateLabel',
+      'person.addressLabel',
+      'person.phoneLabel',
+      'person.emailLabel',
+      'person.identifiersLabel',
+      'person.copy',
+      'person.save',
+      'person.copied',
+      'person.saved',
+      'error.person.validation',
+      'error.person.processing',
+      'error.person.resource',
+      'error.person.outputAccess',
+      'error.person.clipboardWrite',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenUuidMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.uuidUsage',
@@ -930,6 +971,36 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.personUsage',
+      'person.syntheticLabel',
+      'person.pageTitle',
+      'person.openAction',
+      'person.localeLabel',
+      'person.locale.us',
+      'person.locale.br',
+      'person.minAgeLabel',
+      'person.maxAgeLabel',
+      'person.countLabel',
+      'person.semantics',
+      'person.generate',
+      'person.resultLabel',
+      'person.success',
+      'person.entryLabel',
+      'person.nameLabel',
+      'person.birthDateLabel',
+      'person.addressLabel',
+      'person.phoneLabel',
+      'person.emailLabel',
+      'person.identifiersLabel',
+      'person.copy',
+      'person.save',
+      'person.copied',
+      'person.saved',
+      'error.person.validation',
+      'error.person.processing',
+      'error.person.resource',
+      'error.person.outputAccess',
+      'error.person.clipboardWrite',
       'cli.loremUsage',
       'lorem.pageTitle',
       'lorem.openAction',

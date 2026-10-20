@@ -48,6 +48,8 @@ Future<int> runChimera(
   IdentityDocumentService identityDocumentService =
       const IdentityDocumentService(),
   JsonObjectEncoder? identityDocumentJsonEncoder,
+  PersonService personService = const PersonService(),
+  JsonObjectEncoder? personJsonEncoder,
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -105,7 +107,9 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'document'
+      final key = parsed.command?.name == 'person'
+          ? 'cli.personUsage'
+          : parsed.command?.name == 'document'
           ? 'cli.documentUsage'
           : parsed.command?.name == 'card'
           ? 'cli.cardUsage'
@@ -252,6 +256,26 @@ Future<int> runChimera(
         err: err,
         service: identityDocumentService,
         encodeJson: identityDocumentJsonEncoder ?? jsonEncode,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+      );
+    }
+    if (parsed.command!.name == 'person' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runPerson(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        service: personService,
+        encodeJson: personJsonEncoder ?? jsonEncode,
         writeOutputFile:
             writeOutputFile ??
             (path, bytes) => _writeFileTransactionally(
@@ -833,6 +857,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isPerson =
+        args.length >= 2 && args[0] == 'person' && args[1] == 'generate';
     final isIdentityDocument =
         args.length >= 2 && args[0] == 'document' && args[1] == 'generate';
     final isCard =
@@ -909,7 +935,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isIdentityDocument ||
+          (isPerson ||
+              isIdentityDocument ||
               isCard ||
               isUuid ||
               isPassword ||
@@ -947,7 +974,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isIdentityDocument
+      code: isPerson
+          ? 'person.invalid-options'
+          : isIdentityDocument
           ? 'document.invalid-options'
           : isCard
           ? 'card.invalid-options'
@@ -1020,7 +1049,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isIdentityDocument
+      messageKey: isPerson
+          ? 'error.person.validation'
+          : isIdentityDocument
           ? 'error.document.validation'
           : isCard
           ? 'error.card.validation'
@@ -1099,6 +1130,17 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final person = ArgParser()
+    ..addCommand(
+      'generate',
+      ArgParser()
+        ..addOption('locale', defaultsTo: 'us')
+        ..addOption('min-age', defaultsTo: '18')
+        ..addOption('max-age', defaultsTo: '90')
+        ..addOption('count', defaultsTo: '1')
+        ..addOption('output', abbr: 'o')
+        ..addFlag('json', negatable: false),
+    );
   final document = ArgParser()
     ..addCommand(
       'generate',
@@ -1430,6 +1472,7 @@ ArgParser _buildParser() {
     ..addCommand('lorem', lorem)
     ..addCommand('number', number)
     ..addCommand('password', password)
+    ..addCommand('person', person)
     ..addCommand('checksum', checksum)
     ..addCommand('qr', qr)
     ..addCommand('sql', sql)
@@ -6562,6 +6605,113 @@ Future<int> _runIdentityDocument(
     },
   );
 }
+
+Future<int> _runPerson(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required PersonService service,
+  required JsonObjectEncoder encodeJson,
+  required FileBytesWriter writeOutputFile,
+}) async {
+  final json = parsed.flag('json');
+  final path = parsed.option('output');
+  void fail(
+    String kind,
+    String code,
+    String messageKey, [
+    Map<String, Object?> details = const {},
+  ]) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+  if (parsed.rest.isNotEmpty || path == '') {
+    fail('validation', 'person.invalid-options', 'error.person.validation');
+    return 64;
+  }
+  final result = await service.execute(
+    PersonOperationRequest(
+      locale: parsed.option('locale')!,
+      minAge: parsed.option('min-age')!,
+      maxAge: parsed.option('max-age')!,
+      count: parsed.option('count')!,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        final human = _personHuman(value, catalog, localeTag);
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : path != null
+            ? '${catalog.lookup(localeTag, 'person.saved')}\n'
+            : human;
+        if (path != null) {
+          await writeOutputFile(path, utf8.encode(human));
+        }
+        await writeSinkAndFlush(out, payload);
+        return 0;
+      } on OutOfMemoryError {
+        fail('resource', 'person.resource-limit', 'error.person.resource');
+        return 75;
+      } on Object {
+        fail('access', 'person.output-access', 'error.person.outputAccess');
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      fail(
+        failure.kind.name,
+        failure.code,
+        failure.messageKey,
+        failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+String _personHuman(
+  PersonOutput output,
+  MessageCatalog catalog,
+  String localeTag,
+) {
+  String label(String key) => catalog.lookup(localeTag, 'person.$key');
+  final lines = <String>[label('syntheticLabel')];
+  for (var index = 0; index < output.people.length; index++) {
+    final person = output.people[index];
+    lines
+      ..add('')
+      ..add('${label('entryLabel')} ${index + 1}')
+      ..add('${label('nameLabel')}: ${person.givenName} ${person.familyName}')
+      ..add('${label('birthDateLabel')}: ${_personDate(person.birthDate)}')
+      ..add(
+        '${label('addressLabel')}: ${person.address.street}, '
+        '${person.address.city}, ${person.address.region} '
+        '${person.address.postalCode}, ${person.address.countryCode}',
+      )
+      ..add('${label('phoneLabel')}: ${person.phone}')
+      ..add('${label('emailLabel')}: ${person.email}')
+      ..add('${label('identifiersLabel')}:');
+    for (final identifier in person.identifiers) {
+      lines.add('  ${identifier.type.name.toUpperCase()}: ${identifier.value}');
+    }
+  }
+  return lines.join('\n');
+}
+
+String _personDate(DateTime value) =>
+    '${value.year.toString().padLeft(4, '0')}-'
+    '${value.month.toString().padLeft(2, '0')}-'
+    '${value.day.toString().padLeft(2, '0')}';
 
 Future<int> _runUuid(
   ArgResults parsed, {
