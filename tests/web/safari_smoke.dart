@@ -1195,6 +1195,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('Lorem', () => _generateLorem(driver));
     await protocol.stage('Password', () => _generatePassword(driver));
     await protocol.stage('UUID', () => _generateUuid(driver));
+    await protocol.stage('Synthetic cards', () => _generateCard(driver));
     try {
       await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
@@ -1206,7 +1207,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -4227,5 +4228,143 @@ Future<void> _generateUuid(WebDriver driver) async {
       'UUID partial result survived failure',
     );
     await _assertNoNetworkRequests(driver, flow: 'UUID $failure failure');
+  }
+}
+
+Future<void> _generateCard(WebDriver driver) async {
+  final source = await File.fromUri(Platform.script.resolve('card_browser.js'))
+      .readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn cardProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openCard() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Card semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate Synthetic Cards');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'Card configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Card startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  await openCard();
+  await _clickButton(driver, 'Generate synthetic cards');
+  await _waitUntil(
+    () => _pageContains(
+      driver,
+      'Synthetic test data - not for real transactions',
+    ),
+    'Synthetic card warning missing',
+  );
+  String? values;
+  await _waitUntil(() async {
+    final value = await probe('values');
+    if (value is! String) return false;
+    values = value;
+    return const {
+      '4005520201264821',
+      '4242424242424242',
+      '4000056655665556',
+    }.contains(value);
+  }, 'Safe Visa sandbox value missing');
+  final transferred =
+      'Synthetic test data - not for real transactions\n$values';
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'Card copy unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('copied', transferred) == true,
+    'Card clipboard mismatch',
+  );
+  await _clickButton(driver, 'Save labeled card data');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(transferred)) == true,
+    'Card saved bytes mismatch',
+  );
+  await _fillTextBox(driver, 'Positive integer count', '2');
+  await _waitUntil(
+    () async => await probe('noResult') == true,
+    'Card result remained after configuration changed',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'Card defaults');
+
+  for (final network in const {
+    'Visa': {'4005520201264821', '4242424242424242', '4000056655665556'},
+    'Mastercard': {'5500005555555559', '5555555555554444', '2223003122003222'},
+    'American Express': {
+      '340353278080900',
+      '378282246310005',
+      '371449635398431',
+    },
+    'Discover': {'6011003179988686', '6011111111111117', '6011000990139424'},
+  }.entries) {
+    await openCard();
+    await _waitUntil(
+      () async => await probe('openNetwork') == true,
+      'Card network selector unavailable',
+    );
+    await _waitUntil(
+      () async => await probe('option', network.key) == true,
+      '${network.key} option unavailable',
+    );
+    await _clickButton(driver, 'Generate synthetic cards');
+    await _waitUntil(() async {
+      final value = await probe('values');
+      return value is String && network.value.contains(value);
+    }, '${network.key} sandbox value missing');
+    await _assertNoNetworkRequests(driver, flow: 'Card ${network.key}');
+  }
+
+  for (final failure in ['validation', 'processing', 'copy', 'save']) {
+    await openCard();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    if (failure == 'processing') await probe('entropyFailure');
+    await _clickButton(driver, 'Generate synthetic cards');
+    if (failure == 'copy' || failure == 'save') {
+      await _waitUntil(
+        () async => await probe('values') is String,
+        'Card default result missing',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy' ? 'Copy labeled card data' : 'Save labeled card data',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(driver, switch (failure) {
+        'validation' => 'Choose Visa, Mastercard, American Express, or Discover and a positive integer count.',
+        'processing' =>
+          'Synthetic card generation failed. No card numbers were produced.',
+        'copy' => 'The synthetic card result could not be copied.',
+        _ => 'The synthetic card result could not be written.',
+      }),
+      'Card localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Card partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Card $failure failure');
   }
 }
