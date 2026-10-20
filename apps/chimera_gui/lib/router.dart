@@ -27,6 +27,7 @@ import 'list_compare_page.dart';
 import 'lorem_page.dart';
 import 'number_base_page.dart';
 import 'password_page.dart';
+import 'person_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'sql_format_page.dart';
@@ -61,6 +62,10 @@ GoRouter buildRouter({
   required IdentityDocumentClipboardWriter identityDocumentClipboardWriter,
   required IdentityDocumentFileSaver identityDocumentFileSaver,
   required IdentityDocumentOutputEncoder identityDocumentOutputEncoder,
+  required PersonOperationService personService,
+  required PersonClipboardWriter personClipboardWriter,
+  required PersonFileSaver personFileSaver,
+  required PersonOutputEncoder personOutputEncoder,
   required JwtCreateOperationService jwtCreateService,
   required JwtCreateFilePicker jwtCreateFilePicker,
   required JwtCreateClipboardReader jwtCreateClipboardReader,
@@ -237,6 +242,17 @@ GoRouter buildRouter({
           clipboardWriter: identityDocumentClipboardWriter,
           fileSaver: identityDocumentFileSaver,
           outputEncoder: identityDocumentOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/person/generate',
+        builder: (context, state) => PersonPage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: personService,
+          clipboardWriter: personClipboardWriter,
+          fileSaver: personFileSaver,
+          outputEncoder: personOutputEncoder,
         ),
       ),
       GoRoute(
@@ -661,6 +677,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/document/generate'),
                         child: Text(
                           catalog.lookup(localeTag, 'document.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-person'),
+                        onPressed: () => context.go('/person/generate'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'person.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
