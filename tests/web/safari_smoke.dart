@@ -3405,7 +3405,25 @@ Future<void> _encodeCipher(WebDriver driver) async {
     'Cipher clipboard output was not exact',
   );
 
+  await _fillTextBox(driver, 'Text to encode', 'Attack');
+  await _selectMenuValue(driver, 'Cipher Atbash', 'Vigenere');
+  await _fillTextBox(driver, 'Key (ASCII letters)', 'K3Y');
+  await _clickButton(driver, 'Encode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The cipher encoding request is invalid.'),
+    'Cipher invalid-key validation did not appear',
+  );
+  var retained = await driver.execute(r'''
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => (element.getAttribute('aria-label') || '')
+          .startsWith('Cipher encoded result'));
+    ''', const <Object?>[]);
+  if (retained == true) {
+    throw StateError('Cipher invalid-key validation retained a prior result');
+  }
+
   await _fillTextBox(driver, 'Text to encode', 'A🌍B');
+  await _selectMenuValue(driver, 'Cipher Vigenere', 'Atbash');
   await _selectMenuValue(
     driver,
     'Unsupported symbols Preserve unsupported symbols',
@@ -3416,7 +3434,7 @@ Future<void> _encodeCipher(WebDriver driver) async {
     () => _pageContains(driver, 'The cipher encoding request is invalid.'),
     'Cipher unsupported-symbol validation did not appear',
   );
-  final retained = await driver.execute(r'''
+  retained = await driver.execute(r'''
       return [...document.querySelectorAll('[role="region"]')]
         .some(element => (element.getAttribute('aria-label') || '')
           .startsWith('Cipher encoded result'));
@@ -3436,9 +3454,10 @@ Future<void> _selectMenuValue(
     () async =>
         await driver.execute(
           r'''
-            const expected = arguments[0];
+            const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+            const expected = normalize(arguments[0]);
             const button = [...document.querySelectorAll('[role="button"]')]
-              .find(element => (element.getAttribute('aria-label') || '') === expected &&
+              .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === expected &&
                 element.getAttribute('aria-disabled') !== 'true');
             if (!button) return false;
             button.click();
@@ -3453,9 +3472,10 @@ Future<void> _selectMenuValue(
     () async =>
         await driver.execute(
           r'''
-            const expected = arguments[0];
+            const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+            const expected = normalize(arguments[0]);
             const option = [...document.querySelectorAll('[role="menuitem"]')]
-              .find(element => (element.getAttribute('aria-label') || element.textContent).trim() === expected &&
+              .find(element => normalize(element.getAttribute('aria-label') || element.textContent) === expected &&
                 element.getAttribute('aria-disabled') !== 'true');
             if (!option) return false;
             option.click();
