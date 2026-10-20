@@ -488,6 +488,58 @@ _catalogs = <String, Map<String, String>>{
         'The clipboard text could not be written.',
     'error.cipherEncode.interactiveInputAccess':
         'The input could not be processed.',
+    'cli.cipherDecodeUsage':
+        'Usage: chimera cipher decode (--input=<text>|--stdin|--file=<path>) '
+        '--cipher=caesar|rot13|vigenere|atbash|affine|bacon|rail-fence '
+        '[--character-policy=preserve|reject] [--shift=<0..25>] '
+        '[--key=<ASCII letters>] [--a=<0..25> --b=<0..25>] '
+        '[--rails=<2+>] [--output=<path>] [--json]. Exactly one input source '
+        'is required. Cipher parameters are validated locally and accepted '
+        'only by their matching cipher. Human stdout is exact text without a '
+        'newline. Output saves UTF-8 text; JSON emits the result after saving. '
+        'Exit codes: 64 validation, 70 processing, 74 access, 75 resource.',
+    'cipherDecode.savedResult': 'Cipher decoded text saved.',
+    'error.cipherDecode.validation': 'The cipher decoding request is invalid.',
+    'error.cipherDecode.inputAccess': 'The standard input could not be read.',
+    'error.cipherDecode.fileAccess': 'The input file could not be read.',
+    'error.cipherDecode.outputAccess':
+        'The cipher decoded text could not be saved.',
+    'error.cipherDecode.resource':
+        'Cipher decoding exceeded its resource limit.',
+    'error.cipherDecode.processing': 'Cipher decoding failed.',
+    'cipherDecode.pageTitle': 'Decode with Cipher',
+    'cipherDecode.openAction': 'Decode with Cipher',
+    'cipherDecode.inputLabel': 'Text to decode',
+    'cipherDecode.fileAction': 'Load UTF-8 file',
+    'cipherDecode.pasteAction': 'Paste text',
+    'cipherDecode.cipherLabel': 'Cipher',
+    'cipherDecode.cipher.caesar': 'Caesar',
+    'cipherDecode.cipher.rot13': 'ROT13',
+    'cipherDecode.cipher.vigenere': 'Vigenere',
+    'cipherDecode.cipher.atbash': 'Atbash',
+    'cipherDecode.cipher.affine': 'Affine',
+    'cipherDecode.cipher.bacon': 'Bacon',
+    'cipherDecode.cipher.rail-fence': 'Rail Fence',
+    'cipherDecode.policyLabel': 'Unsupported symbols',
+    'cipherDecode.policy.preserve': 'Preserve unsupported symbols',
+    'cipherDecode.policy.reject': 'Reject unsupported symbols',
+    'cipherDecode.shiftLabel': 'Shift (0-25)',
+    'cipherDecode.keyLabel': 'Key (ASCII letters)',
+    'cipherDecode.aLabel': 'Multiplier a (coprime with 26)',
+    'cipherDecode.bLabel': 'Offset b (0-25)',
+    'cipherDecode.railsLabel': 'Rails (2 or more)',
+    'cipherDecode.submitAction': 'Decode',
+    'cipherDecode.outputLabel': 'Cipher decoded result',
+    'cipherDecode.resultSuccess': 'Cipher decoding succeeded.',
+    'cipherDecode.copyAction': 'Copy decoded text',
+    'cipherDecode.saveAction': 'Save decoded text',
+    'cipherDecode.copiedResult': 'Cipher decoded text copied.',
+    'cipherDecode.fileSaved': 'Cipher decoded text saved.',
+    'error.cipherDecode.clipboardRead': 'The clipboard text could not be read.',
+    'error.cipherDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.cipherDecode.interactiveInputAccess':
+        'The input could not be processed.',
     'htmlDecode.pageTitle': 'Decode HTML',
     'htmlDecode.openAction': 'Decode HTML',
     'htmlDecode.inputLabel': 'HTML entities to decode',
@@ -1658,6 +1710,63 @@ _catalogs = <String, Map<String, String>>{
     'error.cipherEncode.clipboardWrite':
         'Não foi possível gravar o texto na área de transferência.',
     'error.cipherEncode.interactiveInputAccess':
+        'Não foi possível processar a entrada.',
+    'cli.cipherDecodeUsage':
+        'Uso: chimera cipher decode (--input=<texto>|--stdin|--file=<caminho>) '
+        '--cipher=caesar|rot13|vigenere|atbash|affine|bacon|rail-fence '
+        '[--character-policy=preserve|reject] [--shift=<0..25>] '
+        '[--key=<letras ASCII>] [--a=<0..25> --b=<0..25>] '
+        '[--rails=<2+>] [--output=<caminho>] [--json]. É obrigatório informar '
+        'exatamente uma fonte de entrada. Os parâmetros da cifra são validados '
+        'localmente e aceitos apenas pela cifra correspondente. A saída humana '
+        'é o texto exato, sem nova linha. O arquivo salva texto UTF-8; JSON '
+        'emite o resultado após salvar. Códigos de saída: 64 validação, '
+        '70 processamento, 74 acesso, 75 recursos.',
+    'cipherDecode.savedResult': 'Texto decifrado salvo.',
+    'error.cipherDecode.validation':
+        'A solicitação de decodificação de cifra é inválida.',
+    'error.cipherDecode.inputAccess': 'Não foi possível ler a entrada padrão.',
+    'error.cipherDecode.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.cipherDecode.outputAccess':
+        'Não foi possível salvar o texto decifrado.',
+    'error.cipherDecode.resource':
+        'A decodificação de cifra excedeu o limite de recursos.',
+    'error.cipherDecode.processing':
+        'Não foi possível concluir a decodificação de cifra.',
+    'cipherDecode.pageTitle': 'Decodificar com cifra',
+    'cipherDecode.openAction': 'Decodificar com cifra',
+    'cipherDecode.inputLabel': 'Texto para decodificar',
+    'cipherDecode.fileAction': 'Carregar arquivo UTF-8',
+    'cipherDecode.pasteAction': 'Colar texto',
+    'cipherDecode.cipherLabel': 'Cifra',
+    'cipherDecode.cipher.caesar': 'César',
+    'cipherDecode.cipher.rot13': 'ROT13',
+    'cipherDecode.cipher.vigenere': 'Vigenère',
+    'cipherDecode.cipher.atbash': 'Atbash',
+    'cipherDecode.cipher.affine': 'Afim',
+    'cipherDecode.cipher.bacon': 'Bacon',
+    'cipherDecode.cipher.rail-fence': 'Cerca de trilhos',
+    'cipherDecode.policyLabel': 'Símbolos não compatíveis',
+    'cipherDecode.policy.preserve': 'Preservar símbolos não compatíveis',
+    'cipherDecode.policy.reject': 'Rejeitar símbolos não compatíveis',
+    'cipherDecode.shiftLabel': 'Deslocamento (0-25)',
+    'cipherDecode.keyLabel': 'Chave (letras ASCII)',
+    'cipherDecode.aLabel': 'Multiplicador a (coprimo com 26)',
+    'cipherDecode.bLabel': 'Deslocamento b (0-25)',
+    'cipherDecode.railsLabel': 'Trilhos (2 ou mais)',
+    'cipherDecode.submitAction': 'Decodificar',
+    'cipherDecode.outputLabel': 'Resultado decifrado',
+    'cipherDecode.resultSuccess': 'Decodificação por cifra concluída.',
+    'cipherDecode.copyAction': 'Copiar texto decifrado',
+    'cipherDecode.saveAction': 'Salvar texto decifrado',
+    'cipherDecode.copiedResult': 'Texto decifrado copiado.',
+    'cipherDecode.fileSaved': 'Texto decifrado salvo.',
+    'error.cipherDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.cipherDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.cipherDecode.interactiveInputAccess':
         'Não foi possível processar a entrada.',
     'htmlDecode.pageTitle': 'Decodificar HTML',
     'htmlDecode.openAction': 'Decodificar HTML',
