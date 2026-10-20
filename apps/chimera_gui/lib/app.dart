@@ -12,6 +12,7 @@ import 'card_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'checksum_generate_page.dart';
+import 'cipher_decode_page.dart';
 import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
@@ -131,6 +132,12 @@ final class ChimeraApp extends StatelessWidget {
     this.cipherEncodeClipboardWriter,
     this.cipherEncodeFileSaver,
     this.cipherEncodeOutputEncoder,
+    this.cipherDecodeService = const CipherDecodeService(),
+    this.cipherDecodeFilePicker,
+    this.cipherDecodeClipboardReader,
+    this.cipherDecodeClipboardWriter,
+    this.cipherDecodeFileSaver,
+    this.cipherDecodeOutputEncoder,
     this.gzipCompressService = const GzipCompressService(),
     this.gzipCompressFilePicker,
     this.gzipCompressClipboardReader,
@@ -322,6 +329,12 @@ final class ChimeraApp extends StatelessWidget {
   final CipherEncodeClipboardWriter? cipherEncodeClipboardWriter;
   final CipherEncodeFileSaver? cipherEncodeFileSaver;
   final CipherEncodeOutputEncoder? cipherEncodeOutputEncoder;
+  final CipherDecodeOperationService cipherDecodeService;
+  final CipherDecodeFilePicker? cipherDecodeFilePicker;
+  final CipherDecodeClipboardReader? cipherDecodeClipboardReader;
+  final CipherDecodeClipboardWriter? cipherDecodeClipboardWriter;
+  final CipherDecodeFileSaver? cipherDecodeFileSaver;
+  final CipherDecodeOutputEncoder? cipherDecodeOutputEncoder;
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
   final GzipCompressClipboardReader? gzipCompressClipboardReader;
@@ -507,6 +520,12 @@ final class ChimeraApp extends StatelessWidget {
         cipherEncodeClipboardWriter: cipherEncodeClipboardWriter,
         cipherEncodeFileSaver: cipherEncodeFileSaver,
         cipherEncodeOutputEncoder: cipherEncodeOutputEncoder,
+        cipherDecodeService: cipherDecodeService,
+        cipherDecodeFilePicker: cipherDecodeFilePicker,
+        cipherDecodeClipboardReader: cipherDecodeClipboardReader,
+        cipherDecodeClipboardWriter: cipherDecodeClipboardWriter,
+        cipherDecodeFileSaver: cipherDecodeFileSaver,
+        cipherDecodeOutputEncoder: cipherDecodeOutputEncoder,
         gzipCompressService: gzipCompressService,
         gzipCompressFilePicker: gzipCompressFilePicker,
         gzipCompressClipboardReader: gzipCompressClipboardReader,
@@ -695,6 +714,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.cipherEncodeClipboardWriter,
     required this.cipherEncodeFileSaver,
     required this.cipherEncodeOutputEncoder,
+    required this.cipherDecodeService,
+    required this.cipherDecodeFilePicker,
+    required this.cipherDecodeClipboardReader,
+    required this.cipherDecodeClipboardWriter,
+    required this.cipherDecodeFileSaver,
+    required this.cipherDecodeOutputEncoder,
     required this.gzipCompressService,
     required this.gzipCompressFilePicker,
     required this.gzipCompressClipboardReader,
@@ -973,6 +998,12 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final CipherEncodeClipboardWriter? cipherEncodeClipboardWriter;
   final CipherEncodeFileSaver? cipherEncodeFileSaver;
   final CipherEncodeOutputEncoder? cipherEncodeOutputEncoder;
+  final CipherDecodeOperationService cipherDecodeService;
+  final CipherDecodeFilePicker? cipherDecodeFilePicker;
+  final CipherDecodeClipboardReader? cipherDecodeClipboardReader;
+  final CipherDecodeClipboardWriter? cipherDecodeClipboardWriter;
+  final CipherDecodeFileSaver? cipherDecodeFileSaver;
+  final CipherDecodeOutputEncoder? cipherDecodeOutputEncoder;
 
   final GzipCompressOperationService gzipCompressService;
   final GzipCompressFilePicker? gzipCompressFilePicker;
@@ -1117,6 +1148,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.cipherEncodeFileSaver ?? saveCipherEncodeFile,
       cipherEncodeOutputEncoder:
           widget.cipherEncodeOutputEncoder ?? encodeCipherEncodeOutput,
+      cipherDecodeService: widget.cipherDecodeService,
+      cipherDecodeFilePicker:
+          widget.cipherDecodeFilePicker ?? pickCipherDecodeFile,
+      cipherDecodeClipboardReader:
+          widget.cipherDecodeClipboardReader ?? readCipherDecodeClipboard,
+      cipherDecodeClipboardWriter:
+          widget.cipherDecodeClipboardWriter ?? writeCipherDecodeClipboard,
+      cipherDecodeFileSaver:
+          widget.cipherDecodeFileSaver ?? saveCipherDecodeFile,
+      cipherDecodeOutputEncoder:
+          widget.cipherDecodeOutputEncoder ?? encodeCipherDecodeOutput,
       gzipCompressService: widget.gzipCompressService,
       gzipCompressFilePicker:
           widget.gzipCompressFilePicker ?? pickGzipCompressFile,
