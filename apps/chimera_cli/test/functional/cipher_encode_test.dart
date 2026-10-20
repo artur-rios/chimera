@@ -58,6 +58,7 @@ void main() {
         'preserve',
         'reject',
         '64',
+        '70',
         '74',
         '75',
       ]) {
@@ -262,4 +263,34 @@ void main() {
     final error = envelope['error'] as Map<String, dynamic>;
     expect(error['code'], 'cipher.resource-limit');
   });
+
+  test(
+    'GivenUnexpectedProcessingFailure_WhenEncoded_ThenExit70IsRedacted',
+    () async {
+      final out = StringBuffer();
+      final err = StringBuffer();
+      final exit = await runChimera(
+        ['cipher', 'encode', '--input=secret', '--cipher=atbash', '--json'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+        cipherEncodeService: const CipherEncodeService(
+          encodeOverride: _throwUnexpectedFailure,
+        ),
+      );
+
+      expect(exit, 70);
+      expect(out.toString(), isEmpty);
+      expect(err.toString(), isNot(contains('secret')));
+      expect(err.toString(), isNot(contains('private encoder diagnostics')));
+      final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+      final error = envelope['error'] as Map<String, dynamic>;
+      expect(error['kind'], 'processing');
+      expect(error['code'], 'cipher.processing-failed');
+      expect(error['message'], 'Cipher encoding failed.');
+    },
+  );
 }
+
+CipherEncodeResult _throwUnexpectedFailure(CipherEncodeRequest request) =>
+    throw StateError('private encoder diagnostics');

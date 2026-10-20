@@ -194,7 +194,13 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   });
   await page.goto('/');
   await enableFlutterSemantics(page);
-  page.on('request', request => recordHttpRequest(request, requests));
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:')
+        && url.hostname !== '127.0.0.1') {
+      requests.push(request.url());
+    }
+  });
   await page.getByRole('button', { name: 'Encode with Cipher', exact: true }).click();
   const editor = page.getByRole('textbox', { name: 'Text to encode', exact: true });
   await fillFlutterTextBox(editor, 'Attack!');
@@ -211,7 +217,23 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   await expect.poll(() => page.evaluate(() => window.__chimeraCipherCopiedText))
     .toBe('Zggzxp!');
 
-  await fillFlutterTextBox(editor, 'A🌍B');
+  await fillFlutterTextBox(editor, 'Attack');
+  await page.getByRole('button', { name: 'Cipher Atbash', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Vigenere', exact: true }).click();
+  const keyEditor = page.getByRole('textbox', {
+    name: 'Key (ASCII letters)',
+    exact: true,
+  });
+  await keyEditor.focus();
+  await keyEditor.fill('K3Y');
+  await expect(keyEditor).toHaveValue('K3Y');
+  await keyEditor.press('Tab');
+  await page.getByRole('button', { name: 'Encode', exact: true }).click();
+  await expect(page.getByText('The cipher encoding request is invalid.', { exact: true }).last())
+    .toBeVisible();
+  await expect(result).toHaveCount(0);
+
+  await fillFlutterTextBox(editor, 'A?B');
   await page.getByRole('button', {
     name: 'Unsupported symbols Preserve unsupported symbols',
     exact: true,

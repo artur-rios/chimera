@@ -98,6 +98,32 @@ void main() {
   }
 
   testWidgets(
+    'GivenInvalidVigenereKey_WhenEncoded_ThenLocalizedFailureHasNoResult',
+    (tester) async {
+      await tester.pumpWidget(
+        const ChimeraApp(initialLocation: '/cipher/encode'),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const Key('cipher-encode-input')),
+        'Attack',
+      );
+      await _select(tester, const Key('cipher-encode-cipher'), 'Vigenere');
+      await tester.enterText(find.byKey(const Key('cipher-encode-key')), 'K3Y');
+      await tester.tap(find.byKey(const Key('cipher-encode-submit')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('The cipher encoding request is invalid.'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Attack'), findsNothing);
+      expect(find.textContaining('K3Y'), findsNothing);
+      expect(find.byKey(const Key('cipher-encode-result')), findsNothing);
+    },
+  );
+
+  testWidgets(
     'GivenRejectedUnicode_WhenEncoded_ThenNoSensitiveSymbolOrResultRemains',
     (tester) async {
       final network = _Offline();

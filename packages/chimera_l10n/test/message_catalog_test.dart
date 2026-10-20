@@ -454,6 +454,7 @@ void main() {
       'error.cipherEncode.fileAccess',
       'error.cipherEncode.outputAccess',
       'error.cipherEncode.resource',
+      'error.cipherEncode.processing',
     };
     expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
     for (final locale in supportedLocaleTags) {
@@ -1382,6 +1383,7 @@ void main() {
       'error.cipherEncode.fileAccess',
       'error.cipherEncode.outputAccess',
       'error.cipherEncode.resource',
+      'error.cipherEncode.processing',
       'cipherEncode.pageTitle',
       'cipherEncode.openAction',
       'cipherEncode.inputLabel',

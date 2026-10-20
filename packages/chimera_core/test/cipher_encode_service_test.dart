@@ -1,4 +1,5 @@
 import 'package:chimera_core/chimera_core.dart';
+import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -104,4 +105,24 @@ void main() {
       });
     }
   });
+
+  test('GivenUnexpectedEncoderFailure_WhenExecuted_ThenTypedProcessingFailureReturns', () async {
+    const failingService = CipherEncodeService(
+      encodeOverride: _throwUnexpectedFailure,
+    );
+
+    final result = await failingService.execute(
+      CipherEncodeOperationRequest.text('secret', cipher: 'atbash'),
+    );
+
+    final failure = result as ChimeraFailure<CipherEncodeOutput>;
+    expect(failure.kind, FailureKind.processing);
+    expect(failure.code, 'cipher.processing-failed');
+    expect(failure.messageKey, 'error.cipherEncode.processing');
+    expect(failure.details, isEmpty);
+    expect(failure.toString(), isNot(contains('secret')));
+  });
 }
+
+CipherEncodeResult _throwUnexpectedFailure(CipherEncodeRequest request) =>
+    throw StateError('private encoder diagnostics');

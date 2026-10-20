@@ -91,12 +91,20 @@ final class CipherEncodeOutput {
   };
 }
 
+typedef CipherEncodeFunction = CipherEncodeResult Function(
+  CipherEncodeRequest request,
+);
+
 final class CipherEncodeService
     implements
         OperationService<CipherEncodeOperationRequest, CipherEncodeOutput> {
-  const CipherEncodeService({this.encoder = const CipherEncoder()});
+  const CipherEncodeService({
+    this.encoder = const CipherEncoder(),
+    this.encodeOverride,
+  });
 
   final CipherEncoder encoder;
+  final CipherEncodeFunction? encodeOverride;
 
   @override
   Future<ChimeraResult<CipherEncodeOutput>> execute(
@@ -123,7 +131,7 @@ final class CipherEncodeService
       }
 
       final input = _decodeInput(request);
-      final result = encoder.encode(
+      final result = (encodeOverride ?? encoder.encode)(
         CipherEncodeRequest(
           input: input,
           algorithm: algorithm,
@@ -162,6 +170,12 @@ final class CipherEncodeService
           'field': 'input',
           'reason': 'allocation-limit',
         },
+      );
+    } on Object {
+      return const ChimeraFailure<CipherEncodeOutput>(
+        kind: FailureKind.processing,
+        code: 'cipher.processing-failed',
+        messageKey: 'error.cipherEncode.processing',
       );
     }
   }

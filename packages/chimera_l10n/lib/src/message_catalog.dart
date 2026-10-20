@@ -445,7 +445,7 @@ _catalogs = <String, Map<String, String>>{
         'Default character policy: preserve. Cipher parameters are accepted '
         'only by their matching cipher. Human stdout is exact text without a '
         'newline. Output saves UTF-8 text; JSON emits the result after saving. '
-        'Exit codes: 64 validation, 74 access, 75 resource.',
+        'Exit codes: 64 validation, 70 processing, 74 access, 75 resource.',
     'cipherEncode.savedResult': 'Cipher encoded text saved.',
     'error.cipherEncode.validation': 'The cipher encoding request is invalid.',
     'error.cipherEncode.inputAccess': 'The standard input could not be read.',
@@ -454,6 +454,7 @@ _catalogs = <String, Map<String, String>>{
         'The cipher encoded text could not be saved.',
     'error.cipherEncode.resource':
         'Cipher encoding exceeded its resource limit.',
+    'error.cipherEncode.processing': 'Cipher encoding failed.',
     'cipherEncode.pageTitle': 'Encode with Cipher',
     'cipherEncode.openAction': 'Encode with Cipher',
     'cipherEncode.inputLabel': 'Text to encode',
@@ -1610,7 +1611,8 @@ _catalogs = <String, Map<String, String>>{
         'Política de caracteres padrão: preserve. Os parâmetros de cifra são '
         'aceitos apenas pela cifra correspondente. A saída de texto é exata, '
         'sem nova linha. O arquivo salva texto UTF-8; JSON emite o resultado '
-        'após salvar. Códigos de saída: 64 validação, 74 acesso, 75 recursos.',
+        'após salvar. Códigos de saída: 64 validação, 70 processamento, '
+        '74 acesso, 75 recursos.',
     'cipherEncode.savedResult': 'Texto cifrado salvo.',
     'error.cipherEncode.validation':
         'A solicitação de codificação de cifra é inválida.',
@@ -1621,6 +1623,8 @@ _catalogs = <String, Map<String, String>>{
         'Não foi possível salvar o texto cifrado.',
     'error.cipherEncode.resource':
         'A codificação de cifra excedeu o limite de recursos.',
+    'error.cipherEncode.processing':
+        'Não foi possível concluir a codificação de cifra.',
     'cipherEncode.pageTitle': 'Codificar com cifra',
     'cipherEncode.openAction': 'Codificar com cifra',
     'cipherEncode.inputLabel': 'Texto para codificar',

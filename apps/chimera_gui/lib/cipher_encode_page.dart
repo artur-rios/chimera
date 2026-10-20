@@ -205,6 +205,7 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
         },
         onFailure: (failure) => _fail(generation, switch (failure.kind) {
           FailureKind.resource => 'resource',
+          FailureKind.processing || FailureKind.unexpected => 'processing',
           FailureKind.validation || FailureKind.range => 'validation',
           _ => 'interactiveInputAccess',
         }),
@@ -492,6 +493,9 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
                         2,
                         OutlinedButton.icon(
                           key: const Key('cipher-encode-file'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                          ),
                           onPressed: _busy ? null : _loadFile,
                           icon: const Icon(Icons.file_open),
                           label: Text(_label('fileAction')),
@@ -501,6 +505,9 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
                         3,
                         OutlinedButton.icon(
                           key: const Key('cipher-encode-paste'),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size(48, 48),
+                          ),
                           onPressed: _busy ? null : _paste,
                           icon: const Icon(Icons.content_paste),
                           label: Text(_label('pasteAction')),
@@ -628,6 +635,9 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
                       10,
                       OutlinedButton.icon(
                         key: const Key('cipher-encode-copy'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
                         onPressed: _busy ? null : _copy,
                         icon: const Icon(Icons.copy),
                         label: Text(_label('copyAction')),
@@ -638,6 +648,9 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
                       11,
                       OutlinedButton.icon(
                         key: const Key('cipher-encode-save'),
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size(48, 48),
+                        ),
                         onPressed: _busy ? null : _save,
                         icon: const Icon(Icons.save_alt),
                         label: Text(_label('saveAction')),
