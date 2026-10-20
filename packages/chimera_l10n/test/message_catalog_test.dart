@@ -516,6 +516,55 @@ void main() {
   );
 
   test(
+    'GivenAlphabetDecodeMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = {
+        'cli.alphabetDecodeUsage',
+        'alphabetDecode.savedResult',
+        'alphabetDecode.mappingLabel',
+        'alphabetDecode.mappingSourcesLabel',
+        'error.alphabetDecode.validation',
+        'error.alphabetDecode.inputAccess',
+        'error.alphabetDecode.fileAccess',
+        'error.alphabetDecode.outputAccess',
+        'error.alphabetDecode.resource',
+        'error.alphabetDecode.processing',
+        'alphabetDecode.pageTitle',
+        'alphabetDecode.openAction',
+        'alphabetDecode.inputLabel',
+        'alphabetDecode.fileAction',
+        'alphabetDecode.pasteAction',
+        'alphabetDecode.alphabetLabel',
+        'alphabetDecode.alphabet.morse',
+        'alphabetDecode.alphabet.nato',
+        'alphabetDecode.alphabet.braille',
+        'alphabetDecode.submitAction',
+        'alphabetDecode.outputLabel',
+        'alphabetDecode.resultSuccess',
+        'alphabetDecode.mappingIdLabel',
+        'alphabetDecode.mappingEditionLabel',
+        'alphabetDecode.mappingSymbolsLabel',
+        'alphabetDecode.mappingRulesLabel',
+        'alphabetDecode.copyAction',
+        'alphabetDecode.saveAction',
+        'alphabetDecode.copiedResult',
+        'alphabetDecode.fileSaved',
+        'error.alphabetDecode.clipboardRead',
+        'error.alphabetDecode.clipboardWrite',
+        'error.alphabetDecode.interactiveInputAccess',
+      };
+      expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+      for (final locale in supportedLocaleTags) {
+        expect(catalog.keysFor(locale), containsAll(keys));
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
+  test(
     'GivenCipherEncodeGuiMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
       const keys = <String>{
@@ -1518,6 +1567,39 @@ void main() {
       'error.alphabetEncode.clipboardRead',
       'error.alphabetEncode.clipboardWrite',
       'error.alphabetEncode.interactiveInputAccess',
+      'cli.alphabetDecodeUsage',
+      'alphabetDecode.savedResult',
+      'alphabetDecode.mappingLabel',
+      'alphabetDecode.mappingSourcesLabel',
+      'error.alphabetDecode.validation',
+      'error.alphabetDecode.inputAccess',
+      'error.alphabetDecode.fileAccess',
+      'error.alphabetDecode.outputAccess',
+      'error.alphabetDecode.resource',
+      'error.alphabetDecode.processing',
+      'alphabetDecode.pageTitle',
+      'alphabetDecode.openAction',
+      'alphabetDecode.inputLabel',
+      'alphabetDecode.fileAction',
+      'alphabetDecode.pasteAction',
+      'alphabetDecode.alphabetLabel',
+      'alphabetDecode.alphabet.morse',
+      'alphabetDecode.alphabet.nato',
+      'alphabetDecode.alphabet.braille',
+      'alphabetDecode.submitAction',
+      'alphabetDecode.outputLabel',
+      'alphabetDecode.resultSuccess',
+      'alphabetDecode.mappingIdLabel',
+      'alphabetDecode.mappingEditionLabel',
+      'alphabetDecode.mappingSymbolsLabel',
+      'alphabetDecode.mappingRulesLabel',
+      'alphabetDecode.copyAction',
+      'alphabetDecode.saveAction',
+      'alphabetDecode.copiedResult',
+      'alphabetDecode.fileSaved',
+      'error.alphabetDecode.clipboardRead',
+      'error.alphabetDecode.clipboardWrite',
+      'error.alphabetDecode.interactiveInputAccess',
       'cipherEncode.pageTitle',
       'cipherEncode.openAction',
       'cipherEncode.inputLabel',

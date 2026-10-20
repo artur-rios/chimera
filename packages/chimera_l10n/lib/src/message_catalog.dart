@@ -501,6 +501,52 @@ _catalogs = <String, Map<String, String>>{
         'The clipboard text could not be written.',
     'error.alphabetEncode.interactiveInputAccess':
         'The alphabet input could not be accessed.',
+    'cli.alphabetDecodeUsage':
+        'Usage: chimera alphabet decode '
+        '(--input=<text>|--stdin|--file=<path>) '
+        '--alphabet=morse|nato|braille [--output=<path>] [--json]\n'
+        'Human output includes the exact mapping identifier, edition, and '
+        'source links. Output files contain only the UTF-8 decoded text; JSON '
+        'includes the complete mapping reference. Exit codes: 64 validation, '
+        '70 processing, 74 access, 75 resource.',
+    'alphabetDecode.savedResult': 'Alphabet-decoded text saved.',
+    'alphabetDecode.mappingLabel': 'Mapping',
+    'alphabetDecode.mappingSourcesLabel': 'Sources',
+    'error.alphabetDecode.validation':
+        'The alphabet decoding request is invalid.',
+    'error.alphabetDecode.inputAccess': 'The standard input could not be read.',
+    'error.alphabetDecode.fileAccess': 'The input file could not be read.',
+    'error.alphabetDecode.outputAccess':
+        'The alphabet-decoded text could not be saved.',
+    'error.alphabetDecode.resource':
+        'Alphabet decoding exceeded the resource limit.',
+    'error.alphabetDecode.processing': 'Alphabet decoding failed.',
+    'alphabetDecode.pageTitle': 'Decode Alphabet',
+    'alphabetDecode.openAction': 'Decode Alphabet',
+    'alphabetDecode.inputLabel': 'Alphabet text to decode',
+    'alphabetDecode.fileAction': 'Load UTF-8 file',
+    'alphabetDecode.pasteAction': 'Paste text',
+    'alphabetDecode.alphabetLabel': 'Alphabet',
+    'alphabetDecode.alphabet.morse': 'Morse',
+    'alphabetDecode.alphabet.nato': 'NATO/ICAO phonetic',
+    'alphabetDecode.alphabet.braille': 'Braille (UEB)',
+    'alphabetDecode.submitAction': 'Decode',
+    'alphabetDecode.outputLabel': 'Alphabet-decoded result',
+    'alphabetDecode.resultSuccess': 'Alphabet decoding completed.',
+    'alphabetDecode.mappingIdLabel': 'Identifier',
+    'alphabetDecode.mappingEditionLabel': 'Edition',
+    'alphabetDecode.mappingSymbolsLabel': 'Symbols',
+    'alphabetDecode.mappingRulesLabel': 'Rules',
+    'alphabetDecode.copyAction': 'Copy result',
+    'alphabetDecode.saveAction': 'Save result',
+    'alphabetDecode.copiedResult': 'Alphabet-decoded text copied.',
+    'alphabetDecode.fileSaved': 'Alphabet-decoded text saved.',
+    'error.alphabetDecode.clipboardRead':
+        'The clipboard text could not be read.',
+    'error.alphabetDecode.clipboardWrite':
+        'The clipboard text could not be written.',
+    'error.alphabetDecode.interactiveInputAccess':
+        'The alphabet input could not be accessed.',
     'cipherEncode.pageTitle': 'Encode with Cipher',
     'cipherEncode.openAction': 'Encode with Cipher',
     'cipherEncode.inputLabel': 'Text to encode',
@@ -1771,6 +1817,55 @@ _catalogs = <String, Map<String, String>>{
     'error.alphabetEncode.clipboardWrite':
         'Não foi possível gravar o texto na área de transferência.',
     'error.alphabetEncode.interactiveInputAccess':
+        'Não foi possível acessar a entrada do alfabeto.',
+    'cli.alphabetDecodeUsage':
+        'Uso: chimera alphabet decode '
+        '(--input=<texto>|--stdin|--file=<caminho>) '
+        '--alphabet=morse|nato|braille [--output=<caminho>] [--json]\n'
+        'A saída humana inclui o identificador exato, a edição e os links das '
+        'fontes do mapeamento. O arquivo contém apenas o texto decodificado em '
+        'UTF-8; o JSON inclui a referência completa. Códigos de saída: 64 '
+        'validação, 70 processamento, 74 acesso, 75 recursos.',
+    'alphabetDecode.savedResult': 'Texto decodificado com alfabeto salvo.',
+    'alphabetDecode.mappingLabel': 'Mapeamento',
+    'alphabetDecode.mappingSourcesLabel': 'Fontes',
+    'error.alphabetDecode.validation':
+        'A solicitação de decodificação com alfabeto é inválida.',
+    'error.alphabetDecode.inputAccess':
+        'Não foi possível ler a entrada padrão.',
+    'error.alphabetDecode.fileAccess':
+        'Não foi possível ler o arquivo de entrada.',
+    'error.alphabetDecode.outputAccess':
+        'Não foi possível salvar o texto decodificado com alfabeto.',
+    'error.alphabetDecode.resource':
+        'A decodificação com alfabeto excedeu o limite de recursos.',
+    'error.alphabetDecode.processing':
+        'Não foi possível concluir a decodificação com alfabeto.',
+    'alphabetDecode.pageTitle': 'Decodificar alfabeto',
+    'alphabetDecode.openAction': 'Decodificar alfabeto',
+    'alphabetDecode.inputLabel': 'Texto de alfabeto para decodificar',
+    'alphabetDecode.fileAction': 'Carregar arquivo UTF-8',
+    'alphabetDecode.pasteAction': 'Colar texto',
+    'alphabetDecode.alphabetLabel': 'Alfabeto',
+    'alphabetDecode.alphabet.morse': 'Morse',
+    'alphabetDecode.alphabet.nato': 'Fonético OTAN/OACI',
+    'alphabetDecode.alphabet.braille': 'Braille (UEB)',
+    'alphabetDecode.submitAction': 'Decodificar',
+    'alphabetDecode.outputLabel': 'Resultado decodificado com alfabeto',
+    'alphabetDecode.resultSuccess': 'Decodificação com alfabeto concluída.',
+    'alphabetDecode.mappingIdLabel': 'Identificador',
+    'alphabetDecode.mappingEditionLabel': 'Edição',
+    'alphabetDecode.mappingSymbolsLabel': 'Símbolos',
+    'alphabetDecode.mappingRulesLabel': 'Regras',
+    'alphabetDecode.copyAction': 'Copiar resultado',
+    'alphabetDecode.saveAction': 'Salvar resultado',
+    'alphabetDecode.copiedResult': 'Texto decodificado com alfabeto copiado.',
+    'alphabetDecode.fileSaved': 'Texto decodificado com alfabeto salvo.',
+    'error.alphabetDecode.clipboardRead':
+        'Não foi possível ler o texto da área de transferência.',
+    'error.alphabetDecode.clipboardWrite':
+        'Não foi possível gravar o texto na área de transferência.',
+    'error.alphabetDecode.interactiveInputAccess':
         'Não foi possível acessar a entrada do alfabeto.',
     'cipherEncode.pageTitle': 'Codificar com cifra',
     'cipherEncode.openAction': 'Codificar com cifra',
