@@ -2,6 +2,7 @@
 library;
 
 export 'src/alphabet/alphabet_codec.dart';
+export 'src/alphabet/alphabet_decoder.dart';
 export 'src/alphabet/alphabet_encoder.dart';
 export 'src/base64/base64_byte_decoder.dart';
 export 'src/base64/base64_byte_encoder.dart';
