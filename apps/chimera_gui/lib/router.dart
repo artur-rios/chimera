@@ -9,6 +9,7 @@ import 'card_page.dart';
 import 'certificate_convert_page.dart';
 import 'certificate_inspect_page.dart';
 import 'checksum_generate_page.dart';
+import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'gzip_compress_page.dart';
@@ -119,6 +120,12 @@ GoRouter buildRouter({
   required UrlEncodeClipboardWriter urlEncodeClipboardWriter,
   required UrlEncodeFileSaver urlEncodeFileSaver,
   required UrlEncodeOutputEncoder urlEncodeOutputEncoder,
+  required CipherEncodeOperationService cipherEncodeService,
+  required CipherEncodeFilePicker cipherEncodeFilePicker,
+  required CipherEncodeClipboardReader cipherEncodeClipboardReader,
+  required CipherEncodeClipboardWriter cipherEncodeClipboardWriter,
+  required CipherEncodeFileSaver cipherEncodeFileSaver,
+  required CipherEncodeOutputEncoder cipherEncodeOutputEncoder,
   required GzipCompressOperationService gzipCompressService,
   required GzipCompressFilePicker gzipCompressFilePicker,
   required GzipCompressClipboardReader gzipCompressClipboardReader,
@@ -409,6 +416,19 @@ GoRouter buildRouter({
           clipboardWriter: urlEncodeClipboardWriter,
           fileSaver: urlEncodeFileSaver,
           outputEncoder: urlEncodeOutputEncoder,
+        ),
+      ),
+      GoRoute(
+        path: '/cipher/encode',
+        builder: (context, state) => CipherEncodePage(
+          catalog: catalog,
+          localeTag: localeTag,
+          service: cipherEncodeService,
+          filePicker: cipherEncodeFilePicker,
+          clipboardReader: cipherEncodeClipboardReader,
+          clipboardWriter: cipherEncodeClipboardWriter,
+          fileSaver: cipherEncodeFileSaver,
+          outputEncoder: cipherEncodeOutputEncoder,
         ),
       ),
       GoRoute(
@@ -709,6 +729,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/url/encode'),
                         child: Text(
                           catalog.lookup(localeTag, 'urlEncode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-cipher-encode'),
+                        onPressed: () => context.go('/cipher/encode'),
+                        child: Text(
+                          catalog.lookup(localeTag, 'cipherEncode.openAction'),
                         ),
                       ),
                       const SizedBox(height: 12),
