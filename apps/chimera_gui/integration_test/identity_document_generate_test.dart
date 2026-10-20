@@ -40,7 +40,7 @@ void main() {
       'alphanumeric': '12ABC34501DE35',
     }.entries) {
       testWidgets(
-        'Given${locale}${fixture.key}CnpjBatch_WhenGeneratedOffline_ThenExactCopySaveAndDiscard',
+        'Given$locale${fixture.key}CnpjBatch_WhenGeneratedOffline_ThenExactCopySaveAndDiscard',
         (tester) async {
           final network = _Offline();
           final previous = HttpOverrides.current;
@@ -135,7 +135,7 @@ void main() {
 
     for (final failure in ['validation', 'processing']) {
       testWidgets(
-        'Given${locale}${failure}Failure_WhenGeneratedOffline_ThenLocalizedErrorWithoutPartialValue',
+        'Given$locale${failure}Failure_WhenGeneratedOffline_ThenLocalizedErrorWithoutPartialValue',
         (tester) async {
           final network = _Offline();
           final previous = HttpOverrides.current;

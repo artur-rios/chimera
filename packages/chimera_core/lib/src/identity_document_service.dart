@@ -34,7 +34,7 @@ final class IdentityDocumentOutput {
   Map<String, Object?> toJson() => {
     'locale': locale,
     'type': type,
-    if (cnpjFormat case final format?) 'cnpjFormat': format,
+    'cnpjFormat': ?cnpjFormat,
     'count': count,
     'synthetic': synthetic,
     'label': label,
