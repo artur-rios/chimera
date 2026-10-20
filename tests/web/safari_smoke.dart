@@ -1190,6 +1190,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('URL encode', () => _encodeUrl(driver));
     await protocol.stage('Cipher encode', () => _encodeCipher(driver));
     await protocol.stage('Alphabet encode', () => _encodeAlphabet(driver));
+    await protocol.stage('Alphabet decode', () => _decodeAlphabet(driver));
     await protocol.stage('Cipher decode', () => _decodeCipher(driver));
     await protocol.stage('URL decode', () => _decodeUrl(driver));
     await protocol.stage('JWT create', () => _createJwt(driver));
@@ -1215,7 +1216,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding, URL encoding, classical cipher encoding and decoding/copy/save/validation, Morse/NATO/Braille alphabet encoding/mapping/copy/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding, URL encoding, classical cipher encoding and decoding/copy/save/validation, Morse/NATO/Braille alphabet encoding and decoding/mapping/copy/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -3523,6 +3524,98 @@ Future<void> _encodeAlphabet(WebDriver driver) async {
   await _assertNoNetworkRequests(
     driver,
     flow: 'alphabet encode and validation',
+  );
+}
+
+Future<void> _decodeAlphabet(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Alphabet decode semantics placeholder did not load',
+  );
+  await _enableFlutterSemantics(driver);
+  await _clickButton(driver, 'Decode Alphabet');
+  await _waitUntil(
+    () => _pageContains(driver, 'Alphabet text to decode'),
+    'Alphabet decode page did not open',
+  );
+  await _assertNoExternalRequests(driver, flow: 'alphabet decode startup');
+  await driver.execute(r'''
+      window.__chimeraAlphabetDecodedText = null;
+      window.__chimeraAlphabetDecodeClipboardText = '.-  -...';
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: {
+          readText: async () => window.__chimeraAlphabetDecodeClipboardText,
+          writeText: async value => {
+            window.__chimeraAlphabetDecodedText = value;
+          },
+        },
+      });
+      performance.clearResourceTimings();
+    ''', const <Object?>[]);
+  await _fillTextBox(driver, 'Alphabet text to decode', '... --- ... / ..---');
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () => _pageContains(driver, 'SOS 2'),
+    'Morse decoded output was not exact',
+  );
+  await _waitUntil(
+    () async =>
+        await _pageContains(driver, 'itu-r-m.1677-1') &&
+        await _pageContains(driver, '10/2009'),
+    'Morse decode mapping reference was not visible',
+  );
+  final semanticResult = await driver.execute(r'''
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => (element.getAttribute('aria-label') || '')
+          .includes('Alphabet-decoded result Alphabet decoding completed. SOS 2'));
+    ''', const <Object?>[]);
+  if (semanticResult != true) {
+    throw StateError('Alphabet decoded result semantics omitted exact output');
+  }
+  await _clickButton(driver, 'Copy result');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          'return window.__chimeraAlphabetDecodedText === arguments[0];',
+          const <Object?>['SOS 2'],
+        ) ==
+        true,
+    'Alphabet decoded clipboard output was not exact',
+  );
+
+  await _clickButton(driver, 'Paste text');
+  await _waitUntil(
+    () => _inputHasValue(
+      driver,
+      'Alphabet text to decode',
+      '.-  -...',
+      focus: true,
+    ),
+    'Alphabet decode clipboard source was not loaded',
+  );
+  await _clickButton(driver, 'Decode');
+  await _waitUntil(
+    () => _pageContains(driver, 'The alphabet decoding request is invalid.'),
+    'Alphabet ambiguous-sequence validation did not appear',
+  );
+  final retained = await driver.execute(r'''
+      return [...document.querySelectorAll('[role="region"]')]
+        .some(element => (element.getAttribute('aria-label') || '')
+          .startsWith('Alphabet-decoded result'));
+    ''', const <Object?>[]);
+  if (retained == true) {
+    throw StateError('Alphabet decode validation retained a prior result');
+  }
+  await _assertNoNetworkRequests(
+    driver,
+    flow: 'alphabet decode and validation',
   );
 }
 

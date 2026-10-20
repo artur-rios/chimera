@@ -746,3 +746,32 @@ Firefox, and WebKit scenarios verify representative output, alternate input
 flows, discard behavior, mapping metadata, and zero network attempts. The
 native Safari harness covers the same local encoding and validation contract.
 No automated UC-40 accessibility finding remains open.
+
+## UC-41 Decode Alphabet
+
+- Branch: `feature/uc-41-decode-alphabet`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux alphabet-decoding surface
+- Locales: English and Brazilian Portuguese
+
+The source editor, file and clipboard actions, alphabet selector, decode action,
+focusable result, exact mapping reference, copy, and save controls expose
+localized labels in document-order keyboard traversal. Every interactive target
+remains at least 48 logical pixels, and the page remains usable at 200% text
+scale.
+
+Successful decoding moves focus to a localized live result region whose
+semantics include the exact decoded text. A separately labeled mapping region
+exposes the published identifier, edition, source links, complete symbol table,
+and rules. Copy and save transfer only the exact decoded result. Encoded source
+text is discarded when a request starts; failures, late completions, and
+disposal do not restore source or stale output.
+
+Focused widget coverage exercises both locales, all three alphabets, typed,
+file, and clipboard input, exact mapping display, exact copy/save, redacted
+adapter and ambiguity failures, disposal of pending work, large text, and
+minimum target sizes. Native Windows integration and compiled Chromium,
+Firefox, and WebKit scenarios verify representative output, alternate input
+flows, discard behavior, semantic output, mapping metadata, and zero network
+attempts. The native Safari harness covers the same local decoding and
+validation contract. No automated UC-41 accessibility finding remains open.
