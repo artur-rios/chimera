@@ -206,8 +206,9 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   await fillFlutterTextBox(editor, 'Attack!');
   await page.getByRole('button', { name: 'Cipher Caesar', exact: true }).click();
   await page.getByRole('menuitem', { name: 'Atbash', exact: true }).click();
-  await page.getByRole('button', { name: 'Encode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Encode', exact: true }),
+  );
   const result = page.getByRole('region', {
     name: 'Cipher encoded result Cipher encoding succeeded.',
     exact: true,
@@ -229,8 +230,9 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   await keyEditor.fill('K3Y');
   await expect(keyEditor).toHaveValue('K3Y');
   await keyEditor.press('Tab');
-  await page.getByRole('button', { name: 'Encode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Encode', exact: true }),
+  );
   await expect(page.getByText('The cipher encoding request is invalid.', { exact: true }).last())
     .toBeVisible();
   await expect(result).toHaveCount(0);
@@ -244,8 +246,9 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     name: 'Reject unsupported symbols',
     exact: true,
   }).click();
-  await page.getByRole('button', { name: 'Encode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Encode', exact: true }),
+  );
   await expect(page.getByText('The cipher encoding request is invalid.', { exact: true }).last())
     .toBeVisible();
   await expect(result).toHaveCount(0);
@@ -284,8 +287,9 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     exact: true,
   });
   await fillFlutterTextBox(keyEditor, 'LEMON');
-  await page.getByRole('button', { name: 'Decode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Decode', exact: true }),
+  );
   const result = page.getByRole('region', {
     name: 'Cipher decoded result Cipher decoding succeeded.',
     exact: true,
@@ -298,8 +302,9 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
 
   await fillFlutterTextBox(editor, 'Lxfopv');
   await fillFlutterTextBox(keyEditor, 'K3Y');
-  await page.getByRole('button', { name: 'Decode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Decode', exact: true }),
+  );
   await expect(page.getByText('The cipher decoding request is invalid.', { exact: true }).last())
     .toBeVisible();
   await expect(result).toHaveCount(0);
@@ -315,8 +320,9 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     name: 'Reject unsupported symbols',
     exact: true,
   }).click();
-  await page.getByRole('button', { name: 'Decode', exact: true })
-    .evaluate(button => button.click());
+  await activateFlutterButton(
+    page.getByRole('button', { name: 'Decode', exact: true }),
+  );
   await expect(page.getByText('The cipher decoding request is invalid.', { exact: true }).last())
     .toBeVisible();
   await expect(result).toHaveCount(0);
@@ -1431,6 +1437,14 @@ async function fillFlutterTextBox(textBox, value) {
   await textBox.fill(value);
   await expect(textBox).toHaveValue(value);
   await textBox.press('Tab');
+}
+
+async function activateFlutterButton(button) {
+  await expect(button).toBeVisible();
+  await expect(button).toBeEnabled();
+  await button.focus();
+  await expect(button).toBeFocused();
+  await button.press('Enter');
 }
 
 test('compiled Chimera shell loads without page errors', async ({ page }) => {
