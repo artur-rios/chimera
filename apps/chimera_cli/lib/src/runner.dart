@@ -71,6 +71,8 @@ Future<int> runChimera(
   JsonObjectEncoder? cipherEncodeJsonEncoder,
   AlphabetEncodeService alphabetEncodeService = const AlphabetEncodeService(),
   JsonObjectEncoder? alphabetEncodeJsonEncoder,
+  AlphabetDecodeService alphabetDecodeService = const AlphabetDecodeService(),
+  JsonObjectEncoder? alphabetDecodeJsonEncoder,
   CipherDecodeService cipherDecodeService = const CipherDecodeService(),
   JsonObjectEncoder? cipherDecodeJsonEncoder,
   CertificateInspectService certificateInspectService =
@@ -164,6 +166,9 @@ Future<int> runChimera(
           : parsed.command?.name == 'alphabet' &&
                 parsed.command?.command?.name == 'encode'
           ? 'cli.alphabetEncodeUsage'
+          : parsed.command?.name == 'alphabet' &&
+                parsed.command?.command?.name == 'decode'
+          ? 'cli.alphabetDecodeUsage'
           : parsed.command?.name == 'gzip' &&
                 parsed.command?.command?.name == 'compress'
           ? 'cli.gzipCompressUsage'
@@ -592,6 +597,29 @@ Future<int> runChimera(
         encodeJson: alphabetEncodeJsonEncoder ?? jsonEncode,
       );
     }
+    if (parsed.command!.name == 'alphabet' &&
+        parsed.command!.command?.name == 'decode') {
+      return await _runAlphabetDecode(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        readStandardInputBytes:
+            readStandardInputBytes ?? _readStandardInputBytes,
+        readFileBytes: readFileBytes ?? (path) => File(path).readAsBytes(),
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+        service: alphabetDecodeService,
+        encodeJson: alphabetDecodeJsonEncoder ?? jsonEncode,
+      );
+    }
     if (parsed.command!.name == 'gzip' &&
         parsed.command!.command?.name == 'compress') {
       return await _runGzipCompress(
@@ -977,6 +1005,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'cipher' && args[1] == 'decode';
     final isAlphabetEncode =
         args.length >= 2 && args[0] == 'alphabet' && args[1] == 'encode';
+    final isAlphabetDecode =
+        args.length >= 2 && args[0] == 'alphabet' && args[1] == 'decode';
     final isHtmlEncode =
         args.length >= 2 && args[0] == 'html' && args[1] == 'encode';
     final isGzipCompress =
@@ -1044,6 +1074,7 @@ Future<int> runChimera(
               isCipherEncode ||
               isCipherDecode ||
               isAlphabetEncode ||
+              isAlphabetDecode ||
               isBase64Encode ||
               isGzipCompress ||
               isGzipDecompress ||
@@ -1104,6 +1135,8 @@ Future<int> runChimera(
           : isCipherDecode
           ? 'cipher.invalid-options'
           : isAlphabetEncode
+          ? 'alphabet.invalid-options'
+          : isAlphabetDecode
           ? 'alphabet.invalid-options'
           : isGzipCompress
           ? 'gzip-compress.invalid-options'
@@ -1186,6 +1219,8 @@ Future<int> runChimera(
           ? 'error.cipherDecode.validation'
           : isAlphabetEncode
           ? 'error.alphabetEncode.validation'
+          : isAlphabetDecode
+          ? 'error.alphabetDecode.validation'
           : isGzipCompress
           ? 'error.gzipCompress.validation'
           : isGzipDecompress
@@ -1418,7 +1453,16 @@ ArgParser _buildParser() {
     ..addOption('alphabet')
     ..addOption('output', abbr: 'o')
     ..addFlag('json', negatable: false);
-  final alphabet = ArgParser()..addCommand('encode', alphabetEncode);
+  final alphabetDecode = ArgParser()
+    ..addOption('input', abbr: 'i')
+    ..addFlag('stdin', negatable: false)
+    ..addOption('file', abbr: 'f')
+    ..addOption('alphabet')
+    ..addOption('output', abbr: 'o')
+    ..addFlag('json', negatable: false);
+  final alphabet = ArgParser()
+    ..addCommand('encode', alphabetEncode)
+    ..addCommand('decode', alphabetDecode);
   final html = ArgParser()
     ..addCommand('decode', htmlDecode)
     ..addCommand('encode', htmlEncode);
@@ -3869,6 +3913,167 @@ Future<int> _runAlphabetEncode(
         await writeSinkAndFlush(out, stdoutPayload);
       } on OutOfMemoryError {
         resourceFailure('encoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      return 0;
+    },
+    onFailure: (failure) async {
+      _writeFailure(
+        err,
+        catalog: catalog,
+        localeTag: localeTag,
+        json: json,
+        kind: failure.kind.name,
+        code: failure.code,
+        messageKey: failure.messageKey,
+        details: failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runAlphabetDecode(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required BytesReader readStandardInputBytes,
+  required FileBytesReader readFileBytes,
+  required FileBytesWriter writeOutputFile,
+  required AlphabetDecodeService service,
+  required JsonObjectEncoder encodeJson,
+}) async {
+  final text = parsed.option('input');
+  final file = parsed.option('file');
+  final useStandardInput = parsed.flag('stdin');
+  final json = parsed.flag('json');
+  final outputPath = parsed.option('output');
+  final alphabet = parsed.option('alphabet');
+  final sourceCount =
+      (text == null ? 0 : 1) +
+      (file == null ? 0 : 1) +
+      (useStandardInput ? 1 : 0);
+  const supportedAlphabets = <String>{'morse', 'nato', 'braille'};
+  final invalid = parsed.rest.isNotEmpty || outputPath == '' || file == ''
+      ? 'invalid-options'
+      : sourceCount == 0
+      ? 'missing-source'
+      : sourceCount > 1
+      ? 'conflicting-sources'
+      : alphabet == null || !supportedAlphabets.contains(alphabet)
+      ? 'invalid-alphabet'
+      : null;
+  if (invalid != null) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'validation',
+      code: 'alphabet.$invalid',
+      messageKey: 'error.alphabetDecode.validation',
+      details: invalid == 'invalid-alphabet'
+          ? const {'field': 'alphabet', 'reason': 'unsupported-alphabet'}
+          : const {},
+    );
+    return 64;
+  }
+
+  void resourceFailure(String field) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'resource',
+    code: 'alphabet.resource-limit',
+    messageKey: 'error.alphabetDecode.resource',
+    details: {'field': field, 'reason': 'allocation-limit'},
+  );
+
+  void outputAccessFailure() => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: 'access',
+    code: 'alphabet.output-access',
+    messageKey: 'error.alphabetDecode.outputAccess',
+  );
+
+  late AlphabetDecodeOperationRequest request;
+  try {
+    request = text != null
+        ? AlphabetDecodeOperationRequest.text(text, alphabet: alphabet!)
+        : AlphabetDecodeOperationRequest.utf8Bytes(
+            useStandardInput
+                ? await readStandardInputBytes()
+                : await readFileBytes(file!),
+            alphabet: alphabet!,
+          );
+  } on OutOfMemoryError {
+    resourceFailure('input');
+    return 75;
+  } on Object {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: 'access',
+      code: useStandardInput ? 'alphabet.input-access' : 'alphabet.file-access',
+      messageKey: useStandardInput
+          ? 'error.alphabetDecode.inputAccess'
+          : 'error.alphabetDecode.fileAccess',
+    );
+    return 74;
+  }
+
+  final result = await service.execute(request);
+  return await result.fold(
+    onSuccess: (value) async {
+      late String stdoutPayload;
+      try {
+        if (json) {
+          stdoutPayload = '${encodeJson(value.toJson())}\n';
+        } else {
+          final mapping = value.mapping;
+          final firstLine = outputPath == null
+              ? value.decoded
+              : catalog.lookup(localeTag, 'alphabetDecode.savedResult');
+          stdoutPayload =
+              '$firstLine\n'
+              '${catalog.lookup(localeTag, 'alphabetDecode.mappingLabel')}: '
+              '${mapping.id} (${mapping.edition})\n'
+              '${catalog.lookup(localeTag, 'alphabetDecode.mappingSourcesLabel')}: '
+              '${mapping.sources.join(', ')}\n';
+        }
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
+        return 75;
+      } on Object {
+        outputAccessFailure();
+        return 74;
+      }
+      if (outputPath != null) {
+        try {
+          await writeOutputFile(outputPath, utf8.encode(value.decoded));
+        } on OutOfMemoryError {
+          resourceFailure('decoded');
+          return 75;
+        } on Object {
+          outputAccessFailure();
+          return 74;
+        }
+      }
+      try {
+        await writeSinkAndFlush(out, stdoutPayload);
+      } on OutOfMemoryError {
+        resourceFailure('decoded');
         return 75;
       } on Object {
         outputAccessFailure();
