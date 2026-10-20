@@ -21,7 +21,8 @@ requests and results. Every surface labels the output as synthetic test data.
   Anatel `9XXXX-XXXX` subscriber format. They are synthetic but are not asserted
   to be unassigned.
 - US people contain a synthetic SSN. Brazilian people contain CPF and CIN
-  entries sharing the same CPF-based registration number. All identifiers are
+  entries sharing the same CPF-based registration number. Each identifier
+  carries its own issuing locale, which must match the person locale, and is
   independently checked by Chimera's identity-document validator.
 - A person is accepted only after the complete aggregate passes validation.
   Generation retries at most 32 candidates per requested person and never

@@ -38,6 +38,7 @@ void main() {
         expect(
           () => result.people.first.identifiers.add(
             const PersonIdentifier(
+              locale: PersonLocale.us,
               type: IdentityDocumentType.ssn,
               value: 'PRIVATE',
             ),
@@ -54,6 +55,7 @@ void main() {
     expect(person.phone, matches(r'^\+1 \(415\) 555-01\d{2}$'));
     expect(person.email, endsWith('@example.com'));
     expect(person.address.region, 'CA');
+    expect(person.identifiers.single.locale, PersonLocale.us);
     expect(person.identifiers.single.type, IdentityDocumentType.ssn);
     expect(
       const IdentityDocumentValidator().isValid(
@@ -70,6 +72,12 @@ void main() {
 
     expect(person.phone, matches(r'^\+55 \(11\) 9\d{4}-\d{4}$'));
     expect(person.address.region, 'SP');
+    expect(
+      person.identifiers.every(
+        (identifier) => identifier.locale == PersonLocale.br,
+      ),
+      isTrue,
+    );
     expect(person.identifiers.map((item) => item.type), [
       IdentityDocumentType.cpf,
       IdentityDocumentType.cin,
@@ -98,21 +106,40 @@ void main() {
     'NonReservedEmail': _usPerson(email: 'avery.reed01@example.net'),
     'WrongIdentifierType': _usPerson(
       identifiers: const [
-        PersonIdentifier(type: IdentityDocumentType.itin, value: '900-70-0000'),
+        PersonIdentifier(
+          locale: PersonLocale.us,
+          type: IdentityDocumentType.itin,
+          value: '900-70-0000',
+        ),
+      ],
+    ),
+    'IdentifierLocaleMismatch': _usPerson(
+      identifiers: const [
+        PersonIdentifier(
+          locale: PersonLocale.br,
+          type: IdentityDocumentType.ssn,
+          value: '219-09-9999',
+        ),
       ],
     ),
     'InvalidIdentifier': _usPerson(
       identifiers: const [
-        PersonIdentifier(type: IdentityDocumentType.ssn, value: '000-00-0000'),
+        PersonIdentifier(
+          locale: PersonLocale.us,
+          type: IdentityDocumentType.ssn,
+          value: '000-00-0000',
+        ),
       ],
     ),
     'MismatchedBrazilRegistration': _brPerson(
       identifiers: const [
         PersonIdentifier(
+          locale: PersonLocale.br,
           type: IdentityDocumentType.cpf,
           value: '280.012.389-38',
         ),
         PersonIdentifier(
+          locale: PersonLocale.br,
           type: IdentityDocumentType.cin,
           value: '111.444.777-35',
         ),
@@ -374,7 +401,11 @@ SyntheticPerson _usPerson({
   identifiers:
       identifiers ??
       const [
-        PersonIdentifier(type: IdentityDocumentType.ssn, value: '219-09-9999'),
+        PersonIdentifier(
+          locale: PersonLocale.us,
+          type: IdentityDocumentType.ssn,
+          value: '219-09-9999',
+        ),
       ],
 );
 
@@ -399,10 +430,12 @@ SyntheticPerson _brPerson({
       identifiers ??
       const [
         PersonIdentifier(
+          locale: PersonLocale.br,
           type: IdentityDocumentType.cpf,
           value: '280.012.389-38',
         ),
         PersonIdentifier(
+          locale: PersonLocale.br,
           type: IdentityDocumentType.cin,
           value: '280.012.389-38',
         ),

@@ -91,18 +91,26 @@ final class PersonAddress {
 
 @immutable
 final class PersonIdentifier {
-  const PersonIdentifier({required this.type, required this.value});
+  const PersonIdentifier({
+    required this.locale,
+    required this.type,
+    required this.value,
+  });
 
+  final PersonLocale locale;
   final IdentityDocumentType type;
   final String value;
   bool get synthetic => true;
 
   @override
   bool operator ==(Object other) =>
-      other is PersonIdentifier && type == other.type && value == other.value;
+      other is PersonIdentifier &&
+      locale == other.locale &&
+      type == other.type &&
+      value == other.value;
 
   @override
-  int get hashCode => Object.hash(type, value);
+  int get hashCode => Object.hash(locale, type, value);
 }
 
 @immutable
@@ -281,6 +289,7 @@ SyntheticPerson _secureCandidate(
   final identifiers = us
       ? [
           PersonIdentifier(
+            locale: PersonLocale.us,
             type: IdentityDocumentType.ssn,
             value: _documentGenerator
                 .generate(
@@ -325,8 +334,16 @@ List<PersonIdentifier> _brazilIdentifiers() {
       .values
       .single;
   return [
-    PersonIdentifier(type: IdentityDocumentType.cpf, value: value),
-    PersonIdentifier(type: IdentityDocumentType.cin, value: value),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cpf,
+      value: value,
+    ),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cin,
+      value: value,
+    ),
   ];
 }
 
@@ -410,6 +427,7 @@ final class PersonValidator {
 
   bool _validUsIdentifiers(List<PersonIdentifier> identifiers) =>
       identifiers.length == 1 &&
+      identifiers.single.locale == PersonLocale.us &&
       identifiers.single.type == IdentityDocumentType.ssn &&
       _documentValidator.isValid(
         locale: IdentityLocale.us,
@@ -419,6 +437,8 @@ final class PersonValidator {
 
   bool _validBrazilIdentifiers(List<PersonIdentifier> identifiers) {
     if (identifiers.length != 2 ||
+        identifiers[0].locale != PersonLocale.br ||
+        identifiers[1].locale != PersonLocale.br ||
         identifiers[0].type != IdentityDocumentType.cpf ||
         identifiers[1].type != IdentityDocumentType.cin ||
         _onlyDigits(identifiers[0].value) !=

@@ -79,8 +79,13 @@ void main() {
         expect(json['synthetic'], isTrue);
         expect(json['label'], 'synthetic-test-data');
         expect(json['people'], hasLength(2));
-        final person = (json['people'] as List<Object?>).first;
-        expect(person, isA<Map<String, Object?>>());
+        final person =
+            (json['people'] as List<Object?>).first as Map<String, Object?>;
+        final identifier =
+            (person['identifiers'] as List<Object?>).first
+                as Map<String, Object?>;
+        expect(identifier['locale'], entry.key == 'Us' ? 'us' : 'br');
+        expect(identifier['synthetic'], isTrue);
         expect(err.toString(), isEmpty);
       },
     );
@@ -317,7 +322,11 @@ SyntheticPerson _usPerson({String phone = '+1 (415) 555-0100'}) =>
       phone: phone,
       email: 'avery.reed01@example.com',
       identifiers: const [
-        PersonIdentifier(type: IdentityDocumentType.ssn, value: '219-09-9999'),
+        PersonIdentifier(
+          locale: PersonLocale.us,
+          type: IdentityDocumentType.ssn,
+          value: '219-09-9999',
+        ),
       ],
     );
 
@@ -336,8 +345,16 @@ SyntheticPerson _brPerson() => SyntheticPerson(
   phone: '+55 (11) 90000-0000',
   email: 'ana.silva01@example.com',
   identifiers: const [
-    PersonIdentifier(type: IdentityDocumentType.cpf, value: '280.012.389-38'),
-    PersonIdentifier(type: IdentityDocumentType.cin, value: '280.012.389-38'),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cpf,
+      value: '280.012.389-38',
+    ),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cin,
+      value: '280.012.389-38',
+    ),
   ],
 );
 

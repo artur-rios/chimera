@@ -178,7 +178,11 @@ SyntheticPerson _usPerson({String phone = '+1 (415) 555-0100'}) =>
       phone: phone,
       email: 'avery.reed01@example.com',
       identifiers: const [
-        PersonIdentifier(type: IdentityDocumentType.ssn, value: '219-09-9999'),
+        PersonIdentifier(
+          locale: PersonLocale.us,
+          type: IdentityDocumentType.ssn,
+          value: '219-09-9999',
+        ),
       ],
     );
 
@@ -197,8 +201,16 @@ SyntheticPerson _brPerson() => SyntheticPerson(
   phone: '+55 (11) 90000-0000',
   email: 'ana.silva01@example.com',
   identifiers: const [
-    PersonIdentifier(type: IdentityDocumentType.cpf, value: '280.012.389-38'),
-    PersonIdentifier(type: IdentityDocumentType.cin, value: '280.012.389-38'),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cpf,
+      value: '280.012.389-38',
+    ),
+    PersonIdentifier(
+      locale: PersonLocale.br,
+      type: IdentityDocumentType.cin,
+      value: '280.012.389-38',
+    ),
   ],
 );
 

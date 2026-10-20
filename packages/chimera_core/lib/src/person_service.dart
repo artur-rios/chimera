@@ -57,6 +57,7 @@ Map<String, Object?> _personToJson(SyntheticPerson person) => {
   'identifiers': person.identifiers
       .map(
         (identifier) => {
+          'locale': identifier.locale.name,
           'type': identifier.type.name,
           'value': identifier.value,
           'synthetic': identifier.synthetic,
