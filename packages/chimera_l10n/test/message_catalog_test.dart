@@ -37,6 +37,52 @@ void main() {
     }
   });
 
+  test(
+    'GivenIdentityDocumentMessages_WhenLookedUp_ThenBothLocalesAreComplete',
+    () {
+      const keys = <String>{
+        'cli.documentUsage',
+        'document.syntheticLabel',
+        'document.pageTitle',
+        'document.openAction',
+        'document.localeLabel',
+        'document.locale.us',
+        'document.locale.br',
+        'document.typeLabel',
+        'document.type.ssn',
+        'document.type.itin',
+        'document.type.ein',
+        'document.type.cpf',
+        'document.type.cnpj',
+        'document.type.cnh',
+        'document.type.cin',
+        'document.cnpjFormatLabel',
+        'document.cnpjFormat.numeric',
+        'document.cnpjFormat.alphanumeric',
+        'document.countLabel',
+        'document.semantics',
+        'document.generate',
+        'document.resultLabel',
+        'document.success',
+        'document.copy',
+        'document.save',
+        'document.copied',
+        'document.saved',
+        'error.document.validation',
+        'error.document.processing',
+        'error.document.resource',
+        'error.document.outputAccess',
+        'error.document.clipboardWrite',
+      };
+      for (final locale in supportedLocaleTags) {
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+          expect(catalog.lookup(locale, key), isNot(key));
+        }
+      }
+    },
+  );
+
   test('GivenUuidMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.uuidUsage',
@@ -948,6 +994,38 @@ void main() {
       'error.card.resource',
       'error.card.outputAccess',
       'error.card.clipboardWrite',
+      'cli.documentUsage',
+      'document.syntheticLabel',
+      'document.pageTitle',
+      'document.openAction',
+      'document.localeLabel',
+      'document.locale.us',
+      'document.locale.br',
+      'document.typeLabel',
+      'document.type.ssn',
+      'document.type.itin',
+      'document.type.ein',
+      'document.type.cpf',
+      'document.type.cnpj',
+      'document.type.cnh',
+      'document.type.cin',
+      'document.cnpjFormatLabel',
+      'document.cnpjFormat.numeric',
+      'document.cnpjFormat.alphanumeric',
+      'document.countLabel',
+      'document.semantics',
+      'document.generate',
+      'document.resultLabel',
+      'document.success',
+      'document.copy',
+      'document.save',
+      'document.copied',
+      'document.saved',
+      'error.document.validation',
+      'error.document.processing',
+      'error.document.resource',
+      'error.document.outputAccess',
+      'error.document.clipboardWrite',
       'cli.uuidUsage',
       'uuid.pageTitle',
       'uuid.openAction',

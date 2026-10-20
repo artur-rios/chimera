@@ -45,6 +45,9 @@ Future<int> runChimera(
   JsonObjectEncoder? uuidJsonEncoder,
   CardService cardService = const CardService(),
   JsonObjectEncoder? cardJsonEncoder,
+  IdentityDocumentService identityDocumentService =
+      const IdentityDocumentService(),
+  JsonObjectEncoder? identityDocumentJsonEncoder,
   Base64EncodeService base64EncodeService = const Base64EncodeService(),
   Base64DecodeService base64DecodeService = const Base64DecodeService(),
   JsonObjectEncoder? base64DecodeJsonEncoder,
@@ -102,7 +105,9 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'card'
+      final key = parsed.command?.name == 'document'
+          ? 'cli.documentUsage'
+          : parsed.command?.name == 'card'
           ? 'cli.cardUsage'
           : parsed.command?.name == 'uuid'
           ? 'cli.uuidUsage'
@@ -227,6 +232,26 @@ Future<int> runChimera(
         err: err,
         service: cardService,
         encodeJson: cardJsonEncoder ?? jsonEncode,
+        writeOutputFile:
+            writeOutputFile ??
+            (path, bytes) => _writeFileTransactionally(
+              path,
+              bytes,
+              writeStage: writeOutputStage ?? _writeFileStageExactly,
+              operations: outputFileOperations,
+            ),
+      );
+    }
+    if (parsed.command!.name == 'document' &&
+        parsed.command!.command?.name == 'generate') {
+      return await _runIdentityDocument(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        service: identityDocumentService,
+        encodeJson: identityDocumentJsonEncoder ?? jsonEncode,
         writeOutputFile:
             writeOutputFile ??
             (path, bytes) => _writeFileTransactionally(
@@ -808,6 +833,8 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    final isIdentityDocument =
+        args.length >= 2 && args[0] == 'document' && args[1] == 'generate';
     final isCard =
         args.length >= 2 && args[0] == 'card' && args[1] == 'generate';
     final isUuid =
@@ -882,7 +909,8 @@ Future<int> runChimera(
       catalog: catalog,
       localeTag: localeTag,
       json:
-          (isCard ||
+          (isIdentityDocument ||
+              isCard ||
               isUuid ||
               isPassword ||
               isLorem ||
@@ -919,7 +947,9 @@ Future<int> runChimera(
               isXmlFormat) &&
           args.contains('--json'),
       kind: 'validation',
-      code: isCard
+      code: isIdentityDocument
+          ? 'document.invalid-options'
+          : isCard
           ? 'card.invalid-options'
           : isUuid
           ? 'uuid.invalid-options'
@@ -990,7 +1020,9 @@ Future<int> runChimera(
           : isXmlFormat
           ? 'xml-format.invalid-options'
           : 'cli.invalid-options',
-      messageKey: isCard
+      messageKey: isIdentityDocument
+          ? 'error.document.validation'
+          : isCard
           ? 'error.card.validation'
           : isUuid
           ? 'error.uuid.validation'
@@ -1067,6 +1099,17 @@ Future<int> runChimera(
 }
 
 ArgParser _buildParser() {
+  final document = ArgParser()
+    ..addCommand(
+      'generate',
+      ArgParser()
+        ..addOption('locale', defaultsTo: 'us')
+        ..addOption('type', defaultsTo: 'ssn')
+        ..addOption('cnpj-format')
+        ..addOption('count', defaultsTo: '1')
+        ..addOption('output', abbr: 'o')
+        ..addFlag('json', negatable: false),
+    );
   final card = ArgParser()
     ..addCommand(
       'generate',
@@ -1376,6 +1419,7 @@ ArgParser _buildParser() {
     ..addCommand('certificate', certificate)
     ..addCommand('cron', cron)
     ..addCommand('date', date)
+    ..addCommand('document', document)
     ..addCommand('gzip', gzip)
     ..addCommand('hash', hash)
     ..addCommand('url', url)
@@ -6428,6 +6472,82 @@ Future<int> _runCard(
         return 75;
       } on Object {
         fail('access', 'card.output-access', 'error.card.outputAccess');
+        return 74;
+      }
+    },
+    onFailure: (failure) async {
+      fail(
+        failure.kind.name,
+        failure.code,
+        failure.messageKey,
+        failure.details,
+      );
+      return _exitCodeFor(failure.kind);
+    },
+  );
+}
+
+Future<int> _runIdentityDocument(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required IdentityDocumentService service,
+  required JsonObjectEncoder encodeJson,
+  required FileBytesWriter writeOutputFile,
+}) async {
+  final json = parsed.flag('json');
+  final path = parsed.option('output');
+  void fail(
+    String kind,
+    String code,
+    String messageKey, [
+    Map<String, Object?> details = const {},
+  ]) => _writeFailure(
+    err,
+    catalog: catalog,
+    localeTag: localeTag,
+    json: json,
+    kind: kind,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+  if (parsed.rest.isNotEmpty || path == '') {
+    fail('validation', 'document.invalid-options', 'error.document.validation');
+    return 64;
+  }
+  final result = await service.execute(
+    IdentityDocumentOperationRequest(
+      locale: parsed.option('locale')!,
+      type: parsed.option('type')!,
+      cnpjFormat: parsed.option('cnpj-format'),
+      count: parsed.option('count')!,
+    ),
+  );
+  return await result.fold(
+    onSuccess: (value) async {
+      try {
+        final human = [
+          catalog.lookup(localeTag, 'document.syntheticLabel'),
+          ...value.values,
+        ].join('\n');
+        final payload = json
+            ? '${encodeJson(value.toJson())}\n'
+            : path != null
+            ? '${catalog.lookup(localeTag, 'document.saved')}\n'
+            : human;
+        if (path != null) {
+          await writeOutputFile(path, utf8.encode(human));
+        }
+        await writeSinkAndFlush(out, payload);
+        return 0;
+      } on OutOfMemoryError {
+        fail('resource', 'document.resource-limit', 'error.document.resource');
+        return 75;
+      } on Object {
+        fail('access', 'document.output-access', 'error.document.outputAccess');
         return 74;
       }
     },
