@@ -50,6 +50,15 @@ _catalogs = <String, Map<String, String>>{
         'The generated password could not be saved or written.',
     'error.password.clipboardWrite':
         'The generated password could not be copied.',
+    'cli.cardUsage': 'Usage: chimera card generate [--network=visa|mastercard|amex|discover] [--count=<positive integer>] [--output=<path>] [--json]. Defaults: visa, count 1. Results are synthetic sandbox test data.',
+    'card.syntheticLabel': 'Synthetic test data - not for real transactions',
+    'card.saved': 'Synthetic card data saved.',
+    'error.card.validation': 'Choose Visa, Mastercard, American Express, or Discover and a positive integer count.',
+    'error.card.processing':
+        'Synthetic card generation failed. No card numbers were produced.',
+    'error.card.resource': 'Card generation exceeded the available resources.',
+    'error.card.outputAccess':
+        'The synthetic card result could not be written.',
     'cli.uuidUsage': 'Usage: chimera uuid generate [--version=v4|v7] [--representation=uuid|guid] [--count=<positive integer>] [--output=<path>] [--json]. Defaults: v4, uuid, count 1. UUID uses lowercase canonical text; GUID uses uppercase text in braces.',
     'uuid.pageTitle': 'Generate UUID or GUID',
     'uuid.openAction': 'Generate UUID or GUID',
@@ -1045,6 +1054,16 @@ _catalogs = <String, Map<String, String>>{
     'error.password.outputAccess':
         'Não foi possível salvar ou escrever a senha gerada.',
     'error.password.clipboardWrite': 'Não foi possível copiar a senha gerada.',
+    'cli.cardUsage': 'Uso: chimera card generate [--network=visa|mastercard|amex|discover] [--count=<inteiro positivo>] [--output=<caminho>] [--json]. Padrões: visa, quantidade 1. Os resultados são dados sintéticos de teste para sandbox.',
+    'card.syntheticLabel':
+        'Dados sintéticos de teste - não usar em transações reais',
+    'card.saved': 'Dados sintéticos de cartão salvos.',
+    'error.card.validation': 'Escolha Visa, Mastercard, American Express ou Discover e uma quantidade inteira positiva.',
+    'error.card.processing': 'A geração de cartões sintéticos falhou. Nenhum número de cartão foi produzido.',
+    'error.card.resource':
+        'A geração de cartões excedeu os recursos disponíveis.',
+    'error.card.outputAccess':
+        'Não foi possível gravar o resultado de cartão sintético.',
     'cli.uuidUsage': 'Uso: chimera uuid generate [--version=v4|v7] [--representation=uuid|guid] [--count=<inteiro positivo>] [--output=<caminho>] [--json]. Padrões: v4, uuid, quantidade 1. UUID usa texto canônico minúsculo; GUID usa texto maiúsculo entre chaves.',
     'uuid.pageTitle': 'Gerar UUID ou GUID',
     'uuid.openAction': 'Gerar UUID ou GUID',

@@ -3,6 +3,24 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenCardMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.cardUsage',
+      'card.syntheticLabel',
+      'card.saved',
+      'error.card.validation',
+      'error.card.processing',
+      'error.card.resource',
+      'error.card.outputAccess',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenUuidMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.uuidUsage',
@@ -891,6 +909,13 @@ void main() {
       'error.password.resource',
       'error.password.outputAccess',
       'error.password.clipboardWrite',
+      'cli.cardUsage',
+      'card.syntheticLabel',
+      'card.saved',
+      'error.card.validation',
+      'error.card.processing',
+      'error.card.resource',
+      'error.card.outputAccess',
       'cli.uuidUsage',
       'uuid.pageTitle',
       'uuid.openAction',
