@@ -445,6 +445,26 @@ void main() {
     );
   });
 
+  test('GivenCipherEncodeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = {
+      'cli.cipherEncodeUsage',
+      'cipherEncode.savedResult',
+      'error.cipherEncode.validation',
+      'error.cipherEncode.inputAccess',
+      'error.cipherEncode.fileAccess',
+      'error.cipherEncode.outputAccess',
+      'error.cipherEncode.resource',
+    };
+    expect(catalog.keysFor('en'), catalog.keysFor('pt-BR'));
+    for (final locale in supportedLocaleTags) {
+      expect(catalog.keysFor(locale), containsAll(keys));
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test(
     'GivenHtmlInteractiveMessages_WhenLookedUp_ThenBothLocalesAreComplete',
     () {
