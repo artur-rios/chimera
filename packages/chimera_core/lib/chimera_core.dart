@@ -12,6 +12,7 @@ export 'src/gzip_decompress_service.dart';
 export 'src/hash_generate_service.dart';
 export 'src/html_decode_service.dart';
 export 'src/html_encode_service.dart';
+export 'src/identity_document_service.dart';
 export 'src/json_csv_service.dart';
 export 'src/json_format_service.dart';
 export 'src/json_table_service.dart';

@@ -13,6 +13,7 @@ export 'src/gzip/gzip_decompressor.dart';
 export 'src/hash/hash_generator.dart';
 export 'src/html/html_entity_decoder.dart';
 export 'src/html/html_entity_encoder.dart';
+export 'src/identity_document/identity_document_generator.dart';
 export 'src/json_csv/json_csv_converter.dart';
 export 'src/json_format/json_formatter.dart';
 export 'src/json_table/json_table_converter.dart';
