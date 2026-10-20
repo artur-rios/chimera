@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' show SemanticsRole;
 
 import 'package:chimera_core/chimera_core.dart';
