@@ -3,6 +3,38 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenPasswordMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'cli.passwordUsage',
+      'password.pageTitle',
+      'password.openAction',
+      'password.lengthLabel',
+      'password.lowercase',
+      'password.uppercase',
+      'password.digits',
+      'password.symbols',
+      'password.semantics',
+      'password.generate',
+      'password.resultLabel',
+      'password.success',
+      'password.copy',
+      'password.save',
+      'password.copied',
+      'password.saved',
+      'error.password.validation',
+      'error.password.processing',
+      'error.password.resource',
+      'error.password.outputAccess',
+      'error.password.clipboardWrite',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenHashMessages_WhenLookedUp_ThenBothLocalesDescribeLegacySecurityAndAdapters', () {
     for (final locale in supportedLocaleTags) {
       for (final key in const [
@@ -804,6 +836,27 @@ void main() {
       'error.lorem.resource',
       'error.lorem.outputAccess',
       'error.lorem.clipboardWrite',
+      'cli.passwordUsage',
+      'password.pageTitle',
+      'password.openAction',
+      'password.lengthLabel',
+      'password.lowercase',
+      'password.uppercase',
+      'password.digits',
+      'password.symbols',
+      'password.semantics',
+      'password.generate',
+      'password.resultLabel',
+      'password.success',
+      'password.copy',
+      'password.save',
+      'password.copied',
+      'password.saved',
+      'error.password.validation',
+      'error.password.processing',
+      'error.password.resource',
+      'error.password.outputAccess',
+      'error.password.clipboardWrite',
       'cli.checksumGenerateUsage',
       'checksumGenerate.pageTitle',
       'checksumGenerate.openAction',
