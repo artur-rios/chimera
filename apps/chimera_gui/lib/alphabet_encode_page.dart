@@ -446,7 +446,7 @@ final class _AlphabetEncodePageState extends State<AlphabetEncodePage> {
                           explicitChildNodes: true,
                           role: SemanticsRole.region,
                           label: _label('outputLabel'),
-                          value: _label('resultSuccess'),
+                          value: '${_label('resultSuccess')} ${output.encoded}',
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(

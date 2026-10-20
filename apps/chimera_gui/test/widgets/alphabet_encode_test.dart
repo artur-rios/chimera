@@ -97,6 +97,13 @@ void main() {
 
       expect(find.text(fixture.output), findsOneWidget);
       expect(find.text(fixture.id), findsOneWidget);
+      expect(
+        tester
+            .getSemantics(find.byKey(const Key('alphabet-encode-result')))
+            .getSemanticsData()
+            .value,
+        contains(fixture.output),
+      );
       expect(find.byKey(const Key('alphabet-encode-mapping')), findsOneWidget);
       expect(
         tester

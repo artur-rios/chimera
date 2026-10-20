@@ -284,8 +284,7 @@ test('GivenAlphabetSources_WhenEncodedAndRejected_ThenMappingAndFlowStayOffline'
   await fillFlutterTextBox(editor, 'SOS 2');
   await activateFlutterButton(page.getByRole('button', { name: 'Encode', exact: true }));
   const result = page.getByRole('region', {
-    name: 'Alphabet-encoded result Alphabet encoding completed.',
-    exact: true,
+    name: /Alphabet-encoded result Alphabet encoding completed\. \.\.\. --- \.\.\. \/ \.\.---/,
   });
   await expect(result).toBeVisible();
   await expect(result).toHaveAttribute('tabindex', '0');
