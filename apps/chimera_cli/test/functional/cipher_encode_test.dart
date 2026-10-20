@@ -181,10 +181,9 @@ void main() {
 
       expect(exit, 64);
       expect(out.toString(), isEmpty);
-      expect(
-        (jsonDecode(err.toString()) as Map)['error']['code'],
-        fixture.code,
-      );
+      final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+      final error = envelope['error'] as Map<String, dynamic>;
+      expect(error['code'], fixture.code);
       expect(err.toString(), isNot(contains('private')));
       if (fixture.code == 'cipher.invalid-options' ||
           fixture.code == 'cipher.missing-source' ||
@@ -259,9 +258,8 @@ void main() {
     expect(exit, 75);
     expect(saves, 0);
     expect(out.toString(), isEmpty);
-    expect(
-      (jsonDecode(err.toString()) as Map)['error']['code'],
-      'cipher.resource-limit',
-    );
+    final envelope = jsonDecode(err.toString()) as Map<String, dynamic>;
+    final error = envelope['error'] as Map<String, dynamic>;
+    expect(error['code'], 'cipher.resource-limit');
   });
 }

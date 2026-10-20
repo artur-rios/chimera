@@ -89,6 +89,7 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
   String _cipher = 'caesar';
   String _policy = 'preserve';
   int _editorGeneration = 0;
+  int _parameterGeneration = 0;
   int _generation = 0;
   bool _busy = false;
 
@@ -102,6 +103,15 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
     _fileBytes = null;
     _inputController.clear();
     _editorGeneration++;
+  }
+
+  void _clearParameters() {
+    _shiftController.clear();
+    _keyController.clear();
+    _aController.clear();
+    _bController.clear();
+    _railsController.clear();
+    _parameterGeneration++;
   }
 
   void _clearResult() {
@@ -132,6 +142,7 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
     setState(() {
       _clearResult();
       _clearSource();
+      _clearParameters();
       _busy = false;
       _error = widget.catalog.lookup(
         widget.localeTag,
@@ -178,13 +189,15 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
     final generation = _begin();
     try {
       final request = _request(_fileBytes);
-      _fileBytes = null;
+      setState(() {
+        _clearSource();
+        _clearParameters();
+      });
       final result = await widget.service.execute(request);
       if (!_current(generation)) return;
       result.fold(
         onSuccess: (output) {
           setState(() {
-            _clearSource();
             _output = output;
             _busy = false;
           });
@@ -304,11 +317,7 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
     if (value == null || value == _cipher) return;
     setState(() {
       _cipher = value;
-      _shiftController.clear();
-      _keyController.clear();
-      _aController.clear();
-      _bController.clear();
-      _railsController.clear();
+      _clearParameters();
       _busy = false;
       _clearResult();
     });
@@ -358,6 +367,69 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
       labelText: label,
       border: const OutlineInputBorder(),
     ),
+  );
+
+  Widget _parameterControls() => KeyedSubtree(
+    key: ValueKey(_parameterGeneration),
+    child: switch (_cipher) {
+      'caesar' => _ordered(
+        6,
+        _parameterField(
+          key: const Key('cipher-encode-shift'),
+          controller: _shiftController,
+          label: _label('shiftLabel'),
+          numeric: true,
+        ),
+      ),
+      'vigenere' => _ordered(
+        6,
+        _parameterField(
+          key: const Key('cipher-encode-key'),
+          controller: _keyController,
+          label: _label('keyLabel'),
+        ),
+      ),
+      'affine' => Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          SizedBox(
+            width: 300,
+            child: _ordered(
+              6,
+              _parameterField(
+                key: const Key('cipher-encode-a'),
+                controller: _aController,
+                label: _label('aLabel'),
+                numeric: true,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: 300,
+            child: _ordered(
+              7,
+              _parameterField(
+                key: const Key('cipher-encode-b'),
+                controller: _bController,
+                label: _label('bLabel'),
+                numeric: true,
+              ),
+            ),
+          ),
+        ],
+      ),
+      'rail-fence' => _ordered(
+        6,
+        _parameterField(
+          key: const Key('cipher-encode-rails'),
+          controller: _railsController,
+          label: _label('railsLabel'),
+          numeric: true,
+        ),
+      ),
+      _ => const SizedBox.shrink(),
+    },
   );
 
   @override
@@ -487,66 +559,7 @@ final class _CipherEncodePageState extends State<CipherEncodePage> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  if (_cipher == 'caesar')
-                    _ordered(
-                      6,
-                      _parameterField(
-                        key: const Key('cipher-encode-shift'),
-                        controller: _shiftController,
-                        label: _label('shiftLabel'),
-                        numeric: true,
-                      ),
-                    ),
-                  if (_cipher == 'vigenere')
-                    _ordered(
-                      6,
-                      _parameterField(
-                        key: const Key('cipher-encode-key'),
-                        controller: _keyController,
-                        label: _label('keyLabel'),
-                      ),
-                    ),
-                  if (_cipher == 'affine')
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        SizedBox(
-                          width: 300,
-                          child: _ordered(
-                            6,
-                            _parameterField(
-                              key: const Key('cipher-encode-a'),
-                              controller: _aController,
-                              label: _label('aLabel'),
-                              numeric: true,
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: 300,
-                          child: _ordered(
-                            7,
-                            _parameterField(
-                              key: const Key('cipher-encode-b'),
-                              controller: _bController,
-                              label: _label('bLabel'),
-                              numeric: true,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (_cipher == 'rail-fence')
-                    _ordered(
-                      6,
-                      _parameterField(
-                        key: const Key('cipher-encode-rails'),
-                        controller: _railsController,
-                        label: _label('railsLabel'),
-                        numeric: true,
-                      ),
-                    ),
+                  _parameterControls(),
                   const SizedBox(height: 8),
                   _ordered(
                     8,

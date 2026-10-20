@@ -76,6 +76,13 @@ void main() {
                 .text,
             isEmpty,
           );
+          expect(
+            tester
+                .widget<TextField>(find.byKey(const Key('cipher-encode-key')))
+                .controller!
+                .text,
+            isEmpty,
+          );
           await tester.tap(find.byKey(const Key('cipher-encode-copy')));
           await tester.pumpAndSettle();
           expect(copied, 'Lxfopv!');

@@ -51,9 +51,9 @@ final class CipherEncodeOperationRequest {
   );
 
   const CipherEncodeOperationRequest._({
-    required this.source,
-    this.text,
-    this.bytes,
+    required this._source,
+    this._text,
+    this._bytes,
     required this.cipher,
     required this.characterPolicy,
     this.shift,
@@ -63,9 +63,9 @@ final class CipherEncodeOperationRequest {
     this.rails,
   });
 
-  final _CipherEncodeSource source;
-  final String? text;
-  final List<int>? bytes;
+  final _CipherEncodeSource _source;
+  final String? _text;
+  final List<int>? _bytes;
   final String cipher;
   final String characterPolicy;
   final String? shift;
@@ -167,8 +167,8 @@ final class CipherEncodeService
   }
 
   String _decodeInput(CipherEncodeOperationRequest request) {
-    if (request.source == _CipherEncodeSource.text) return request.text!;
-    final bytes = request.bytes!;
+    if (request._source == _CipherEncodeSource.text) return request._text!;
+    final bytes = request._bytes!;
     try {
       for (final byte in bytes) {
         if (byte < 0 || byte > 0xff) throw const FormatException();
