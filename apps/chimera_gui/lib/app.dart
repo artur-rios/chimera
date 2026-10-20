@@ -30,6 +30,7 @@ import 'list_compare_page.dart';
 import 'lorem_page.dart';
 import 'number_base_page.dart';
 import 'password_page.dart';
+import 'person_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'router.dart';
@@ -66,6 +67,10 @@ final class ChimeraApp extends StatelessWidget {
     this.identityDocumentClipboardWriter,
     this.identityDocumentFileSaver,
     this.identityDocumentOutputEncoder,
+    this.personService = const PersonService(),
+    this.personClipboardWriter,
+    this.personFileSaver,
+    this.personOutputEncoder,
     this.jwtCreateService = const JwtCreateService(),
     this.jwtCreateFilePicker,
     this.jwtCreateClipboardReader,
@@ -247,6 +252,10 @@ final class ChimeraApp extends StatelessWidget {
   final IdentityDocumentClipboardWriter? identityDocumentClipboardWriter;
   final IdentityDocumentFileSaver? identityDocumentFileSaver;
   final IdentityDocumentOutputEncoder? identityDocumentOutputEncoder;
+  final PersonOperationService personService;
+  final PersonClipboardWriter? personClipboardWriter;
+  final PersonFileSaver? personFileSaver;
+  final PersonOutputEncoder? personOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -422,6 +431,10 @@ final class ChimeraApp extends StatelessWidget {
         identityDocumentClipboardWriter: identityDocumentClipboardWriter,
         identityDocumentFileSaver: identityDocumentFileSaver,
         identityDocumentOutputEncoder: identityDocumentOutputEncoder,
+        personService: personService,
+        personClipboardWriter: personClipboardWriter,
+        personFileSaver: personFileSaver,
+        personOutputEncoder: personOutputEncoder,
         jwtCreateService: jwtCreateService,
         jwtCreateFilePicker: jwtCreateFilePicker,
         jwtCreateClipboardReader: jwtCreateClipboardReader,
@@ -600,6 +613,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.identityDocumentClipboardWriter,
     required this.identityDocumentFileSaver,
     required this.identityDocumentOutputEncoder,
+    required this.personService,
+    required this.personClipboardWriter,
+    required this.personFileSaver,
+    required this.personOutputEncoder,
     required this.jwtCreateService,
     required this.jwtCreateFilePicker,
     required this.jwtCreateClipboardReader,
@@ -774,6 +791,10 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final IdentityDocumentClipboardWriter? identityDocumentClipboardWriter;
   final IdentityDocumentFileSaver? identityDocumentFileSaver;
   final IdentityDocumentOutputEncoder? identityDocumentOutputEncoder;
+  final PersonOperationService personService;
+  final PersonClipboardWriter? personClipboardWriter;
+  final PersonFileSaver? personFileSaver;
+  final PersonOutputEncoder? personOutputEncoder;
   final JwtCreateOperationService jwtCreateService;
   final JwtCreateFilePicker? jwtCreateFilePicker;
   final JwtCreateClipboardReader? jwtCreateClipboardReader;
@@ -966,6 +987,11 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.identityDocumentFileSaver ?? saveIdentityDocumentFile,
       identityDocumentOutputEncoder:
           widget.identityDocumentOutputEncoder ?? encodeIdentityDocumentOutput,
+      personService: widget.personService,
+      personClipboardWriter:
+          widget.personClipboardWriter ?? writePersonClipboard,
+      personFileSaver: widget.personFileSaver ?? savePersonFile,
+      personOutputEncoder: widget.personOutputEncoder ?? encodePersonOutput,
       jwtCreateService: widget.jwtCreateService,
       jwtCreateFilePicker: widget.jwtCreateFilePicker ?? pickJwtCreateFile,
       jwtCreateClipboardReader:
