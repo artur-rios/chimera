@@ -661,3 +661,31 @@ and redacted failures. Native and compiled-browser scenarios exercise the
 closed published sandbox catalogue, exact transfer, discard behavior, and zero
 network access. The native Safari harness covers the same local-only path. No
 automated UC-35 accessibility finding remains open.
+
+## UC-36 Generate Identity Document
+
+- Branch: `feature/uc-36-generate-identity-document`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux synthetic-identity surface
+- Locales: English and Brazilian Portuguese
+
+The locale, document-type, optional CNPJ-format, and positive-integer count
+controls expose localized labels in document-order keyboard traversal. Enter
+submits the count field. Actions disable while work is pending, and the CNPJ
+format control is present only when it applies. Long document labels remain
+responsive at narrow widths.
+
+Successful generation moves focus to a localized live result region. A visible
+and accessible warning labels every value as synthetic test data and explicitly
+states that it is not proof of issuance. Copy and save include that warning
+before the same newline-delimited values. Configuration changes, failures, late
+completions, and disposal clear stale result state.
+
+Focused widget and save-adapter coverage exercises both locales, every selector,
+both CNPJ formats, positive counts, keyboard submission, focus and live
+semantics, exact labeled multi-value copy/save output, cancellation, busy
+behavior, stale completion, retry exhaustion, and redacted failures. Native and
+compiled-browser scenarios exercise representative US and Brazilian documents,
+both CNPJ formats, exact transfer, discard behavior, and zero network access.
+The native Safari harness covers the same local-only path. No automated UC-36
+accessibility finding remains open.

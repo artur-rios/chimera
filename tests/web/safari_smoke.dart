@@ -1196,6 +1196,10 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('Password', () => _generatePassword(driver));
     await protocol.stage('UUID', () => _generateUuid(driver));
     await protocol.stage('Synthetic cards', () => _generateCard(driver));
+    await protocol.stage(
+      'Synthetic identity documents',
+      () => _generateIdentityDocument(driver),
+    );
     try {
       await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
@@ -1207,7 +1211,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -4371,5 +4375,150 @@ Future<void> _generateCard(WebDriver driver) async {
       'Card partial result survived failure',
     );
     await _assertNoNetworkRequests(driver, flow: 'Card $failure failure');
+  }
+}
+
+Future<void> _generateIdentityDocument(WebDriver driver) async {
+  final source = await File.fromUri(
+    Platform.script.resolve('identity_document_browser.js'),
+  ).readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn identityDocumentProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openDocument() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Identity document semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate Synthetic Identity Documents');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'Identity document configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Identity document startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  Future<void> select(String field, String option) async {
+    await _waitUntil(
+      () async => await probe('openSelect', field) == true,
+      '$field selector unavailable',
+    );
+    await _waitUntil(
+      () async => await probe('option', option) == true,
+      '$option option unavailable',
+    );
+  }
+
+  await openDocument();
+  await _fillTextBox(driver, 'Positive integer count', '2');
+  await _clickButton(driver, 'Generate synthetic documents');
+  await _waitUntil(
+    () => _pageContains(
+      driver,
+      'Synthetic identity test data - not proof of issuance',
+    ),
+    'Synthetic identity warning missing',
+  );
+  await _waitUntil(
+    () async => await probe('values') == '219-09-9999\n219-09-9999',
+    'SSA specimen batch missing',
+  );
+  const transferred =
+      'Synthetic identity test data - not proof of issuance\n'
+      '219-09-9999\n219-09-9999';
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'Identity document copy unavailable',
+  );
+  await _waitUntil(
+    () async => await probe('copied', transferred) == true,
+    'Identity document clipboard mismatch',
+  );
+  await _clickButton(driver, 'Save labeled identity data');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(transferred)) == true,
+    'Identity document saved bytes mismatch',
+  );
+  await _fillTextBox(driver, 'Positive integer count', '3');
+  await _waitUntil(
+    () async => await probe('noResult') == true,
+    'Identity document result remained after configuration changed',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'Identity document defaults');
+
+  for (final format in ['Numeric', 'Alphanumeric']) {
+    await openDocument();
+    await select('Country or locale', 'Brazil');
+    await select('Document type', 'CNPJ');
+    await select('CNPJ format', format);
+    await _clickButton(driver, 'Generate synthetic documents');
+    await _waitUntil(() async {
+      final value = await probe('values');
+      if (value is! String) return false;
+      return format == 'Numeric'
+          ? RegExp(r'^\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}$').hasMatch(value)
+          : RegExp(r'^[0-9A-Z]{2}\.[0-9A-Z]{3}\.[0-9A-Z]{3}/[0-9A-Z]{4}-\d{2}$')
+                .hasMatch(value);
+    }, '$format CNPJ value missing');
+    await _assertNoNetworkRequests(driver, flow: '$format CNPJ');
+  }
+
+  for (final failure in ['validation', 'processing', 'copy', 'save']) {
+    await openDocument();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    if (failure == 'processing') {
+      await select(
+        'Document type',
+        'Individual Taxpayer Identification Number (ITIN)',
+      );
+      await probe('entropyFailure');
+    }
+    await _clickButton(driver, 'Generate synthetic documents');
+    if (failure == 'copy' || failure == 'save') {
+      await _waitUntil(
+        () async => await probe('values') is String,
+        'Identity document default result missing',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy'
+            ? 'Copy labeled identity data'
+            : 'Save labeled identity data',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(driver, switch (failure) {
+        'validation' => 'Choose a supported locale and document type, compatible options, and a positive integer count.',
+        'processing' => 'Synthetic identity document generation failed. No document values were produced.',
+        'copy' => 'The synthetic identity document result could not be copied.',
+        _ => 'The synthetic identity document result could not be written.',
+      }),
+      'Identity document localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Identity document partial result survived failure',
+    );
+    await _assertNoNetworkRequests(
+      driver,
+      flow: 'Identity document $failure failure',
+    );
   }
 }
