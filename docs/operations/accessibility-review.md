@@ -689,3 +689,31 @@ compiled-browser scenarios exercise representative US and Brazilian documents,
 both CNPJ formats, exact transfer, discard behavior, and zero network access.
 The native Safari harness covers the same local-only path. No automated UC-36
 accessibility finding remains open.
+
+## UC-39 Decode with Cipher
+
+- Branch: `feature/uc-39-decode-cipher`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux classical-cipher surface
+- Locales: English and Brazilian Portuguese
+
+The source editor, file and clipboard actions, cipher and unsupported-symbol
+selectors, conditional parameter fields, decode action, result region, copy,
+and save controls expose localized labels in document-order keyboard traversal.
+Every interactive target remains at least 48 logical pixels, and the page stays
+usable at a 320-pixel logical width and 200% text scale.
+
+Successful decoding moves focus to a localized live result region whose visible
+plaintext remains selectable. Copy and save consume that exact result. Input,
+key material, and parameters are cleared when the request starts; configuration
+changes, failures, late adapter completions, and disposal cannot retain or
+restore stale plaintext or source data.
+
+Focused widget coverage exercises both locales, conditional controls, all input
+adapters, exact copy/save, keyboard order, automated accessibility guidelines,
+redacted validation and access failures, and pending-operation disposal. Native
+Windows integration verifies both locales, exact local transfer, invalid keys,
+unsupported-symbol rejection, discard behavior, and zero network attempts.
+Compiled Chromium, Firefox, and WebKit plus the native Safari harness cover the
+same main and alternate flows. No automated UC-39 accessibility finding remains
+open.

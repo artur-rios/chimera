@@ -249,6 +249,74 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
   expect(requests).toEqual([]);
 });
 
+test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', async ({ page }) => {
+  const requests = [];
+  await page.addInitScript(() => {
+    window.__chimeraCipherDecodedText = null;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: {
+        writeText: async value => {
+          window.__chimeraCipherDecodedText = value;
+        },
+      },
+    });
+  });
+  await page.goto('/');
+  await enableFlutterSemantics(page);
+  page.on('request', request => {
+    const url = new URL(request.url());
+    if ((url.protocol === 'http:' || url.protocol === 'https:')
+        && url.hostname !== '127.0.0.1') {
+      requests.push(request.url());
+    }
+  });
+  await page.getByRole('button', { name: 'Decode with Cipher', exact: true }).click();
+  const editor = page.getByRole('textbox', { name: 'Text to decode', exact: true });
+  await fillFlutterTextBox(editor, 'Lxfopv!');
+  await page.getByRole('button', { name: 'Cipher Caesar', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Vigenere', exact: true }).click();
+  const keyEditor = page.getByRole('textbox', {
+    name: 'Key (ASCII letters)',
+    exact: true,
+  });
+  await fillFlutterTextBox(keyEditor, 'LEMON');
+  await page.getByRole('button', { name: 'Decode', exact: true }).click();
+  const result = page.getByRole('region', {
+    name: 'Cipher decoded result Cipher decoding succeeded.',
+    exact: true,
+  });
+  await expect(result).toBeVisible();
+  await expect(result).toHaveAttribute('tabindex', '0');
+  await page.getByRole('button', { name: 'Copy decoded text', exact: true }).click();
+  await expect.poll(() => page.evaluate(() => window.__chimeraCipherDecodedText))
+    .toBe('Attack!');
+
+  await fillFlutterTextBox(editor, 'Lxfopv');
+  await fillFlutterTextBox(keyEditor, 'K3Y');
+  await page.getByRole('button', { name: 'Decode', exact: true }).click();
+  await expect(page.getByText('The cipher decoding request is invalid.', { exact: true }).last())
+    .toBeVisible();
+  await expect(result).toHaveCount(0);
+
+  await fillFlutterTextBox(editor, 'Z🧪Y');
+  await page.getByRole('button', { name: 'Cipher Vigenere', exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Atbash', exact: true }).click();
+  await page.getByRole('button', {
+    name: 'Unsupported symbols Preserve unsupported symbols',
+    exact: true,
+  }).click();
+  await page.getByRole('menuitem', {
+    name: 'Reject unsupported symbols',
+    exact: true,
+  }).click();
+  await page.getByRole('button', { name: 'Decode', exact: true }).click();
+  await expect(page.getByText('The cipher decoding request is invalid.', { exact: true }).last())
+    .toBeVisible();
+  await expect(result).toHaveCount(0);
+  expect(requests).toEqual([]);
+});
+
 const safariHtmlScripts = Object.fromEntries([...safariHarness.matchAll(
   /const _html(\w+)Script = r'''([\s\S]*?)''';/g,
 )].map(([, name, source]) => [name, source]));
