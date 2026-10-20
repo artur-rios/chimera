@@ -1200,6 +1200,7 @@ Future<void> main(List<String> arguments) async {
       'Synthetic identity documents',
       () => _generateIdentityDocument(driver),
     );
+    await protocol.stage('Synthetic people', () => _generatePerson(driver));
     try {
       await protocol.stage('Checksum flows', () => _generateChecksum(driver));
     } on Object {
@@ -1211,7 +1212,7 @@ Future<void> main(List<String> arguments) async {
     }
 
     stdout.writeln(
-      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
+      'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding and strict decoding/copy/save/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
     );
   } on Object catch (error) {
     primaryFailure = error;
@@ -4520,5 +4521,143 @@ Future<void> _generateIdentityDocument(WebDriver driver) async {
       driver,
       flow: 'Identity document $failure failure',
     );
+  }
+}
+
+Future<void> _generatePerson(WebDriver driver) async {
+  final source = await File.fromUri(
+    Platform.script.resolve('person_browser.js'),
+  ).readAsString();
+  final observer = await _loadGzipSaveObserver();
+  Future<Object?> probe(String action, [Object? value]) => driver.execute(
+    '$source\nreturn personProbe(arguments[0], arguments[1]);',
+    <Object?>[action, value],
+  );
+  Future<void> openPerson() async {
+    await driver.get('http://127.0.0.1:4173');
+    await _waitUntil(
+      () async =>
+          await driver.execute(
+            "return document.querySelector('flt-semantics-placeholder') !== null;",
+            const <Object?>[],
+          ) ==
+          true,
+      'Person semantics placeholder missing',
+    );
+    await _enableFlutterSemantics(driver);
+    await _clickButton(driver, 'Generate Synthetic People');
+    await _waitUntil(
+      () => _pageContains(driver, 'Positive integer count'),
+      'Person configuration missing',
+    );
+    await _assertNoExternalRequests(driver, flow: 'Person startup');
+    await driver.execute(
+      '$observer\nobserveGzipSaves({suppressDownloads: true});',
+      const <Object?>[],
+    );
+    await probe('setup');
+  }
+
+  Future<void> select(String field, String option) async {
+    await _waitUntil(
+      () async => await probe('openSelect', field) == true,
+      '$field selector unavailable',
+    );
+    await _waitUntil(
+      () async => await probe('option', option) == true,
+      '$option option unavailable',
+    );
+  }
+
+  await openPerson();
+  await _fillTextBox(driver, 'Positive integer count', '2');
+  await _clickButton(driver, 'Generate synthetic people');
+  await _waitUntil(() async {
+    final value = await probe('result');
+    return value is String &&
+        value.contains(
+          'Synthetic person test data - not a real identity or proof of issuance',
+        ) &&
+        value.contains('Person 1 Name:') &&
+        value.contains('Person 2 Name:') &&
+        value.contains('@example.com') &&
+        value.contains('SSN:');
+  }, 'Synthetic person batch missing');
+  await _waitUntil(
+    () async => await probe('copy') == true,
+    'Person copy unavailable',
+  );
+  late String transferred;
+  await _waitUntil(() async {
+    final value = await probe('copied');
+    if (value is! String ||
+        !value.startsWith(
+          'Synthetic person test data - not a real identity or proof of issuance\nPerson 1',
+        )) {
+      return false;
+    }
+    transferred = value;
+    return true;
+  }, 'Person clipboard mismatch');
+  await _clickButton(driver, 'Save labeled person data');
+  await _waitUntil(
+    () async => await probe('saved', utf8.encode(transferred)) == true,
+    'Person saved bytes mismatch',
+  );
+  await _fillTextBox(driver, 'Positive integer count', '3');
+  await _waitUntil(
+    () async => await probe('noResult') == true,
+    'Person result remained after configuration changed',
+  );
+  await _assertNoNetworkRequests(driver, flow: 'Person defaults');
+
+  await openPerson();
+  await select('Country or locale', 'Brazil');
+  await _fillTextBox(driver, 'Minimum age (0-130)', '21');
+  await _fillTextBox(driver, 'Maximum age (0-130)', '40');
+  await _clickButton(driver, 'Generate synthetic people');
+  await _waitUntil(() async {
+    final value = await probe('result');
+    return value is String &&
+        value.contains('+55 (') &&
+        value.contains('CPF:') &&
+        value.contains('CIN:');
+  }, 'Brazil synthetic person missing');
+  await _assertNoNetworkRequests(driver, flow: 'Brazil person');
+
+  for (final failure in ['validation', 'processing', 'copy', 'save']) {
+    await openPerson();
+    if (failure == 'validation') {
+      await _fillTextBox(driver, 'Positive integer count', '0');
+    }
+    if (failure == 'processing') await probe('entropyFailure');
+    await _clickButton(driver, 'Generate synthetic people');
+    if (failure == 'copy' || failure == 'save') {
+      await _waitUntil(
+        () async => await probe('result') is String,
+        'Person default result missing',
+      );
+      await probe('${failure}Failure');
+      await _clickButton(
+        driver,
+        failure == 'copy'
+            ? 'Copy labeled person data'
+            : 'Save labeled person data',
+      );
+    }
+    await _waitUntil(
+      () => _pageContains(driver, switch (failure) {
+        'validation' => 'Choose a supported locale, ages from 0 through 130 in ascending order, and a positive integer count.',
+        'processing' => 'Synthetic person generation failed. No partial people were produced.',
+        'copy' => 'The synthetic person result could not be copied.',
+        _ => 'The synthetic person result could not be written.',
+      }),
+      'Person localized failure missing',
+    );
+    await _waitUntil(
+      () async => await probe('noResult') == true,
+      'Person partial result survived failure',
+    );
+    await _assertNoNetworkRequests(driver, flow: 'Person $failure failure');
   }
 }
