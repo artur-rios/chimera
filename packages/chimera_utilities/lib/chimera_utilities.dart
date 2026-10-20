@@ -1,6 +1,8 @@
 /// Shared local-only algorithms and validators for Chimera.
 library;
 
+export 'src/alphabet/alphabet_codec.dart';
+export 'src/alphabet/alphabet_encoder.dart';
 export 'src/base64/base64_byte_decoder.dart';
 export 'src/base64/base64_byte_encoder.dart';
 export 'src/card/card_generator.dart';
