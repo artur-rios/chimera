@@ -25,6 +25,25 @@ jobs:
 
       - uses: dart-lang/setup-dart@v1
 
+      - name: Checkout Yggdrasil release contract
+        if: github.base_ref == 'main'
+        uses: actions/checkout@v7
+        with:
+          repository: artur-rios/yggdrasil
+          ref: main
+          path: .yggdrasil
+          persist-credentials: false
+
+      - name: Set up catalog validator
+        if: github.base_ref == 'main'
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+
+      - name: Install catalog validator dependencies
+        if: github.base_ref == 'main'
+        run: python3 -m pip install --quiet pyyaml==6.0.3
+
       - name: Check the branch against the branching model
         env:
           HEAD_REF: ${{ github.head_ref }}
@@ -52,6 +71,7 @@ jobs:
                 || fail "A release branch must be an unchanged snapshot of develop."
 
               version="${HEAD_REF#release/}"
+              dart tool/validate_release_readiness.dart --version "$version"
               if git ls-remote --exit-code --tags origin "refs/tags/v$version" >/dev/null; then
                 fail "Version $version was already released."
               fi
@@ -59,3 +79,10 @@ jobs:
           esac
 
           echo "'$HEAD_REF' -> '$BASE_REF' follows the branching model."
+
+      - name: Validate Yggdrasil catalog release contract
+        if: github.base_ref == 'main'
+        run: |
+          python3 .yggdrasil/scripts/catalog.py validate
+          python3 tool/validate_yggdrasil_contract.py .yggdrasil/catalog.yaml
+          PYTHONPATH=.yggdrasil/scripts python3 -m unittest test_catalog.ChimeraCatalogTests -v

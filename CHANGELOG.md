@@ -18,6 +18,8 @@ Versioning and use tags in the form `vX.Y.Z`.
 - Privacy, dependency-boundary, release-metadata, accessibility, performance,
   and deployment contracts.
 - Reproducible unprivileged web container and native release pipelines.
+- Fail-closed release readiness, live Yggdrasil catalog, and complete native
+  artifact-bundle gates with an operator promotion and rollback runbook.
 - Shared five- and six-field cron parsing with IANA-zone previous/next
   occurrences, localized GUI flow, and human or JSON CLI output.
 - Strict ISO 8601, Unix epoch, custom-pattern, and IANA-zone date conversion

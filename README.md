@@ -355,11 +355,14 @@ utility input or output is sent to those operational surfaces.
 
 Release preparation happens on `develop`; an unchanged `release/X.Y.Z` snapshot
 targets `main`. After Yggdrasil completes its environment gates and creates
-`vX.Y.Z`, GitHub Actions publishes Windows and Linux GUI/CLI portable packages
-and installers. Every native artifact has a SHA-256 sidecar and six-field
-release-metadata sidecar. See
+the `vX.Y.Z` tag and private draft release, GitHub Actions publishes that draft
+only after verifying the complete Windows and Linux GUI/CLI portable and
+installer bundle locally and on GitHub. Every native artifact has a SHA-256
+sidecar and six-field release-metadata sidecar. See
 [Release artifacts](docs/operations/release-artifacts.md) for formats and the
-infrastructure-requirement evidence map.
+infrastructure-requirement evidence map, and use the
+[publish-release runbook](docs/operations/publish-release.md) for readiness,
+approval, health, rollback, and post-publication verification.
 
 ### Decode a QR code
 

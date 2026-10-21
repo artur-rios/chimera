@@ -35,6 +35,9 @@ dry runs and the release-sidecar tests. Pull requests must pass `branch-policy`,
 ## Releases
 
 Finalize the version and changelog on `develop`, cut `release/X.Y.Z`, and open
-it against `main`. Yggdrasil owns promotion and creates the `vX.Y.Z` release;
-GitHub Actions then builds and attaches the native portable packages,
-installers, SHA-256 sidecars, and release metadata.
+it against `main`. Yggdrasil owns promotion and, only after production approval,
+prepares the `vX.Y.Z` tag and private draft release. GitHub Actions then builds,
+verifies, and attaches the native portable packages, installers, SHA-256
+sidecars, and release metadata before publishing the draft. Follow the complete
+[publish-release runbook](docs/operations/publish-release.md); release branches
+must pass `dart tool/validate_release_readiness.dart --version X.Y.Z`.

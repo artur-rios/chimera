@@ -153,11 +153,53 @@ void main() {
     },
   );
 
+  test(
+    'GivenReleasePullRequest_WhenBranchPolicyRuns_ThenSourceAndCatalogAreReady',
+    () {
+      expect(
+        branchPolicy,
+        contains('dart tool/validate_release_readiness.dart'),
+      );
+      expect(branchPolicy, contains('repository: artur-rios/yggdrasil'));
+      expect(
+        branchPolicy,
+        contains('python3 .yggdrasil/scripts/catalog.py validate'),
+      );
+      expect(branchPolicy, contains('ChimeraCatalogTests'));
+      expect(branchPolicy, contains('tool/validate_yggdrasil_contract.py'));
+      expect(
+        branchPolicy,
+        contains(
+          'PYTHONPATH=.yggdrasil/scripts python3 -m unittest '
+          'test_catalog.ChimeraCatalogTests',
+        ),
+      );
+      expect(branchPolicy, isNot(contains('-k ChimeraCatalogTests')));
+      expect(
+        releaseArtifacts,
+        contains('dart tool/validate_release_readiness.dart'),
+      );
+    },
+  );
+
   test('GivenReleaseWorkflow_WhenArtifactsArePublished_ThenIntegrityAndMetadataAreIncluded', () {
     expect(releaseArtifacts, contains('tool/write_checksums.dart'));
     expect(releaseArtifacts, contains('.sha256'));
     expect(releaseArtifacts, contains('.release.json'));
     expect(releaseArtifacts, contains('actions/upload-artifact@'));
+    expect(releaseArtifacts, contains('name: Validate complete native bundle'));
+    expect(
+      releaseArtifacts,
+      contains('dart run tool/validate_release_bundle.dart'),
+    );
+    expect(releaseArtifacts, contains('tool/validate_release_upload.dart'));
+    expect(releaseArtifacts, contains('inputs.publish'));
+    expect(releaseArtifacts, contains('inputs.release_id'));
+    expect(releaseArtifacts, contains('cancel-in-progress: false'));
+    expect(releaseArtifacts, contains('Require an unpublished draft release'));
+    expect(releaseArtifacts, contains('Publish the verified release'));
+    expect(releaseArtifacts, isNot(contains('types: [published]')));
+    expect(releaseArtifacts, contains('needs: validate-artifacts'));
   });
 
   test('GivenCiWorkflow_WhenEvidenceIsProduced_ThenItIsPreserved', () {
