@@ -47,6 +47,47 @@ test('GivenThemeSelection_WhenPageReloads_ThenDarkThemeIsRestoredOffline', async
   expect(externalRequests).toEqual([]);
 });
 
+test('GivenLanguageSelection_WhenPageReloads_ThenPortugueseIsRestoredOffline', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await enableFlutterSemantics(page);
+
+  const portuguese = page.getByRole('button', { name: 'Brazilian Portuguese', exact: true });
+  for (let step = 0; step < 120 && !await portuguese.isVisible().catch(() => false); step += 1) {
+    await page.keyboard.press('Tab');
+  }
+  await expect(portuguese).toBeVisible();
+  await portuguese.click();
+  await expect(page.getByText('Portugu\u00eas (Brasil) aplicado e salvo.', { exact: true }))
+    .toBeVisible();
+  await expect(page.getByRole('button', { name: 'Claro', exact: true })).toBeVisible();
+
+  const stored = await page.evaluate(() => Object.fromEntries(
+    Array.from({ length: localStorage.length }, (_, index) => {
+      const key = localStorage.key(index);
+      return [key, JSON.parse(localStorage.getItem(key))];
+    }).filter(([key]) => key.endsWith('language')),
+  ));
+  expect(Object.values(stored)).toEqual(['pt-BR']);
+
+  await page.reload();
+  await enableFlutterSemantics(page);
+  const restoredPortuguese = page.getByRole('button', { name: 'Portugu\u00eas (Brasil)', exact: true });
+  for (let step = 0; step < 120 && !await restoredPortuguese.isVisible().catch(() => false); step += 1) {
+    await page.keyboard.press('Tab');
+  }
+  await expect(restoredPortuguese).toBeVisible();
+  await expect(restoredPortuguese).toHaveAttribute('aria-current', 'true');
+  expect(externalRequests).toEqual([]);
+});
+
 // The native Safari harness executes this exact source, resolved from its script.
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
 
