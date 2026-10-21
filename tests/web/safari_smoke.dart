@@ -3693,7 +3693,7 @@ Future<void> _changeTheme(WebDriver driver) async {
 Future<void> _revealThemePanel(WebDriver driver) async {
   await _waitUntil(() async {
     if (await _pageContains(driver, 'Appearance')) return true;
-    await driver.keyboard.sendKeys(Keyboard.tab);
+    await _advancePreferenceFocus(driver);
     return false;
   }, 'Theme preference panel was not keyboard-reachable');
 }
@@ -3775,10 +3775,13 @@ Future<void> _changeLanguage(WebDriver driver) async {
 Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
   await _waitUntil(() async {
     if (await _pageContains(driver, title)) return true;
-    await driver.keyboard.sendKeys(Keyboard.tab);
+    await _advancePreferenceFocus(driver);
     return false;
   }, 'Language preference panel was not keyboard-reachable');
 }
+
+Future<void> _advancePreferenceFocus(WebDriver driver) => driver.keyboard
+    .sendKeys(List<String>.filled(4, Keyboard.tab).join());
 
 Future<void> _decodeCipher(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
