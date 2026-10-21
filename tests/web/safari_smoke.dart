@@ -3780,8 +3780,8 @@ Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
   }, 'Language preference panel was not keyboard-reachable');
 }
 
-Future<void> _advancePreferenceFocus(WebDriver driver) => driver.keyboard
-    .sendKeys(List<String>.filled(4, Keyboard.tab).join());
+Future<void> _advancePreferenceFocus(WebDriver driver) =>
+    driver.keyboard.sendKeys(List<String>.filled(4, Keyboard.tab).join());
 
 Future<void> _decodeCipher(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
