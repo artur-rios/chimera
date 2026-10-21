@@ -99,11 +99,15 @@ void main() {
     );
     expect(
       safariSmoke,
-      contains('advanceSafariPreferenceFocus(driver.keyboard.sendKeys)'),
+      contains('focusOrigin: () => _focusPreferenceOrigin(driver)'),
     );
     expect(
-      RegExp(r'await _advancePreferenceFocus\(driver\);')
+      RegExp(r'final navigator = _preferenceFocusNavigator\(driver\);')
           .allMatches(safariSmoke),
+      hasLength(2),
+    );
+    expect(
+      RegExp(r'await navigator\.advance\(\);').allMatches(safariSmoke),
       hasLength(2),
     );
   });

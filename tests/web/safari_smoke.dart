@@ -3692,9 +3692,10 @@ Future<void> _changeTheme(WebDriver driver) async {
 }
 
 Future<void> _revealThemePanel(WebDriver driver) async {
+  final navigator = _preferenceFocusNavigator(driver);
   await _waitUntil(() async {
     if (await _pageContains(driver, 'Appearance')) return true;
-    await _advancePreferenceFocus(driver);
+    await navigator.advance();
     return false;
   }, 'Theme preference panel was not keyboard-reachable');
 }
@@ -3774,15 +3775,31 @@ Future<void> _changeLanguage(WebDriver driver) async {
 }
 
 Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
+  final navigator = _preferenceFocusNavigator(driver);
   await _waitUntil(() async {
     if (await _pageContains(driver, title)) return true;
-    await _advancePreferenceFocus(driver);
+    await navigator.advance();
     return false;
   }, 'Language preference panel was not keyboard-reachable');
 }
 
-Future<void> _advancePreferenceFocus(WebDriver driver) =>
-    advanceSafariPreferenceFocus(driver.keyboard.sendKeys);
+SafariPreferenceFocusNavigator _preferenceFocusNavigator(WebDriver driver) =>
+    SafariPreferenceFocusNavigator(
+      focusOrigin: () => _focusPreferenceOrigin(driver),
+      sendKeys: driver.keyboard.sendKeys,
+    );
+
+Future<bool> _focusPreferenceOrigin(WebDriver driver) async =>
+    await driver.execute(r'''
+      const buttons = [...document.querySelectorAll('[role="button"]')]
+        .filter(element => element.getAttribute('aria-disabled') !== 'true');
+      if (buttons.includes(document.activeElement)) return true;
+      const origin = buttons[0];
+      if (!origin) return false;
+      origin.focus();
+      return document.activeElement === origin;
+    ''', const <Object?>[]) ==
+    true;
 
 Future<void> _decodeCipher(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');

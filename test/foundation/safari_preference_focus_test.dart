@@ -5,20 +5,56 @@ import '../../tests/web/safari_preference_focus.dart';
 
 void main() {
   test(
-    'GivenSafariPreferences_WhenFocusAdvances_ThenEachTabUsesItsOwnCommand',
+    'GivenMissingFocusOrigin_WhenTraversalAdvances_ThenTabsWaitForStableFocus',
     () async {
-      final commands = <String>[];
+      final events = <String>[];
+      var focusAttempt = 0;
+      final navigator = SafariPreferenceFocusNavigator(
+        focusOrigin: () async {
+          events.add('focus');
+          focusAttempt += 1;
+          return focusAttempt > 1;
+        },
+        sendKeys: (keys) async {
+          events.add(keys);
+        },
+      );
 
-      await advanceSafariPreferenceFocus((keys) async {
-        commands.add(keys);
-      });
+      await navigator.advance();
+      expect(events, <String>['focus']);
 
-      expect(commands, <String>[
+      await navigator.advance();
+      expect(events, <String>[
+        'focus',
+        'focus',
         Keyboard.tab,
         Keyboard.tab,
         Keyboard.tab,
         Keyboard.tab,
       ]);
+    },
+  );
+
+  test(
+    'GivenStableFocusOrigin_WhenTraversalRepeats_ThenFocusIsNotReset',
+    () async {
+      var focusCalls = 0;
+      final commands = <String>[];
+      final navigator = SafariPreferenceFocusNavigator(
+        focusOrigin: () async {
+          focusCalls += 1;
+          return true;
+        },
+        sendKeys: (keys) async {
+          commands.add(keys);
+        },
+      );
+
+      await navigator.advance();
+      await navigator.advance();
+
+      expect(focusCalls, 1);
+      expect(commands, List<String>.filled(8, Keyboard.tab));
     },
   );
 }
