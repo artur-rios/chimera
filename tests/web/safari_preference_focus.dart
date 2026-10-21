@@ -1,16 +1,16 @@
 import 'package:webdriver/async_io.dart';
 
-typedef SafariSendKeys = Future<void> Function(String keys);
+typedef SafariSendChord = Future<void> Function(Iterable<String> keys);
 typedef SafariFocusOrigin = Future<bool> Function();
 
 final class SafariPreferenceFocusNavigator {
   SafariPreferenceFocusNavigator({
     required this.focusOrigin,
-    required this.sendKeys,
+    required this.sendChord,
   });
 
   final SafariFocusOrigin focusOrigin;
-  final SafariSendKeys sendKeys;
+  final SafariSendChord sendChord;
   bool _hasFocusOrigin = false;
 
   Future<void> advance() async {
@@ -19,7 +19,7 @@ final class SafariPreferenceFocusNavigator {
       if (!_hasFocusOrigin) return;
     }
     for (var step = 0; step < 4; step += 1) {
-      await sendKeys(Keyboard.tab);
+      await sendChord(<String>[Keyboard.alt, Keyboard.tab]);
     }
   }
 }

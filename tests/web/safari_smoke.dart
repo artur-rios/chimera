@@ -3786,7 +3786,7 @@ Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
 SafariPreferenceFocusNavigator _preferenceFocusNavigator(WebDriver driver) =>
     SafariPreferenceFocusNavigator(
       focusOrigin: () => _focusPreferenceOrigin(driver),
-      sendKeys: driver.keyboard.sendKeys,
+      sendChord: driver.keyboard.sendChord,
     );
 
 Future<bool> _focusPreferenceOrigin(WebDriver driver) async =>

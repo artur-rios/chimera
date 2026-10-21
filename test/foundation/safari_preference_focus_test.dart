@@ -15,8 +15,8 @@ void main() {
           focusAttempt += 1;
           return focusAttempt > 1;
         },
-        sendKeys: (keys) async {
-          events.add(keys);
+        sendChord: (keys) async {
+          events.add(keys.join());
         },
       );
 
@@ -27,10 +27,10 @@ void main() {
       expect(events, <String>[
         'focus',
         'focus',
-        Keyboard.tab,
-        Keyboard.tab,
-        Keyboard.tab,
-        Keyboard.tab,
+        '${Keyboard.alt}${Keyboard.tab}',
+        '${Keyboard.alt}${Keyboard.tab}',
+        '${Keyboard.alt}${Keyboard.tab}',
+        '${Keyboard.alt}${Keyboard.tab}',
       ]);
     },
   );
@@ -39,14 +39,14 @@ void main() {
     'GivenStableFocusOrigin_WhenTraversalRepeats_ThenFocusIsNotReset',
     () async {
       var focusCalls = 0;
-      final commands = <String>[];
+      final commands = <List<String>>[];
       final navigator = SafariPreferenceFocusNavigator(
         focusOrigin: () async {
           focusCalls += 1;
           return true;
         },
-        sendKeys: (keys) async {
-          commands.add(keys);
+        sendChord: (keys) async {
+          commands.add(List<String>.of(keys));
         },
       );
 
@@ -54,7 +54,13 @@ void main() {
       await navigator.advance();
 
       expect(focusCalls, 1);
-      expect(commands, List<String>.filled(8, Keyboard.tab));
+      expect(
+        commands,
+        List<List<String>>.generate(
+          8,
+          (_) => <String>[Keyboard.alt, Keyboard.tab],
+        ),
+      );
     },
   );
 }

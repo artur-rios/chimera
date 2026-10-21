@@ -101,6 +101,7 @@ void main() {
       safariSmoke,
       contains('focusOrigin: () => _focusPreferenceOrigin(driver)'),
     );
+    expect(safariSmoke, contains('sendChord: driver.keyboard.sendChord'));
     expect(
       RegExp(r'final navigator = _preferenceFocusNavigator\(driver\);')
           .allMatches(safariSmoke),
