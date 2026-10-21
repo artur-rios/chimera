@@ -3643,10 +3643,7 @@ Future<void> _changeTheme(WebDriver driver) async {
     'Theme clean reload did not finish',
   );
   await _enableFlutterSemantics(driver);
-  await _waitUntil(
-    () => _pageContains(driver, 'Appearance'),
-    'Theme preference panel was not visible',
-  );
+  await _revealThemePanel(driver);
   await _clickButton(driver, 'Dark');
   await _waitUntil(
     () => _pageContains(driver, 'Dark theme applied and saved.'),
@@ -3676,6 +3673,7 @@ Future<void> _changeTheme(WebDriver driver) async {
     'Theme persisted reload did not finish',
   );
   await _enableFlutterSemantics(driver);
+  await _revealThemePanel(driver);
   await _waitUntil(
     () async =>
         await driver.execute(r'''
@@ -3689,6 +3687,14 @@ Future<void> _changeTheme(WebDriver driver) async {
     'Dark theme was not restored after reload',
   );
   await _assertNoExternalRequests(driver, flow: 'theme preference');
+}
+
+Future<void> _revealThemePanel(WebDriver driver) async {
+  await _waitUntil(() async {
+    if (await _pageContains(driver, 'Appearance')) return true;
+    await driver.keyboard.sendKeys(Keyboard.tab);
+    return false;
+  }, 'Theme preference panel was not keyboard-reachable');
 }
 
 Future<void> _decodeCipher(WebDriver driver) async {
