@@ -158,11 +158,132 @@ void main() {
       expect(find.text('O Chimera 1.2.3 está atualizado.'), findsOneWidget);
     },
   );
+
+  testWidgets(
+    'GivenAvailableUpdate_WhenApplyConfirmationIsCancelled_ThenNoApplyOccurs',
+    (tester) async {
+      var applyCalls = 0;
+      await _pumpPage(
+        tester,
+        checker: () async => ChimeraSuccess<UpdateCheckResult>(
+          UpdateCheckResult.available(
+            SemanticVersion.parse('1.2.3'),
+            _release('2.0.0'),
+          ),
+        ),
+        applier: (release) async {
+          applyCalls++;
+          return ChimeraSuccess<UpdateApplyResult>(
+            UpdateApplyResult(release: release, restartRequired: true),
+          );
+        },
+      );
+      await tester.tap(find.byKey(const Key('update-check-action')));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('update-apply-action')));
+      await tester.pumpAndSettle();
+      expect(find.text('Install Chimera 2.0.0?'), findsOneWidget);
+      expect(find.textContaining('installer package'), findsOneWidget);
+      expect(find.textContaining('a' * 64), findsWidgets);
+      await tester.tap(find.byKey(const Key('update-apply-cancel')));
+      await tester.pumpAndSettle();
+
+      expect(applyCalls, 0);
+    },
+  );
+
+  testWidgets(
+    'GivenConfirmedUpdate_WhenApplySucceeds_ThenRestartStatusIsAnnounced',
+    (tester) async {
+      final pending = Completer<ChimeraResult<UpdateApplyResult>>();
+      await _pumpPage(
+        tester,
+        checker: () async => ChimeraSuccess<UpdateCheckResult>(
+          UpdateCheckResult.available(
+            SemanticVersion.parse('1.2.3'),
+            _release('2.0.0'),
+          ),
+        ),
+        applier: (_) => pending.future,
+      );
+      await tester.tap(find.byKey(const Key('update-check-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('update-apply-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('update-apply-confirm')));
+      await tester.pump();
+
+      expect(find.byKey(const Key('update-apply-progress')), findsOneWidget);
+      pending.complete(
+        ChimeraSuccess<UpdateApplyResult>(
+          UpdateApplyResult(
+            release: _release('2.0.0'),
+            restartRequired: true,
+            status: UpdateApplyStatus.scheduled,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Chimera 2.0.0 is ready to install. Exit and reopen the application '
+          'to complete the update.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byKey(const Key('update-apply-action')), findsNothing);
+      expect(
+        tester
+            .widget<ElevatedButton>(
+              find.byKey(const Key('update-check-action')),
+            )
+            .onPressed,
+        isNull,
+      );
+    },
+  );
+
+  testWidgets(
+    'GivenConfirmedUpdate_WhenApplyFails_ThenInstalledVersionSafeStatusIsAnnounced',
+    (tester) async {
+      await _pumpPage(
+        tester,
+        localeTag: 'pt-BR',
+        checker: () async => ChimeraSuccess<UpdateCheckResult>(
+          UpdateCheckResult.available(
+            SemanticVersion.parse('1.2.3'),
+            _release('2.0.0'),
+          ),
+        ),
+        applier: (_) async => const ChimeraFailure<UpdateApplyResult>(
+          kind: FailureKind.update,
+          code: 'update-install-failed',
+          messageKey: 'error.update.installFailed',
+        ),
+      );
+      await tester.tap(find.byKey(const Key('update-check-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('update-apply-action')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('update-apply-confirm')));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(
+          'Não foi possível instalar a atualização. A versão instalada continua disponível.',
+        ),
+        findsOneWidget,
+      );
+    },
+  );
 }
 
 Future<void> _pumpPage(
   WidgetTester tester, {
   required UpdateCheckCallback checker,
+  UpdateApplyCallback? applier,
   String localeTag = 'en',
 }) => tester.pumpWidget(
   MaterialApp(
@@ -170,6 +291,7 @@ Future<void> _pumpPage(
       catalog: const MessageCatalog(),
       localeTag: localeTag,
       checker: checker,
+      applier: applier,
     ),
   ),
 );

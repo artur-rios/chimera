@@ -71,14 +71,20 @@ final class _FakeUpdateArtifactDownloader implements UpdateArtifactDownloader {
   const _FakeUpdateArtifactDownloader();
 
   @override
-  Future<ChimeraResult<List<int>>> downloadArtifact(Uri url) async =>
-      const ChimeraSuccess<List<int>>(<int>[]);
+  Future<ChimeraResult<void>> download({
+    required Uri source,
+    required String destinationPath,
+  }) async => const ChimeraSuccess<void>(null);
 }
 
 final class _FakeUpdateInstaller implements UpdateInstaller {
   const _FakeUpdateInstaller();
 
   @override
-  Future<ChimeraResult<void>> installArtifact(String path) async =>
-      const ChimeraSuccess<void>(null);
+  Future<ChimeraResult<UpdateInstallResult>> install({
+    required ReleaseMetadata release,
+    required String artifactPath,
+  }) async => const ChimeraSuccess<UpdateInstallResult>(
+    UpdateInstallResult(restartRequired: false),
+  );
 }

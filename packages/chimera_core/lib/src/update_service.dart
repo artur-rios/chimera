@@ -407,3 +407,212 @@ final class UpdateCheckService {
     );
   }
 }
+
+final class TemporaryUpdateArtifact {
+  const TemporaryUpdateArtifact({
+    required this.rootPath,
+    required this.artifactPath,
+  });
+
+  final String rootPath;
+  final String artifactPath;
+}
+
+abstract interface class UpdateTemporaryStorage {
+  Future<ChimeraResult<TemporaryUpdateArtifact>> createFor(Uri source);
+
+  Future<ChimeraResult<void>> cleanup(TemporaryUpdateArtifact artifact);
+}
+
+abstract interface class UpdateArtifactDownloader {
+  Future<ChimeraResult<void>> download({
+    required Uri source,
+    required String destinationPath,
+  });
+}
+
+abstract interface class UpdateChecksumVerifier {
+  Future<ChimeraResult<bool>> verifySha256({
+    required String path,
+    required String expectedDigest,
+  });
+}
+
+enum UpdateApplyStatus { applied, scheduled }
+
+final class UpdateInstallResult {
+  const UpdateInstallResult({
+    required this.restartRequired,
+    this.cleanupDeferred = false,
+    this.status = UpdateApplyStatus.applied,
+  });
+
+  final bool restartRequired;
+  final bool cleanupDeferred;
+  final UpdateApplyStatus status;
+}
+
+abstract interface class UpdateInstaller {
+  Future<ChimeraResult<UpdateInstallResult>> install({
+    required ReleaseMetadata release,
+    required String artifactPath,
+  });
+}
+
+final class UpdateApplyRequest {
+  const UpdateApplyRequest({required this.release, required this.accepted});
+
+  final ReleaseMetadata release;
+  final bool accepted;
+}
+
+final class UpdateApplyResult {
+  const UpdateApplyResult({
+    required this.release,
+    required this.restartRequired,
+    this.status = UpdateApplyStatus.applied,
+  });
+
+  final ReleaseMetadata release;
+  final bool restartRequired;
+  final UpdateApplyStatus status;
+}
+
+final class UpdateApplyService {
+  const UpdateApplyService({
+    required UpdateTemporaryStorage storage,
+    required UpdateArtifactDownloader downloader,
+    required UpdateChecksumVerifier verifier,
+    required UpdateInstaller installer,
+  }) : // Keep descriptive public constructor parameters while retaining
+       // private dependencies.
+       // ignore: prefer_initializing_formals
+       _storage = storage,
+       // ignore: prefer_initializing_formals
+       _downloader = downloader,
+       // ignore: prefer_initializing_formals
+       _verifier = verifier,
+       // ignore: prefer_initializing_formals
+       _installer = installer;
+
+  final UpdateTemporaryStorage _storage;
+  final UpdateArtifactDownloader _downloader;
+  final UpdateChecksumVerifier _verifier;
+  final UpdateInstaller _installer;
+
+  Future<ChimeraResult<UpdateApplyResult>> apply(
+    UpdateApplyRequest request,
+  ) async {
+    if (!request.accepted) {
+      return _failure(
+        'update-approval-required',
+        'error.update.approvalRequired',
+      );
+    }
+    if (request.release.packageType != ReleasePackageType.installer) {
+      return _failure(
+        'unsupported-update-package',
+        'error.update.unsupportedPackage',
+      );
+    }
+
+    final ChimeraResult<TemporaryUpdateArtifact> staging;
+    try {
+      staging = await _storage.createFor(request.release.downloadUrl);
+    } on Object {
+      return _failure('update-download-failed', 'error.update.downloadFailed');
+    }
+    if (staging case ChimeraFailure<TemporaryUpdateArtifact>()) {
+      return _failure('update-download-failed', 'error.update.downloadFailed');
+    }
+    final artifact = (staging as ChimeraSuccess<TemporaryUpdateArtifact>).value;
+
+    var activeFailureCode = 'update-download-failed';
+    var activeMessageKey = 'error.update.downloadFailed';
+    var cleanupDeferred = false;
+    ChimeraResult<UpdateApplyResult> outcome;
+    try {
+      final download = await _downloader.download(
+        source: request.release.downloadUrl,
+        destinationPath: artifact.artifactPath,
+      );
+      if (download case ChimeraFailure<void>()) {
+        outcome = _failure(activeFailureCode, activeMessageKey);
+      } else {
+        activeFailureCode = 'update-checksum-failed';
+        activeMessageKey = 'error.update.checksumFailed';
+        final verification = await _verifier.verifySha256(
+          path: artifact.artifactPath,
+          expectedDigest: request.release.checksum,
+        );
+        if (verification case ChimeraFailure<bool>()) {
+          outcome = _failure(activeFailureCode, activeMessageKey);
+        } else if (!(verification as ChimeraSuccess<bool>).value) {
+          outcome = _failure(activeFailureCode, activeMessageKey);
+        } else {
+          activeFailureCode = 'update-install-failed';
+          activeMessageKey = 'error.update.installFailed';
+          final installation = await _installer.install(
+            release: request.release,
+            artifactPath: artifact.artifactPath,
+          );
+          if (installation case ChimeraFailure<UpdateInstallResult>(
+            :final code,
+          )) {
+            outcome = code == 'update-elevation-denied'
+                ? _failure(
+                    'update-elevation-denied',
+                    'error.update.elevationDenied',
+                  )
+                : _failure(activeFailureCode, activeMessageKey);
+          } else {
+            final installed =
+                (installation as ChimeraSuccess<UpdateInstallResult>).value;
+            cleanupDeferred = installed.cleanupDeferred;
+            outcome = ChimeraSuccess<UpdateApplyResult>(
+              UpdateApplyResult(
+                release: request.release,
+                restartRequired: installed.restartRequired,
+                status: installed.status,
+              ),
+            );
+          }
+        }
+      }
+    } on Object {
+      outcome = _failure(activeFailureCode, activeMessageKey);
+    }
+
+    var cleanupSucceeded = cleanupDeferred;
+    if (!cleanupDeferred) {
+      try {
+        final cleanup = await _storage.cleanup(artifact);
+        cleanupSucceeded = cleanup is ChimeraSuccess<void>;
+      } on Object {
+        cleanupSucceeded = false;
+      }
+    }
+    if (!cleanupSucceeded) {
+      return _failure(
+        'update-cleanup-failed',
+        'error.update.cleanupFailed',
+        details: <String, Object?>{
+          if (outcome case ChimeraFailure<UpdateApplyResult>(:final code))
+            'priorCode': code,
+        },
+      );
+    }
+    return outcome;
+  }
+
+  ChimeraFailure<UpdateApplyResult> _failure(
+    String code,
+    String messageKey, {
+    Map<String, Object?> details = const <String, Object?>{},
+  }) => ChimeraFailure<UpdateApplyResult>(
+    kind: FailureKind.update,
+    code: code,
+    messageKey: messageKey,
+    details: details,
+  );
+}

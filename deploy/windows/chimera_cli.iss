@@ -19,25 +19,25 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 ChangesEnvironment=yes
 Compression=lzma2
-DefaultDirName={autopf}\Chimera CLI
+DefaultDirName={localappdata}\Programs\Chimera CLI
 OutputBaseFilename={#OutputBaseName}
 OutputDir={#OutputDirectory}
-PrivilegesRequired=admin
+PrivilegesRequired=lowest
 SolidCompression=yes
 
 [Files]
 Source: "{#SourceExecutable}"; DestDir: "{app}"; DestName: "chimera.exe"; Flags: ignoreversion
 
 [Registry]
-Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsPathUpdate(ExpandConstant('{app}'))
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}"; Check: NeedsPathUpdate(ExpandConstant('{app}'))
 
 [Code]
 function NeedsPathUpdate(Path: string): Boolean;
 var
   ExistingPath: string;
 begin
-  if not RegQueryStringValue(HKEY_LOCAL_MACHINE,
-    'SYSTEM\CurrentControlSet\Control\Session Manager\Environment',
+  if not RegQueryStringValue(HKEY_CURRENT_USER,
+    'Environment',
     'Path', ExistingPath) then
     ExistingPath := '';
   Result := Pos(';' + Uppercase(Path) + ';', ';' + Uppercase(ExistingPath) + ';') = 0;

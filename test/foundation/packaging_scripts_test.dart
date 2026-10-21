@@ -93,10 +93,40 @@ void main() {
 
     expect(
       script,
-      contains('Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6'),
+      contains(
+        'Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6, '
+        'pkexec | policykit-1',
+      ),
     );
+    expect(script, contains('Depends: pkexec | policykit-1'));
     expect(releaseWorkflow, contains('Smoke-test installed Linux packages'));
     expect(releaseWorkflow, contains('dpkg --install'));
     expect(releaseWorkflow, contains('xvfb-run -a timeout 5s chimera-gui'));
+  });
+
+  test(
+    'GivenWindowsCliInstaller_WhenDefined_ThenItUsesPerUserInstallation',
+    () {
+      final installer = File('deploy/windows/chimera_cli.iss')
+          .readAsStringSync();
+
+      expect(installer, contains('PrivilegesRequired=lowest'));
+      expect(installer, contains(r'DefaultDirName={localappdata}\Programs'));
+      expect(installer, contains('Root: HKCU; Subkey: "Environment"'));
+      expect(installer, isNot(contains('HKEY_LOCAL_MACHINE')));
+    },
+  );
+
+  test('GivenLinuxPackages_WhenBuilt_ThenTheyHaveNoMaintainerScripts', () {
+    final script = File('tool/package_linux.sh').readAsStringSync();
+
+    for (final maintainerScript in <String>[
+      '/DEBIAN/preinst',
+      '/DEBIAN/postinst',
+      '/DEBIAN/prerm',
+      '/DEBIAN/postrm',
+    ]) {
+      expect(script, isNot(contains(maintainerScript)));
+    }
   });
 }
