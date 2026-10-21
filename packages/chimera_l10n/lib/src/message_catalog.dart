@@ -3,6 +3,19 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'update.pageTitle': 'Check for updates',
+    'update.openAction': 'Check for updates',
+    'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
+    'update.checkAction': 'Check now',
+    'update.checking': 'Checking for updates.',
+    'cli.updateCheckUsage': 'Usage: chimera update check [--repository=<owner/name>] [--current-version=<semver>] [--platform=windows|linux] [--package-type=installer|portable] [--json]. Checks metadata only; it never downloads or installs an update.',
+    'update.current': 'Chimera {version} is current.',
+    'update.available': 'Chimera {available} is available (installed: {installed}, package: {package}, SHA-256: {checksum}). Approval is required before downloading.',
+    'error.update.checkFailed':
+        'The update check failed. The installed version can continue running.',
+    'error.update.invalidMetadata': 'The release metadata is invalid. The installed version can continue running.',
+    'error.update.invalidInstalledVersion':
+        'The installed Chimera version is invalid.',
     'cli.personUsage': 'Usage: chimera person generate [--locale=us|br] [--min-age=<0-130>] [--max-age=<0-130>] [--count=<positive integer>] [--output=<path>] [--json]. Defaults: us, minimum age 18, maximum age 90, count 1. Results are synthetic test data and not real identities.',
     'person.syntheticLabel':
         'Synthetic person test data - not a real identity or proof of issuance',
@@ -1309,6 +1322,18 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'update.pageTitle': 'Verificar atualizações',
+    'update.openAction': 'Verificar atualizações',
+    'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',
+    'update.checkAction': 'Verificar agora',
+    'update.checking': 'Verificando atualizações.',
+    'cli.updateCheckUsage': 'Uso: chimera update check [--repository=<proprietário/repositório>] [--current-version=<semver>] [--platform=windows|linux] [--package-type=installer|portable] [--json]. Verifica apenas os metadados; nunca baixa nem instala uma atualização.',
+    'update.current': 'O Chimera {version} está atualizado.',
+    'update.available': 'O Chimera {available} está disponível (instalado: {installed}, pacote: {package}, SHA-256: {checksum}). É necessária aprovação antes do download.',
+    'error.update.checkFailed': 'A verificação de atualização falhou. A versão instalada pode continuar em execução.',
+    'error.update.invalidMetadata': 'Os metadados da versão são inválidos. A versão instalada pode continuar em execução.',
+    'error.update.invalidInstalledVersion':
+        'A versão instalada do Chimera é inválida.',
     'cli.personUsage': 'Uso: chimera person generate [--locale=us|br] [--min-age=<0-130>] [--max-age=<0-130>] [--count=<inteiro positivo>] [--output=<caminho>] [--json]. Padrões: us, idade mínima 18, idade máxima 90, quantidade 1. Os resultados são dados sintéticos de teste e não identidades reais.',
     'person.syntheticLabel': 'Dados sintéticos de pessoa - não são identidade real nem comprovam emissão',
     'person.pageTitle': 'Gerar pessoas sintéticas',

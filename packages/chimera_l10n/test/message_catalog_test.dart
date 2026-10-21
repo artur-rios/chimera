@@ -1228,6 +1228,17 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'update.pageTitle',
+      'update.openAction',
+      'update.description',
+      'update.checkAction',
+      'update.checking',
+      'cli.updateCheckUsage',
+      'update.current',
+      'update.available',
+      'error.update.checkFailed',
+      'error.update.invalidMetadata',
+      'error.update.invalidInstalledVersion',
       'cli.personUsage',
       'person.syntheticLabel',
       'person.pageTitle',
