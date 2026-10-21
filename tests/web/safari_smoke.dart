@@ -1191,6 +1191,7 @@ Future<void> main(List<String> arguments) async {
     await protocol.stage('Cipher encode', () => _encodeCipher(driver));
     await protocol.stage('Alphabet encode', () => _encodeAlphabet(driver));
     await protocol.stage('Alphabet decode', () => _decodeAlphabet(driver));
+    await protocol.stage('Theme preference', () => _changeTheme(driver));
     await protocol.stage('Cipher decode', () => _decodeCipher(driver));
     await protocol.stage('URL decode', () => _decodeUrl(driver));
     await protocol.stage('JWT create', () => _createJwt(driver));
@@ -3617,6 +3618,83 @@ Future<void> _decodeAlphabet(WebDriver driver) async {
     driver,
     flow: 'alphabet decode and validation',
   );
+}
+
+Future<void> _changeTheme(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Theme semantics placeholder did not load',
+  );
+  await driver.execute('localStorage.clear();', const <Object?>[]);
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Theme clean reload did not finish',
+  );
+  await _enableFlutterSemantics(driver);
+  await _revealThemePanel(driver);
+  await _clickButton(driver, 'Dark');
+  await _waitUntil(
+    () => _pageContains(driver, 'Dark theme applied and saved.'),
+    'Dark theme save status was not visible',
+  );
+  final stored = await driver.execute(r'''
+      return Array.from({length: localStorage.length}, (_, index) => {
+        const key = localStorage.key(index);
+        return [key, JSON.parse(localStorage.getItem(key))];
+      }).filter(([key]) => key.endsWith('theme'));
+    ''', const <Object?>[]);
+  if (stored is! List ||
+      stored.length != 1 ||
+      stored.single is! List ||
+      (stored.single as List).last != 'dark') {
+    throw StateError('Theme preference was not stored exactly once: $stored');
+  }
+
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Theme persisted reload did not finish',
+  );
+  await _enableFlutterSemantics(driver);
+  await _revealThemePanel(driver);
+  await _waitUntil(
+    () async =>
+        await driver.execute(r'''
+          const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+          return [...document.querySelectorAll('[role="button"]')]
+            .some(element =>
+              normalize(element.getAttribute('aria-label') || element.textContent) === 'Dark' &&
+              element.getAttribute('aria-current') === 'true');
+        ''', const <Object?>[]) ==
+        true,
+    'Dark theme was not restored after reload',
+  );
+  await _assertNoExternalRequests(driver, flow: 'theme preference');
+}
+
+Future<void> _revealThemePanel(WebDriver driver) async {
+  await _waitUntil(() async {
+    if (await _pageContains(driver, 'Appearance')) return true;
+    await driver.keyboard.sendKeys(Keyboard.tab);
+    return false;
+  }, 'Theme preference panel was not keyboard-reachable');
 }
 
 Future<void> _decodeCipher(WebDriver driver) async {

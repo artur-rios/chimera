@@ -13,6 +13,40 @@ for (const value of networkPolicyCases) {
   });
 }
 
+test('GivenThemeSelection_WhenPageReloads_ThenDarkThemeIsRestoredOffline', async ({ page }) => {
+  const externalRequests = [];
+  page.on('request', request => {
+    if (/^https?:/.test(request.url()) && new URL(request.url()).hostname !== '127.0.0.1') {
+      externalRequests.push(request.url());
+    }
+  });
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+  await page.reload();
+  await enableFlutterSemantics(page);
+
+  const lightTheme = page.getByRole('button', { name: 'Light', exact: true });
+  await expect(lightTheme).toBeVisible();
+  await page.getByRole('button', { name: 'Dark', exact: true }).click();
+  await expect(page.locator('span', { hasText: /^Dark theme applied and saved\.$/ }))
+    .toBeVisible();
+
+  const stored = await page.evaluate(() => Object.fromEntries(
+    Array.from({ length: localStorage.length }, (_, index) => {
+      const key = localStorage.key(index);
+      return [key, JSON.parse(localStorage.getItem(key))];
+    }).filter(([key]) => key.endsWith('theme')),
+  ));
+  expect(Object.values(stored)).toEqual(['dark']);
+
+  await page.reload();
+  await enableFlutterSemantics(page);
+  const restoredDark = page.getByRole('button', { name: 'Dark', exact: true });
+  await expect(restoredDark).toBeVisible();
+  await expect(restoredDark).toHaveAttribute('aria-current', 'true');
+  expect(externalRequests).toEqual([]);
+});
+
 // The native Safari harness executes this exact source, resolved from its script.
 const gzipSaveObserver = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
 

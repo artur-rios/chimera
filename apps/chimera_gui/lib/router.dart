@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +42,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'theme_preferences.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
 import 'uuid_page.dart';
@@ -166,6 +169,7 @@ GoRouter buildRouter({
   required CertificateInspectClipboardWriter certificateInspectClipboardWriter,
   required MessageCatalog catalog,
   required String localeTag,
+  required ThemePreferenceController themeController,
   required Base64DecodeService base64DecodeService,
   required Base64EncodeService base64EncodeService,
   required CronService cronService,
@@ -520,365 +524,355 @@ GoRouter buildRouter({
             autofocus: true,
             child: SingleChildScrollView(
               child: Center(
-                child: Semantics(
-                  header: true,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      Text(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Semantics(
+                      key: const Key('app-title-heading'),
+                      header: true,
+                      child: Text(
                         catalog.lookup(localeTag, 'app.name'),
                         style: Theme.of(context).textTheme.headlineLarge,
                       ),
-                      const SizedBox(height: 12),
-                      Text(catalog.lookup(localeTag, 'app.description')),
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        key: const Key('open-checksum-generate'),
-                        onPressed: () => context.go('/checksum/generate'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'checksumGenerate.openAction',
-                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(catalog.lookup(localeTag, 'app.description')),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      key: const Key('open-checksum-generate'),
+                      onPressed: () => context.go('/checksum/generate'),
+                      child: Text(
+                        catalog.lookup(
+                          localeTag,
+                          'checksumGenerate.openAction',
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-cron'),
-                        onPressed: () => context.go('/cron/parse'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'cron.openAction'),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-cron'),
+                      onPressed: () => context.go('/cron/parse'),
+                      child: Text(catalog.lookup(localeTag, 'cron.openAction')),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-json-table'),
+                      onPressed: () => context.go('/json/array-to-table'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jsonTable.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-json-csv'),
+                      onPressed: () => context.go('/json/array-to-csv'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jsonCsv.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-json-yaml'),
+                      onPressed: () => context.go('/json/to-yaml'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jsonYaml.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-json-format'),
+                      onPressed: () => context.go('/json/format'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jsonFormat.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-sql-format'),
+                      onPressed: () => context.go('/sql/format'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'sqlFormat.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-xml-format'),
+                      onPressed: () => context.go('/xml/format'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'xmlFormat.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-date'),
+                      onPressed: () => context.go('/date/convert'),
+                      child: Text(catalog.lookup(localeTag, 'date.openAction')),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-number-base'),
+                      onPressed: () => context.go('/number/convert-base'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'numberBase.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-base64-decode'),
+                      onPressed: () => context.go('/base64/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'base64Decode.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-base64-encode'),
+                      onPressed: () => context.go('/base64/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'base64Encode.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-text-escape'),
+                      onPressed: () => context.go('/text/escape'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'textEscape.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-text-unescape'),
+                      onPressed: () => context.go('/text/unescape'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'textUnescape.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-text-transform'),
+                      onPressed: () => context.go('/text/transform'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'textTransform.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-text-compare'),
+                      onPressed: () => context.go('/text/compare'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'textCompare.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-list-compare'),
+                      onPressed: () => context.go('/list/compare'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'listCompare.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-text-analyze'),
+                      onPressed: () => context.go('/text/analyze'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'textAnalyze.openAction'),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-certificate-inspect'),
+                      onPressed: () => context.go('/certificate/inspect'),
+                      child: Text(
+                        catalog.lookup(
+                          localeTag,
+                          'certificateInspect.openAction',
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-json-table'),
-                        onPressed: () => context.go('/json/array-to-table'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jsonTable.openAction'),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-certificate-convert'),
+                      onPressed: () => context.go('/certificate/convert'),
+                      child: Text(
+                        catalog.lookup(
+                          localeTag,
+                          'certificateConvert.openAction',
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-json-csv'),
-                        onPressed: () => context.go('/json/array-to-csv'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jsonCsv.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-gzip-compress'),
+                      onPressed: () => context.go('/gzip/compress'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'gzipCompress.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-json-yaml'),
-                        onPressed: () => context.go('/json/to-yaml'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jsonYaml.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-gzip-decompress'),
+                      onPressed: () => context.go('/gzip/decompress'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'gzipDecompress.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-json-format'),
-                        onPressed: () => context.go('/json/format'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jsonFormat.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-lorem'),
+                      onPressed: () => context.go('/lorem/generate'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'lorem.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-sql-format'),
-                        onPressed: () => context.go('/sql/format'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'sqlFormat.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-password'),
+                      onPressed: () => context.go('/password/generate'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'password.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-xml-format'),
-                        onPressed: () => context.go('/xml/format'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'xmlFormat.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-uuid'),
+                      onPressed: () => context.go('/uuid/generate'),
+                      child: Text(catalog.lookup(localeTag, 'uuid.openAction')),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-card'),
+                      onPressed: () => context.go('/card/generate'),
+                      child: Text(catalog.lookup(localeTag, 'card.openAction')),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-identity-document'),
+                      onPressed: () => context.go('/document/generate'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'document.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-date'),
-                        onPressed: () => context.go('/date/convert'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'date.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-person'),
+                      onPressed: () => context.go('/person/generate'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'person.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-number-base'),
-                        onPressed: () => context.go('/number/convert-base'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'numberBase.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-hash-generate'),
+                      onPressed: () => context.go('/hash/generate'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'hashGenerate.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-base64-decode'),
-                        onPressed: () => context.go('/base64/decode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'base64Decode.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-html-encode'),
+                      onPressed: () => context.go('/html/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'htmlEncode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-base64-encode'),
-                        onPressed: () => context.go('/base64/encode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'base64Encode.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-url-encode'),
+                      onPressed: () => context.go('/url/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'urlEncode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-text-escape'),
-                        onPressed: () => context.go('/text/escape'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'textEscape.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-cipher-encode'),
+                      onPressed: () => context.go('/cipher/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'cipherEncode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-text-unescape'),
-                        onPressed: () => context.go('/text/unescape'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'textUnescape.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-cipher-decode'),
+                      onPressed: () => context.go('/cipher/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'cipherDecode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-text-transform'),
-                        onPressed: () => context.go('/text/transform'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'textTransform.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-alphabet-encode'),
+                      onPressed: () => context.go('/alphabet/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'alphabetEncode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-text-compare'),
-                        onPressed: () => context.go('/text/compare'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'textCompare.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-alphabet-decode'),
+                      onPressed: () => context.go('/alphabet/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'alphabetDecode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-list-compare'),
-                        onPressed: () => context.go('/list/compare'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'listCompare.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-url-decode'),
+                      onPressed: () => context.go('/url/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'urlDecode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-text-analyze'),
-                        onPressed: () => context.go('/text/analyze'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'textAnalyze.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-html-decode'),
+                      onPressed: () => context.go('/html/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'htmlDecode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-certificate-inspect'),
-                        onPressed: () => context.go('/certificate/inspect'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'certificateInspect.openAction',
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-jwt-create'),
+                      onPressed: () => context.go('/jwt/create'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jwtCreate.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-certificate-convert'),
-                        onPressed: () => context.go('/certificate/convert'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'certificateConvert.openAction',
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-jwt-inspect'),
+                      onPressed: () => context.go('/jwt/inspect'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'jwtInspect.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-gzip-compress'),
-                        onPressed: () => context.go('/gzip/compress'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'gzipCompress.openAction'),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-qr-encode'),
+                      onPressed: () => context.go('/qr/encode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'qrEncode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-gzip-decompress'),
-                        onPressed: () => context.go('/gzip/decompress'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'gzipDecompress.openAction',
-                          ),
-                        ),
+                    ),
+                    const SizedBox(height: 12),
+                    ElevatedButton(
+                      key: const Key('open-qr-decode'),
+                      onPressed: () => context.go('/qr/decode'),
+                      child: Text(
+                        catalog.lookup(localeTag, 'qrDecode.openAction'),
                       ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-lorem'),
-                        onPressed: () => context.go('/lorem/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'lorem.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-password'),
-                        onPressed: () => context.go('/password/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'password.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-uuid'),
-                        onPressed: () => context.go('/uuid/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'uuid.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-card'),
-                        onPressed: () => context.go('/card/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'card.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-identity-document'),
-                        onPressed: () => context.go('/document/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'document.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-person'),
-                        onPressed: () => context.go('/person/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'person.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-hash-generate'),
-                        onPressed: () => context.go('/hash/generate'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'hashGenerate.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-html-encode'),
-                        onPressed: () => context.go('/html/encode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'htmlEncode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-url-encode'),
-                        onPressed: () => context.go('/url/encode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'urlEncode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-cipher-encode'),
-                        onPressed: () => context.go('/cipher/encode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'cipherEncode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-cipher-decode'),
-                        onPressed: () => context.go('/cipher/decode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'cipherDecode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-alphabet-encode'),
-                        onPressed: () => context.go('/alphabet/encode'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'alphabetEncode.openAction',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-alphabet-decode'),
-                        onPressed: () => context.go('/alphabet/decode'),
-                        child: Text(
-                          catalog.lookup(
-                            localeTag,
-                            'alphabetDecode.openAction',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-url-decode'),
-                        onPressed: () => context.go('/url/decode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'urlDecode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-html-decode'),
-                        onPressed: () => context.go('/html/decode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'htmlDecode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-jwt-create'),
-                        onPressed: () => context.go('/jwt/create'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jwtCreate.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-jwt-inspect'),
-                        onPressed: () => context.go('/jwt/inspect'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'jwtInspect.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-qr-encode'),
-                        onPressed: () => context.go('/qr/encode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'qrEncode.openAction'),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton(
-                        key: const Key('open-qr-decode'),
-                        onPressed: () => context.go('/qr/decode'),
-                        child: Text(
-                          catalog.lookup(localeTag, 'qrDecode.openAction'),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 24),
+                    _ThemePreferencePanel(
+                      controller: themeController,
+                      catalog: catalog,
+                      localeTag: localeTag,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1108,4 +1102,104 @@ GoRouter buildRouter({
       ),
     ],
   );
+}
+
+final class _ThemePreferencePanel extends StatelessWidget {
+  const _ThemePreferencePanel({
+    required this.controller,
+    required this.catalog,
+    required this.localeTag,
+  });
+
+  final ThemePreferenceController controller;
+  final MessageCatalog catalog;
+  final String localeTag;
+
+  String _message(String key) => catalog.lookup(localeTag, 'theme.$key');
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final selectedLabel = controller.mode == ThemeMode.dark
+            ? _message('dark')
+            : _message('light');
+        final statusTheme = localeTag == 'pt-BR'
+            ? selectedLabel.toLowerCase()
+            : selectedLabel;
+        final status = switch (controller.status) {
+          ThemePreferenceStatus.idle => null,
+          ThemePreferenceStatus.saving => _message('saving'),
+          ThemePreferenceStatus.saved => _message(
+            'saved',
+          ).replaceFirst('{theme}', statusTheme),
+          ThemePreferenceStatus.notSaved => _message(
+            'notSaved',
+          ).replaceFirst('{theme}', statusTheme),
+        };
+
+        return Semantics(
+          container: true,
+          explicitChildNodes: true,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Semantics(
+                      header: true,
+                      child: Text(
+                        _message('title'),
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(_message('description')),
+                    const SizedBox(height: 16),
+                    Text(
+                      _message('label'),
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    SegmentedButton<ThemeMode>(
+                      key: const Key('theme-selector'),
+                      direction: Axis.vertical,
+                      showSelectedIcon: true,
+                      segments: [
+                        ButtonSegment(
+                          value: ThemeMode.light,
+                          label: Text(_message('light')),
+                        ),
+                        ButtonSegment(
+                          value: ThemeMode.dark,
+                          label: Text(_message('dark')),
+                        ),
+                      ],
+                      selected: {controller.mode},
+                      onSelectionChanged: (selection) {
+                        unawaited(controller.select(selection.single));
+                      },
+                    ),
+                    if (status != null) ...[
+                      const SizedBox(height: 12),
+                      Semantics(
+                        key: const Key('theme-status'),
+                        liveRegion: true,
+                        container: true,
+                        child: Text(status),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

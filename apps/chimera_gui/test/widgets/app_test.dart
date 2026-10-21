@@ -135,12 +135,11 @@ void main() {
 
     expect(find.text('Developer toolbox'), findsOneWidget);
     expect(find.byType(Focus), findsWidgets);
-    expect(
-      find.byWidgetPredicate(
-        (widget) => widget is Semantics && widget.properties.header == true,
-      ),
-      findsOneWidget,
+    expect(find.byKey(const Key('app-title-heading')), findsOneWidget);
+    final appTitleHeading = tester.widget<Semantics>(
+      find.byKey(const Key('app-title-heading')),
     );
+    expect(appTitleHeading.properties.header, isTrue);
     await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
     await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
     await expectLater(tester, meetsGuideline(textContrastGuideline));
