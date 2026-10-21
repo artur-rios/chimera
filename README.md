@@ -131,6 +131,22 @@ file. Processing works offline, keeps no history and imposes no arbitrary size
 limit. Input and editor undo history are discarded after processing, failure,
 replacement, or navigation away. See the [independent known-answer fixtures](tests/fixtures/checksums/README.md).
 
+### Check for a native update
+
+Installed Windows and Linux builds can compare their version with compatible
+metadata from the latest stable GitHub release:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart update check \
+  --current-version 0.1.0 --platform windows --package-type installer
+```
+
+Use `--repository=owner/name` to select the release source and `--json` for
+stable automation output. The check strictly validates the six-field release
+metadata and SemVer compatibility. It does not download or install an artifact;
+an available result requires a separate explicit approval. The update page is
+available only in native desktop builds.
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.

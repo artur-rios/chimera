@@ -30,6 +30,21 @@ dart run tool/write_checksums.dart <artifact-directory> \
 dart run tool/validate_release_metadata.dart <artifact>.release.json
 ```
 
+Installed native builds can inspect these sidecars without downloading an
+artifact:
+
+```text
+chimera update check --repository=artur-rios/chimera \
+  --current-version=X.Y.Z --platform=windows --package-type=installer
+```
+
+The command reads the latest stable GitHub release, validates every discovered
+`.release.json` sidecar against the same six-field validator used by packaging,
+and selects the highest exact platform/application/package match using SemVer
+precedence. `--json` provides stable automation output. A check never requests
+the `downloadUrl` and never invokes an installer; an available result only says
+that explicit approval is required by the separate apply workflow.
+
 The release workflow rejects malformed tags and runs formatting, analysis, and
 tests before either platform package job. Package jobs never receive deployment
 credentials. Native artifacts contain application binaries only; Yggdrasil

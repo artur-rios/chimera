@@ -1,7 +1,13 @@
 import 'package:flutter/widgets.dart';
 
 import 'app.dart';
+import 'update_runtime.dart';
 
 void main() {
-  runApp(const ChimeraApp());
+  runApp(
+    ChimeraApp(
+      updateChecksEnabled: nativeUpdateChecksSupported,
+      updateChecker: nativeUpdateChecksSupported ? checkForNativeUpdate : null,
+    ),
+  );
 }

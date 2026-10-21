@@ -36,10 +36,10 @@ abstract interface class PreferenceGateway {
   Future<ChimeraResult<void>> write(PreferenceKey key, String value);
 }
 
-abstract interface class UpdateGateway {
-  Future<ChimeraResult<String>> fetchReleaseMetadata(Uri endpoint);
-
+abstract interface class UpdateArtifactDownloader {
   Future<ChimeraResult<List<int>>> downloadArtifact(Uri url);
+}
 
+abstract interface class UpdateInstaller {
   Future<ChimeraResult<void>> installArtifact(String path);
 }

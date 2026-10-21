@@ -44,6 +44,7 @@ import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'theme_preferences.dart';
+import 'update_page.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
 import 'uuid_page.dart';
@@ -168,6 +169,8 @@ GoRouter buildRouter({
   required CertificateInspectFilePicker certificateInspectFilePicker,
   required CertificateInspectClipboardReader certificateInspectClipboardReader,
   required CertificateInspectClipboardWriter certificateInspectClipboardWriter,
+  required bool updateChecksEnabled,
+  required UpdateCheckCallback? updateChecker,
   required MessageCatalog catalog,
   required LanguagePreferenceController languageController,
   required ThemePreferenceController themeController,
@@ -258,6 +261,15 @@ GoRouter buildRouter({
     refreshListenable: languageController,
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      if (updateChecksEnabled && updateChecker != null)
+        GoRoute(
+          path: '/update/check',
+          builder: (context, state) => UpdatePage(
+            catalog: catalog,
+            localeTag: localeTag(),
+            checker: updateChecker,
+          ),
+        ),
       GoRoute(
         path: '/card/generate',
         builder: (context, state) => CardPage(
@@ -544,6 +556,17 @@ GoRouter buildRouter({
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag(), 'app.description')),
                       const SizedBox(height: 24),
+                      if (updateChecksEnabled &&
+                          updateChecker != null) ...<Widget>[
+                        ElevatedButton(
+                          key: const Key('open-update-check'),
+                          onPressed: () => context.go('/update/check'),
+                          child: Text(
+                            catalog.lookup(localeTag(), 'update.openAction'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       ElevatedButton(
                         key: const Key('open-checksum-generate'),
                         onPressed: () => context.go('/checksum/generate'),
