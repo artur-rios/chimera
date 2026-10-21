@@ -802,3 +802,29 @@ text. Native Windows integration plus compiled Chromium, Firefox, and WebKit
 exercise selection and restoration without network access. The native Safari
 harness covers the same persistent theme journey. No automated UC-42
 accessibility finding remains open.
+
+## UC-43 Change Language
+
+- Branch: `feature/uc-43-change-language`
+- Date: 2026-10-21
+- Targets: shared Flutter web, Windows, and Linux interface
+- Locales: English and Brazilian Portuguese
+
+The home-page language card exposes a localized heading, explanation, and
+English/Brazilian Portuguese selector in document-order keyboard traversal. The
+selector remains usable at a 320-pixel logical width and 200% text scale.
+Persistence updates are announced through a localized live status region
+without moving focus.
+
+Changing language immediately updates the full application shell and subsequent
+utility routes. Success identifies the active saved language; unavailable
+storage identifies the active session-only language. Invalid stored values or
+incomplete catalogs use the English default and emit a sanitized structured
+diagnostic. No utility input, output, or history is stored or transmitted.
+
+Focused controller, localization, widget, native integration, and compiled
+browser coverage exercises both languages, live route updates, restart
+restoration, invalid data, missing catalog coverage, read/write failures, rapid
+selection ordering, large text, and zero network access. Chromium, Firefox,
+WebKit, and native Safari cover the same persistent-language journey. No
+automated UC-43 accessibility finding remains open.

@@ -33,6 +33,7 @@ import 'json_table_page.dart';
 import 'json_yaml_page.dart';
 import 'jwt_create_page.dart';
 import 'jwt_inspect_page.dart';
+import 'language_preferences.dart';
 import 'list_compare_page.dart';
 import 'lorem_page.dart';
 import 'number_base_page.dart';
@@ -167,6 +168,7 @@ final class ChimeraApp extends StatelessWidget {
     this.gzipDecompressFileSaver,
     this.localeTag = 'en',
     this.preferenceGateway,
+    this.diagnosticSink,
     this.certificateConvertService = const CertificateConvertService(),
     this.certificateConvertFilePicker,
     this.certificateConvertFileSaver,
@@ -267,6 +269,7 @@ final class ChimeraApp extends StatelessWidget {
 
   final String localeTag;
   final PreferenceGateway? preferenceGateway;
+  final DiagnosticSink? diagnosticSink;
   final LoremOperationService loremService;
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
@@ -581,6 +584,7 @@ final class ChimeraApp extends StatelessWidget {
         gzipDecompressFileSaver: gzipDecompressFileSaver,
         localeTag: localeTag,
         preferenceGateway: preferenceGateway,
+        diagnosticSink: diagnosticSink,
         certificateConvertService: certificateConvertService,
         certificateConvertFilePicker: certificateConvertFilePicker,
         certificateConvertFileSaver: certificateConvertFileSaver,
@@ -797,6 +801,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.certificateInspectClipboardWriter,
     required this.localeTag,
     required this.preferenceGateway,
+    required this.diagnosticSink,
     required this.base64DecodeService,
     required this.base64EncodeService,
     required this.cronService,
@@ -881,6 +886,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
 
   final String localeTag;
   final PreferenceGateway? preferenceGateway;
+  final DiagnosticSink? diagnosticSink;
   final LoremOperationService loremService;
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
@@ -1091,14 +1097,22 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   static const MessageCatalog _catalog = MessageCatalog();
   late final GoRouter _router;
   late final ThemePreferenceController _themeController;
+  late final LanguagePreferenceController _languageController;
 
   @override
   void initState() {
     super.initState();
-    _themeController = ThemePreferenceController(
-      widget.preferenceGateway ?? SharedPreferencesPreferenceGateway(),
-    )..addListener(_handleThemeChanged);
+    final preferenceGateway =
+        widget.preferenceGateway ?? SharedPreferencesPreferenceGateway();
+    _themeController = ThemePreferenceController(preferenceGateway)
+      ..addListener(_handleThemeChanged);
+    _languageController = LanguagePreferenceController(
+      preferenceGateway,
+      initialLocaleTag: widget.localeTag,
+      diagnosticSink: widget.diagnosticSink,
+    )..addListener(_handleLanguageChanged);
     unawaited(_themeController.restore());
+    unawaited(_languageController.restore());
     _router = buildRouter(
       loremService: widget.loremService,
       loremClipboardWriter: widget.loremClipboardWriter ?? writeLoremClipboard,
@@ -1293,7 +1307,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           widget.certificateInspectClipboardWriter ??
           writeCertificateInspectClipboard,
       catalog: _catalog,
-      localeTag: widget.localeTag,
+      languageController: _languageController,
       themeController: _themeController,
       base64DecodeService: widget.base64DecodeService,
       base64EncodeService: widget.base64EncodeService,
@@ -1425,10 +1439,17 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
     _themeController
       ..removeListener(_handleThemeChanged)
       ..dispose();
+    _languageController
+      ..removeListener(_handleLanguageChanged)
+      ..dispose();
     super.dispose();
   }
 
   void _handleThemeChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _handleLanguageChanged() {
     if (mounted) setState(() {});
   }
 
@@ -1437,7 +1458,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: _router,
-      title: _catalog.lookup(widget.localeTag, 'app.name'),
+      title: _catalog.lookup(_languageController.localeTag, 'app.name'),
       theme: ThemeData(
         brightness: Brightness.light,
         colorSchemeSeed: const Color(0xFF6750A4),

@@ -22,6 +22,25 @@ void main() {
     }
   });
 
+  test('GivenLanguageMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'language.title',
+      'language.description',
+      'language.label',
+      'language.en',
+      'language.pt-BR',
+      'language.saving',
+      'language.saved',
+      'language.notSaved',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenCardMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.cardUsage',
@@ -1851,6 +1870,14 @@ void main() {
       'theme.saving',
       'theme.saved',
       'theme.notSaved',
+      'language.title',
+      'language.description',
+      'language.label',
+      'language.en',
+      'language.pt-BR',
+      'language.saving',
+      'language.saved',
+      'language.notSaved',
       'certificateInspect.representationLabel',
       'certificateInspect.pageTitle',
       'certificateInspect.openAction',

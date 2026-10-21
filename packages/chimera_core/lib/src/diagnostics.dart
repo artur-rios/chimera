@@ -2,7 +2,12 @@ enum DiagnosticSeverity { debug, info, warning, error }
 
 enum DiagnosticComponent { application, cli, core, gui, platform, update, web }
 
-enum DiagnosticCode { operationStarted, operationCompleted, operationFailed }
+enum DiagnosticCode {
+  operationStarted,
+  operationCompleted,
+  operationFailed,
+  localizationFallback,
+}
 
 enum DiagnosticEnvironment {
   local,

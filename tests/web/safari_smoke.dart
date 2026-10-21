@@ -1215,6 +1215,7 @@ Future<void> main(List<String> arguments) async {
       );
       rethrow;
     }
+    await protocol.stage('Language preference', () => _changeLanguage(driver));
 
     stdout.writeln(
       'Safari cron, date, number base, text escape, text unescape, list comparison, text analysis, text transformation, text comparison, Base64 encoding, Base64 decoding, certificate PEM/DER/Base64 inspection, certificate PEM-to-DER and DER-to-PEM conversion/save, GZIP text/binary compression/save and BOM text decompression/copy/save, HTML context encoding, URL encoding, classical cipher encoding and decoding/copy/save/validation, Morse/NATO/Braille alphabet encoding and decoding/mapping/copy/validation, local JWT signing and inspection, QR encoding and decoding/copy/save/validation, Lorem generation, password generation, UUID/GUID generation, synthetic card generation, synthetic identity document generation, synthetic person generation, JSON table, JSON CSV, JSON YAML, JSON format, SQL format, and XML format smoke: OK',
@@ -3695,6 +3696,88 @@ Future<void> _revealThemePanel(WebDriver driver) async {
     await driver.keyboard.sendKeys(Keyboard.tab);
     return false;
   }, 'Theme preference panel was not keyboard-reachable');
+}
+
+Future<void> _changeLanguage(WebDriver driver) async {
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Language semantics placeholder did not load',
+  );
+  await driver.execute('localStorage.clear();', const <Object?>[]);
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Language clean reload did not finish',
+  );
+  await _enableFlutterSemantics(driver);
+  await _revealLanguagePanel(driver, 'Language');
+  await _clickButton(driver, 'Brazilian Portuguese');
+  await _waitUntil(
+    () => _pageContains(driver, 'Portugu\u00eas (Brasil) aplicado e salvo.'),
+    'Portuguese language save status was not visible',
+  );
+  final stored = await driver.execute(r'''
+      return Array.from({length: localStorage.length}, (_, index) => {
+        const key = localStorage.key(index);
+        return [key, JSON.parse(localStorage.getItem(key))];
+      }).filter(([key]) => key.endsWith('language'));
+    ''', const <Object?>[]);
+  if (stored is! List ||
+      stored.length != 1 ||
+      stored.single is! List ||
+      (stored.single as List).last != 'pt-BR') {
+    throw StateError(
+      'Language preference was not stored exactly once: $stored',
+    );
+  }
+
+  await driver.get('http://127.0.0.1:4173');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          "return document.querySelector('flt-semantics-placeholder') !== null;",
+          const <Object?>[],
+        ) ==
+        true,
+    'Language persisted reload did not finish',
+  );
+  await _enableFlutterSemantics(driver);
+  await _revealLanguagePanel(driver, 'Idioma');
+  await _waitUntil(
+    () async =>
+        await driver.execute(
+          r'''
+          const normalize = value => (value || '').replace(/\s+/g, ' ').trim();
+          return [...document.querySelectorAll('[role="button"]')]
+            .some(element =>
+              normalize(element.getAttribute('aria-label') || element.textContent) === arguments[0] &&
+              element.getAttribute('aria-current') === 'true');
+        ''',
+          const <Object?>['Portugu\u00eas (Brasil)'],
+        ) ==
+        true,
+    'Portuguese language was not restored after reload',
+  );
+  await _assertNoExternalRequests(driver, flow: 'language preference');
+}
+
+Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
+  await _waitUntil(() async {
+    if (await _pageContains(driver, title)) return true;
+    await driver.keyboard.sendKeys(Keyboard.tab);
+    return false;
+  }, 'Language preference panel was not keyboard-reachable');
 }
 
 Future<void> _decodeCipher(WebDriver driver) async {
