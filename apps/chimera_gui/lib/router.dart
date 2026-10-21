@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +42,7 @@ import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'theme_preferences.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
 import 'uuid_page.dart';
@@ -166,6 +169,7 @@ GoRouter buildRouter({
   required CertificateInspectClipboardWriter certificateInspectClipboardWriter,
   required MessageCatalog catalog,
   required String localeTag,
+  required ThemePreferenceController themeController,
   required Base64DecodeService base64DecodeService,
   required Base64EncodeService base64EncodeService,
   required CronService cronService,
@@ -531,6 +535,12 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag, 'app.description')),
+                      const SizedBox(height: 24),
+                      _ThemePreferencePanel(
+                        controller: themeController,
+                        catalog: catalog,
+                        localeTag: localeTag,
+                      ),
                       const SizedBox(height: 24),
                       ElevatedButton(
                         key: const Key('open-checksum-generate'),
@@ -1108,4 +1118,98 @@ GoRouter buildRouter({
       ),
     ],
   );
+}
+
+final class _ThemePreferencePanel extends StatelessWidget {
+  const _ThemePreferencePanel({
+    required this.controller,
+    required this.catalog,
+    required this.localeTag,
+  });
+
+  final ThemePreferenceController controller;
+  final MessageCatalog catalog;
+  final String localeTag;
+
+  String _message(String key) => catalog.lookup(localeTag, 'theme.$key');
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        final selectedLabel = controller.mode == ThemeMode.dark
+            ? _message('dark')
+            : _message('light');
+        final statusTheme = localeTag == 'pt-BR'
+            ? selectedLabel.toLowerCase()
+            : selectedLabel;
+        final status = switch (controller.status) {
+          ThemePreferenceStatus.idle => null,
+          ThemePreferenceStatus.saving => _message('saving'),
+          ThemePreferenceStatus.saved => _message(
+            'saved',
+          ).replaceFirst('{theme}', statusTheme),
+          ThemePreferenceStatus.notSaved => _message(
+            'notSaved',
+          ).replaceFirst('{theme}', statusTheme),
+        };
+
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      _message('title'),
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(_message('description')),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<ThemeMode>(
+                    key: const Key('theme-selector'),
+                    initialValue: controller.mode,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: _message('label'),
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: ThemeMode.light,
+                        child: Text(_message('light')),
+                      ),
+                      DropdownMenuItem(
+                        value: ThemeMode.dark,
+                        child: Text(_message('dark')),
+                      ),
+                    ],
+                    onChanged: (mode) {
+                      if (mode != null) unawaited(controller.select(mode));
+                    },
+                  ),
+                  if (status != null) ...[
+                    const SizedBox(height: 12),
+                    Semantics(
+                      key: const Key('theme-status'),
+                      liveRegion: true,
+                      container: true,
+                      child: Text(status),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
 }

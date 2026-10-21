@@ -755,6 +755,14 @@ _catalogs = <String, Map<String, String>>{
         'The decompressed text could not be copied.',
     'app.name': 'Chimera',
     'app.description': 'Developer toolbox',
+    'theme.title': 'Appearance',
+    'theme.description': 'Choose a light or dark appearance. Only this preference is stored locally.',
+    'theme.label': 'Theme',
+    'theme.light': 'Light',
+    'theme.dark': 'Dark',
+    'theme.saving': 'Applying and saving theme…',
+    'theme.saved': '{theme} theme applied and saved.',
+    'theme.notSaved': '{theme} theme is active for this session, but the preference was not saved.',
     'cli.certificateConvertUsage':
         'Usage: chimera certificate convert (--text=<value>|--stdin|--file=<path>) '
         '[--from=auto|pem|der|base64] --to=pem|der|base64 [--output=<path>] [--json]',
@@ -2175,6 +2183,14 @@ _catalogs = <String, Map<String, String>>{
         'A inspeção do certificado excedeu o limite de recursos.',
     'app.name': 'Chimera',
     'app.description': 'Caixa de ferramentas para desenvolvedores',
+    'theme.title': 'Aparência',
+    'theme.description': 'Escolha uma aparência clara ou escura. Somente esta preferência é armazenada localmente.',
+    'theme.label': 'Tema',
+    'theme.light': 'Claro',
+    'theme.dark': 'Escuro',
+    'theme.saving': 'Aplicando e salvando o tema…',
+    'theme.saved': 'Tema {theme} aplicado e salvo.',
+    'theme.notSaved': 'O tema {theme} está ativo nesta sessão, mas a preferência não foi salva.',
     'cli.noCommand': 'Nenhum comando foi informado.',
     'cli.usage':
         'Uso: chimera <comando> [opções]\n'

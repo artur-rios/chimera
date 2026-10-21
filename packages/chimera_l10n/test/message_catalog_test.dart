@@ -3,6 +3,25 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test('GivenThemeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
+    const keys = <String>{
+      'theme.title',
+      'theme.description',
+      'theme.label',
+      'theme.light',
+      'theme.dark',
+      'theme.saving',
+      'theme.saved',
+      'theme.notSaved',
+    };
+    for (final locale in supportedLocaleTags) {
+      for (final key in keys) {
+        expect(catalog.lookup(locale, key), isNotEmpty);
+        expect(catalog.lookup(locale, key), isNot(key));
+      }
+    }
+  });
+
   test('GivenCardMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'cli.cardUsage',
@@ -1824,6 +1843,14 @@ void main() {
       'error.certificateConvert.resource',
       'app.name',
       'app.description',
+      'theme.title',
+      'theme.description',
+      'theme.label',
+      'theme.light',
+      'theme.dark',
+      'theme.saving',
+      'theme.saved',
+      'theme.notSaved',
       'certificateInspect.representationLabel',
       'certificateInspect.pageTitle',
       'certificateInspect.openAction',

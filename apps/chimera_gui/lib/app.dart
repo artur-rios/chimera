@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
+import 'package:chimera_platform/chimera_platform.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -38,12 +41,14 @@ import 'person_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'router.dart';
+import 'shared_preferences_gateway.dart';
 import 'sql_format_page.dart';
 import 'text_analyze_page.dart';
 import 'text_compare_page.dart';
 import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
+import 'theme_preferences.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
 import 'uuid_page.dart';
@@ -161,6 +166,7 @@ final class ChimeraApp extends StatelessWidget {
     this.gzipDecompressClipboardWriter,
     this.gzipDecompressFileSaver,
     this.localeTag = 'en',
+    this.preferenceGateway,
     this.certificateConvertService = const CertificateConvertService(),
     this.certificateConvertFilePicker,
     this.certificateConvertFileSaver,
@@ -260,6 +266,7 @@ final class ChimeraApp extends StatelessWidget {
   });
 
   final String localeTag;
+  final PreferenceGateway? preferenceGateway;
   final LoremOperationService loremService;
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
@@ -573,6 +580,7 @@ final class ChimeraApp extends StatelessWidget {
         gzipDecompressClipboardWriter: gzipDecompressClipboardWriter,
         gzipDecompressFileSaver: gzipDecompressFileSaver,
         localeTag: localeTag,
+        preferenceGateway: preferenceGateway,
         certificateConvertService: certificateConvertService,
         certificateConvertFilePicker: certificateConvertFilePicker,
         certificateConvertFileSaver: certificateConvertFileSaver,
@@ -788,6 +796,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.certificateInspectClipboardReader,
     required this.certificateInspectClipboardWriter,
     required this.localeTag,
+    required this.preferenceGateway,
     required this.base64DecodeService,
     required this.base64EncodeService,
     required this.cronService,
@@ -871,6 +880,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   });
 
   final String localeTag;
+  final PreferenceGateway? preferenceGateway;
   final LoremOperationService loremService;
   final LoremClipboardWriter? loremClipboardWriter;
   final LoremFileSaver? loremFileSaver;
@@ -1080,10 +1090,15 @@ final class _RoutedChimeraApp extends StatefulWidget {
 final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   static const MessageCatalog _catalog = MessageCatalog();
   late final GoRouter _router;
+  late final ThemePreferenceController _themeController;
 
   @override
   void initState() {
     super.initState();
+    _themeController = ThemePreferenceController(
+      gateway: widget.preferenceGateway ?? SharedPreferencesPreferenceGateway(),
+    )..addListener(_handleThemeChanged);
+    unawaited(_themeController.restore());
     _router = buildRouter(
       loremService: widget.loremService,
       loremClipboardWriter: widget.loremClipboardWriter ?? writeLoremClipboard,
@@ -1279,6 +1294,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           writeCertificateInspectClipboard,
       catalog: _catalog,
       localeTag: widget.localeTag,
+      themeController: _themeController,
       base64DecodeService: widget.base64DecodeService,
       base64EncodeService: widget.base64EncodeService,
       cronService: widget.cronService,
@@ -1406,7 +1422,14 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   @override
   void dispose() {
     _router.dispose();
+    _themeController
+      ..removeListener(_handleThemeChanged)
+      ..dispose();
     super.dispose();
+  }
+
+  void _handleThemeChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -1416,6 +1439,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       routerConfig: _router,
       title: _catalog.lookup(widget.localeTag, 'app.name'),
       theme: ThemeData(
+        brightness: Brightness.light,
         colorSchemeSeed: const Color(0xFF6750A4),
         // Preserve the web engine's Roboto fallback before emoji, including
         // when a platform/system or monospace font is unavailable. Both fonts
@@ -1424,6 +1448,14 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
             ? const ['Roboto', 'Noto Color Emoji']
             : null,
       ),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+        colorSchemeSeed: const Color(0xFF6750A4),
+        fontFamilyFallback: kIsWeb
+            ? const ['Roboto', 'Noto Color Emoji']
+            : null,
+      ),
+      themeMode: _themeController.mode,
     );
   }
 }
