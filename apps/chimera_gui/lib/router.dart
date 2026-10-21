@@ -528,6 +528,7 @@ GoRouter buildRouter({
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
                     Semantics(
+                      key: const Key('app-title-heading'),
                       header: true,
                       child: Text(
                         catalog.lookup(localeTag, 'app.name'),
@@ -536,12 +537,6 @@ GoRouter buildRouter({
                     ),
                     const SizedBox(height: 12),
                     Text(catalog.lookup(localeTag, 'app.description')),
-                    const SizedBox(height: 24),
-                    _ThemePreferencePanel(
-                      controller: themeController,
-                      catalog: catalog,
-                      localeTag: localeTag,
-                    ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       key: const Key('open-checksum-generate'),
@@ -870,6 +865,12 @@ GoRouter buildRouter({
                       child: Text(
                         catalog.lookup(localeTag, 'qrDecode.openAction'),
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                    _ThemePreferencePanel(
+                      controller: themeController,
+                      catalog: catalog,
+                      localeTag: localeTag,
                     ),
                   ],
                 ),

@@ -24,6 +24,8 @@ void main() {
   }
 
   Future<void> selectTheme(WidgetTester tester, String label) async {
+    await tester.ensureVisible(find.byKey(const Key('theme-selector')));
+    await tester.pumpAndSettle();
     await tester.tap(find.text(label).last);
     await tester.pumpAndSettle();
   }
@@ -160,6 +162,8 @@ void main() {
       );
 
       final selector = find.byKey(const Key('theme-selector'));
+      await tester.ensureVisible(selector);
+      await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
       expect(tester.getSize(selector).height, greaterThanOrEqualTo(48));
       expect(find.text('Light'), findsOneWidget);

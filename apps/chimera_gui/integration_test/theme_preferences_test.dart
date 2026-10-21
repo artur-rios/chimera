@@ -24,6 +24,8 @@ void main() {
           ChimeraApp(localeTag: locale, preferenceGateway: gateway),
         );
         await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(const Key('theme-selector')));
+        await tester.pumpAndSettle();
         await tester.tap(find.text(locale == 'en' ? 'Dark' : 'Escuro').last);
         await tester.pumpAndSettle();
 
@@ -67,6 +69,8 @@ void main() {
       await tester.pumpWidget(
         ChimeraApp(preferenceGateway: _MemoryPreferenceGateway(fails: true)),
       );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byKey(const Key('theme-selector')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Dark').last);
       await tester.pumpAndSettle();
