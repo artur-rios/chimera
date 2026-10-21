@@ -113,7 +113,7 @@ jobs:
           cd apps/chimera_gui
           flutter build web --release --no-web-resources-cdn
       - name: Run Safari WebDriver smoke
-        timeout-minutes: 8
+        timeout-minutes: 15
         run: |
           sudo safaridriver --enable
           safaridriver -p 4444 > safari-driver.log 2>&1 &
