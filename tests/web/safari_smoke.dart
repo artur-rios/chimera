@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 import '../fixtures/jwt_signing_keys.dart';
+import 'safari_preference_focus.dart';
 import 'safari_protocol.dart';
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
@@ -3781,7 +3782,7 @@ Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
 }
 
 Future<void> _advancePreferenceFocus(WebDriver driver) =>
-    driver.keyboard.sendKeys(List<String>.filled(4, Keyboard.tab).join());
+    advanceSafariPreferenceFocus(driver.keyboard.sendKeys);
 
 Future<void> _decodeCipher(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');
