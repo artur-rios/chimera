@@ -131,6 +131,41 @@ file. Processing works offline, keeps no history and imposes no arbitrary size
 limit. Input and editor undo history are discarded after processing, failure,
 replacement, or navigation away. See the [independent known-answer fixtures](tests/fixtures/checksums/README.md).
 
+### Check for a native update
+
+Installed Windows and Linux builds can compare their version with compatible
+metadata from the latest stable GitHub release:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart update check \
+  --current-version 0.1.0 --platform windows --package-type installer
+```
+
+Use `--repository=owner/name` to select the release source and `--json` for
+stable automation output. The check strictly validates the six-field release
+metadata and SemVer compatibility. It does not download or install an artifact;
+an available result requires a separate explicit approval. The update page is
+available only in native desktop builds.
+
+Apply an available installer only with explicit approval:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart update apply --yes \
+  --current-version 0.1.0 --platform windows --package-type installer
+```
+
+The apply workflow stages a bounded download and verifies its published SHA-256
+before invoking the platform installer. Cleanup is attempted after every direct
+attempt, and a cleanup failure is surfaced. Windows hands the per-user Inno
+Setup installer and its staging cleanup to a detached helper that waits for the
+current process to exit, avoiding an executable-replacement deadlock. Windows
+reports this state as `scheduled`, disables duplicate apply actions, and lets
+Inno Setup surface any post-exit installation failure. Linux
+preflights the Debian transaction before asking for elevation through `pkexec`;
+permission denial is reported with retry guidance. Apply targets must match the
+host platform. Guided self-update rejects portable packages because replacing a
+running portable app cannot safely preserve the working version.
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.

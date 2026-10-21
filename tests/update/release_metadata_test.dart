@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:chimera_core/chimera_core.dart';
 import 'package:test/test.dart';
-
-import '../../tool/validate_release_metadata.dart';
 
 void main() {
   late Map<String, Object?> validMetadata;
@@ -22,7 +21,7 @@ void main() {
       final result = ReleaseMetadataValidator.validate(validMetadata);
 
       expect(result.isValid, isTrue);
-      expect(result.metadata!.releaseVersion, '1.2.3');
+      expect(result.metadata!.releaseVersion.toString(), '1.2.3');
       expect(result.metadata!.platform, ReleasePlatform.windows);
       expect(result.metadata!.application, ReleaseApplication.desktop);
       expect(result.metadata!.packageType, ReleasePackageType.installer);
@@ -58,4 +57,31 @@ void main() {
     expect(result.isValid, isFalse);
     expect(result.errors, contains('checksum'));
   });
+
+  test('GivenExtraField_WhenValidated_ThenFieldIsRejected', () {
+    validMetadata['architecture'] = 'x64';
+
+    final result = ReleaseMetadataValidator.validate(validMetadata);
+
+    expect(result.isValid, isFalse);
+    expect(result.errors, contains('architecture'));
+  });
+
+  test(
+    'GivenReleaseBuilds_WhenCompiled_ThenInstalledVersionAndRepositoryAreBound',
+    () {
+      final workflow = File('.github/workflows/release-artifacts.yml')
+          .readAsStringSync();
+
+      expect(
+        RegExp('CHIMERA_VERSION=\\\$version').allMatches(workflow),
+        hasLength(2),
+      );
+      expect(
+        RegExp('CHIMERA_RELEASE_REPOSITORY=').allMatches(workflow).length,
+        greaterThanOrEqualTo(4),
+      );
+      expect(RegExp('--build-name=').allMatches(workflow), hasLength(2));
+    },
+  );
 }

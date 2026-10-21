@@ -20,12 +20,14 @@ void main() {
     const file = _FakeFileGateway();
     const clipboard = _FakeClipboardGateway();
     const preferences = _FakePreferenceGateway();
-    const updates = _FakeUpdateGateway();
+    const downloader = _FakeUpdateArtifactDownloader();
+    const installer = _FakeUpdateInstaller();
 
     expect(file, isA<FileGateway>());
     expect(clipboard, isA<ClipboardGateway>());
     expect(preferences, isA<PreferenceGateway>());
-    expect(updates, isA<UpdateGateway>());
+    expect(downloader, isA<UpdateArtifactDownloader>());
+    expect(installer, isA<UpdateInstaller>());
   });
 }
 
@@ -65,18 +67,24 @@ final class _FakePreferenceGateway implements PreferenceGateway {
       const ChimeraSuccess<void>(null);
 }
 
-final class _FakeUpdateGateway implements UpdateGateway {
-  const _FakeUpdateGateway();
+final class _FakeUpdateArtifactDownloader implements UpdateArtifactDownloader {
+  const _FakeUpdateArtifactDownloader();
 
   @override
-  Future<ChimeraResult<List<int>>> downloadArtifact(Uri url) async =>
-      const ChimeraSuccess<List<int>>(<int>[]);
+  Future<ChimeraResult<void>> download({
+    required Uri source,
+    required String destinationPath,
+  }) async => const ChimeraSuccess<void>(null);
+}
+
+final class _FakeUpdateInstaller implements UpdateInstaller {
+  const _FakeUpdateInstaller();
 
   @override
-  Future<ChimeraResult<String>> fetchReleaseMetadata(Uri endpoint) async =>
-      const ChimeraSuccess<String>('{}');
-
-  @override
-  Future<ChimeraResult<void>> installArtifact(String path) async =>
-      const ChimeraSuccess<void>(null);
+  Future<ChimeraResult<UpdateInstallResult>> install({
+    required ReleaseMetadata release,
+    required String artifactPath,
+  }) async => const ChimeraSuccess<UpdateInstallResult>(
+    UpdateInstallResult(restartRequired: false),
+  );
 }

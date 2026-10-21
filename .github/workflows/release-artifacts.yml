@@ -81,11 +81,17 @@ jobs:
         shell: pwsh
         run: |
           flutter pub get
+          $version = $env:RELEASE_TAG.TrimStart('v')
           Push-Location apps/chimera_gui
-          flutter build windows --release
+          flutter build windows --release `
+            --build-name=$version `
+            --dart-define="CHIMERA_RELEASE_REPOSITORY=$env:GITHUB_REPOSITORY"
           Pop-Location
           New-Item -ItemType Directory -Force build/cli/windows | Out-Null
-          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe
+          dart compile exe apps/chimera_cli/bin/chimera.dart `
+            --define="CHIMERA_VERSION=$version" `
+            --define="CHIMERA_RELEASE_REPOSITORY=$env:GITHUB_REPOSITORY" `
+            -o build/cli/windows/chimera.exe
       - name: Install installer compiler
         run: choco install innosetup --no-progress --yes
       - name: Package applications and write integrity sidecars
@@ -125,11 +131,17 @@ jobs:
       - name: Build native applications
         run: |
           flutter pub get
+          version="${RELEASE_TAG#v}"
           cd apps/chimera_gui
-          flutter build linux --release
+          flutter build linux --release \
+            --build-name="$version" \
+            --dart-define="CHIMERA_RELEASE_REPOSITORY=$GITHUB_REPOSITORY"
           cd ../..
           mkdir -p build/cli/linux
-          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/linux/chimera
+          dart compile exe apps/chimera_cli/bin/chimera.dart \
+            --define="CHIMERA_VERSION=$version" \
+            --define="CHIMERA_RELEASE_REPOSITORY=$GITHUB_REPOSITORY" \
+            -o build/cli/linux/chimera
       - name: Package applications and write integrity sidecars
         run: |
           version="${RELEASE_TAG#v}"

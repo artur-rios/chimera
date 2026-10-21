@@ -64,7 +64,7 @@ void main() {
   );
 
   test('GivenSafariFileInput_WhenBinarySmokeRuns_ThenItIsBoundedAndDoesNotUseTheHangingUploadEndpoint', () {
-    expect(continuousIntegration, contains('timeout-minutes: 8'));
+    expect(continuousIntegration, contains('timeout-minutes: 15'));
     expect(safariSmoke, contains('new DataTransfer()'));
     expect(safariSmoke, contains('new Uint8Array([0x00, 0xff])'));
     expect(safariSmoke, contains("new File([bytes], 'bytes.bin'"));
@@ -90,6 +90,18 @@ void main() {
     );
     expect(inspectJwt, isNot(contains('driver.get(')));
     expect(inspectJwt, isNot(contains('_openJwtInspectPage(')));
+  });
+
+  test('GivenSafariHomeActions_WhenPreferencesAreReached_ThenKeyboardTraversalIsBatched', () {
+    expect(
+      safariSmoke,
+      contains('List<String>.filled(4, Keyboard.tab).join()'),
+    );
+    expect(
+      RegExp(r'await _advancePreferenceFocus\(driver\);')
+          .allMatches(safariSmoke),
+      hasLength(2),
+    );
   });
 
   test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {

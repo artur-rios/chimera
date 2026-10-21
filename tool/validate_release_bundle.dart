@@ -1,9 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:chimera_core/chimera_core.dart';
 import 'package:crypto/crypto.dart';
-
-import 'validate_release_metadata.dart';
 
 final class ReleaseArtifactDescriptor {
   const ReleaseArtifactDescriptor({
@@ -239,7 +238,7 @@ void _validateMetadata({
   }
   final metadata = validation.metadata!;
   _expectMetadata(
-    actual: metadata.releaseVersion,
+    actual: metadata.releaseVersion.toString(),
     expected: version,
     code: 'metadata-version',
     field: 'releaseVersion',
