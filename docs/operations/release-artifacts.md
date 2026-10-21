@@ -45,6 +45,40 @@ precedence. `--json` provides stable automation output. A check never requests
 the `downloadUrl` and never invokes an installer; an available result only says
 that explicit approval is required by the separate apply workflow.
 
+Apply the selected installer with an explicit same-invocation approval:
+
+```text
+chimera update apply --yes --repository=artur-rios/chimera \
+  --current-version=X.Y.Z --platform=windows --package-type=installer
+```
+
+Without `--yes`, the CLI returns `update-approval-required` before release
+discovery, staging, download, or installer activity. The native desktop presents
+the same approval as a confirmation dialog containing the version, package type,
+and checksum.
+Approval is never persisted.
+
+Accepted downloads are restricted to HTTPS `github.com`, use abortable bounded
+streaming with a 512 MiB limit, and are written to an isolated temporary root.
+The staged file's SHA-256 must exactly match the validated release metadata before
+an installer can run. Windows installers use per-user destinations. A detached
+helper waits for the current process to exit, runs the verified `.exe` with Inno
+Setup unattended/no-restart flags, and owns cleanup of that handed-off staging
+root. This avoids asking a running executable to wait for its own replacement.
+The immediate result is `scheduled`, not `applied`; the native update screen
+disables further checks, and Inno Setup retains its silent progress/error UI so
+post-exit failures remain visible. An application-scoped named mutex rejects
+duplicate helpers without blocking the other Chimera application.
+Linux first validates the `.deb` transaction with
+`dpkg --no-act --install`, then invokes `pkexec dpkg --no-triggers --install`.
+Chimera's Debian artifacts have no maintainer scripts, so a failed unpack stays
+within dpkg's native file backup and rollback behavior. A dismissed or unavailable
+permission prompt produces a separate actionable failure. Direct staging cleanup
+is attempted after every attempt and any failure is reported; Windows handoff
+cleanup is performed by the detached helper. Portable packages are deliberately rejected by guided
+self-update because safe in-place replacement of a running portable application
+cannot satisfy the working-version preservation requirement.
+
 The release workflow rejects malformed tags and runs formatting, analysis, and
 tests before either platform package job. Package jobs never receive deployment
 credentials. Native artifacts contain application binaries only; Yggdrasil
@@ -56,7 +90,7 @@ keeps host variables and secrets outside the repository and container layers.
 | --- | --- |
 | IR-01 | Root pub workspace, six member projects, and workspace-layout test. |
 | IR-02 | GUI and CLI depend on `chimera_core` and `chimera_utilities`; boundary test rejects reverse dependencies. |
-| IR-03 | `FileGateway`, `ClipboardGateway`, `PreferenceGateway`, and `UpdateGateway` are injectable platform contracts. |
+| IR-03 | File, clipboard, preference, update staging, download, checksum, and installer boundaries are injectable contracts. |
 | IR-04 | Dependency guard rejects database packages; no remote processing service exists. |
 | IR-05 | `PreferenceKey` exposes only `theme` and `language`. |
 | IR-06 | Catalog-parity tests require exact English and Brazilian Portuguese key sets. |

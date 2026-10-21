@@ -147,6 +147,25 @@ metadata and SemVer compatibility. It does not download or install an artifact;
 an available result requires a separate explicit approval. The update page is
 available only in native desktop builds.
 
+Apply an available installer only with explicit approval:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart update apply --yes \
+  --current-version 0.1.0 --platform windows --package-type installer
+```
+
+The apply workflow stages a bounded download and verifies its published SHA-256
+before invoking the platform installer. Cleanup is attempted after every direct
+attempt, and a cleanup failure is surfaced. Windows hands the per-user Inno
+Setup installer and its staging cleanup to a detached helper that waits for the
+current process to exit, avoiding an executable-replacement deadlock. Windows
+reports this state as `scheduled`, disables duplicate apply actions, and lets
+Inno Setup surface any post-exit installation failure. Linux
+preflights the Debian transaction before asking for elevation through `pkexec`;
+permission denial is reported with retry guidance. Apply targets must match the
+host platform. Guided self-update rejects portable packages because replacing a
+running portable app cannot safely preserve the working version.
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.

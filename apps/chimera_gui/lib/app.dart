@@ -266,6 +266,7 @@ final class ChimeraApp extends StatelessWidget {
     this.xmlFormatClipboardWriter,
     this.updateChecksEnabled = false,
     this.updateChecker,
+    this.updateApplier,
     this.initialLocation = '/',
     super.key,
   });
@@ -472,6 +473,7 @@ final class ChimeraApp extends StatelessWidget {
   final XmlFormatClipboardWriter? xmlFormatClipboardWriter;
   final bool updateChecksEnabled;
   final UpdateCheckCallback? updateChecker;
+  final UpdateApplyCallback? updateApplier;
   final String initialLocation;
 
   @override
@@ -680,6 +682,7 @@ final class ChimeraApp extends StatelessWidget {
         xmlFormatClipboardWriter: xmlFormatClipboardWriter,
         updateChecksEnabled: updateChecksEnabled && !kIsWeb,
         updateChecker: updateChecker,
+        updateApplier: updateApplier,
         initialLocation: initialLocation,
       ),
     );
@@ -890,6 +893,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.xmlFormatClipboardWriter,
     required this.updateChecksEnabled,
     required this.updateChecker,
+    required this.updateApplier,
     required this.initialLocation,
   });
 
@@ -1027,6 +1031,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final XmlFormatClipboardWriter? xmlFormatClipboardWriter;
   final bool updateChecksEnabled;
   final UpdateCheckCallback? updateChecker;
+  final UpdateApplyCallback? updateApplier;
   final String initialLocation;
 
   @override
@@ -1319,6 +1324,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
           writeCertificateInspectClipboard,
       updateChecksEnabled: widget.updateChecksEnabled,
       updateChecker: widget.updateChecker,
+      updateApplier: widget.updateApplier,
       catalog: _catalog,
       languageController: _languageController,
       themeController: _themeController,

@@ -8,6 +8,7 @@ void main() {
     ChimeraApp(
       updateChecksEnabled: nativeUpdateChecksSupported,
       updateChecker: nativeUpdateChecksSupported ? checkForNativeUpdate : null,
+      updateApplier: nativeUpdateChecksSupported ? applyNativeUpdate : null,
     ),
   );
 }

@@ -171,6 +171,7 @@ GoRouter buildRouter({
   required CertificateInspectClipboardWriter certificateInspectClipboardWriter,
   required bool updateChecksEnabled,
   required UpdateCheckCallback? updateChecker,
+  required UpdateApplyCallback? updateApplier,
   required MessageCatalog catalog,
   required LanguagePreferenceController languageController,
   required ThemePreferenceController themeController,
@@ -268,6 +269,7 @@ GoRouter buildRouter({
             catalog: catalog,
             localeTag: localeTag(),
             checker: updateChecker,
+            applier: updateApplier,
           ),
         ),
       GoRoute(

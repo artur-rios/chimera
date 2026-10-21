@@ -10,6 +10,9 @@ Versioning and use tags in the form `vX.Y.Z`.
 - Native GitHub release checks with strict shared metadata validation, SemVer
   compatibility selection, localized CLI/desktop status, and no artifact
   download before explicit approval.
+- Explicitly approved native installer updates with bounded staging, streamed
+  SHA-256 verification, platform installation, typed failures, and temporary
+  data cleanup across CLI and desktop flows.
 - Monorepo foundation for the Flutter GUI, Dart CLI, and shared packages.
 - English and Brazilian Portuguese application catalogs.
 - Privacy, dependency-boundary, release-metadata, accessibility, performance,

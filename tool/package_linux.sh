@@ -62,7 +62,7 @@ printf '%s\n' \
   'Section: utils' \
   'Priority: optional' \
   'Architecture: amd64' \
-  'Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6' \
+  'Depends: libgtk-3-0, libblkid1, liblzma5, libstdc++6, pkexec | policykit-1' \
   'Maintainer: Chimera maintainers' \
   'Description: Local-first developer toolbox desktop application' \
   >"$gui_package/DEBIAN/control"
@@ -76,6 +76,7 @@ printf '%s\n' \
   'Section: utils' \
   'Priority: optional' \
   'Architecture: amd64' \
+  'Depends: pkexec | policykit-1' \
   'Maintainer: Chimera maintainers' \
   'Description: Local-first developer toolbox command-line application' \
   >"$cli_package/DEBIAN/control"

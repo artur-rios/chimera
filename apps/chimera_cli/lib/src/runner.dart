@@ -5,6 +5,7 @@ import 'package:args/args.dart';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_platform/chimera_platform.dart';
+import 'package:chimera_platform/native_updates.dart';
 import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
@@ -118,6 +119,7 @@ Future<int> runChimera(
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
   UpdateCheckService? updateCheckService,
+  UpdateApplyService? updateApplyService,
   DateTime Function()? currentTime,
 }) async {
   const catalog = MessageCatalog();
@@ -192,6 +194,9 @@ Future<int> runChimera(
           : parsed.command?.name == 'update' &&
                 parsed.command?.command?.name == 'check'
           ? 'cli.updateCheckUsage'
+          : parsed.command?.name == 'update' &&
+                parsed.command?.command?.name == 'apply'
+          ? 'cli.updateApplyUsage'
           : 'cli.usage';
       out.writeln(catalog.lookup(localeTag, key));
       return 0;
@@ -211,6 +216,20 @@ Future<int> runChimera(
         service:
             updateCheckService ??
             UpdateCheckService(GitHubReleaseMetadataSource()),
+      );
+    }
+    if (parsed.command!.name == 'update' &&
+        parsed.command!.command?.name == 'apply') {
+      return await _runUpdateApply(
+        parsed.command!.command!,
+        localeTag: localeTag,
+        catalog: catalog,
+        out: out,
+        err: err,
+        checkService:
+            updateCheckService ??
+            UpdateCheckService(GitHubReleaseMetadataSource()),
+        applyService: updateApplyService,
       );
     }
     if (parsed.command!.name == 'lorem' &&
@@ -1079,6 +1098,8 @@ Future<int> runChimera(
         args.length >= 2 && args[0] == 'xml' && args[1] == 'format';
     final isUpdateCheck =
         args.length >= 2 && args[0] == 'update' && args[1] == 'check';
+    final isUpdateApply =
+        args.length >= 2 && args[0] == 'update' && args[1] == 'apply';
     _writeFailure(
       err,
       catalog: catalog,
@@ -1125,7 +1146,8 @@ Future<int> runChimera(
               isJsonFormat ||
               isSqlFormat ||
               isXmlFormat ||
-              isUpdateCheck) &&
+              isUpdateCheck ||
+              isUpdateApply) &&
           args.contains('--json'),
       kind: 'validation',
       code: isPerson
@@ -1212,6 +1234,8 @@ Future<int> runChimera(
           ? 'xml-format.invalid-options'
           : isUpdateCheck
           ? 'update-invalid-options'
+          : isUpdateApply
+          ? 'update-invalid-options'
           : 'cli.invalid-options',
       messageKey: isPerson
           ? 'error.person.validation'
@@ -1297,6 +1321,8 @@ Future<int> runChimera(
           ? 'error.xmlFormat.validation'
           : isUpdateCheck
           ? 'cli.updateCheckUsage'
+          : isUpdateApply
+          ? 'cli.updateApplyUsage'
           : 'error.unexpected',
     );
     return 64;
@@ -1688,7 +1714,24 @@ ArgParser _buildParser() {
       allowed: <String>['installer', 'portable'],
     )
     ..addFlag('json', negatable: false);
-  final update = ArgParser()..addCommand('check', updateCheck);
+  final updateApply = ArgParser()
+    ..addOption('repository', defaultsTo: _defaultUpdateRepository)
+    ..addOption('current-version', defaultsTo: _defaultInstalledVersion)
+    ..addOption(
+      'platform',
+      defaultsTo: Platform.isWindows ? 'windows' : 'linux',
+      allowed: <String>['windows', 'linux'],
+    )
+    ..addOption(
+      'package-type',
+      defaultsTo: 'installer',
+      allowed: const <String>['installer'],
+    )
+    ..addFlag('yes', negatable: false)
+    ..addFlag('json', negatable: false);
+  final update = ArgParser()
+    ..addCommand('check', updateCheck)
+    ..addCommand('apply', updateApply);
   return ArgParser()
     ..addFlag('help', abbr: 'h', negatable: false)
     ..addCommand('alphabet', alphabet)
@@ -1717,6 +1760,180 @@ ArgParser _buildParser() {
     ..addCommand('uuid', uuid)
     ..addCommand('update', update)
     ..addCommand('xml', xml);
+}
+
+Future<int> _runUpdateApply(
+  ArgResults parsed, {
+  required String localeTag,
+  required MessageCatalog catalog,
+  required StringSink out,
+  required StringSink err,
+  required UpdateCheckService checkService,
+  required UpdateApplyService? applyService,
+}) async {
+  final json = parsed.flag('json');
+  if (parsed.rest.isNotEmpty) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: FailureKind.validation.name,
+      code: 'update-invalid-options',
+      messageKey: 'cli.updateApplyUsage',
+    );
+    return 64;
+  }
+  if (!parsed.flag('yes')) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: FailureKind.update.name,
+      code: 'update-approval-required',
+      messageKey: 'error.update.approvalRequired',
+    );
+    return _exitCodeFor(FailureKind.update);
+  }
+
+  final repository = parsed.option('repository') ?? '';
+  final repositoryPattern = RegExp(r'^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$');
+  if (!repositoryPattern.hasMatch(repository)) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: FailureKind.validation.name,
+      code: 'update-invalid-options',
+      messageKey: 'cli.updateApplyUsage',
+    );
+    return 64;
+  }
+  final requestedPlatform = parsed.option('platform');
+  final hostPlatform = Platform.isWindows
+      ? 'windows'
+      : Platform.isLinux
+      ? 'linux'
+      : null;
+  if (hostPlatform == null || requestedPlatform != hostPlatform) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: FailureKind.validation.name,
+      code: 'update-invalid-options',
+      messageKey: 'cli.updateApplyUsage',
+    );
+    return 64;
+  }
+  final platform = parsed.option('platform') == 'windows'
+      ? ReleasePlatform.windows
+      : ReleasePlatform.linux;
+  const packageType = ReleasePackageType.installer;
+  final installedVersion = parsed.option('current-version') ?? '';
+  final checked = await checkService.check(
+    endpoint: Uri.https('api.github.com', '/repos/$repository/releases/latest'),
+    installedVersion: installedVersion,
+    target: UpdateTarget(
+      platform: platform,
+      application: ReleaseApplication.cli,
+      packageType: packageType,
+    ),
+  );
+  if (checked case ChimeraFailure<UpdateCheckResult>(
+    :final kind,
+    :final code,
+    :final messageKey,
+  )) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: kind.name,
+      code: code,
+      messageKey: messageKey,
+    );
+    return _exitCodeFor(kind);
+  }
+
+  final check = (checked as ChimeraSuccess<UpdateCheckResult>).value;
+  final release = check.availableRelease;
+  if (release == null) {
+    if (json) {
+      out.writeln(
+        jsonEncode(<String, Object?>{
+          'status': UpdateCheckStatus.current.name,
+          'installedVersion': check.installedVersion.toString(),
+        }),
+      );
+    } else {
+      out.writeln(
+        catalog
+            .lookup(localeTag, 'update.current')
+            .replaceAll('{version}', check.installedVersion.toString()),
+      );
+    }
+    return 0;
+  }
+
+  final service =
+      applyService ??
+      UpdateApplyService(
+        storage: NativeUpdateTemporaryStorage(),
+        downloader: HttpUpdateArtifactDownloader(),
+        verifier: const Sha256UpdateChecksumVerifier(),
+        installer: NativeUpdateInstaller(platform: platform),
+      );
+  final applied = await service.apply(
+    UpdateApplyRequest(release: release, accepted: true),
+  );
+  if (applied case ChimeraFailure<UpdateApplyResult>(
+    :final kind,
+    :final code,
+    :final messageKey,
+  )) {
+    _writeFailure(
+      err,
+      catalog: catalog,
+      localeTag: localeTag,
+      json: json,
+      kind: kind.name,
+      code: code,
+      messageKey: messageKey,
+    );
+    return _exitCodeFor(kind);
+  }
+
+  final result = (applied as ChimeraSuccess<UpdateApplyResult>).value;
+  if (json) {
+    out.writeln(
+      jsonEncode(<String, Object?>{
+        'status': result.status.name,
+        'installedVersion': check.installedVersion.toString(),
+        'appliedVersion': result.release.releaseVersion.toString(),
+        'restartRequired': result.restartRequired,
+      }),
+    );
+  } else {
+    out.writeln(
+      catalog
+          .lookup(
+            localeTag,
+            result.status == UpdateApplyStatus.scheduled
+                ? 'cli.updateScheduled'
+                : result.restartRequired
+                ? 'cli.updateAppliedRestart'
+                : 'cli.updateApplied',
+          )
+          .replaceAll('{installed}', check.installedVersion.toString())
+          .replaceAll('{applied}', result.release.releaseVersion.toString()),
+    );
+  }
+  return 0;
 }
 
 Future<int> _runUpdateCheck(
