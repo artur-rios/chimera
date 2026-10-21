@@ -92,6 +92,21 @@ void main() {
     expect(inspectJwt, isNot(contains('_openJwtInspectPage(')));
   });
 
+  test(
+    'GivenSafariHomeActions_WhenPreferencesAreReached_ThenKeyboardTraversalIsBatched',
+    () {
+      expect(
+        safariSmoke,
+        contains('List<String>.filled(4, Keyboard.tab).join()'),
+      );
+      expect(
+        RegExp(r'await _advancePreferenceFocus\(driver\);')
+            .allMatches(safariSmoke),
+        hasLength(2),
+      );
+    },
+  );
+
   test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {
     expect(continuousIntegration, contains('os: windows-latest'));
     expect(continuousIntegration, contains('target: windows'));
