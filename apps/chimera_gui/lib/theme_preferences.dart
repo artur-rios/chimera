@@ -11,6 +11,7 @@ final class ThemePreferenceController extends ChangeNotifier {
 
   ThemeMode _mode = ThemeMode.light;
   ThemePreferenceStatus _status = ThemePreferenceStatus.idle;
+  Future<void> _pendingWrites = Future<void>.value();
   int _generation = 0;
   bool _disposed = false;
 
@@ -59,19 +60,10 @@ final class ThemePreferenceController extends ChangeNotifier {
     _status = ThemePreferenceStatus.saving;
     notifyListeners();
 
-    ChimeraResult<void> result;
-    try {
-      result = await _gateway.write(
-        PreferenceKey.theme,
-        mode == ThemeMode.dark ? 'dark' : 'light',
-      );
-    } on Object {
-      result = const ChimeraFailure<void>(
-        kind: FailureKind.access,
-        code: 'preference_write_failed',
-        messageKey: 'error.preference.access',
-      );
-    }
+    final value = mode == ThemeMode.dark ? 'dark' : 'light';
+    final write = _pendingWrites.then((_) => _write(value));
+    _pendingWrites = write.then<void>((_) {});
+    final result = await write;
     if (_disposed || generation != _generation) return;
 
     _status = result.fold<ThemePreferenceStatus>(
@@ -79,6 +71,18 @@ final class ThemePreferenceController extends ChangeNotifier {
       onFailure: (_) => ThemePreferenceStatus.notSaved,
     );
     notifyListeners();
+  }
+
+  Future<ChimeraResult<void>> _write(String value) async {
+    try {
+      return await _gateway.write(PreferenceKey.theme, value);
+    } on Object {
+      return const ChimeraFailure<void>(
+        kind: FailureKind.access,
+        code: 'preference_write_failed',
+        messageKey: 'error.preference.access',
+      );
+    }
   }
 
   @override

@@ -121,6 +121,7 @@ void main() {
 
       expect(controller.mode, ThemeMode.dark);
       expect(controller.status, ThemePreferenceStatus.saving);
+      await Future<void>.delayed(Duration.zero);
       expect(gateway.writes, <String>['dark']);
 
       pending.complete(const ChimeraSuccess<void>(null));
@@ -154,7 +155,6 @@ void main() {
         final darkSelection = controller.select(ThemeMode.dark);
         gateway.pendingWrite = null;
         final lightSelection = controller.select(ThemeMode.light);
-        await lightSelection;
         read.complete(const ChimeraSuccess<String?>('dark'));
         firstWrite.complete(
           const ChimeraFailure<void>(
@@ -165,10 +165,30 @@ void main() {
         );
         await restore;
         await darkSelection;
+        await lightSelection;
 
         expect(controller.mode, ThemeMode.light);
         expect(controller.status, ThemePreferenceStatus.saved);
         expect(gateway.writes, <String>['dark', 'light']);
+      },
+    );
+
+    test(
+      'GivenRapidSelections_WhenOlderWriteCompletes_ThenLatestValuePersists',
+      () async {
+        final gateway = _OutOfOrderPreferenceGateway();
+        final controller = ThemePreferenceController(gateway);
+
+        final darkSelection = controller.select(ThemeMode.dark);
+        final lightSelection = controller.select(ThemeMode.light);
+        await Future<void>.delayed(Duration.zero);
+        gateway.firstWrite.complete();
+        await Future.wait(<Future<void>>[darkSelection, lightSelection]);
+
+        expect(gateway.writes, <String>['dark', 'light']);
+        expect(gateway.stored, 'light');
+        expect(controller.mode, ThemeMode.light);
+        expect(controller.status, ThemePreferenceStatus.saved);
       },
     );
 
@@ -185,6 +205,24 @@ void main() {
       await expectLater(restore, completes);
     });
   });
+}
+
+final class _OutOfOrderPreferenceGateway implements PreferenceGateway {
+  final Completer<void> firstWrite = Completer<void>();
+  final List<String> writes = <String>[];
+  String? stored;
+
+  @override
+  Future<ChimeraResult<String?>> read(PreferenceKey key) async =>
+      ChimeraSuccess<String?>(stored);
+
+  @override
+  Future<ChimeraResult<void>> write(PreferenceKey key, String value) async {
+    writes.add(value);
+    if (writes.length == 1) await firstWrite.future;
+    stored = value;
+    return const ChimeraSuccess<void>(null);
+  }
 }
 
 final class _FakePreferenceGateway implements PreferenceGateway {
