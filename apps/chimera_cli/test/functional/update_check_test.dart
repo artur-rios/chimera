@@ -28,7 +28,13 @@ void main() {
       final source = _Source(<Map<String, Object?>>[_metadata('1.2.0')]);
       final out = StringBuffer();
       final exitCode = await runChimera(
-        <String>['update', 'check', '--current-version=1.0.0', '--json'],
+        <String>[
+          'update',
+          'check',
+          '--current-version=1.0.0',
+          '--platform=windows',
+          '--json',
+        ],
         localeTag: 'en',
         out: out,
         err: StringBuffer(),
@@ -58,7 +64,12 @@ void main() {
       () async {
         final out = StringBuffer();
         final exitCode = await runChimera(
-          <String>['update', 'check', '--current-version=1.2.0'],
+          <String>[
+            'update',
+            'check',
+            '--current-version=1.2.0',
+            '--platform=windows',
+          ],
           localeTag: locale,
           out: out,
           err: StringBuffer(),
@@ -80,7 +91,12 @@ void main() {
       () async {
         final out = StringBuffer();
         final exitCode = await runChimera(
-          <String>['update', 'check', '--current-version=1.0.0'],
+          <String>[
+            'update',
+            'check',
+            '--current-version=1.0.0',
+            '--platform=windows',
+          ],
           localeTag: locale,
           out: out,
           err: StringBuffer(),
