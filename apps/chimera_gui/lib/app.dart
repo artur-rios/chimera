@@ -1096,7 +1096,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
   void initState() {
     super.initState();
     _themeController = ThemePreferenceController(
-      gateway: widget.preferenceGateway ?? SharedPreferencesPreferenceGateway(),
+      widget.preferenceGateway ?? SharedPreferencesPreferenceGateway(),
     )..addListener(_handleThemeChanged);
     unawaited(_themeController.restore());
     _router = buildRouter(

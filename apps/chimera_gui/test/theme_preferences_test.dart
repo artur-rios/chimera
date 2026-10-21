@@ -68,7 +68,7 @@ void main() {
       () async {
         for (final stored in <String?>[null, '', 'system', 'DARK']) {
           final controller = ThemePreferenceController(
-            gateway: _FakePreferenceGateway(stored: stored),
+            _FakePreferenceGateway(stored: stored),
           );
 
           await controller.restore();
@@ -84,10 +84,10 @@ void main() {
       'GivenCanonicalPreference_WhenRestored_ThenStoredThemeIsApplied',
       () async {
         final dark = ThemePreferenceController(
-          gateway: _FakePreferenceGateway(stored: 'dark'),
+          _FakePreferenceGateway(stored: 'dark'),
         );
         final light = ThemePreferenceController(
-          gateway: _FakePreferenceGateway(stored: 'light'),
+          _FakePreferenceGateway(stored: 'light'),
         );
 
         await dark.restore();
@@ -102,7 +102,7 @@ void main() {
       'GivenReadFailure_WhenRestored_ThenLightAndUnavailableStatusRemain',
       () async {
         final controller = ThemePreferenceController(
-          gateway: _FakePreferenceGateway(readFails: true),
+          _FakePreferenceGateway(readFails: true),
         );
 
         await controller.restore();
@@ -115,7 +115,7 @@ void main() {
     test('GivenSelection_WhenWritePending_ThenThemeAppliesImmediatelyAndSavesCanonicalValue', () async {
       final pending = Completer<ChimeraResult<void>>();
       final gateway = _FakePreferenceGateway(pendingWrite: pending);
-      final controller = ThemePreferenceController(gateway: gateway);
+      final controller = ThemePreferenceController(gateway);
 
       final selection = controller.select(ThemeMode.dark);
 
@@ -130,7 +130,7 @@ void main() {
 
     test('GivenWriteFailure_WhenSelected_ThenSessionThemeRemainsAndNotSavedIsReported', () async {
       final controller = ThemePreferenceController(
-        gateway: _FakePreferenceGateway(writeFails: true),
+        _FakePreferenceGateway(writeFails: true),
       );
 
       await controller.select(ThemeMode.dark);
@@ -148,7 +148,7 @@ void main() {
           pendingRead: read,
           pendingWrite: firstWrite,
         );
-        final controller = ThemePreferenceController(gateway: gateway);
+        final controller = ThemePreferenceController(gateway);
 
         final restore = controller.restore();
         final darkSelection = controller.select(ThemeMode.dark);
@@ -175,7 +175,7 @@ void main() {
     test('GivenPendingRestore_WhenControllerDisposed_ThenCompletionIsIgnoredSafely', () async {
       final read = Completer<ChimeraResult<String?>>();
       final controller = ThemePreferenceController(
-        gateway: _FakePreferenceGateway(pendingRead: read),
+        _FakePreferenceGateway(pendingRead: read),
       );
       final restore = controller.restore();
 

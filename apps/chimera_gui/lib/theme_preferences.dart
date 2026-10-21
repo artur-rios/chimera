@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 enum ThemePreferenceStatus { idle, saving, saved, notSaved }
 
 final class ThemePreferenceController extends ChangeNotifier {
-  ThemePreferenceController({required PreferenceGateway gateway})
-    : _gateway = gateway;
+  ThemePreferenceController(this._gateway);
 
   final PreferenceGateway _gateway;
 
