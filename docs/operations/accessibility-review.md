@@ -775,3 +775,30 @@ Firefox, and WebKit scenarios verify representative output, alternate input
 flows, discard behavior, semantic output, mapping metadata, and zero network
 attempts. The native Safari harness covers the same local decoding and
 validation contract. No automated UC-41 accessibility finding remains open.
+
+## UC-42 Change Theme
+
+- Branch: `feature/uc-42-change-theme`
+- Date: 2026-10-20
+- Targets: shared Flutter web, Windows, and Linux interface
+- Locales: English and Brazilian Portuguese
+
+The home-page appearance card exposes a localized heading, explanation, and
+light/dark selector in document-order keyboard traversal. The selector remains
+at least 48 logical pixels high and usable at a 320-pixel logical width and
+200% text scale. Theme persistence updates are announced through a localized
+live status region without moving focus.
+
+The light or dark appearance is applied before local persistence completes.
+Success identifies the active saved theme; unavailable storage identifies the
+active session-only theme. Missing or invalid stored values retain the light
+default without interrupting startup. No utility input, output, or history is
+stored as part of this interaction.
+
+Focused controller, adapter, localization, and widget coverage exercises both
+themes and locales, restart restoration, invalid data, read/write failures,
+stale asynchronous completions, disposal, target size, semantics, and large
+text. Native Windows integration plus compiled Chromium, Firefox, and WebKit
+exercise selection and restoration without network access. The native Safari
+harness covers the same persistent theme journey. No automated UC-42
+accessibility finding remains open.

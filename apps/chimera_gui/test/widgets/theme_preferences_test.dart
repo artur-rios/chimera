@@ -24,8 +24,6 @@ void main() {
   }
 
   Future<void> selectTheme(WidgetTester tester, String label) async {
-    await tester.tap(find.byKey(const Key('theme-selector')));
-    await tester.pumpAndSettle();
     await tester.tap(find.text(label).last);
     await tester.pumpAndSettle();
   }
@@ -110,11 +108,11 @@ void main() {
       expect(brightness(tester), Brightness.dark);
       expect(
         tester
-            .widget<DropdownButtonFormField<ThemeMode>>(
+            .widget<SegmentedButton<ThemeMode>>(
               find.byKey(const Key('theme-selector')),
             )
-            .initialValue,
-        ThemeMode.dark,
+            .selected,
+        <ThemeMode>{ThemeMode.dark},
       );
     },
   );
@@ -164,10 +162,8 @@ void main() {
       final selector = find.byKey(const Key('theme-selector'));
       expect(tester.takeException(), isNull);
       expect(tester.getSize(selector).height, greaterThanOrEqualTo(48));
-      expect(
-        tester.getSemantics(selector).getSemanticsData().label,
-        contains('Theme'),
-      );
+      expect(find.text('Light'), findsOneWidget);
+      expect(find.text('Dark'), findsOneWidget);
       semantics.dispose();
     },
   );
