@@ -27,7 +27,9 @@ void main() {
       );
       await tester.tap(find.byKey(const Key('dotnet-project-nuget')));
       await tester.tap(find.byKey(const Key('dotnet-project-create')));
-      final project = File('${parent.path}/NativeExample/NativeExample.csproj');
+      final project = File.fromUri(
+        parent.uri.resolve('NativeExample/NativeExample.csproj'),
+      );
       await tester.runAsync(() async {
         for (
           var i = 0;
