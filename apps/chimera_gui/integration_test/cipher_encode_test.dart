@@ -24,17 +24,19 @@ void main() {
         addTearDown(() => directory.delete(recursive: true));
         final saved = File('${directory.path}/chimera-cipher-encoded.txt');
         String? copied;
+        Future<bool>? saveOperation;
         try {
           await tester.pumpWidget(
             ChimeraApp(
               localeTag: locale,
               initialLocation: '/cipher/encode',
               cipherEncodeClipboardWriter: (value) async => copied = value,
-              cipherEncodeFileSaver: (name, bytes, mime) async {
+              cipherEncodeFileSaver: (name, bytes, mime) {
                 expect(name, 'chimera-cipher-encoded.txt');
                 expect(mime, 'text/plain; charset=utf-8');
-                await saved.writeAsBytes(bytes, flush: true);
-                return true;
+                return saveOperation = saved
+                    .writeAsBytes(bytes, flush: true)
+                    .then((_) => true);
               },
             ),
           );
@@ -87,6 +89,8 @@ void main() {
           await tester.pumpAndSettle();
           expect(copied, 'Lxfopv!');
           await tester.tap(find.byKey(const Key('cipher-encode-save')));
+          expect(saveOperation, isNotNull);
+          expect(await saveOperation!, isTrue);
           await tester.pumpAndSettle();
           expect(await saved.readAsBytes(), utf8.encode('Lxfopv!'));
           expect(network.attempts, 0);

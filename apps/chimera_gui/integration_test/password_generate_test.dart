@@ -55,6 +55,7 @@ void main() {
         final target = File('${directory.path}/password.txt');
         await target.writeAsString('previous');
         String? copied;
+        Future<bool>? saveOperation;
         await tester.pumpWidget(
           ChimeraApp(
             localeTag: locale,
@@ -63,13 +64,14 @@ void main() {
             passwordClipboardWriter: (value) async {
               copied = value;
             },
-            passwordFileSaver: (name, bytes, mime) => saveLocalFile(
-              name,
-              bytes,
-              mime,
-              extensions: const ['txt'],
-              chooseLocation: (_, _) async => target.path,
-            ),
+            passwordFileSaver: (name, bytes, mime) =>
+                saveOperation = saveLocalFile(
+                  name,
+                  bytes,
+                  mime,
+                  extensions: const ['txt'],
+                  chooseLocation: (_, _) async => target.path,
+                ),
           ),
         );
         await tester.pumpAndSettle();
@@ -93,6 +95,8 @@ void main() {
         expect(copied, '00000000');
         await tester.ensureVisible(find.byKey(const Key('password-save')));
         await tester.tap(find.byKey(const Key('password-save')));
+        expect(saveOperation, isNotNull);
+        expect(await saveOperation!, isTrue);
         await tester.pumpAndSettle();
         expect(await target.readAsBytes(), utf8.encode('00000000'));
         expect(directory.listSync(), hasLength(1));
