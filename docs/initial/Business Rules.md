@@ -109,4 +109,4 @@ after that user accepts the update prompt.
   Restore may contact the actor's configured NuGet sources as part of the
   explicitly requested native build workflow.
 
-- BR-DW-07: Release tags are annotated, never forced or overwritten. Push is opt-in and sends one fully-qualified tag refspec; cancellation or failed remote acknowledgement preserves and reports the local tag and an unconfirmed remote outcome. Tag discovery recursively scans the selected source scope without following links; explicit project files resolve ambiguity.
+- BR-DW-07: Release tags are annotated, never forced or overwritten. Push is opt-in and sends one fully-qualified tag refspec with configured tag-following and submodule pushes explicitly disabled; cancellation or failed remote acknowledgement preserves and reports the local tag and an unconfirmed remote outcome. Tag discovery recursively scans the selected source scope without following links; explicit project files resolve ambiguity.

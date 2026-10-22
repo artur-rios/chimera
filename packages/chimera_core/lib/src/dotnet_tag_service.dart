@@ -153,6 +153,8 @@ final class DotnetTagService implements DotnetTagOperationService {
       if (request.push) {
         final pushed = await run([
           'push',
+          '--no-follow-tags',
+          '--recurse-submodules=no',
           '--',
           request.remote,
           'refs/tags/$tag:refs/tags/$tag',

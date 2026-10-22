@@ -110,7 +110,8 @@ void main() {
         0,
       );
       await git(['remote', 'add', 'local-test', remote.path]);
-      await git(['tag', 'unrelated']);
+      await git(['tag', '-a', 'unrelated', '-m', 'Existing unrelated tag']);
+      await git(['config', 'push.followTags', 'true']);
       final code = await runChimera(
         [
           'dotnet',
@@ -134,5 +135,77 @@ void main() {
       ]);
       expect(refs.stdout.toString().trim(), 'refs/tags/v1.2.3');
     },
+  );
+  test(
+    'GivenOnDemandSubmodules_WhenTagPushed_ThenOnlyParentRemoteIsChanged',
+    () async {
+      final auxiliary = await Directory.systemTemp.createTemp(
+        'chimera-tag-submodule-',
+      );
+      addTearDown(() => auxiliary.delete(recursive: true));
+      Future<ProcessResult> at(String path, List<String> args) async {
+        final result = await Process.run('git', args, workingDirectory: path);
+        expect(result.exitCode, 0, reason: '$args: ${result.stderr}');
+        return result;
+      }
+
+      final seed = Directory('${auxiliary.path}/seed')..createSync();
+      for (final args in [
+        ['init'],
+        ['config', 'user.name', 'Chimera Tests'],
+        ['config', 'user.email', 'chimera@example.invalid'],
+        ['commit', '--allow-empty', '-m', 'base'],
+      ]) {
+        await at(seed.path, args);
+      }
+      final subRemote = '${auxiliary.path}/subremote';
+      await at(auxiliary.path, ['clone', '--bare', seed.path, subRemote]);
+      await at(root.path, [
+        '-c',
+        'protocol.file.allow=always',
+        'submodule',
+        'add',
+        subRemote,
+        'sub',
+      ]);
+      await at(root.path, ['commit', '-am', 'add submodule']);
+      for (final args in [
+        ['config', 'user.name', 'Chimera Tests'],
+        ['config', 'user.email', 'chimera@example.invalid'],
+        ['commit', '--allow-empty', '-m', 'unpushed'],
+        ['tag', '-a', 'v1.2.3', '-m', 'submodule tag'],
+      ]) {
+        await at('${root.path}/sub', args);
+      }
+      await at(root.path, ['add', 'sub']);
+      await at(root.path, ['commit', '-m', 'submodule update']);
+      final parentRemote = '${auxiliary.path}/parentremote';
+      await at(auxiliary.path, ['init', '--bare', parentRemote]);
+      await at(root.path, ['remote', 'add', 'origin', parentRemote]);
+      await at(root.path, ['config', 'push.recurseSubmodules', 'on-demand']);
+      final out = StringBuffer(), err = StringBuffer();
+      final code = await runChimera(
+        ['dotnet', 'tag', '--project', '${root.path}/src', '--push'],
+        localeTag: 'en',
+        out: out,
+        err: err,
+      );
+      final subTags = await at(auxiliary.path, [
+        '--git-dir',
+        subRemote,
+        'tag',
+        '-l',
+      ]);
+      expect(subTags.stdout.toString().trim(), isEmpty);
+      expect(code, 0, reason: err.toString());
+      final parentTags = await at(auxiliary.path, [
+        '--git-dir',
+        parentRemote,
+        'tag',
+        '-l',
+      ]);
+      expect(parentTags.stdout.toString().trim(), 'v1.2.3');
+    },
+    timeout: const Timeout(Duration(minutes: 1)),
   );
 }

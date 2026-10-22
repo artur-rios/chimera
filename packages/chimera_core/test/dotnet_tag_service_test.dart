@@ -66,6 +66,8 @@ void main() {
     expect(failure.details['remoteOutcome'], 'unconfirmed');
     expect(runner.commands.last.arguments, [
       'push',
+      '--no-follow-tags',
+      '--recurse-submodules=no',
       '--',
       'origin',
       'refs/tags/v1.2.3:refs/tags/v1.2.3',

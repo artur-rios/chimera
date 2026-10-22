@@ -22,7 +22,7 @@ Future<int> runDotnetTag(
     ..addOption('remote', defaultsTo: 'origin')
     ..addFlag('json', negatable: false)
     ..addFlag('help', abbr: 'h', negatable: false);
-  StreamSubscription<ProcessSignal>? signal;
+  final subscriptions = <StreamSubscription<ProcessSignal>>[];
   try {
     final options = parser.parse(args);
     if (options.flag('help')) {
@@ -31,7 +31,12 @@ Future<int> runDotnetTag(
     }
     if (options.rest.isNotEmpty) throw const FormatException();
     final cancellation = OperationCancellation();
-    signal = ProcessSignal.sigint.watch().listen((_) => cancellation.cancel());
+    for (final signal in [
+      ProcessSignal.sigint,
+      if (!Platform.isWindows) ProcessSignal.sigterm,
+    ]) {
+      subscriptions.add(signal.watch().listen((_) => cancellation.cancel()));
+    }
     final result =
         await (service ??
                 DotnetTagService(
@@ -78,6 +83,8 @@ Future<int> runDotnetTag(
     err.writeln(catalog.lookup(localeTag, 'error.dotnetTag.command'));
     return 70;
   } finally {
-    await signal?.cancel();
+    for (final subscription in subscriptions) {
+      await subscription.cancel();
+    }
   }
 }
