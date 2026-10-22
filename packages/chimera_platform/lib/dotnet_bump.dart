@@ -34,14 +34,13 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
     return true;
   }
 
-  void _safePath(String path, {bool mayBeMissing = false}) {
+  void _safePath(String path) {
     final parent = Directory(p.dirname(path));
     if (!parent.existsSync() ||
         !p.equals(parent.resolveSymbolicLinksSync(), parent.path)) {
       throw const DotnetBumpBoundaryException('access');
     }
     final type = FileSystemEntity.typeSync(path, followLinks: false);
-    if (mayBeMissing && type == FileSystemEntityType.notFound) return;
     if (type != FileSystemEntityType.file ||
         !p.equals(File(path).resolveSymbolicLinksSync(), path)) {
       throw const DotnetBumpBoundaryException('access');
@@ -150,7 +149,7 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
   Future<void> _replaceBytes(
     String target,
     List<int> bytes, {
-    List<int>? expectedOriginal,
+    required List<int> expectedOriginal,
     bool inject = false,
   }) async {
     final stage = await _reserve(target, 'stage');
@@ -164,9 +163,8 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
       if (!_equal(await stage.readAsBytes(), bytes)) {
         throw const FileSystemException('Stage verification failed');
       }
-      _safePath(target, mayBeMissing: expectedOriginal == null);
-      if (expectedOriginal != null &&
-          !_equal(await File(target).readAsBytes(), expectedOriginal)) {
+      _safePath(target);
+      if (!_equal(await File(target).readAsBytes(), expectedOriginal)) {
         throw const DotnetBumpBoundaryException('conflict');
       }
       if (inject && operations.renameStage != null) {
@@ -195,17 +193,26 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
   Future<void> restore(
     String path,
     String backupPath,
-    List<int> original,
-  ) async {
+    List<int> original, {
+    required List<int> expectedCurrent,
+  }) async {
     _safePath(backupPath);
     final backup = await File(backupPath).readAsBytes();
     if (!_equal(backup, original)) {
       throw const FileSystemException('Backup verification failed');
     }
+    _safePath(path);
+    final current = await File(path).readAsBytes();
+    if (_equal(current, original)) return;
+    if (!_equal(current, expectedCurrent)) {
+      throw const DotnetBumpBoundaryException('conflict');
+    }
     if (operations.restoreBackup != null) {
       await operations.restoreBackup!(path, backupPath);
     } else {
-      await _replaceBytes(path, backup);
+      // Check again after the restore stage has been written, immediately
+      // before replacement, so a concurrent save during staging is preserved.
+      await _replaceBytes(path, backup, expectedOriginal: expectedCurrent);
     }
     _safePath(path);
     if (!_equal(await File(path).readAsBytes(), original)) {

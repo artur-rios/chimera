@@ -122,7 +122,7 @@ void main() {
     },
   );
   test(
-    'GivenCorruptReplacement_WhenVerified_ThenRollbackAndBackupPath',
+    'GivenCorruptReplacement_WhenVerified_ThenUnknownContentAndBackupRetained',
     () async {
       final result =
           await service(
@@ -134,37 +134,78 @@ void main() {
                 ),
               ).execute(const DotnetBumpRequest(increment: 'minor'))
               as ChimeraFailure<DotnetBumpOutput>;
-      expect(result.details['restored'], isTrue);
-      expect(await project.readAsString(), original);
-      expect(
-        await File(result.details['backupPath']! as String).readAsString(),
-        original,
-      );
-    },
-  );
-  test(
-    'GivenRollbackDenied_WhenVerificationFails_ThenRecoverableBackupRemains',
-    () async {
-      final result =
-          await service(
-                operations: DotnetBumpFileOperations(
-                  renameStage: (stage, target) async {
-                    await File(stage).rename(target);
-                    await File(target).writeAsString('<Project/>');
-                  },
-                  restoreBackup: (target, backup) async {
-                    throw const FileSystemException('locked');
-                  },
-                ),
-              ).execute(const DotnetBumpRequest(increment: 'major'))
-              as ChimeraFailure<DotnetBumpOutput>;
       expect(result.details['restored'], isFalse);
+      expect(await project.readAsString(), '<Project/>');
       expect(
         await File(result.details['backupPath']! as String).readAsString(),
         original,
       );
     },
   );
+  test('GivenOwnedReplacementAndRollbackDenied_WhenRestoreRequested_ThenRecoverableBackupRemains', () async {
+    final gateway = NativeDotnetBumpGateway(
+      workingDirectory: sandbox.path,
+      operations: DotnetBumpFileOperations(
+        restoreBackup: (target, backup) async {
+          throw const FileSystemException('locked');
+        },
+      ),
+    );
+    final originalBytes = await project.readAsBytes();
+    final expected = utf8.encode(original.replaceFirst('1.2.3', '1.2.4'));
+    final backup = await gateway.createBackup(project.path, originalBytes);
+    await gateway.replace(project.path, originalBytes, expected);
+    await expectLater(
+      gateway.restore(
+        project.path,
+        backup,
+        originalBytes,
+        expectedCurrent: expected,
+      ),
+      throwsA(isA<FileSystemException>()),
+    );
+    expect(await project.readAsBytes(), expected);
+    expect(await File(backup).readAsBytes(), originalBytes);
+  });
+  test(
+    'GivenOwnedReplacement_WhenRestored_ThenOriginalRecoveredAndBackupRemains',
+    () async {
+      final gateway = NativeDotnetBumpGateway(workingDirectory: sandbox.path);
+      final originalBytes = await project.readAsBytes();
+      final expected = utf8.encode(original.replaceFirst('1.2.3', '1.2.4'));
+      final backup = await gateway.createBackup(project.path, originalBytes);
+      await gateway.replace(project.path, originalBytes, expected);
+      await gateway.restore(
+        project.path,
+        backup,
+        originalBytes,
+        expectedCurrent: expected,
+      );
+      expect(await project.readAsBytes(), originalBytes);
+      expect(await File(backup).readAsBytes(), originalBytes);
+    },
+  );
+  test('GivenNewerSource_WhenRestoreRequested_ThenExpectedByteGuardPreservesSaveAndBackup', () async {
+    final gateway = NativeDotnetBumpGateway(workingDirectory: sandbox.path);
+    final originalBytes = await project.readAsBytes();
+    final expected = utf8.encode(original.replaceFirst('1.2.3', '1.2.4'));
+    final backup = await gateway.createBackup(project.path, originalBytes);
+    await gateway.replace(project.path, originalBytes, expected);
+    const newer =
+        '<Project><PropertyGroup><Version>5.0.0</Version><Description>user save</Description></PropertyGroup></Project>';
+    await project.writeAsString(newer);
+    await expectLater(
+      gateway.restore(
+        project.path,
+        backup,
+        originalBytes,
+        expectedCurrent: expected,
+      ),
+      throwsA(isA<DotnetBumpBoundaryException>()),
+    );
+    expect(await project.readAsString(), newer);
+    expect(await File(backup).readAsBytes(), originalBytes);
+  });
   test('GivenLinkedProject_WhenSelected_ThenNoWriteOutsideScope', () async {
     final link = p.join(source.path, 'Link.csproj');
     if (Platform.isWindows) return; // Real Windows junction coverage belongs to cleanup; file links require privileges.
@@ -174,6 +215,46 @@ void main() {
     );
     expect(result, isA<ChimeraFailure<DotnetBumpOutput>>());
     expect(await project.readAsString(), original);
+  });
+  test('GivenConcurrentSaveAndStagingFailure_WhenBumpFails_ThenNewerSourceAndOriginalBackupRemain', () async {
+    const newer =
+        '<Project><PropertyGroup><Version>5.0.0</Version><Description>user save</Description></PropertyGroup></Project>';
+    final result =
+        await service(
+              operations: DotnetBumpFileOperations(
+                writeStage: (path, bytes) async {
+                  await project.writeAsString(newer);
+                  throw const FileSystemException('staging write failed');
+                },
+              ),
+            ).execute(const DotnetBumpRequest(increment: 'patch'))
+            as ChimeraFailure<DotnetBumpOutput>;
+    expect(await project.readAsString(), newer);
+    expect(result.details['restored'], isFalse);
+    expect(
+      await File(result.details['backupPath']! as String).readAsString(),
+      original,
+    );
+  });
+  test('GivenConcurrentSaveAfterReplacement_WhenVerificationFails_ThenNewerSourceAndOriginalBackupRemain', () async {
+    const newer =
+        '<Project><PropertyGroup><Version>5.0.0</Version><Description>user save</Description></PropertyGroup></Project>';
+    final result =
+        await service(
+              operations: DotnetBumpFileOperations(
+                renameStage: (stage, target) async {
+                  await File(stage).rename(target);
+                  await project.writeAsString(newer);
+                },
+              ),
+            ).execute(const DotnetBumpRequest(increment: 'patch'))
+            as ChimeraFailure<DotnetBumpOutput>;
+    expect(await project.readAsString(), newer);
+    expect(result.details['restored'], isFalse);
+    expect(
+      await File(result.details['backupPath']! as String).readAsString(),
+      original,
+    );
   });
   test('GivenSourceChangedAfterRead_WhenStageReady_ThenRefuseOverwritingNewContent', () async {
     final result =

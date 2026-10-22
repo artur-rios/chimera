@@ -14,6 +14,8 @@ final class _Gateway implements DotnetBumpGateway {
   bool failCleanup = false;
   int backups = 0;
   bool written = false;
+  int restoreCalls = 0;
+  List<int>? concurrentSaveBeforeFailure;
   @override
   Future<String> resolveProject(String? selection) async => '/src/App.csproj';
   @override
@@ -32,6 +34,10 @@ final class _Gateway implements DotnetBumpGateway {
     List<int> expectedOriginal,
     List<int> updated,
   ) async {
+    if (concurrentSaveBeforeFailure case final newer?) {
+      content = [...newer];
+      throw StateError('staging failed after concurrent save');
+    }
     if (failWrite) throw StateError('write failed');
     content = [...updated];
     written = true;
@@ -41,8 +47,17 @@ final class _Gateway implements DotnetBumpGateway {
   Future<void> restore(
     String path,
     String backupPath,
-    List<int> original,
-  ) async {
+    List<int> original, {
+    required List<int> expectedCurrent,
+  }) async {
+    restoreCalls++;
+    if (content.length != expectedCurrent.length ||
+        List.generate(
+          content.length,
+          (index) => content[index] == expectedCurrent[index],
+        ).contains(false)) {
+      throw const DotnetBumpBoundaryException('conflict');
+    }
     if (failRestore) throw StateError('restore failed');
     content = [...backup!];
     written = false;
@@ -112,7 +127,7 @@ void main() {
   });
   test('GivenWriteOrRestoreFailure_WhenExecuted_ThenNeverSuccessAndRecoverableBackupRetained', () async {
     final original = [...gateway.content];
-    gateway.failWrite = true;
+    gateway.failVerification = true;
     gateway.failRestore = true;
     final result = await service.execute(
       const DotnetBumpRequest(increment: 'major'),
@@ -120,6 +135,20 @@ void main() {
     expect(result.details['restored'], isFalse);
     expect(gateway.backup, original);
     expect(result.details['backupPath'], isNotNull);
+  });
+  test('GivenStagingFailureAfterConcurrentSave_WhenExecuted_ThenNoRollbackAndBothVersionsRetained', () async {
+    final original = [...gateway.content];
+    final newer = utf8.encode(
+      '<Project><PropertyGroup><Version>5.0.0</Version><Description>user save</Description></PropertyGroup></Project>',
+    );
+    gateway.concurrentSaveBeforeFailure = newer;
+    final result = await service.execute(
+      const DotnetBumpRequest(increment: 'patch'),
+    ) as ChimeraFailure<DotnetBumpOutput>;
+    expect(gateway.content, newer);
+    expect(gateway.backup, original);
+    expect(gateway.restoreCalls, 0);
+    expect(result.details['restored'], isFalse);
   });
   test('GivenBackupCleanupFailureAfterVerification_WhenExecuted_ThenSuccessfulVersionAndRetainedBackupWarning', () async {
     gateway.failCleanup = true;
