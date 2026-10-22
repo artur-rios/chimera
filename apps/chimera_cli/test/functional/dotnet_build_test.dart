@@ -29,6 +29,23 @@ class Runner implements NativeCommandRunner {
 }
 
 void main() {
+  test(
+    'GivenUnknownDotnetVerb_WhenCli_ThenReturnGeneralCommandUsage',
+    () async {
+      final err = StringBuffer();
+      expect(
+        await runChimera(
+          ['dotnet', 'unknown-subcommand'],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        ),
+        64,
+      );
+      expect(err.toString(), contains('Usage: chimera <command>'));
+    },
+  );
+
   test('GivenDotnetBuildHelp_WhenCli_ThenLocalizedUsage', () async {
     final out = StringBuffer();
     expect(
