@@ -11,7 +11,8 @@ void main() {
   late DotnetCleanService service;
   setUp(() async {
     sandbox = await Directory.systemTemp.createTemp('chimera-clean-');
-    root = await Directory(p.normalize('${sandbox.path}/src')).create();
+    final source = await Directory(p.normalize('${sandbox.path}/src')).create();
+    root = Directory(await source.resolveSymbolicLinks());
     service = DotnetCleanService(
       NativeDotnetCleanGateway(workingDirectory: sandbox.path),
     );
@@ -129,6 +130,23 @@ void main() {
       isA<ChimeraFailure<DotnetCleanPreview>>(),
     );
   });
+  test(
+    'GivenLinkedSelectedRootOrAncestor_WhenPreviewed_ThenNoOutsideDeletion',
+    () async {
+      final outside = await Directory(p.join(sandbox.path, 'outside', 'source'))
+          .create(recursive: true);
+      final bin = await Directory(p.join(outside.path, 'bin')).create();
+      final alias = p.join(sandbox.path, 'linked-parent');
+      await createDirectoryLink(alias, p.dirname(outside.path));
+      for (final selected in [alias, p.join(alias, 'source')]) {
+        expect(
+          await service.preview(root: selected),
+          isA<ChimeraFailure<DotnetCleanPreview>>(),
+        );
+        expect(await bin.exists(), isTrue);
+      }
+    },
+  );
   test('GivenArtifactReplacedByLinkAfterPreview_WhenConfirmed_ThenRetainedAndOutsideUntouched', () async {
     final bin = await artifact('Project/bin');
     final value = await preview();
@@ -208,6 +226,75 @@ void main() {
     expect(report.removed.length, 1);
     expect(await late.exists(), isTrue);
   });
+  test('GivenSystemTempShortNameAlias_WhenPreviewed_ThenCanonicalScopeIsConfirmedAndCleaned', () async {
+    final createdHome = await Directory(
+      p.join(sandbox.path, 'runneradministrator'),
+    ).create();
+    final home = Directory(await createdHome.resolveSymbolicLinks());
+    final selected = await Directory(p.join(home.path, 'src')).create();
+    final bin = await Directory(p.join(selected.path, 'bin')).create();
+    final outside = await Directory(p.join(home.path, 'src2', 'bin'))
+        .create(recursive: true);
+    final alias = p.join(sandbox.path, 'RUNNER~1');
+    await IOOverrides.runWithIOOverrides(() async {
+      final cleaner = DotnetCleanService(
+        NativeDotnetCleanGateway(workingDirectory: alias),
+      );
+      final value =
+          (await cleaner.preview() as ChimeraSuccess<DotnetCleanPreview>).value;
+      expect(value.root, selected.path);
+      expect(value.paths, [bin.path]);
+      expect(await bin.exists(), isTrue);
+      final report = (await cleaner.clean(
+        value,
+        confirmed: true,
+      ) as ChimeraSuccess<DotnetCleanReport>).value;
+      expect(report.removed, [bin.path]);
+      expect(report.retained, isEmpty);
+      expect(await outside.exists(), isTrue);
+    }, _DirectoryAliasOverrides(alias, home.path));
+  });
+  test('GivenCanonicalAliasToDifferentObject_WhenPreviewed_ThenRejectedBeforeDeletion', () async {
+    final createdHome = await Directory(
+      p.join(sandbox.path, 'runneradministrator'),
+    ).create();
+    final home = Directory(await createdHome.resolveSymbolicLinks());
+    final selected = await Directory(p.join(home.path, 'src')).create();
+    final bin = await Directory(p.join(selected.path, 'bin')).create();
+    final alias = p.join(sandbox.path, 'RUNNER~1');
+    final overrides = _DirectoryAliasOverrides(
+      alias,
+      home.path,
+      sameObject: false,
+    );
+    await IOOverrides.runWithIOOverrides(() async {
+      final cleaner = DotnetCleanService(
+        NativeDotnetCleanGateway(workingDirectory: alias),
+      );
+      expect(
+        await cleaner.preview(),
+        isA<ChimeraFailure<DotnetCleanPreview>>(),
+      );
+      expect(await bin.exists(), isTrue);
+    }, overrides);
+    expect(overrides.directoryRequests, isNot(contains(p.join(alias, 'src'))));
+  });
+  test('GivenWindowsSystemTempAlias_WhenSelected_ThenCanonicalRootIsUsedWithoutFollowingJunctions', () async {
+    final bin = await artifact('Project/bin');
+    final resolvedRoot = await root.resolveSymbolicLinks();
+    final resolvedBin = await bin.resolveSymbolicLinks();
+    final rawRoot = p.join(sandbox.path, 'src');
+    final value = await preview(rawRoot);
+    expect(value.root, resolvedRoot);
+    expect(value.paths, [resolvedBin]);
+    expect(await bin.exists(), isTrue);
+    final report = (await service.clean(
+      value,
+      confirmed: true,
+    ) as ChimeraSuccess<DotnetCleanReport>).value;
+    expect(report.removed, [resolvedBin]);
+    expect(report.retained, isEmpty);
+  }, skip: !Platform.isWindows);
   test('GivenWindowsOrLinuxPaths_WhenScopeCompared_ThenComponentBoundariesAndCaseAreExact', () {
     expect(
       DotnetCleanScope.contains('/work/src', '/work/src/bin', separator: '/'),
@@ -267,4 +354,35 @@ Future<void> createDirectoryLink(String path, String target) async {
   } else {
     await Link(path).create(target);
   }
+}
+
+/// Models an OS short-name alias while retaining real isolated directories.
+/// Native calls map the short spelling to the same object; no link is created.
+final class _DirectoryAliasOverrides extends IOOverrides {
+  _DirectoryAliasOverrides(
+    this.alias,
+    this.canonical, {
+    this.sameObject = true,
+  });
+  final String alias;
+  final String canonical;
+  final bool sameObject;
+  final List<String> directoryRequests = [];
+  bool _isAlias(String path) => path == alias || p.isWithin(alias, path);
+  String _map(String path) =>
+      _isAlias(path) ? p.join(canonical, p.relative(path, from: alias)) : path;
+  @override
+  Directory createDirectory(String path) {
+    directoryRequests.add(path);
+    return super.createDirectory(_map(path));
+  }
+
+  @override
+  FileSystemEntityType fseGetTypeSync(String path, bool followLinks) =>
+      super.fseGetTypeSync(_map(path), followLinks);
+  @override
+  bool fseIdenticalSync(String first, String second) =>
+      (!sameObject && (_isAlias(first) || _isAlias(second)))
+      ? false
+      : super.fseIdenticalSync(_map(first), _map(second));
 }
