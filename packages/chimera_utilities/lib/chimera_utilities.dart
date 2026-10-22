@@ -30,6 +30,7 @@ export 'src/lorem/lorem_generator.dart';
 export 'src/number_base/number_base_converter.dart';
 export 'src/password/password_generator.dart';
 export 'src/person/person_generator.dart';
+export 'src/project_template.dart';
 export 'src/qr/qr_decoder.dart';
 export 'src/qr/qr_encoder.dart';
 export 'src/sql_format/sql_formatter.dart';

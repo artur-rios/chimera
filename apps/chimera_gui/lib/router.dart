@@ -35,6 +35,7 @@ import 'lorem_page.dart';
 import 'number_base_page.dart';
 import 'password_page.dart';
 import 'person_page.dart';
+import 'project_template_page.dart';
 import 'qr_decode_page.dart';
 import 'qr_encode_page.dart';
 import 'sql_format_page.dart';
@@ -938,6 +939,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag(), 'qrDecode.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-project-template'),
+                        onPressed: () => context.go('/project/from-template'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'scaffold.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       _ThemePreferencePanel(
                         controller: themeController,
@@ -956,6 +965,11 @@ GoRouter buildRouter({
             ),
           ),
         ),
+      ),
+      GoRoute(
+        path: '/project/from-template',
+        builder: (context, state) =>
+            ProjectTemplatePage(localeTag: localeTag()),
       ),
       GoRoute(
         path: '/cron/parse',

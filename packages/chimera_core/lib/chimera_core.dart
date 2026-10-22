@@ -1,3 +1,5 @@
+export 'package:chimera_utilities/chimera_utilities.dart' show TemplateBundle;
+
 export 'src/alphabet_decode_service.dart';
 export 'src/alphabet_encode_service.dart';
 export 'src/base64_decode_service.dart';
@@ -32,6 +34,7 @@ export 'src/person_service.dart';
 export 'src/qr_decode_service.dart';
 export 'src/qr_encode_service.dart';
 export 'src/result.dart';
+export 'src/scaffold_service.dart';
 export 'src/sql_format_service.dart';
 export 'src/text_analyze_service.dart';
 export 'src/text_compare_service.dart';

@@ -3,6 +3,21 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "scaffold.title": "Create project from template",
+    "scaffold.destination": "New destination path",
+    "scaffold.create": "Create project",
+    "scaffold.created": "Project created",
+    "scaffold.working": "Creating project…",
+    "scaffold.description": "Creates an offline project template, including hidden files. The destination must not exist.",
+    "cli.projectTemplateUsage":
+        "Usage: chimera project from-template <destination> [--json]",
+    "error.scaffold.validation": "Choose a valid new destination.",
+    "error.scaffold.template":
+        "The bundled template is missing or invalid. Nothing was created.",
+    "error.scaffold.access": "The destination already exists or cannot be created. Existing content was preserved.",
+    "error.scaffold.failed": "Project creation failed. Partial output was removed where safe; inspect any retained destination.",
+    "error.scaffold.unsupported": "Project creation is available in the Windows and Linux desktop and CLI applications.",
+
     'update.pageTitle': 'Check for updates',
     'update.openAction': 'Check for updates',
     'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
@@ -1344,6 +1359,21 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "scaffold.title": "Criar projeto a partir de modelo",
+    "scaffold.destination": "Caminho do novo destino",
+    "scaffold.create": "Criar projeto",
+    "scaffold.created": "Projeto criado",
+    "scaffold.working": "Criando projeto…",
+    "scaffold.description": "Cria um projeto com modelo local, incluindo arquivos ocultos. O destino não pode existir.",
+    "cli.projectTemplateUsage":
+        "Uso: chimera project from-template <destino> [--json]",
+    "error.scaffold.validation": "Escolha um novo destino válido.",
+    "error.scaffold.template":
+        "O modelo incluído está ausente ou inválido. Nada foi criado.",
+    "error.scaffold.access": "O destino já existe ou não pode ser criado. O conteúdo existente foi preservado.",
+    "error.scaffold.failed": "Falha ao criar o projeto. A saída parcial foi removida quando seguro; verifique o destino mantido.",
+    "error.scaffold.unsupported": "A criação de projetos está disponível nos aplicativos desktop e CLI para Windows e Linux.",
+
     'update.pageTitle': 'Verificar atualizações',
     'update.openAction': 'Verificar atualizações',
     'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',
