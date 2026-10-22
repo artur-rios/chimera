@@ -198,6 +198,14 @@ preference, file/clipboard, and update adapters vary by target.
 
 ---
 
+### 3.9 Developer Workflow (`DW`)
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-02 | Chimera shall provide UC-48 on supported Windows native desktop and CLI interfaces through one shared lifecycle service: launch and activate its own `cmd.exe /d` console; normalize invalid, absent, nonpositive, or out-of-range intervals to 20 seconds; wait 1 second at startup, 15 seconds initially, and the interval before each fixed sequential `echo Hello World <n>` command starting at 1; verify live console/process ownership and foreground at every scoped console-input write; stop on ownership/focus or automation failure; cancel and await cleanup without affecting unrelated windows; return a typed unsupported result on Linux and web; localize effective interval, stop count, and redacted failures in English and Brazilian Portuguese. | Must |
+
+---
+
 ## 4. Data Model
 
 ### 4.0 Identifier Strategy

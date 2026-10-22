@@ -506,7 +506,7 @@ access failures discard the source and expose no successful partial result.
 | Issue | Work | Source repositories |
 | --- | --- | --- |
 | [#96](https://github.com/artur-rios/chimera/issues/96) | UC-47 — Create Project from Template | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
-| [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
+| [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands — Implemented; human review pending | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
 | [#98](https://github.com/artur-rios/chimera/issues/98) | UC-49 — Build .NET Solution | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
@@ -515,6 +515,14 @@ access failures discard the source and expose no successful partial result.
 | [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#105](https://github.com/artur-rios/chimera/issues/105) | UC-56 — Scaffold .NET Project | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+
+
+UC-48 is available at `/terminal/type-periodic` and
+`chimera terminal type-periodic --interval=20`. It requires a supported native
+Windows console. Linux and web return a localized unsupported-target result.
+The first command follows the 1-second startup, 15-second initial delay, and
+selected interval. Stop with the desktop Stop button or CLI Ctrl+C; the owned
+terminal closes. Moving focus away stops input at the next send attempt.
 
 ## Contributing
 
