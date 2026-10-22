@@ -198,6 +198,12 @@ preference, file/clipboard, and update adapters vary by target.
 
 ---
 
+### 3.9 Developer Workflow (`DW`): UC-52
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-06 | Native Windows/Linux desktop and CLI shall share project discovery, numeric MAJOR.MINOR.PATCH calculation, and transactional version writing. Discover one immediate `.csproj` child of `./src` by default, or accept an explicit file/directory. Require exactly one explicit version or major/minor/patch increment; increments require an existing valid version and reset lower components. Preserve unrelated XML source, attributes, comments, namespace prefixes, newlines and supported UTF-8/UTF-16 encoding. Create and verify an exclusive original backup before replacement; reread and verify the exact updated bytes/version before cleanup. Failed writes or verification must restore or retain the original backup, report its path and never report success. Ambiguous discovery/version nodes, malformed XML and unsupported encoding fail before backup creation. Web is explicitly unsupported. |
+
 ## 4. Data Model
 
 ### 4.0 Identifier Strategy
@@ -344,6 +350,7 @@ the selected operation supports them.
 | `chimera cipher decode` | Decode using a classical cipher | FR-CA-02–FR-CA-04 |
 | `chimera alphabet encode` | Encode using a representation alphabet | FR-CA-05, FR-CA-07 |
 | `chimera alphabet decode` | Decode a representation alphabet | FR-CA-06–FR-CA-07 |
+| `chimera dotnet bump` | Set or increment a project version with a recoverable backup | FR-DW-06 |
 | `chimera update check` | Check for a compatible update | FR-UP-02–FR-UP-04 |
 | `chimera update apply` | Download, verify, and apply an accepted update | FR-UP-05–FR-UP-08 |
 

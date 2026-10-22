@@ -95,3 +95,9 @@ after that user accepts the update prompt.
   or collaboration features within the approved scope.
 - Do not apply a desktop or CLI update without first obtaining the user's
   confirmation.
+
+## UC-52 Project Version Transactions
+
+| ID | Rule | Rationale |
+| --- | --- | --- |
+| BR-DW-06 | Version changes accept one numeric MAJOR.MINOR.PATCH value or one major/minor/patch increment; incrementing resets lower components and requires a valid existing value. Discovery is nonrecursive and unambiguous. Preserve unrelated project bytes and supported encoding. Verify an exclusive backup before replacement and the complete updated bytes before removing the backup. Failed transactions always report the retained recovery path; no parse/validation failure creates a backup. | Project metadata edits must remain local, precise and recoverable. |

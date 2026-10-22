@@ -10,6 +10,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'dotnet_bump_command.dart';
 import 'output_sink.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
@@ -123,6 +124,14 @@ Future<int> runChimera(
   DateTime Function()? currentTime,
 }) async {
   const catalog = MessageCatalog();
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'bump') {
+    return runDotnetBumpCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+    );
+  }
   final parser = _buildParser();
 
   try {
