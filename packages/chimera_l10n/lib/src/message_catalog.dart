@@ -3,6 +3,30 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    'dotnet.title': 'Build .NET Solution',
+    'dotnet.exitStatus': 'External exit status: {code}',
+    'dotnet.source': 'Source directory',
+    'dotnet.solution': 'Solution (optional)',
+    'dotnet.configuration': 'Configuration',
+    'dotnet.both': 'Debug and Release',
+    'dotnet.noRestore': 'Skip restore',
+    'dotnet.build': 'Build',
+    'dotnet.cancel': 'Cancel',
+    'dotnet.running': 'Building solution…',
+    'dotnet.succeeded': 'Build completed successfully.',
+    'error.dotnet.validation':
+        'Specify a valid source directory and Debug or Release configuration.',
+    'error.dotnet.invalidPath':
+        'The source directory or solution path is invalid or inaccessible.',
+    'error.dotnet.noSolution': 'No solution (.sln) was found.',
+    'error.dotnet.ambiguousSolution':
+        'Multiple solutions were found. Select a solution explicitly.',
+    'error.dotnet.sdkUnavailable': 'The .NET SDK is unavailable. Install it and make dotnet available on PATH.',
+    'error.dotnet.commandFailed': 'The restore or build command failed. See diagnostics and the external exit status.',
+    'error.dotnet.cancelled': 'The build was cancelled.',
+    'error.dotnet.unsupported': 'Building .NET solutions requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'cli.dotnetBuildUsage': 'Usage: chimera dotnet build [source-directory] [--solution=<file.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Defaults: ./src, restore, Debug and Release.',
+
     'update.pageTitle': 'Check for updates',
     'update.openAction': 'Check for updates',
     'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
@@ -890,6 +914,7 @@ _catalogs = <String, Map<String, String>>{
     'cli.noCommand': 'No command provided.',
     'cli.usage':
         'Usage: chimera <command> [options]\n'
+        'Build .NET: chimera dotnet build [source-directory] [--help]\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
@@ -1344,6 +1369,28 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    'dotnet.title': 'Compilar solução .NET',
+    'dotnet.exitStatus': 'Código de saída externo: {code}',
+    'dotnet.source': 'Diretório de código-fonte',
+    'dotnet.solution': 'Solução (opcional)',
+    'dotnet.configuration': 'Configuração',
+    'dotnet.both': 'Debug e Release',
+    'dotnet.noRestore': 'Ignorar restauração',
+    'dotnet.build': 'Compilar',
+    'dotnet.cancel': 'Cancelar',
+    'dotnet.running': 'Compilando solução…',
+    'dotnet.succeeded': 'Compilação concluída com sucesso.',
+    'error.dotnet.validation':
+        'Informe um diretório válido e a configuração Debug ou Release.',
+    'error.dotnet.invalidPath': 'O diretório de código-fonte ou caminho da solução é inválido ou inacessível.',
+    'error.dotnet.noSolution': 'Nenhuma solução (.sln) foi encontrada.',
+    'error.dotnet.ambiguousSolution': 'Várias soluções foram encontradas. Selecione uma solução explicitamente.',
+    'error.dotnet.sdkUnavailable': 'O SDK .NET está indisponível. Instale-o e disponibilize dotnet no PATH.',
+    'error.dotnet.commandFailed': 'A restauração ou compilação falhou. Consulte os diagnósticos e o código de saída externo.',
+    'error.dotnet.cancelled': 'A compilação foi cancelada.',
+    'error.dotnet.unsupported': 'A compilação de soluções .NET requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'cli.dotnetBuildUsage': 'Uso: chimera dotnet build [diretório] [--solution=<arquivo.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Padrões: ./src, restauração, Debug e Release.',
+
     'update.pageTitle': 'Verificar atualizações',
     'update.openAction': 'Verificar atualizações',
     'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',
@@ -2278,6 +2325,7 @@ _catalogs = <String, Map<String, String>>{
     'cli.noCommand': 'Nenhum comando foi informado.',
     'cli.usage':
         'Uso: chimera <comando> [opções]\n'
+        'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',

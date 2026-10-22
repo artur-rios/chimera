@@ -429,3 +429,13 @@ approval, verified before application, and discarded or rolled back on failure.
 | BR-17 | FR-UP-02–FR-UP-08 |
 | BR-18 | NFR-10 |
 | BR-19 | FR-PL-09–FR-PL-11 |
+
+### Developer Workflows — UC-49
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-03 | Restore and build a selected `.sln` through one shared native service. Default to `./src`, automatic single-solution discovery, restoration enabled, and Debug followed by Release. Accept explicit solution, Debug/Release configuration, and no-restore mode. Validate discovery and SDK availability before building; stop on external failure, return its exit status, stream bounded/redacted diagnostics, and terminate the process tree on cancellation. CLI and Windows/Linux desktop are supported; web explicitly reports unsupported. | Must |
+
+Traceability: [UC-49 issue #98](https://github.com/artur-rios/chimera/issues/98),
+[PowerShell build](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1),
+[Python build](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).

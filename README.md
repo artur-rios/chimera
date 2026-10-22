@@ -166,6 +166,23 @@ permission denial is reported with retry guidance. Apply targets must match the
 host platform. Guided self-update rejects portable packages because replacing a
 running portable app cannot safely preserve the working version.
 
+### Build a .NET solution
+
+`chimera dotnet build` restores and builds the single `.sln` in `./src` for
+Debug and Release. Specify the source directory, solution, or one configuration:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart dotnet build ./src \
+  --solution Example.sln --configuration Release --no-restore --json
+```
+
+The Windows/Linux desktop route `/dotnet/build` shares this workflow and supports
+cancellation. Web displays an explicit unsupported message. An installed .NET
+SDK must be on `PATH`. `--no-restore` skips restoration in every build; otherwise
+NuGet may contact the actor's configured package sources. Diagnostics are bounded
+and redact URLs and common credential fields. Cancellation terminates the owned
+process tree and returns status 130; external failures preserve their exit code.
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.
