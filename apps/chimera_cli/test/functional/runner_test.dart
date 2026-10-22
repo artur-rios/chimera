@@ -3019,6 +3019,7 @@ void main() {
       expect(
         out.toString(),
         'Usage: chimera <command> [options]\n'
+        'Minimal .NET: chimera dotnet init-min --help\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]\n',
       );
       expect(err.toString(), isEmpty);
