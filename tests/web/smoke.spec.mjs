@@ -372,7 +372,7 @@ test('GivenAlphabetSources_WhenEncodedAndRejected_ThenMappingAndFlowStayOffline'
     .toBe('... --- ... / ..---');
 
   const pendingChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await activateFlutterButton(page.getByRole('button', { name: 'Load UTF-8 file', exact: true }));
   await (await pendingChooser).setFiles({
     name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from('AZ', 'utf8'),
   });
@@ -446,7 +446,7 @@ test('GivenAlphabetSources_WhenDecodedAndRejected_ThenMappingAndFlowStayOffline'
     .toBe('SOS 2');
 
   const pendingChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await activateFlutterButton(page.getByRole('button', { name: 'Load UTF-8 file', exact: true }));
   await (await pendingChooser).setFiles({
     name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from('Alfa Zulu', 'utf8'),
   });
