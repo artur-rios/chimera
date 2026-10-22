@@ -45,7 +45,8 @@ final class NativeDotnetTagProjectGateway implements DotnetTagProjectGateway {
         }
       }
 
-      await scan(Directory(selected));
+      final directory = reader.resolveDirectory(selected);
+      await scan(Directory(directory));
       files.sort();
       if (files.length != 1) {
         throw DotnetBumpBoundaryException(
