@@ -69,7 +69,7 @@ void main() {
       expect(outside.listSync(), isEmpty);
     },
   );
-  test('GivenConcurrentEmptyDestination_WhenCreating_ThenExistingDirectoryIsNotReplaced', () async {
+  test('GivenExistingEmptyDestination_WhenCreating_ThenExistingDirectoryIsNotReplaced', () async {
     final destination = Directory('${parent.path}/existing')..createSync();
     final before = destination.statSync().changed;
     final result = await ScaffoldService(const NativeScaffoldWriter())
@@ -121,5 +121,22 @@ void main() {
         .execute(ScaffoldRequest(destination: destination));
     expect(result, isA<ChimeraFailure<ScaffoldOutput>>());
     expect(File('${outside.path}/.gitkeep').readAsStringSync(), 'external');
+  });
+  test('GivenConcurrentCreates_WhenBothTargetOneDestination_ThenOneCompleteProjectSurvives', () async {
+    final destination = '${parent.path}/shared';
+    final service = ScaffoldService(const NativeScaffoldWriter());
+    final results = await Future.wait([
+      service.execute(ScaffoldRequest(destination: destination)),
+      service.execute(ScaffoldRequest(destination: destination)),
+    ]);
+    expect(results.whereType<ChimeraSuccess<ScaffoldOutput>>(), hasLength(1));
+    expect(results.whereType<ChimeraFailure<ScaffoldOutput>>(), hasLength(1));
+    for (final entry in service.template.files.entries) {
+      expect(
+        await File('$destination/${entry.key}').readAsString(),
+        entry.value,
+      );
+    }
+    expect(File('$destination/.chimera-scaffold-owner').existsSync(), isFalse);
   });
 }

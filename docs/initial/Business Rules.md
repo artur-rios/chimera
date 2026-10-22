@@ -98,5 +98,4 @@ after that user accepts the update prompt.
 
 ## Developer workflow rules
 
-- BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing.
-- BR-DW-02: A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
+- BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing. A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
