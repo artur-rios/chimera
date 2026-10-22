@@ -95,3 +95,7 @@ after that user accepts the update prompt.
   or collaboration features within the approved scope.
 - Do not apply a desktop or CLI update without first obtaining the user's
   confirmation.
+
+## Developer workflow rules
+
+- BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing. A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.

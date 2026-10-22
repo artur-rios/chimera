@@ -1154,6 +1154,44 @@ graph LR
 
 ---
 
+## 2.8 Developer Workflow Automation
+
+### UC-47: Create Project from Template
+
+**Actors:** Developer, local automation. **Targets:** native Windows/Linux GUI and CLI; web returns unsupported.
+
+**Requirements:** FR-DW-01 and shared FR-PL requirements.
+
+**Preconditions:** The actor selects a new destination under an existing writable parent.
+**Postconditions:** All pinned template files exist, or a typed failure is returned with no existing content overwritten.
+
+## Source traceability
+
+- [`cli-utils init-proj`](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/commands/init-proj.ps1)
+- [`cli-utils` documentation](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/README.md#init-proj)
+
+## Main flow
+
+1. The actor supplies a new destination name or path.
+2. Chimera validates that the parent is writable and the destination does not already exist.
+3. Chimera materializes a versioned `project-template` snapshot, including hidden files and excluding `.git`.
+4. Chimera reports the created path and template version.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | The destination is missing, invalid, already exists, or is not writable. | Return a typed validation or access failure without changing the destination. |
+| AF-02 | The packaged template is missing, corrupt, or cannot be copied completely. | Remove partial output when safe and report a typed scaffold failure. |
+
+## Acceptance criteria
+
+- [ ] The basic operation works offline using a versioned template bundled with Chimera.
+- [ ] The resulting tree matches the approved template fixture, including dotfiles and excluding `.git`.
+- [ ] CLI and supported native GUI surfaces use one shared scaffold service.
+- [ ] Failures do not overwrite an existing destination or report partial output as success.
+
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1204,6 +1242,7 @@ graph LR
 | UC-44 Check for Update | FR-UP-02–FR-UP-04, FR-UP-08 |
 | UC-45 Apply Update | FR-UP-05–FR-UP-08 |
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
+| UC-47 Create Project from Template | FR-DW-01, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

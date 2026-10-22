@@ -11,6 +11,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'output_sink.dart';
+import 'project_commands.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
   'CHIMERA_RELEASE_REPOSITORY',
@@ -120,8 +121,18 @@ Future<int> runChimera(
   XmlFormatService xmlFormatService = const XmlFormatService(),
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
+  ScaffoldOperationService? scaffoldService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.isNotEmpty && args.first == 'project') {
+    return runProjectCommand(
+      args.sublist(1),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: scaffoldService,
+    );
+  }
   const catalog = MessageCatalog();
   final parser = _buildParser();
 

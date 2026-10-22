@@ -429,3 +429,9 @@ approval, verified before application, and discarded or rolled back on failure.
 | BR-17 | FR-UP-02–FR-UP-08 |
 | BR-18 | NFR-10 |
 | BR-19 | FR-PL-09–FR-PL-11 |
+
+## Developer Workflow Automation
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-01 | Create a new native project from the offline, versioned canonical project-template snapshot, preserve hidden files, exclude Git metadata, validate destination access/conflicts before creation, and safely remove owned partial output after rendering or write failures. Desktop and CLI consume one shared service; unsupported targets return a typed result. |

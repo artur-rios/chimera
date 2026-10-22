@@ -1228,6 +1228,18 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'scaffold.title',
+      'scaffold.destination',
+      'scaffold.create',
+      'scaffold.created',
+      'scaffold.working',
+      'scaffold.description',
+      'cli.projectTemplateUsage',
+      'error.scaffold.validation',
+      'error.scaffold.template',
+      'error.scaffold.access',
+      'error.scaffold.failed',
+      'error.scaffold.unsupported',
       'update.pageTitle',
       'update.openAction',
       'update.description',
