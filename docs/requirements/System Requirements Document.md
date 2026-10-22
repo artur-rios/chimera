@@ -198,6 +198,12 @@ preference, file/clipboard, and update adapters vary by target.
 
 ---
 
+### 3.9 Developer Workflow (`DW`): UC-50
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-04 | Native Windows/Linux desktop and CLI shall share a build-artifact cleanup service. Resolve the actor-selected directory (default `./src` only when it exists), discover only topmost directories named exactly `bin` or `obj` beneath it, preview the canonical root and exact directory paths, and require explicit confirmation or CLI `--yes`. Reject missing/non-directory roots, traversal, linked roots/ancestors, junctions and case aliases. Revalidate canonical scope at deletion and conservatively retain changed or unsafe paths. No matches succeeds with zero removals; access/locked failures report each retained artifact and continue within scope. Web shall explicitly report unsupported behavior. |
+
 ## 4. Data Model
 
 ### 4.0 Identifier Strategy
@@ -344,6 +350,7 @@ the selected operation supports them.
 | `chimera cipher decode` | Decode using a classical cipher | FR-CA-02–FR-CA-04 |
 | `chimera alphabet encode` | Encode using a representation alphabet | FR-CA-05, FR-CA-07 |
 | `chimera alphabet decode` | Decode a representation alphabet | FR-CA-06–FR-CA-07 |
+| `chimera dotnet clean [--root=<directory>] [--yes]` | Preview and explicitly confirm removal of build artifacts; default `./src` | FR-DW-04 |
 | `chimera update check` | Check for a compatible update | FR-UP-02–FR-UP-04 |
 | `chimera update apply` | Download, verify, and apply an accepted update | FR-UP-05–FR-UP-08 |
 

@@ -95,3 +95,9 @@ after that user accepts the update prompt.
   or collaboration features within the approved scope.
 - Do not apply a desktop or CLI update without first obtaining the user's
   confirmation.
+
+## UC-50 Cleanup Safety
+
+| ID | Rule | Rationale |
+| --- | --- | --- |
+| BR-DW-04 | Cleanup operates only beneath one explicit resolved source root. Only exact `bin` and `obj` directory names qualify. Never traverse links or junctions, accept traversal/case aliases, delete the selected root itself, or expand scope after preview. Require explicit confirmation; `--yes` supplies it only for the current CLI invocation. Revalidate each entry before nonrecursive deletion, retain unsafe or inaccessible artifacts, and report actual removals. Empty discovery succeeds. | Destructive native actions require a visible, bounded and reviewable scope. |

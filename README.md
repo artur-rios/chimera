@@ -508,7 +508,7 @@ access failures discard the source and expose no successful partial result.
 | [#96](https://github.com/artur-rios/chimera/issues/96) | UC-47 — Create Project from Template | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
 | [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
 | [#98](https://github.com/artur-rios/chimera/issues/98) | UC-49 — Build .NET Solution | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-50-clean-net-build-artifacts) |
 | [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#102](https://github.com/artur-rios/chimera/issues/102) | UC-53 — Create .NET Release Tag | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
@@ -527,3 +527,14 @@ for the review gates, testing requirements, and Definition of Done.
 
 Chimera is distributed under the [Artur Rios Attribution License](LICENSE).
 Copyright © 2026 [Artur Rios](https://artur-rios.tech).
+
+### Clean .NET build artifacts (native Windows/Linux)
+
+Run `chimera dotnet clean --root=./src` to preview the exact resolved scope and
+artifact directories, then type `yes` (`sim` in Portuguese) to confirm. The default
+root is `./src` when it exists. For automation use
+`chimera dotnet clean --root=./src --yes`. Only directories named exactly `bin`
+or `obj` beneath that root qualify; source files and other directory names remain.
+Exit codes are 0 for success/no-op, 1 for partial failure with retained paths,
+and 2 for invalid or unconfirmed cleanup. The desktop tool presents the same
+preview and an explicit deletion dialog. Web displays native-only support.

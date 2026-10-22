@@ -1228,6 +1228,21 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'dotnetClean.title',
+      'dotnetClean.root',
+      'dotnetClean.preview',
+      'dotnetClean.scope',
+      'dotnetClean.confirm',
+      'dotnetClean.cancel',
+      'dotnetClean.confirmPrompt',
+      'dotnetClean.confirmationRequired',
+      'dotnetClean.invalidRoot',
+      'dotnetClean.invalidPreview',
+      'dotnetClean.invalidOptions',
+      'dotnetClean.removed',
+      'dotnetClean.retained',
+      'dotnetClean.unsupported',
+      'dotnetClean.usage',
       'update.pageTitle',
       'update.openAction',
       'update.description',
