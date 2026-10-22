@@ -9,7 +9,10 @@ arrays. CLI and desktop adapt the same service. The web route is present with
 an explicit unsupported message. No additional dependency is introduced.
 
 Linux starts each command in its own `setsid` process group and cancellation
-kills the group; Windows uses `taskkill /T /F`. Diagnostics are capped per
+kills the group; Windows launches the child suspended via a fixed PowerShell/C# helper, assigns
+it to a kill-on-close job, and then resumes it. Child arguments arrive as JSON
+and use Windows argv quoting; no actor input is interpreted as shell code.
+Closing the job also terminates descendants after their original parent exits. Diagnostics are capped per
 process and workflow at 65,536 characters, URLs and common credential fields are redacted,
 and oversized unterminated lines are discarded before emission. No command line
 or external diagnostic is sent to the application logging sink.
@@ -33,3 +36,6 @@ Verified locally: 15 focused Dart tests (including real .NET 10 Debug/Release
 build and intentional compiler failure), 2 GUI widget tests. Dedicated CI
 executes process-tree and real-build contracts on Windows and Linux. Windows
 execution and full repository checks remain required before human merge.
+
+Review follow-up: contain Windows children in a job object to cover cancellation
+after the original parent exits; add a descendant-survival regression contract.
