@@ -7,6 +7,51 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}BuildOutcome_WhenCompleted_ThenAnnouncesStatusAndExposesDiagnosticsAsText',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: DotnetBuildPage(
+              catalog: const MessageCatalog(),
+              localeTag: locale,
+              supported: true,
+              builder: (request, {cancellation, onDiagnostic}) async {
+                onDiagnostic?.call('compiler detail');
+                return const ChimeraSuccess(
+                  DotnetBuildOutput(
+                    solution: 'Example.sln',
+                    configurations: ['Debug'],
+                    diagnostics: 'compiler detail',
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('dotnet-build')));
+        await tester.pumpAndSettle();
+        final status = find.semantics.byLabel(
+          locale == 'en'
+              ? 'Build completed successfully.'
+              : 'Compilação concluída com sucesso.',
+        );
+        expect(status, findsOne);
+        expect(
+          status.evaluate().single,
+          isSemantics(isLiveRegion: true, isTextField: false),
+        );
+        final diagnostics = find.semantics.byLabel('compiler detail');
+        expect(diagnostics, findsOne);
+        expect(
+          diagnostics.evaluate().single,
+          isSemantics(isLiveRegion: false, isTextField: false),
+        );
+      },
+    );
+  }
+
   testWidgets(
     'GivenNativeBuild_WhenSubmitted_ThenSharedDefaultsAndDiagnostics',
     (tester) async {
