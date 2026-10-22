@@ -107,4 +107,22 @@ void main() {
       expect(existing.readAsStringSync(), 'keep');
     },
   );
+  test('GivenPortuguese_WhenScaffolded_ThenHumanModeIsLocalized', () async {
+    final out = StringBuffer();
+    final code = await runChimera(
+      [
+        'dotnet',
+        'init-project',
+        '--name',
+        'LocalExample',
+        '--parent',
+        directory.path,
+      ],
+      localeTag: 'pt-BR',
+      out: out,
+      err: StringBuffer(),
+    );
+    expect(code, 0);
+    expect(out.toString(), contains('Projeto mínimo'));
+  });
 }

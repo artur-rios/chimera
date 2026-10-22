@@ -38,7 +38,7 @@ final class _DotnetProjectPageState extends State<DotnetProjectPage> {
       _busy = false;
       _result = result.fold<String>(
         onSuccess: (value) =>
-            '${_message('scaffold.created')}: ${value.scaffold.createdPaths.single}\n${value.mode}',
+            '${_message('scaffold.created')}: ${value.scaffold.createdPaths.single}\n${_message(value.mode == 'nuget' ? 'dotnetProject.nuget' : 'dotnetProject.minimal')}',
         onFailure: (failure) => _message(failure.messageKey),
       );
     });

@@ -44,7 +44,7 @@ Future<int> runDotnetProjectCommand(
         out.writeln(
           options.flag('json')
               ? jsonEncode(value.toJson())
-              : '${catalog.lookup(localeTag, 'scaffold.created')}: ${value.scaffold.createdPaths.single}\n${value.mode}',
+              : '${catalog.lookup(localeTag, 'scaffold.created')}: ${value.scaffold.createdPaths.single}\n${catalog.lookup(localeTag, value.mode == 'nuget' ? 'dotnetProject.nuget' : 'dotnetProject.minimal')}',
         );
         return 0;
       },

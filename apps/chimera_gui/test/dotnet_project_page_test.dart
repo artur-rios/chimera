@@ -27,6 +27,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(service.request!.name, 'Example');
         expect(service.request!.nuget, isTrue);
+        if (locale == 'pt-BR') {
+          expect(
+            find.textContaining('\nProjeto NuGet (metadados vazios)'),
+            findsOneWidget,
+          );
+        }
         expect(
           find.textContaining('/tmp/Example/Example.csproj'),
           findsOneWidget,
