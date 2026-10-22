@@ -435,3 +435,13 @@ approval, verified before application, and discarded or rolled back on failure.
 | ID | Requirement |
 | --- | --- |
 | FR-DW-01 | Create a new native project from the offline, versioned canonical project-template snapshot, preserve hidden files, exclude Git metadata, validate destination access/conflicts before creation, and safely remove owned partial output after rendering or write failures. Desktop and CLI consume one shared service; unsupported targets return a typed result. |
+
+### Developer Workflows — UC-55
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-09 | Scaffold a minimal .NET library repository from five common values supplied through fields/flags or one JSON file. Validate exclusive input modes, required values, portable names, and a new writable destination before rendering offline, versioned configuration, license, README, solution, and minimal library project files with docs/tests placeholders. Omit NuGet metadata and test projects. Native desktop and CLI shall share parameter validation, rendering, and transactional writing; web shall explicitly report unsupported. Preserve existing destinations, roll back owned partial output when safe, and report every created path. | Must |
+
+Traceability: [UC-55 issue #104](https://github.com/artur-rios/chimera/issues/104),
+[PowerShell init-min](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1),
+[Python init-min](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).

@@ -798,3 +798,14 @@ Global
 	EndGlobalSection
 EndGlobal
 ''';
+
+// Pinned project.minimal.csproj.template; no packaging metadata.
+const dotnetMinimalProject = r'''<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+</Project>
+''';

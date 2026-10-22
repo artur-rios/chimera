@@ -1267,3 +1267,40 @@ stateDiagram-v2
     Installing --> Current : installation fails or rolls back
     Updated --> [*]
 ```
+
+## UC-55 — Scaffold Minimal .NET Library Repository
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-09; business rule BR-DW-09 |
+| Trigger | Actor requests a minimal library repository. |
+| Preconditions | Windows/Linux desktop or CLI; an existing writable parent directory; destination does not exist. Scaffolding itself needs no SDK or network. |
+| Success | An approved minimal .NET 10 solution and library, repository configuration, license, READMEs, and docs/tests placeholders exist; every created file and template version is reported. |
+
+1. The actor supplies `RootFolder`, `SolutionName`, `ProjectName`, `Author`, and
+   `Description` through fields/flags, or selects one JSON file containing them.
+2. Chimera rejects mixed modes, malformed JSON, missing/invalid field values,
+   invalid portable names, and existing or inaccessible destinations.
+3. Chimera renders the versioned offline templates: `.editorconfig`, `.gitignore`,
+   `.wakatime-project`, `LICENSE`, root and source READMEs,
+   `src/<SolutionName>.sln`, `src/<ProjectName>/<ProjectName>.csproj`,
+   `docs/.gitkeep`, and `tests/.gitkeep`. No NuGet metadata or test `.csproj` is
+   generated.
+4. Chimera validates the complete bundle, reserves the destination exclusively,
+   writes through the shared scaffold writer, and verifies written content.
+5. Chimera reports every created path and the pinned template version.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: Mixed modes, missing/invalid values, malformed JSON, unknown CLI options | Typed validation failure with stable field identifiers, no rendering/writing. |
+| AF-02: Existing destination, missing parent, or denied access | Typed access/conflict failure; preserve all existing content. |
+| AF-03: Rendering, writing, or verification failure | Reject invalid bundles before writing; remove owned partial output when safe and report typed failure, retaining content whose ownership cannot be proven. |
+| AF-04: Web | Explicit localized unsupported message; no native file creation. |
+
+Native desktop and CLI share the parameter parser, minimal renderer,
+`ScaffoldService`, and transactional native writer. English and Brazilian
+Portuguese cover inputs and outcomes. Independent golden fixtures and real
+Windows/Linux Debug/Release builds validate the generated solution.
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).

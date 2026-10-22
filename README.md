@@ -516,6 +516,28 @@ access failures discard the source and expose no successful partial result.
 | [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#105](https://github.com/artur-rios/chimera/issues/105) | UC-56 — Scaffold .NET Project | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 
+### Scaffold a minimal .NET library
+
+Create a minimal .NET 10 library repository with offline, versioned templates:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart dotnet init-min \
+  --root ./ExampleRepo --solution Example --project Example.Library \
+  --author "Jane Doe" --description "Example library" --json
+```
+
+Alternatively pass `--parameters parameters.json` containing `RootFolder`,
+`SolutionName`, `ProjectName`, `Author`, and `Description`. Fields and a parameter
+file are mutually exclusive. The destination must not exist and its parent must
+be writable. The desktop route is `/dotnet/init-min`; web reports unsupported.
+
+Output includes configuration, original license attribution, READMEs,
+`src/<SolutionName>.sln`, `src/<ProjectName>/<ProjectName>.csproj`, and placeholder
+`docs`/`tests` directories. It intentionally omits NuGet metadata and a test
+project. SDK installation is required to build the result, but scaffolding works
+offline without it. Failures preserve existing content and remove owned partial
+output where safe; success reports every created file and the template version.
+
 ## Contributing
 
 One use case equals one issue, branch, and pull request. Feature and fix branches

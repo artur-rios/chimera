@@ -100,3 +100,20 @@ after that user accepts the update prompt.
 
 - BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing.
 - BR-DW-02: A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
+
+## BR-DW-09 — Minimal .NET Library Repositories (UC-55)
+
+- Require `RootFolder`, `SolutionName`, `ProjectName`, `Author`, and `Description`
+  through fields/flags or one JSON file, never mixed modes. Return stable field
+  identifiers for invalid data without logging supplied values.
+- Use the pinned offline templates and retain original license attribution.
+  Generate one minimal .NET 10 library below `src/<ProjectName>`, its solution,
+  configuration and READMEs, plus empty docs/tests placeholders. Intentionally
+  omit NuGet metadata and any generated test project.
+- Reuse the shared transactional scaffold service/writer: reserve a new
+  destination exclusively, verify file content, never overwrite an existing
+  destination, and remove owned partial output on failure when safe.
+- Desktop and CLI share validation/rendering/writing; web explicitly reports
+  unsupported. Report every created file and the template version. SDK-backed
+  Windows/Linux golden/build checks validate templates without requiring an
+  installed SDK or network for the scaffold operation itself.

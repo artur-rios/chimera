@@ -11,6 +11,48 @@ final class DotnetRepositoryRenderer {
   static const templateVersion =
       'dotnet-tools-7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998-chimera-v1';
 
+  TemplateBundle renderMinimalLibrary(
+    DotnetRepositoryParameters parameters, {
+    required int year,
+  }) {
+    if (year < 2026 || year > 9999) {
+      throw ArgumentError('Invalid license year');
+    }
+    final project = parameters.projectName;
+    final values = {
+      'SOLUTION_NAME': parameters.solutionName,
+      'DESCRIPTION': parameters['Description'],
+    };
+    final readme = _replace(dotnetReadme, values);
+    final files = <String, String>{
+      '.editorconfig': dotnetEditorconfig,
+      '.gitignore': dotnetGitignore,
+      '.wakatime-project': '$project\n',
+      'LICENSE': _replace(dotnetLicense, {'YEAR': '$year'}),
+      'README.md': readme,
+      'src/README.md': _replace(
+        dotnetReadme.replaceFirst('(./LICENSE)', '(../LICENSE)'),
+        values,
+      ),
+      'src/${parameters.solutionName}.sln': _replace(dotnetSolution, {
+        'PROJECT_NAME': project,
+        'PROJECT_GUID': _guid('project:$project'),
+        'SOLUTION_NAME': parameters.solutionName,
+      }),
+      'src/$project/$project.csproj': dotnetMinimalProject,
+      'tests/.gitkeep': '',
+      'docs/.gitkeep': '',
+    };
+    return TemplateBundle(
+      version: templateVersion,
+      files: files,
+      digests: {
+        for (final entry in files.entries)
+          entry.key: sha256.convert(utf8.encode(entry.value)).toString(),
+      },
+    );
+  }
+
   TemplateBundle renderNugetLibrary(
     DotnetRepositoryParameters parameters, {
     required int year,

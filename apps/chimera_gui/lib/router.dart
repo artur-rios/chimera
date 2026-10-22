@@ -32,6 +32,7 @@ import 'jwt_inspect_page.dart';
 import 'language_preferences.dart';
 import 'list_compare_page.dart';
 import 'lorem_page.dart';
+import 'minimal_library_page.dart';
 import 'number_base_page.dart';
 import 'password_page.dart';
 import 'person_page.dart';
@@ -263,6 +264,10 @@ GoRouter buildRouter({
     refreshListenable: languageController,
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/dotnet/init-min',
+        builder: (context, state) => MinimalLibraryPage(localeTag: localeTag()),
+      ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
           path: '/update/check',
@@ -558,6 +563,13 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag(), 'app.description')),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-init-min'),
+                        onPressed: () => context.go('/dotnet/init-min'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetMinimal.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       if (updateChecksEnabled &&
                           updateChecker != null) ...<Widget>[
