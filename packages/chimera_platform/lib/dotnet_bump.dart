@@ -47,6 +47,42 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
     }
   }
 
+  /// Adopt the canonical spelling of one initial directory selection only after
+  /// rejecting links/reparse escapes in every lexical ancestor. Recursive native
+  /// consumers can share this initial boundary and retain strict later checks.
+  String resolveDirectory(String selection) {
+    if (selection.trim().isEmpty || selection.contains('\u0000')) {
+      throw const DotnetBumpBoundaryException('discovery');
+    }
+    final selected = p.normalize(
+      p.isAbsolute(selection) ? selection : p.join(workingDirectory, selection),
+    );
+    final ancestors = <String>[];
+    var ancestor = selected;
+    while (true) {
+      if (FileSystemEntity.typeSync(ancestor, followLinks: false) !=
+          FileSystemEntityType.directory) {
+        throw const DotnetBumpBoundaryException('access');
+      }
+      ancestors.add(ancestor);
+      final parent = p.dirname(ancestor);
+      if (parent == ancestor) break;
+      ancestor = parent;
+    }
+    // A short-name alias is the same object; a junction/link is not. Validate
+    // parents before resolving descendants, even if a reparse point was reported
+    // as a directory by a filesystem implementation.
+    var resolved = selected;
+    for (final ancestor in ancestors.reversed) {
+      final canonical = Directory(ancestor).resolveSymbolicLinksSync();
+      if (!FileSystemEntity.identicalSync(ancestor, canonical)) {
+        throw const DotnetBumpBoundaryException('access');
+      }
+      resolved = canonical;
+    }
+    return resolved;
+  }
+
   @override
   Future<String> resolveProject(String? selection) async {
     final raw = selection ?? p.join(workingDirectory, 'src');
@@ -60,20 +96,35 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
       p.isAbsolute(raw) ? raw : p.join(workingDirectory, raw),
     );
     final type = FileSystemEntity.typeSync(selected, followLinks: false);
-    if (type == FileSystemEntityType.file &&
-        p.extension(selected).toLowerCase() == '.csproj') {
-      _safePath(selected);
-      return File(selected).resolveSymbolicLinksSync();
+    if (type == FileSystemEntityType.file) {
+      final directory = resolveDirectory(p.dirname(selected));
+      final file = p.join(directory, p.basename(selected));
+      if (FileSystemEntity.typeSync(file, followLinks: false) !=
+          FileSystemEntityType.file) {
+        throw const DotnetBumpBoundaryException('access');
+      }
+      final canonical = File(file).resolveSymbolicLinksSync();
+      if (!FileSystemEntity.identicalSync(file, canonical)) {
+        throw const DotnetBumpBoundaryException('access');
+      }
+      if (p.extension(canonical).toLowerCase() != '.csproj') {
+        throw const DotnetBumpBoundaryException(
+          'discovery',
+          details: {'candidates': <String>[]},
+        );
+      }
+      _safePath(canonical);
+      return canonical;
     }
-    if (type != FileSystemEntityType.directory ||
-        !p.equals(Directory(selected).resolveSymbolicLinksSync(), selected)) {
+    if (type != FileSystemEntityType.directory) {
       throw const DotnetBumpBoundaryException(
         'discovery',
         details: {'candidates': <String>[]},
       );
     }
+    final directory = resolveDirectory(selected);
     final candidates =
-        Directory(selected)
+        Directory(directory)
             .listSync(followLinks: false)
             .where(
               (entry) =>

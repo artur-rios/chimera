@@ -31,7 +31,7 @@ void main() {
         expect(code, 0);
         expect(out.toString(), contains('1.2.3'));
         expect(out.toString(), contains('4.5.6'));
-        expect(out.toString(), contains(project.path));
+        expect(out.toString(), contains(await project.resolveSymbolicLinks()));
         expect(
           await project.readAsString(),
           contains('<Version>4.5.6</Version>'),
@@ -103,7 +103,10 @@ void main() {
       final value = jsonDecode(err.toString()) as Map<String, dynamic>;
       expect(
         (value['details'] as Map<String, dynamic>)['candidates'],
-        containsAll([project.path, second.path]),
+        containsAll([
+          await project.resolveSymbolicLinks(),
+          await second.resolveSymbolicLinks(),
+        ]),
       );
     },
   );
