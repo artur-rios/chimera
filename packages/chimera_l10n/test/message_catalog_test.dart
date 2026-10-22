@@ -3,6 +3,40 @@ import 'package:test/test.dart';
 
 void main() {
   const catalog = MessageCatalog();
+  test(
+    'GivenDotnetBuildMessages_WhenLocalized_ThenBothLanguagesAreComplete',
+    () {
+      const keys = <String>{
+        'cli.dotnetBuildUsage',
+        'dotnet.both',
+        'dotnet.build',
+        'dotnet.cancel',
+        'dotnet.configuration',
+        'dotnet.exitStatus',
+        'dotnet.noRestore',
+        'dotnet.running',
+        'dotnet.solution',
+        'dotnet.source',
+        'dotnet.succeeded',
+        'dotnet.title',
+        'error.dotnet.ambiguousSolution',
+        'error.dotnet.cancelled',
+        'error.dotnet.commandFailed',
+        'error.dotnet.invalidPath',
+        'error.dotnet.noSolution',
+        'error.dotnet.sdkUnavailable',
+        'error.dotnet.unsupported',
+        'error.dotnet.validation',
+      };
+      for (final locale in supportedLocaleTags) {
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+        }
+      }
+      expect(catalog.lookup('en', 'dotnet.title'), 'Build .NET Solution');
+      expect(catalog.lookup('pt-BR', 'dotnet.title'), 'Compilar solução .NET');
+    },
+  );
   test('GivenThemeMessages_WhenLookedUp_ThenBothLocalesAreComplete', () {
     const keys = <String>{
       'theme.title',
@@ -1228,6 +1262,27 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.dotnetBuildUsage',
+      'dotnet.both',
+      'dotnet.build',
+      'dotnet.cancel',
+      'dotnet.configuration',
+      'dotnet.exitStatus',
+      'dotnet.noRestore',
+      'dotnet.running',
+      'dotnet.solution',
+      'dotnet.source',
+      'dotnet.succeeded',
+      'dotnet.title',
+      'error.dotnet.ambiguousSolution',
+      'error.dotnet.cancelled',
+      'error.dotnet.commandFailed',
+      'error.dotnet.invalidPath',
+      'error.dotnet.noSolution',
+      'error.dotnet.sdkUnavailable',
+      'error.dotnet.unsupported',
+      'error.dotnet.validation',
+
       'update.pageTitle',
       'update.openAction',
       'update.description',
