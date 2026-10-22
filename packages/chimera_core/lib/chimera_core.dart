@@ -13,6 +13,7 @@ export 'src/cipher_encode_service.dart';
 export 'src/cron_service.dart';
 export 'src/date_service.dart';
 export 'src/diagnostics.dart';
+export 'src/dotnet_library_scaffold_service.dart';
 export 'src/gzip_compress_service.dart';
 export 'src/gzip_decompress_service.dart';
 export 'src/hash_generate_service.dart';
