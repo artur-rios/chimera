@@ -7,5 +7,5 @@ test('GivenBrowser_WhenCreatingReleaseTag_ThenUnsupportedTargetIsExplainedOfflin
   await placeholder.evaluate(node => node.click());
   await page.context().setOffline(true);
   await page.getByRole('button', { name: 'Create annotated tag', exact: true }).click();
-  await expect(page.getByText('Release tags are available in the Windows and Linux desktop and CLI applications.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Release tags are available in the Windows and Linux desktop and CLI applications.', exact: true })).toBeVisible();
 });
