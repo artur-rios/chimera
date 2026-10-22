@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
@@ -13,6 +14,60 @@ void main() {
   tearDown(() async {
     await root.delete(recursive: true);
   });
+  test(
+    'GivenQuotedArguments_WhenNativeRun_ThenPreserveArgumentsWithoutShell',
+    () async {
+      final script = File('${root.path}/arguments.dart');
+      await script.writeAsString(
+        "import 'dart:convert'; void main(List<String> a) { print(jsonEncode(a)); }",
+      );
+      final arguments = [
+        'space value',
+        'quote"value',
+        'trailing\\',
+        '',
+        r'$(echo unwanted)',
+        r'one\"two',
+      ];
+      final result = await const NativeProcessRunner().run(
+        NativeCommand(Platform.resolvedExecutable, [script.path, ...arguments]),
+      );
+      expect(result.exitCode, 0);
+      expect(jsonDecode(result.diagnostics), arguments);
+    },
+  );
+  test('GivenExitedParent_WhenDescendantSurvives_ThenTreeStillTerminates', () async {
+    final descendant = File('${root.path}/descendant.dart');
+    final parent = File('${root.path}/parent.dart');
+    final marker = File('${root.path}/descendant-alive');
+    await descendant.writeAsString(
+      "import 'dart:async'; import 'dart:io'; void main(List<String> a) { Timer.periodic(Duration(milliseconds: 50), (_) { File(a[0]).writeAsStringSync('alive'); stdout.writeln('alive'); }); }",
+    );
+    await parent.writeAsString(
+      "import 'dart:io'; Future<void> main(List<String> a) async { await Process.start(Platform.resolvedExecutable, a, mode: ProcessStartMode.inheritStdio); while (!await File(a.last).exists()) { await Future<void>.delayed(Duration(milliseconds: 20)); } exit(0); }",
+    );
+    final token = OperationCancellation();
+    final running = const NativeProcessRunner().run(
+      NativeCommand(Platform.resolvedExecutable, [
+        parent.path,
+        descendant.path,
+        marker.path,
+      ]),
+      cancellation: token,
+    );
+    while (!await marker.exists()) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+    token.cancel();
+    final result = await running.timeout(const Duration(seconds: 15));
+    // Windows also disposes the job at normal parent completion. Linux keeps
+    // cancellation active while the descendant holds an inherited output pipe.
+    expect(result.cancelled || result.exitCode == 0, isTrue);
+    await marker.delete();
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    expect(await marker.exists(), isFalse);
+  }, timeout: const Timeout(Duration(seconds: 30)));
   test('GivenNoOrMultipleSolutions_WhenDiscover_ThenTypedChoices', () async {
     const discovery = NativeProjectDiscovery();
     expect(

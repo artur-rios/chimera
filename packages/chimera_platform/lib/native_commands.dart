@@ -8,6 +8,8 @@ import 'dart:io';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:path/path.dart' as p;
 
+import 'src/windows_process_helper.dart';
+
 final class NativeProjectDiscovery implements ProjectDiscovery {
   const NativeProjectDiscovery();
 
@@ -72,7 +74,7 @@ final class NativeProjectDiscovery implements ProjectDiscovery {
 }
 
 /// Executes argument arrays without a shell. Linux uses a fresh process group;
-/// Windows uses taskkill /T to terminate descendants before awaiting pipe EOF.
+/// Windows contains the suspended child in a kill-on-close job object.
 final class NativeProcessRunner implements NativeCommandRunner {
   const NativeProcessRunner({this.maxDiagnosticCharacters = 65536});
   final int maxDiagnosticCharacters;
@@ -92,15 +94,38 @@ final class NativeProcessRunner implements NativeCommandRunner {
     Process process;
     try {
       process = await Process.start(
-        Platform.isLinux ? 'setsid' : command.executable,
+        Platform.isLinux
+            ? 'setsid'
+            : '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
         Platform.isLinux
             ? ['--wait', command.executable, ...command.arguments]
-            : command.arguments,
+            : [
+                '-NoLogo',
+                '-NoProfile',
+                '-NonInteractive',
+                '-EncodedCommand',
+                base64Encode(
+                  windowsProcessHelper.codeUnits
+                      .expand((unit) => [unit & 255, unit >> 8])
+                      .toList(),
+                ),
+              ],
         workingDirectory: command.workingDirectory,
         runInShell: false,
       );
     } on ProcessException {
       return const NativeCommandResult(exitCode: 127, unavailable: true);
+    }
+    if (Platform.isWindows) {
+      process.stdin.writeln(
+        jsonEncode({
+          'executable': command.executable,
+          'arguments': command.arguments,
+          'workingDirectory':
+              command.workingDirectory ?? Directory.current.path,
+        }),
+      );
+      await process.stdin.close();
     }
     final output = StringBuffer();
     var cancelled = false;
@@ -108,7 +133,7 @@ final class NativeProcessRunner implements NativeCommandRunner {
     Future<void>? termination;
     Future<void> terminate() async {
       if (Platform.isWindows) {
-        await Process.run('taskkill', ['/PID', '${process.pid}', '/T', '/F']);
+        process.kill(ProcessSignal.sigkill);
       } else {
         await Process.run('kill', ['-KILL', '--', '-${process.pid}']);
       }
