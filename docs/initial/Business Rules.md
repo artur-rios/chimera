@@ -108,3 +108,5 @@ after that user accepts the update prompt.
 - CLI and Windows/Linux desktop share the service; web explicitly cannot build.
   Restore may contact the actor's configured NuGet sources as part of the
   explicitly requested native build workflow.
+
+- BR-DW-07: Release tags are annotated, never forced or overwritten. Push is opt-in and sends one fully-qualified tag refspec; cancellation or failed remote acknowledgement preserves and reports the local tag and an unconfirmed remote outcome. Tag discovery recursively scans the selected source scope without following links; explicit project files resolve ambiguity.

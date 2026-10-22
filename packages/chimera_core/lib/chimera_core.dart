@@ -13,6 +13,7 @@ export 'src/date_service.dart';
 export 'src/diagnostics.dart';
 export 'src/dotnet_build_service.dart';
 export 'src/dotnet_bump_service.dart';
+export 'src/dotnet_tag_service.dart';
 export 'src/gzip_compress_service.dart';
 export 'src/gzip_decompress_service.dart';
 export 'src/hash_generate_service.dart';

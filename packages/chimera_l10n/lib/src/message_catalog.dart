@@ -3,6 +3,37 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "error.dotnetTag.access":
+        "The project could not be read. No tag was created.",
+    "dotnetTag.title": "Create .NET release tag",
+    "dotnetTag.project": "Project file or source directory",
+    "dotnetTag.remote": "Remote name",
+    "dotnetTag.push": "Push this tag to the selected remote",
+    "dotnetTag.create": "Create annotated tag",
+    "dotnetTag.cancel": "Cancel operation",
+    "dotnetTag.created": "Annotated local tag created; no push requested",
+    "dotnetTag.pushed": "Annotated tag created and pushed",
+    "dotnetTag.busy": "Creating release tag…",
+    "cli.dotnetTagUsage": "Usage: chimera dotnet tag [--project=<file-or-directory>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Choose a valid named remote and project selection.",
+    "error.dotnetTag.discovery":
+        "Select exactly one .csproj; no tag was created.",
+    "error.dotnetTag.version": "The project has no unambiguous valid semantic Version; no tag was created.",
+    "error.dotnetTag.repository":
+        "The project is not inside a Git working tree; no tag was created.",
+    "error.dotnetTag.conflict":
+        "The release tag already exists and was preserved.",
+    "error.dotnetTag.command":
+        "The Git operation failed. Inspect the reported local tag status.",
+    "error.dotnetTag.pushFailed":
+        "The push failed or was not confirmed. The local tag was retained.",
+    "error.dotnetTag.cancelled":
+        "The operation was cancelled. Any created local tag was retained.",
+    "error.dotnetTag.gitUnavailable":
+        "Git is unavailable. Install Git to create a release tag.",
+    "error.dotnetTag.unsupported": "Release tags are available in the Windows and Linux desktop and CLI applications.",
+
     'dotnet.title': 'Build .NET Solution',
     'dotnet.exitStatus': 'External exit status: {code}',
     'dotnet.source': 'Source directory',
@@ -1369,6 +1400,35 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "error.dotnetTag.access":
+        "Não foi possível ler o projeto. Nenhuma tag foi criada.",
+    "dotnetTag.title": "Criar tag de versão .NET",
+    "dotnetTag.project": "Arquivo de projeto ou diretório de origem",
+    "dotnetTag.remote": "Nome do remoto",
+    "dotnetTag.push": "Enviar esta tag ao remoto selecionado",
+    "dotnetTag.create": "Criar tag anotada",
+    "dotnetTag.cancel": "Cancelar operação",
+    "dotnetTag.created": "Tag local anotada criada; envio não solicitado",
+    "dotnetTag.pushed": "Tag anotada criada e enviada",
+    "dotnetTag.busy": "Criando tag de versão…",
+    "cli.dotnetTagUsage": "Uso: chimera dotnet tag [--project=<arquivo-ou-diretório>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Escolha um nome de remoto e uma seleção de projeto válidos.",
+    "error.dotnetTag.discovery":
+        "Selecione exatamente um .csproj; nenhuma tag foi criada.",
+    "error.dotnetTag.version": "O projeto não tem uma Version semântica válida e inequívoca; nenhuma tag foi criada.",
+    "error.dotnetTag.repository": "O projeto não está em uma árvore de trabalho Git; nenhuma tag foi criada.",
+    "error.dotnetTag.conflict": "A tag de versão já existe e foi preservada.",
+    "error.dotnetTag.command":
+        "A operação Git falhou. Verifique o estado da tag local informado.",
+    "error.dotnetTag.pushFailed":
+        "O envio falhou ou não foi confirmado. A tag local foi mantida.",
+    "error.dotnetTag.cancelled":
+        "A operação foi cancelada. Qualquer tag local criada foi mantida.",
+    "error.dotnetTag.gitUnavailable":
+        "O Git está indisponível. Instale o Git para criar uma tag de versão.",
+    "error.dotnetTag.unsupported": "Tags de versão estão disponíveis nos aplicativos desktop e CLI para Windows e Linux.",
+
     'dotnet.title': 'Compilar solução .NET',
     'dotnet.exitStatus': 'Código de saída externo: {code}',
     'dotnet.source': 'Diretório de código-fonte',

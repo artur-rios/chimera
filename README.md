@@ -544,3 +544,7 @@ for the review gates, testing requirements, and Definition of Done.
 
 Chimera is distributed under the [Artur Rios Attribution License](LICENSE).
 Copyright © 2026 [Artur Rios](https://artur-rios.tech).
+
+### .NET release tags (UC-53)
+
+`chimera dotnet tag [--project=<project.csproj-or-directory>] [--push] [--remote=origin] [--json]` recursively discovers one project in `./src` by default, reads its semantic `<Version>`, and creates annotated `v<version>` with `Release <version>`. Without `--push` it stays local. An explicit push sends only that tag. Existing tags are preserved; failed or cancelled pushes retain the local tag and report the remote outcome as unconfirmed. Desktop uses `/dotnet/tag`; browser receives an unsupported-target explanation. Git must be installed.

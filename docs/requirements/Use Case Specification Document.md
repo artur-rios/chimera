@@ -1154,6 +1154,40 @@ graph LR
 
 ---
 
+### UC-53: Create .NET Release Tag
+
+**Actors:** Developer, local automation. **Targets:** Windows/Linux desktop and CLI; web unsupported.
+**Requirements:** FR-DW-07, shared FR-PL requirements.
+**Preconditions:** One project with a valid semantic Version exists inside a Git working tree.
+**Postconditions:** An annotated local tag exists; only an explicit push may publish it. Failed pushes retain and report the local tag.
+
+## Source traceability
+
+- [`dotnet-tools tag`](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/tag.ps1)
+- [`python-dotnet-tools tag`](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/tag.py)
+
+## Main flow
+
+1. The actor selects a project scope and whether to push, defaulting the remote to `origin`.
+2. Chimera resolves exactly one `.csproj`, reads its version, verifies the Git repository, and confirms that `v<version>` does not exist.
+3. Chimera creates annotated tag `v<version>` with message `Release <version>`.
+4. When requested, Chimera pushes only that tag to the selected remote and reports local and remote outcomes separately.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Project discovery is ambiguous, the project has no valid version, or the target is not a Git repository. | Return a typed validation or discovery failure without creating a tag. |
+| AF-02 | The tag already exists. | Return a conflict result and leave the existing tag unchanged. |
+| AF-03 | Local tag creation succeeds but push fails. | Report the retained local tag and failed remote operation without claiming complete success. |
+
+## Acceptance criteria
+
+- [ ] Tag naming, annotation, optional push, and remote selection match the source tools.
+- [ ] No force operation, tag overwrite, credential logging, or implicit push is allowed.
+- [ ] Native desktop and CLI adapters share project discovery, Git execution, cancellation, and diagnostics; web is explicitly unsupported.
+
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1204,6 +1238,7 @@ graph LR
 | UC-44 Check for Update | FR-UP-02–FR-UP-04, FR-UP-08 |
 | UC-45 Apply Update | FR-UP-05–FR-UP-08 |
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
+| UC-53 Create .NET Release Tag | FR-DW-07, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

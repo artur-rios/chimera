@@ -11,6 +11,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'dotnet_build.dart';
+import 'dotnet_tag.dart';
 import 'output_sink.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
@@ -121,8 +122,18 @@ Future<int> runChimera(
   XmlFormatService xmlFormatService = const XmlFormatService(),
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
+  DotnetTagOperationService? dotnetTagService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'tag') {
+    return runDotnetTag(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetTagService,
+    );
+  }
   if (args.isNotEmpty && args.first == 'dotnet') {
     if (args.length >= 2 && args[1] == 'build') {
       return runDotnetBuild(

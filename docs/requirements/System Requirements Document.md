@@ -439,3 +439,9 @@ approval, verified before application, and discarded or rolled back on failure.
 Traceability: [UC-49 issue #98](https://github.com/artur-rios/chimera/issues/98),
 [PowerShell build](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1),
 [Python build](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).
+
+## .NET release-tag automation
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-07 | Resolve exactly one .NET project, validate its semantic Version and Git working tree, and create annotated tag v<version> with message Release <version>. Existing tags are never changed; only an explicitly requested push sends that exact tag to the selected remote (default origin). Retain local tags after failed/cancelled pushes and report local/remote outcomes separately. Shared native desktop/CLI service supports cancellation and redacted diagnostics; web is unsupported. |

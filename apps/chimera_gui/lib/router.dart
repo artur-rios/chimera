@@ -18,6 +18,7 @@ import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'dotnet_build_page.dart';
+import 'dotnet_tag_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -951,6 +952,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag(), 'qrDecode.openAction'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-tag'),
+                        onPressed: () => context.go('/dotnet/tag'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetTag.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       _ThemePreferencePanel(
                         controller: themeController,
@@ -969,6 +978,10 @@ GoRouter buildRouter({
             ),
           ),
         ),
+      ),
+      GoRoute(
+        path: '/dotnet/tag',
+        builder: (context, state) => DotnetTagPage(localeTag: localeTag()),
       ),
       GoRoute(
         path: '/cron/parse',
