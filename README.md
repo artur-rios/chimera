@@ -527,3 +527,7 @@ for the review gates, testing requirements, and Definition of Done.
 
 Chimera is distributed under the [Artur Rios Attribution License](LICENSE).
 Copyright © 2026 [Artur Rios](https://artur-rios.tech).
+
+### .NET project scaffolding (UC-56)
+
+`chimera dotnet init-project --name=Example --parent=./work [--minimal|--nuget] [--json]` creates one new project directory offline. Minimal is the default. NuGet mode keeps metadata elements with blank values. Existing destinations are never overwritten. Desktop uses the same service at `/dotnet/init-project`; browser users receive the native-target explanation. Templates target .NET 10 and are pinned to dotnet-tools commit `7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998`.

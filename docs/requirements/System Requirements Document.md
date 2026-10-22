@@ -435,3 +435,5 @@ approval, verified before application, and discarded or rolled back on failure.
 | ID | Requirement |
 | --- | --- |
 | FR-DW-01 | Create a new native project from the offline, versioned canonical project-template snapshot, preserve hidden files, exclude Git metadata, validate destination access/conflicts before creation, and safely remove owned partial output after rendering or write failures. Desktop and CLI consume one shared service; unsupported targets return a typed result. |
+
+| FR-DW-10 | Scaffold one validated .NET project offline using versioned minimal (default) or NuGet templates; reject mixed modes and invalid names/options, keep all NuGet metadata elements blank in NuGet mode, preserve existing paths, and safely roll back partial output. Native GUI and CLI use one shared renderer and transactional writer. |

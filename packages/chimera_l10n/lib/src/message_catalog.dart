@@ -3,6 +3,16 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "dotnetProject.title": "Scaffold .NET project",
+    "dotnetProject.name": "Project name",
+    "dotnetProject.parent": "Parent directory",
+    "dotnetProject.minimal": "Minimal project",
+    "dotnetProject.nuget": "NuGet project (blank metadata)",
+    "dotnetProject.create": "Create .NET project",
+    "error.dotnetProject.validation":
+        "Choose a valid project name and exactly one project mode.",
+    "cli.dotnetProjectUsage": "Usage: chimera dotnet init-project --name=<name> [--parent=<directory>] [--minimal|--nuget] [--json]",
+
     "scaffold.title": "Create project from template",
     "scaffold.destination": "New destination path",
     "scaffold.create": "Create project",
@@ -1359,6 +1369,16 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "dotnetProject.title": "Criar projeto .NET",
+    "dotnetProject.name": "Nome do projeto",
+    "dotnetProject.parent": "Diretório pai",
+    "dotnetProject.minimal": "Projeto mínimo",
+    "dotnetProject.nuget": "Projeto NuGet (metadados vazios)",
+    "dotnetProject.create": "Criar projeto .NET",
+    "error.dotnetProject.validation":
+        "Escolha um nome de projeto válido e apenas um modo de projeto.",
+    "cli.dotnetProjectUsage": "Uso: chimera dotnet init-project --name=<nome> [--parent=<diretório>] [--minimal|--nuget] [--json]",
+
     "scaffold.title": "Criar projeto a partir de modelo",
     "scaffold.destination": "Caminho do novo destino",
     "scaffold.create": "Criar projeto",

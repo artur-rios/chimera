@@ -13,6 +13,7 @@ export 'src/cipher/cipher_decoder.dart';
 export 'src/cipher/cipher_encoder.dart';
 export 'src/cron/cron_evaluator.dart';
 export 'src/date/date_converter.dart';
+export 'src/dotnet_project_template.dart';
 export 'src/gzip/gzip_compressor.dart';
 export 'src/gzip/gzip_decompressor.dart';
 export 'src/hash/hash_generator.dart';
