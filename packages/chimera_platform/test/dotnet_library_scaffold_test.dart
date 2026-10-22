@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_platform/native_scaffolding.dart';
+import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
 void main() {
@@ -27,7 +28,7 @@ void main() {
   test(
     'GivenValidRepository_WhenCreatedOffline_ThenReportsEveryCreatedFile',
     () async {
-      final destination = '${parent.path}/new';
+      final destination = p.join(parent.path, 'new');
       final result = await NugetLibraryScaffoldService(
         const NativeScaffoldWriter(),
       ).execute(DotnetScaffoldRequest(fields: parameters(destination)));
