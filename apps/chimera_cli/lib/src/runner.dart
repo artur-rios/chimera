@@ -10,6 +10,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'dotnet_library_commands.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -121,9 +122,20 @@ Future<int> runChimera(
   XmlFormatService xmlFormatService = const XmlFormatService(),
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
+  DotnetScaffoldOperationService? dotnetLibraryScaffoldService,
   ScaffoldOperationService? scaffoldService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-lib') {
+    return runDotnetLibraryCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetLibraryScaffoldService,
+      readFile: readFile,
+    );
+  }
   if (args.isNotEmpty && args.first == 'project') {
     return runProjectCommand(
       args.sublist(1),

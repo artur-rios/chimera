@@ -21,11 +21,11 @@
 
 ## Tasks
 
-- [ ] Test common parameter modes and field failures first; implement parser and renderer with literal golden output fixtures.
-- [ ] Test service validation/no-write/error mapping and native destination/rollback behavior; implement wrapper around shared writer.
-- [ ] Test CLI flags/JSON/access/EN-PT behavior and desktop fields/parameter file/start/result; add route/home and localized messages.
-- [ ] Verify a generated solution with real .NET 10 restore/build/test/pack using cached packages; add Windows/Linux CI acceptance coverage.
-- [ ] Extend FR-DW-08, UC-54 and BR-DW-08, README and source attribution. Analyze, focused tests, record evidence, commit; root runs full suites before PR.
+- [x] Test common parameter modes and field failures first; implement parser and renderer with literal golden output fixtures.
+- [x] Test service validation/no-write/error mapping and native destination/rollback behavior; implement wrapper around shared writer.
+- [x] Test CLI flags/JSON/access/EN-PT behavior and desktop fields/parameter file/start/result; add route/home and localized messages.
+- [x] Verify a generated solution with real .NET 10 restore/build/test/pack using cached packages; add Windows/Linux CI acceptance coverage.
+- [x] Extend FR-DW-08, UC-54 and BR-DW-08, README and source attribution. Analyze, focused tests, record evidence, commit; root runs full suites before PR.
 
 ## Review focus
 

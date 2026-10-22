@@ -1192,6 +1192,59 @@ graph LR
 - [ ] Failures do not overwrite an existing destination or report partial output as success.
 
 
+### UC-54: Scaffold NuGet Library Repository
+
+**Actors:** Developer and local automation. **Targets:** Windows/Linux native
+GUI and CLI; web returns a typed unsupported result. **Requirement:** FR-DW-08.
+**Prerequisite:** UC-47's shared transactional scaffold writer.
+
+**Traceability:** [issue #103](https://github.com/artur-rios/chimera/issues/103),
+[`dotnet-tools init-lib.ps1` at 7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-lib.ps1)
+and [`python-dotnet-tools init_lib.py` at c7255b386ca49a40cbafde7c6e4edd29b25fdebf](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_lib.py).
+
+**Main flow:**
+
+1. The actor opens `/dotnet/init-lib` or invokes `chimera dotnet init-lib`.
+   Supply every individual field/flag, or choose one UTF-8 JSON file using
+   `--parameters=<path>`; `--json` selects machine-readable result output.
+2. The shared parser validates required source keys `RootFolder`,
+   `SolutionName`, `ProjectName`, `Author`, `Company`, `Description`, `Version`,
+   `PackageId`, and `RepositoryUrl`. No implicit parameter file is loaded.
+   Names are portable dotted .NET identifiers (project namespaces exclude C#
+   reserved keywords); package IDs contain 1–100 ASCII letters, digits, dots,
+   underscores, or hyphens; strict SemVer numeric core components are at most
+   65534 for buildable assembly versions; repository URLs are absolute HTTPS
+   without credentials/fragments. Metadata is nonempty single-line XML text,
+   at most 4096 characters, with no MSBuild expressions or encoded expansions.
+   The explicit JSON document is at most 64 KiB and contains string values.
+3. The offline renderer uses versioned, embedded templates to produce
+   `.editorconfig`, `.gitignore`, `.wakatime-project`, original license and
+   attribution, README/versioning instructions, `src/<Solution>.sln`, the
+   NuGet library project and sample source, the referenced xUnit test project
+   and sample test, and `docs/.gitkeep`. The library targets .NET 10 and retains
+   supplied NuGet metadata. XML text is escaped without recursive substitution.
+4. UC-47's shared writer exclusively reserves a nonexistent destination under
+   an existing writable parent, creates and verifies every file, and returns
+   the absolute destination, template version, and every created file path.
+   Generation does not invoke dotnet, Git, restore, build, publish, or network
+   services. All request/output data is ephemeral.
+
+| Alternative | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | JSON and any individual value are mixed, including an explicit empty flag. | Reject input mode before reading the JSON file or writing anything. |
+| AF-02 | Required values, JSON shape, names, SemVer, destination name, or metadata are invalid. | Return `dotnet-scaffold-validation` with stable field identifiers and localized field feedback; create nothing. |
+| AF-03 | Parameter file is inaccessible or too large at the native read boundary. | Return a localized typed input-access error; do not invoke the scaffold service. |
+| AF-04 | Destination exists (file/directory/link), parent is absent, or access is denied. | Return the shared typed access/conflict result and preserve all existing content. |
+| AF-05 | Rendering, bundle validation, byte writing, or verification fails. | Return a typed rendering/scaffold error; remove only still-owned partial output when safe. Preserve externally introduced content and report retained paths if rollback cannot safely complete. |
+| AF-06 | Actor uses the web target. | Return `scaffold-unsupported`; no native writes, archive export, or network requests occur. |
+
+**Acceptance evidence:** Independent complete golden fixtures verify template
+output and equivalent field/JSON modes. Native tests verify every reported
+path, existing destinations, and rollback after partial writes. The acceptance
+tool restores, builds, tests, and packs a generated solution using a real .NET
+10 SDK; CI runs it on Windows and Linux. Source normalizations and build fixes
+are documented in [template provenance](../reference/dotnet-library-templates.md).
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1243,6 +1296,7 @@ graph LR
 | UC-45 Apply Update | FR-UP-05–FR-UP-08 |
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
 | UC-47 Create Project from Template | FR-DW-01, shared FR-PL requirements |
+| UC-54 Scaffold NuGet Library Repository | FR-DW-08, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

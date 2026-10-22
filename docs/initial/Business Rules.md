@@ -98,5 +98,6 @@ after that user accepts the update prompt.
 
 ## Developer workflow rules
 
-- BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing.
-- BR-DW-02: A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
+- BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing. A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
+
+- BR-DW-08: NuGet library generation accepts either complete source-compatible fields or one explicit JSON document, validates field-level metadata before any write, preserves source capabilities and attribution using versioned offline templates, and delegates native writes/rollback to the shared scaffold service. Generation performs no dependency restore, build, Git initialization, publication, or network request; web returns typed unsupported.
