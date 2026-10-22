@@ -3,6 +3,8 @@
 /// remain in that job even after their original parent has exited.
 const windowsProcessHelper = r'''
 $ErrorActionPreference = 'Stop'
+# Keep encoded bootstrap progress out of the tool's stderr stream.
+$ProgressPreference = 'SilentlyContinue'
 try {
  $request = [Console]::In.ReadLine() | ConvertFrom-Json
  Add-Type -TypeDefinition @'

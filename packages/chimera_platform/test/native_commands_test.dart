@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_platform/native_commands.dart';
+import 'package:chimera_platform/src/windows_process_helper.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -36,6 +37,64 @@ void main() {
       expect(jsonDecode(result.diagnostics), arguments);
     },
   );
+  test('GivenBootstrapProgress_WhenEncodedPowerShellRuns_ThenOnlyToolStreamsAndStatusRemain', () async {
+    final executable = Platform.isWindows
+        ? '${Platform.environment['SystemRoot'] ?? r'C:\Windows'}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+        : 'pwsh';
+    final bootstrap = windowsProcessHelper
+        .split(' Add-Type -TypeDefinition')
+        .first;
+    // Reproduce module-preparation progress during the actual JSON bootstrap.
+    // The fixed ownership/Win32 body is covered by the real native runner tests.
+    final script =
+        r'''
+function ConvertFrom-Json {
+ process {
+  Write-Progress -Activity 'Preparing modules for first use' -Status 'loading'
+  $_ | Microsoft.PowerShell.Utility\ConvertFrom-Json
+ }
+}
+''' +
+        bootstrap +
+        r'''
+ [Console]::Out.WriteLine($request.output)
+ [Console]::Error.WriteLine($request.error)
+ exit [int]$request.status
+} catch {
+ [Console]::Error.WriteLine('Bootstrap failed.')
+ exit 127
+}
+''';
+    Process process;
+    try {
+      process = await Process.start(executable, [
+        '-NoLogo',
+        '-NoProfile',
+        '-NonInteractive',
+        '-EncodedCommand',
+        base64Encode(
+          script.codeUnits.expand((unit) => [unit & 255, unit >> 8]).toList(),
+        ),
+      ]);
+    } on ProcessException {
+      if (Platform.isWindows) rethrow;
+      markTestSkipped('PowerShell unavailable');
+      return;
+    }
+    final output = process.stdout.transform(utf8.decoder).join();
+    final error = process.stderr.transform(utf8.decoder).join();
+    process.stdin.writeln(
+      jsonEncode({
+        'output': 'tool standard output',
+        'error': 'tool standard error',
+        'status': 7,
+      }),
+    );
+    await process.stdin.close();
+    expect(await process.exitCode, 7);
+    expect((await output).trim(), 'tool standard output');
+    expect((await error).trim(), 'tool standard error');
+  });
   test('GivenExitedParent_WhenDescendantSurvives_ThenTreeStillTerminates', () async {
     final descendant = File('${root.path}/descendant.dart');
     final parent = File('${root.path}/parent.dart');
