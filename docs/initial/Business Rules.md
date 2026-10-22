@@ -95,3 +95,16 @@ after that user accepts the update prompt.
   or collaboration features within the approved scope.
 - Do not apply a desktop or CLI update without first obtaining the user's
   confirmation.
+
+## .NET Solution Builds (UC-49)
+
+- Default to `./src`, one top-level `.sln`, restore enabled, and Debug then Release.
+  Explicit solutions must resolve within the selected root. Reject ambiguous
+  discovery and invalid configurations before external build commands.
+- Verify an installed .NET SDK before restoring or building. Stop on the first
+  failed command and preserve its exit status and bounded, redacted diagnostics.
+- Execute argument arrays without a shell. Cancellation terminates the owned
+  process tree and prevents subsequent commands. Do not persist command output.
+- CLI and Windows/Linux desktop share the service; web explicitly cannot build.
+  Restore may contact the actor's configured NuGet sources as part of the
+  explicitly requested native build workflow.

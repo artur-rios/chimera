@@ -10,6 +10,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'dotnet_build.dart';
 import 'output_sink.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
@@ -122,6 +123,20 @@ Future<int> runChimera(
   UpdateApplyService? updateApplyService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.isNotEmpty && args.first == 'dotnet') {
+    if (args.length >= 2 && args[1] == 'build') {
+      return runDotnetBuild(
+        args.sublist(2),
+        localeTag: localeTag,
+        out: out,
+        err: err,
+      );
+    }
+    err.writeln(
+      const MessageCatalog().lookup(localeTag, 'cli.dotnetBuildUsage'),
+    );
+    return 64;
+  }
   const catalog = MessageCatalog();
   final parser = _buildParser();
 
