@@ -27,8 +27,8 @@ void main() {
           readStandardInput: () async => 'no',
         );
         expect(code, isNot(0));
-        expect(out.toString(), contains(bin.path));
-        expect(out.toString(), contains(root.path));
+        expect(out.toString(), contains(await bin.resolveSymbolicLinks()));
+        expect(out.toString(), contains(await root.resolveSymbolicLinks()));
         expect(await bin.exists(), isTrue);
       },
     );

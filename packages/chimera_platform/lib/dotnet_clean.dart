@@ -36,10 +36,35 @@ final class NativeDotnetCleanGateway implements DotnetCleanGateway {
     final path = p.normalize(
       p.isAbsolute(raw) ? raw : p.join(workingDirectory, raw),
     );
-    _validate(path, path, directory: true);
+    // Windows temp paths may contain an 8.3 spelling such as RUNNER~1.
+    // Validate each lexical component before accepting its canonical spelling.
+    // Identity alone follows intermediate links, so both checks are required
+    // for every ancestor, including ancestors above the selected root.
+    final ancestors = <String>[];
+    var ancestor = path;
+    while (true) {
+      if (FileSystemEntity.typeSync(ancestor, followLinks: false) !=
+          FileSystemEntityType.directory) {
+        _reject(ancestor);
+      }
+      ancestors.add(ancestor);
+      final parent = p.dirname(ancestor);
+      if (parent == ancestor) break;
+      ancestor = parent;
+    }
+    // Inspect parent identities before resolving their descendants. Even a
+    // directory reparse point not classified as a link cannot hide an escape.
+    for (final ancestor in ancestors.reversed) {
+      final canonical = Directory(ancestor).resolveSymbolicLinksSync();
+      if (!FileSystemEntity.identicalSync(ancestor, canonical)) {
+        _reject(ancestor);
+      }
+    }
+    final resolved = Directory(path).resolveSymbolicLinksSync();
+    _validate(resolved, resolved, directory: true);
     // Never permit an entire volume as the selected cleanup scope.
-    if (p.dirname(path) == path) _reject(path);
-    return path;
+    if (p.dirname(resolved) == resolved) _reject(resolved);
+    return resolved;
   }
 
   void _validate(String root, String path, {required bool directory}) {
