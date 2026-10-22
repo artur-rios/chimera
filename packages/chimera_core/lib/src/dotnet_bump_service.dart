@@ -12,7 +12,15 @@ abstract interface class DotnetBumpGateway {
     List<int> expectedOriginal,
     List<int> updated,
   );
-  Future<void> restore(String path, String backupPath, List<int> original);
+
+  /// Restore only while the target still contains the completed replacement.
+  /// A mismatch must retain both the current target and original backup.
+  Future<void> restore(
+    String path,
+    String backupPath,
+    List<int> original, {
+    required List<int> expectedCurrent,
+  });
   Future<void> removeBackup(String path);
 }
 
@@ -73,6 +81,8 @@ final class DotnetBumpService
     String? project;
     String? backup;
     List<int>? original;
+    List<int>? replacement;
+    var replacementCompleted = false;
     try {
       project = await gateway.resolveProject(request.project);
       original = List.unmodifiable(await gateway.read(project));
@@ -81,8 +91,10 @@ final class DotnetBumpService
         version: request.version,
         increment: request.increment,
       );
+      replacement = edit.bytes;
       backup = await gateway.createBackup(project, original);
-      await gateway.replace(project, original, edit.bytes);
+      await gateway.replace(project, original, replacement);
+      replacementCompleted = true;
       final verified = await gateway.read(project);
       if (!_equal(verified, edit.bytes) ||
           editor.readVersion(verified) != edit.version) {
@@ -106,11 +118,16 @@ final class DotnetBumpService
       if (backup != null && project != null && original != null) {
         var restored = false;
         try {
-          if (error is DotnetBumpBoundaryException &&
-              error.code == 'conflict') {
-            rethrow;
+          // A staging/replacement error does not establish that this operation
+          // changed the project. Never roll back an uncompleted replacement.
+          if (replacementCompleted && replacement != null) {
+            await gateway.restore(
+              project,
+              backup,
+              original,
+              expectedCurrent: replacement,
+            );
           }
-          await gateway.restore(project, backup, original);
           restored = _equal(await gateway.read(project), original);
         } on Object {
           restored = false;
