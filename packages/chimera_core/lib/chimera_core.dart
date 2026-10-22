@@ -1,4 +1,5 @@
 export 'package:chimera_utilities/chimera_utilities.dart' show TemplateBundle;
+
 export 'src/alphabet_decode_service.dart';
 export 'src/alphabet_encode_service.dart';
 export 'src/base64_decode_service.dart';
