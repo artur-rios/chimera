@@ -105,3 +105,16 @@ after that user accepts the update prompt.
 ## Developer workflow rules
 
 - BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing. A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
+
+## .NET Solution Builds (UC-49)
+
+- Default to `./src`, one top-level `.sln`, restore enabled, and Debug then Release.
+  Explicit solutions must resolve within the selected root. Reject ambiguous
+  discovery and invalid configurations before external build commands.
+- Verify an installed .NET SDK before restoring or building. Stop on the first
+  failed command and preserve its exit status and bounded, redacted diagnostics.
+- Execute argument arrays without a shell. Cancellation terminates the owned
+  process tree and prevents subsequent commands. Do not persist command output.
+- CLI and Windows/Linux desktop share the service; web explicitly cannot build.
+  Restore may contact the actor's configured NuGet sources as part of the
+  explicitly requested native build workflow.

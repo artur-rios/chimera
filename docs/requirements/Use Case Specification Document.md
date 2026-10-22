@@ -1319,3 +1319,33 @@ stateDiagram-v2
     Installing --> Current : installation fails or rolls back
     Updated --> [*]
 ```
+
+## UC-49 — Build .NET Solution
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-03 |
+| Preconditions | Native Windows/Linux; a source directory containing a solution; .NET SDK on PATH. |
+| Success | Restore (unless disabled) and every requested build complete with exit status zero. |
+
+1. The actor selects a source directory (default `./src`), optional solution,
+   Debug/Release configuration (default both), and optional no-restore mode.
+2. Chimera validates the request, resolves exactly one `.sln` or the explicitly
+   selected file within the chosen directory, and checks installed SDKs.
+3. Chimera executes `dotnet restore` unless disabled, then `dotnet build` for
+   Debug followed by Release, or the explicit configuration. No-restore mode
+   passes `--no-restore` to each build.
+4. Chimera streams bounded/redacted diagnostics and returns a structured result
+   including the external exit status.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: No solution or ambiguous discovery | Typed discovery failure; list available solution names; run no build. |
+| AF-02: Invalid path/configuration or unavailable SDK | Typed validation/dependency failure; run no build. |
+| AF-03: Restore/build failure | Stop immediately, retain bounded diagnostics, propagate non-success and external exit status. |
+| AF-04: Cancellation | Terminate the owned process tree, stop subsequent commands, return cancelled. |
+| AF-05: Web | Show a localized unsupported-target explanation with build disabled. |
+
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).

@@ -17,6 +17,7 @@ import 'cipher_decode_page.dart';
 import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
+import 'dotnet_build_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -272,6 +273,11 @@ GoRouter buildRouter({
           localeTag: localeTag(),
           serviceFactory: typePeriodicServiceFactory,
         ),
+      ),
+      GoRoute(
+        path: '/dotnet/build',
+        builder: (context, state) =>
+            DotnetBuildPage(catalog: catalog, localeTag: localeTag()),
       ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
@@ -568,6 +574,13 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag(), 'app.description')),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-build'),
+                        onPressed: () => context.go('/dotnet/build'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnet.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       ElevatedButton(
                         key: const Key('open-type-periodic'),

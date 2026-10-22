@@ -12,6 +12,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
 import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'dotnet_build.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -136,6 +137,20 @@ Future<int> runChimera(
       err: err,
       service: scaffoldService,
     );
+  }
+  if (args.isNotEmpty && args.first == 'dotnet') {
+    if (args.length >= 2 && args[1] == 'build') {
+      return runDotnetBuild(
+        args.sublist(2),
+        localeTag: localeTag,
+        out: out,
+        err: err,
+      );
+    }
+    err.writeln(
+      const MessageCatalog().lookup(localeTag, 'cli.dotnetBuildUsage'),
+    );
+    return 64;
   }
   const catalog = MessageCatalog();
   final parser = _buildParser();
