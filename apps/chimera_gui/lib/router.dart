@@ -24,6 +24,8 @@ import 'dotnet_clean_page.dart';
 import 'dotnet_test_page.dart';
 
 import 'dotnet_bump_page.dart';
+
+import 'dotnet_tag_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -286,6 +288,7 @@ GoRouter buildRouter({
             DotnetTestPage(catalog: catalog, localeTag: localeTag()),
       ),
       GoRoute(
+
         path: '/dotnet/build',
         builder: (context, state) =>
             DotnetBuildPage(catalog: catalog, localeTag: localeTag()),
@@ -300,6 +303,7 @@ GoRouter buildRouter({
         builder: (context, state) =>
             DotnetBumpPage(catalog: catalog, localeTag: localeTag()),
       ),
+
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
           path: '/update/check',
@@ -603,6 +607,7 @@ GoRouter buildRouter({
                         ),
                       ),
                       ElevatedButton(
+
                         key: const Key('open-dotnet-build'),
                         onPressed: () => context.go('/dotnet/build'),
                         child: Text(
@@ -623,6 +628,7 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag(), 'dotnetBump.title'),
                         ),
                       ),
+
                       const SizedBox(height: 24),
                       ElevatedButton(
                         key: const Key('open-type-periodic'),
@@ -1023,6 +1029,13 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag(), 'scaffold.title'),
                         ),
                       ),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-tag'),
+                        onPressed: () => context.go('/dotnet/tag'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetTag.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       _ThemePreferencePanel(
                         controller: themeController,
@@ -1046,6 +1059,10 @@ GoRouter buildRouter({
         path: '/project/from-template',
         builder: (context, state) =>
             ProjectTemplatePage(localeTag: localeTag()),
+      ),
+      GoRoute(
+        path: '/dotnet/tag',
+        builder: (context, state) => DotnetTagPage(localeTag: localeTag()),
       ),
       GoRoute(
         path: '/cron/parse',

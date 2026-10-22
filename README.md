@@ -197,6 +197,7 @@ after SDK/tool checks and path validation. No projects returns success without
 running tools or clearing output. Failures preserve available artifacts and
 external exit status; cancellation stops the owned process tree.
 
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.
@@ -590,3 +591,7 @@ restoration succeeds. Exit codes: 0 verified success, 1 transaction/access failu
 2 validation. The desktop form shares this behavior; web explains native-only
 support. Conditional projects with multiple Version nodes and other encodings
 are rejected before mutation.
+
+### .NET release tags (UC-53)
+
+`chimera dotnet tag [--project=<project.csproj-or-directory>] [--push] [--remote=origin] [--json]` recursively discovers one project in `./src` by default, reads its semantic `<Version>`, and creates annotated `v<version>` with `Release <version>`. Without `--push` it stays local. An explicit push sends only that tag. Existing tags are preserved; failed or cancelled pushes retain the local tag and report the remote outcome as unconfirmed. Desktop uses `/dotnet/tag`; browser receives an unsupported-target explanation. Git must be installed.

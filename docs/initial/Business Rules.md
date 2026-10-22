@@ -106,6 +106,7 @@ after that user accepts the update prompt.
 
 - BR-DW-01: Templates are pinned offline snapshots. Template paths are relative, may not traverse or contain Git metadata, and all content is validated before writing. A scaffold never overwrites an existing path. Only output created and still owned by the current invocation may be removed on failure.
 
+
 ## .NET Solution Builds (UC-49)
 
 - Default to `./src`, one top-level `.sln`, restore enabled, and Debug then Release.
@@ -144,3 +145,5 @@ after that user accepts the update prompt.
 | ID | Rule | Rationale |
 | --- | --- | --- |
 | BR-DW-06 | Version changes accept one numeric MAJOR.MINOR.PATCH value or one major/minor/patch increment; incrementing resets lower components and requires a valid existing value. Discovery is nonrecursive and unambiguous. Preserve unrelated project bytes and supported encoding. Verify an exclusive backup before replacement and the complete updated bytes before removing the backup. Failed transactions always report the retained recovery path; no parse/validation failure creates a backup. | Project metadata edits must remain local, precise and recoverable. |
+
+- BR-DW-07: Release tags are annotated, never forced or overwritten. Push is opt-in and sends one fully-qualified tag refspec with configured tag-following and submodule pushes explicitly disabled; cancellation or failed remote acknowledgement preserves and reports the local tag and an unconfirmed remote outcome. Tag discovery recursively scans the selected source scope without following links; explicit project files resolve ambiguity.

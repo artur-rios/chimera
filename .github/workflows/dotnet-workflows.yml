@@ -34,3 +34,6 @@ jobs:
       - run: flutter pub get
       - name: Verify shared builds, discovery, diagnostics, and cancellation
         run: dart test packages/chimera_core/test/dotnet_build_test.dart packages/chimera_platform/test/native_commands_test.dart packages/chimera_platform/test/dotnet_build_integration_test.dart apps/chimera_cli/test/functional/dotnet_build_test.dart packages/chimera_core/test/dotnet_test_test.dart packages/chimera_platform/test/dotnet_test_workspace_test.dart packages/chimera_platform/test/dotnet_test_integration_test.dart apps/chimera_cli/test/functional/dotnet_test_test.dart
+
+      - name: Verify annotated tags, selected remote, and cancellation
+        run: dart test packages/chimera_core/test/dotnet_tag_service_test.dart apps/chimera_cli/test/functional/dotnet_tag_test.dart apps/chimera_cli/test/functional/dotnet_tag_signal_test.dart

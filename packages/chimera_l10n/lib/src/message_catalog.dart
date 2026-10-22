@@ -55,6 +55,37 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.reportFailed': 'HTML coverage generation failed. Available coverage artifacts were preserved.',
     'cli.dotnetTestUsage': 'Usage: chimera dotnet test [base-directory] [--json]. Defaults: ./tests, tests/TestResults and docs/coverage-report. Explicit base stores both outputs beneath it. Setup directories are excluded. No projects is a successful no-op. Existing scoped outputs are cleared only after SDK/tool checks and path validation.',
 
+    "error.dotnetTag.access":
+        "The project could not be read. No tag was created.",
+    "dotnetTag.title": "Create .NET release tag",
+    "dotnetTag.project": "Project file or source directory",
+    "dotnetTag.remote": "Remote name",
+    "dotnetTag.push": "Push this tag to the selected remote",
+    "dotnetTag.create": "Create annotated tag",
+    "dotnetTag.cancel": "Cancel operation",
+    "dotnetTag.created": "Annotated local tag created; no push requested",
+    "dotnetTag.pushed": "Annotated tag created and pushed",
+    "dotnetTag.busy": "Creating release tag…",
+    "cli.dotnetTagUsage": "Usage: chimera dotnet tag [--project=<file-or-directory>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Choose a valid named remote and project selection.",
+    "error.dotnetTag.discovery":
+        "Select exactly one .csproj; no tag was created.",
+    "error.dotnetTag.version": "The project has no unambiguous valid semantic Version; no tag was created.",
+    "error.dotnetTag.repository":
+        "The project is not inside a Git working tree; no tag was created.",
+    "error.dotnetTag.conflict":
+        "The release tag already exists and was preserved.",
+    "error.dotnetTag.command":
+        "The Git operation failed. Inspect the reported local tag status.",
+    "error.dotnetTag.pushFailed":
+        "The push failed or was not confirmed. The local tag was retained.",
+    "error.dotnetTag.cancelled":
+        "The operation was cancelled. Any created local tag was retained.",
+    "error.dotnetTag.gitUnavailable":
+        "Git is unavailable. Install Git to create a release tag.",
+    "error.dotnetTag.unsupported": "Release tags are available in the Windows and Linux desktop and CLI applications.",
+
     'dotnet.title': 'Build .NET Solution',
     'dotnet.exitStatus': 'External exit status: {code}',
     'dotnet.source': 'Source directory',
@@ -127,6 +158,7 @@ _catalogs = <String, Map<String, String>>{
     'dotnetBump.unsupported':
         "Version updates are supported only on native Windows and Linux.",
     'dotnetBump.usage': "Usage: chimera dotnet bump (--version=MAJOR.MINOR.PATCH|--major|--minor|--patch) [--project=<csproj-or-directory>] [--json]. Defaults to one immediate .csproj child of ./src. Preserves XML and UTF-8/UTF-16 encoding. Keeps an original backup until reread verification succeeds. Exit: 0 success, 1 transaction/access failure, 2 validation.",
+
     'update.pageTitle': 'Check for updates',
     'update.openAction': 'Check for updates',
     'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
@@ -1016,6 +1048,7 @@ _catalogs = <String, Map<String, String>>{
         'Usage: chimera <command> [options]\n'
         'Build .NET: chimera dotnet build [source-directory] [--help]\n'
         'Test .NET: chimera dotnet test [base-directory] [--help]\n'
+
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
@@ -1520,6 +1553,35 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.reportFailed': 'A geração do relatório HTML falhou. Os artefatos de cobertura disponíveis foram preservados.',
     'cli.dotnetTestUsage': 'Uso: chimera dotnet test [diretório-base] [--json]. Padrões: ./tests, tests/TestResults e docs/coverage-report. Uma base explícita armazena ambas as saídas nela. Diretórios Setup são excluídos. Sem projetos, retorna sucesso sem executar ferramentas. As saídas existentes são removidas somente após verificar o SDK, a ferramenta e os caminhos.',
 
+    "error.dotnetTag.access":
+        "Não foi possível ler o projeto. Nenhuma tag foi criada.",
+    "dotnetTag.title": "Criar tag de versão .NET",
+    "dotnetTag.project": "Arquivo de projeto ou diretório de origem",
+    "dotnetTag.remote": "Nome do remoto",
+    "dotnetTag.push": "Enviar esta tag ao remoto selecionado",
+    "dotnetTag.create": "Criar tag anotada",
+    "dotnetTag.cancel": "Cancelar operação",
+    "dotnetTag.created": "Tag local anotada criada; envio não solicitado",
+    "dotnetTag.pushed": "Tag anotada criada e enviada",
+    "dotnetTag.busy": "Criando tag de versão…",
+    "cli.dotnetTagUsage": "Uso: chimera dotnet tag [--project=<arquivo-ou-diretório>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Escolha um nome de remoto e uma seleção de projeto válidos.",
+    "error.dotnetTag.discovery":
+        "Selecione exatamente um .csproj; nenhuma tag foi criada.",
+    "error.dotnetTag.version": "O projeto não tem uma Version semântica válida e inequívoca; nenhuma tag foi criada.",
+    "error.dotnetTag.repository": "O projeto não está em uma árvore de trabalho Git; nenhuma tag foi criada.",
+    "error.dotnetTag.conflict": "A tag de versão já existe e foi preservada.",
+    "error.dotnetTag.command":
+        "A operação Git falhou. Verifique o estado da tag local informado.",
+    "error.dotnetTag.pushFailed":
+        "O envio falhou ou não foi confirmado. A tag local foi mantida.",
+    "error.dotnetTag.cancelled":
+        "A operação foi cancelada. Qualquer tag local criada foi mantida.",
+    "error.dotnetTag.gitUnavailable":
+        "O Git está indisponível. Instale o Git para criar uma tag de versão.",
+    "error.dotnetTag.unsupported": "Tags de versão estão disponíveis nos aplicativos desktop e CLI para Windows e Linux.",
+
     'dotnet.title': 'Compilar solução .NET',
     'dotnet.exitStatus': 'Código de saída externo: {code}',
     'dotnet.source': 'Diretório de código-fonte',
@@ -1590,6 +1652,7 @@ _catalogs = <String, Map<String, String>>{
     'dotnetBump.transactionFailed': "A atualização da versão falhou. O backup original foi mantido no caminho informado.",
     'dotnetBump.unsupported': "A atualização de versões está disponível apenas no Windows e Linux nativos.",
     'dotnetBump.usage': "Uso: chimera dotnet bump (--version=MAJOR.MINOR.PATCH|--major|--minor|--patch) [--project=<csproj-ou-diretório>] [--json]. Usa o único .csproj imediato de ./src. Preserva XML e codificação UTF-8/UTF-16. Mantém backup original até a verificação por releitura. Saída: 0 sucesso, 1 falha transacional/de acesso, 2 validação.",
+
     'update.pageTitle': 'Verificar atualizações',
     'update.openAction': 'Verificar atualizações',
     'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',
@@ -2526,6 +2589,7 @@ _catalogs = <String, Map<String, String>>{
         'Uso: chimera <comando> [opções]\n'
         'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
         'Testar .NET: chimera dotnet test [diretório-base] [--help]\n'
+
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',

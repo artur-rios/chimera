@@ -13,6 +13,9 @@ export 'src/cipher_encode_service.dart';
 export 'src/cron_service.dart';
 export 'src/date_service.dart';
 export 'src/diagnostics.dart';
+export 'src/dotnet_build_service.dart';
+export 'src/dotnet_bump_service.dart';
+export 'src/dotnet_tag_service.dart';
 export 'src/gzip_compress_service.dart';
 export 'src/gzip_decompress_service.dart';
 export 'src/hash_generate_service.dart';
@@ -27,6 +30,7 @@ export 'src/jwt_create_service.dart';
 export 'src/jwt_inspect_service.dart';
 export 'src/list_compare_service.dart';
 export 'src/lorem_service.dart';
+export 'src/native_commands.dart';
 export 'src/number_base_service.dart';
 export 'src/operation_service.dart';
 export 'src/password_service.dart';
@@ -55,3 +59,4 @@ export 'src/dotnet_clean_service.dart';
 export 'src/dotnet_test_service.dart';
 
 export 'src/dotnet_bump_service.dart';
+

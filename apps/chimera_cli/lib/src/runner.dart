@@ -17,6 +17,7 @@ import 'dotnet_build.dart';
 import 'dotnet_clean_command.dart';
 
 import 'dotnet_test.dart';
+import 'dotnet_tag.dart';
 
 import 'dotnet_bump_command.dart';
 import 'output_sink.dart';
@@ -133,8 +134,18 @@ Future<int> runChimera(
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
   ScaffoldOperationService? scaffoldService,
+  DotnetTagOperationService? dotnetTagService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'tag') {
+    return runDotnetTag(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetTagService,
+    );
+  }
   if (args.isNotEmpty && args.first == 'project') {
     return runProjectCommand(
       args.sublist(1),

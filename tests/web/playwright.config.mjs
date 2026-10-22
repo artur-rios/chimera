@@ -2,7 +2,7 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
   testDir: '.',
-  testMatch: ['project_template.spec.mjs', 'smoke.spec.mjs', 'fonts.spec.mjs', 'hash.spec.mjs', 'checksum.spec.mjs', 'lorem.spec.mjs', 'password.spec.mjs', 'uuid.spec.mjs', 'card.spec.mjs', 'identity_document.spec.mjs', 'person.spec.mjs', 'dotnet_native_unsupported.spec.mjs'],
+  testMatch: ['project_template.spec.mjs', 'smoke.spec.mjs', 'fonts.spec.mjs', 'hash.spec.mjs', 'checksum.spec.mjs', 'lorem.spec.mjs', 'password.spec.mjs', 'uuid.spec.mjs', 'card.spec.mjs', 'identity_document.spec.mjs', 'person.spec.mjs', 'dotnet_native_unsupported.spec.mjs', 'dotnet_tag.spec.mjs'],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
