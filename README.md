@@ -409,12 +409,13 @@ access failures discard the source and expose no successful partial result.
 | Milestone | Delivers | Depends on | Issues | Status |
 | --- | --- | --- | ---: | --- |
 | [M-01 - Foundation](https://github.com/artur-rios/chimera/milestone/1) | Repository scaffold and initial infrastructure | - | 1 | 1 / 1 closed |
-| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 7 / 8 closed |
-| [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 0 / 7 closed |
-| [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 12 / 14 closed |
-| [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 0 / 8 closed |
-| [M-06 — Ciphers and alphabets](https://github.com/artur-rios/chimera/milestone/6) | Approved cipher and alphabet encoding and decoding | M-01 | 4 | 0 / 4 closed |
-| [M-07 — Experience and distribution](https://github.com/artur-rios/chimera/milestone/7) | Preferences, updates, packaging, and Yggdrasil release delivery | M-01–M-06 | 5 | 0 / 5 closed |
+| [M-02 - Scheduling and structured data](https://github.com/artur-rios/chimera/milestone/2) | Cron, date, JSON, CSV, YAML, SQL, and XML tools | M-01 | 8 | 8 / 8 closed |
+| [M-03 — Number and text tools](https://github.com/artur-rios/chimera/milestone/3) | Base conversion, escaping, comparison, analysis, and transformation | M-01 | 7 | 7 / 7 closed |
+| [M-04 — Encoders and decoders](https://github.com/artur-rios/chimera/milestone/4) | Base64, certificates, GZIP, HTML, JWT, QR, and URL tools | M-01 | 14 | 14 / 14 closed |
+| [M-05 — Test-data generators](https://github.com/artur-rios/chimera/milestone/5) | Hashes, checksums, text, credentials, identifiers, cards, documents, and people | M-01 | 8 | 8 / 8 closed |
+| [M-06 — Ciphers and alphabets](https://github.com/artur-rios/chimera/milestone/6) | Approved cipher and alphabet encoding and decoding | M-01 | 4 | 4 / 4 closed |
+| [M-07 — Experience and distribution](https://github.com/artur-rios/chimera/milestone/7) | Preferences, updates, packaging, and Yggdrasil release delivery | M-01–M-06 | 5 | 5 / 5 closed |
+| [M-08 — Developer workflow automation](https://github.com/artur-rios/chimera/milestone/8) | Project templates, terminal automation, and .NET repository workflows | M-01 | 10 | 0 / 10 closed |
 
 ## Backlog
 
@@ -499,6 +500,21 @@ access failures discard the source and expose no successful partial result.
 | [#45](https://github.com/artur-rios/chimera/issues/45) | UC-44 — Check for Update | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-44-check-for-update) |
 | [#46](https://github.com/artur-rios/chimera/issues/46) | UC-45 — Apply Update | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-45-apply-update) |
 | [#47](https://github.com/artur-rios/chimera/issues/47) | UC-46 — Publish Release | [Operations](docs/requirements/Operations%20%26%20Infrastructure%20Document.md#73-operational-use-case--uc-46-publish-release) |
+
+### M-08 — Developer workflow automation
+
+| Issue | Work | Source repositories |
+| --- | --- | --- |
+| [#96](https://github.com/artur-rios/chimera/issues/96) | UC-47 — Create Project from Template | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
+| [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
+| [#98](https://github.com/artur-rios/chimera/issues/98) | UC-49 — Build .NET Solution | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#102](https://github.com/artur-rios/chimera/issues/102) | UC-53 — Create .NET Release Tag | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#105](https://github.com/artur-rios/chimera/issues/105) | UC-56 — Scaffold .NET Project | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 
 ## Contributing
 

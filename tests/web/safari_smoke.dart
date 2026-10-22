@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:webdriver/async_io.dart';
 
 import '../fixtures/jwt_signing_keys.dart';
+import 'safari_preference_focus.dart';
 import 'safari_protocol.dart';
 
 // Public fixture pinned by tests/fixtures/certificates/manifest.json.
@@ -3691,9 +3692,10 @@ Future<void> _changeTheme(WebDriver driver) async {
 }
 
 Future<void> _revealThemePanel(WebDriver driver) async {
+  final navigator = _preferenceFocusNavigator(driver);
   await _waitUntil(() async {
     if (await _pageContains(driver, 'Appearance')) return true;
-    await _advancePreferenceFocus(driver);
+    await navigator.advance();
     return false;
   }, 'Theme preference panel was not keyboard-reachable');
 }
@@ -3773,15 +3775,31 @@ Future<void> _changeLanguage(WebDriver driver) async {
 }
 
 Future<void> _revealLanguagePanel(WebDriver driver, String title) async {
+  final navigator = _preferenceFocusNavigator(driver);
   await _waitUntil(() async {
     if (await _pageContains(driver, title)) return true;
-    await _advancePreferenceFocus(driver);
+    await navigator.advance();
     return false;
   }, 'Language preference panel was not keyboard-reachable');
 }
 
-Future<void> _advancePreferenceFocus(WebDriver driver) =>
-    driver.keyboard.sendKeys(List<String>.filled(4, Keyboard.tab).join());
+SafariPreferenceFocusNavigator _preferenceFocusNavigator(WebDriver driver) =>
+    SafariPreferenceFocusNavigator(
+      focusOrigin: () => _focusPreferenceOrigin(driver),
+      sendChord: driver.keyboard.sendChord,
+    );
+
+Future<bool> _focusPreferenceOrigin(WebDriver driver) async =>
+    await driver.execute(r'''
+      const buttons = [...document.querySelectorAll('[role="button"]')]
+        .filter(element => element.getAttribute('aria-disabled') !== 'true');
+      if (buttons.includes(document.activeElement)) return true;
+      const origin = buttons[0];
+      if (!origin) return false;
+      origin.focus();
+      return document.activeElement === origin;
+    ''', const <Object?>[]) ==
+    true;
 
 Future<void> _decodeCipher(WebDriver driver) async {
   await driver.get('http://127.0.0.1:4173');

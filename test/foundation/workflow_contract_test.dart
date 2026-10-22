@@ -92,14 +92,23 @@ void main() {
     expect(inspectJwt, isNot(contains('_openJwtInspectPage(')));
   });
 
-  test('GivenSafariHomeActions_WhenPreferencesAreReached_ThenKeyboardTraversalIsBatched', () {
+  test('GivenSafariHomeActions_WhenPreferencesAreReached_ThenEachTabUsesItsOwnCommand', () {
     expect(
       safariSmoke,
-      contains('List<String>.filled(4, Keyboard.tab).join()'),
+      isNot(contains('List<String>.filled(4, Keyboard.tab).join()')),
     );
     expect(
-      RegExp(r'await _advancePreferenceFocus\(driver\);')
+      safariSmoke,
+      contains('focusOrigin: () => _focusPreferenceOrigin(driver)'),
+    );
+    expect(safariSmoke, contains('sendChord: driver.keyboard.sendChord'));
+    expect(
+      RegExp(r'final navigator = _preferenceFocusNavigator\(driver\);')
           .allMatches(safariSmoke),
+      hasLength(2),
+    );
+    expect(
+      RegExp(r'await navigator\.advance\(\);').allMatches(safariSmoke),
       hasLength(2),
     );
   });
