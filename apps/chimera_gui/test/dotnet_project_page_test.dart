@@ -27,6 +27,12 @@ void main() {
         await tester.pumpAndSettle();
         expect(service.request!.name, 'Example');
         expect(service.request!.nuget, isTrue);
+        final status = find.semantics.byLabel(RegExp(r'Example\.csproj'));
+        expect(status, findsOne);
+        expect(
+          status.evaluate().single,
+          isSemantics(isLiveRegion: true, isTextField: false),
+        );
         if (locale == 'pt-BR') {
           expect(
             find.textContaining('\nProjeto NuGet (metadados vazios)'),

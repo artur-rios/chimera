@@ -28,24 +28,39 @@ void main() {
     testWidgets(
       'GivenUnsupportedTarget${locale}_WhenCreated_ThenLocalizedFailure',
       (tester) async {
-        await tester.pumpWidget(
-          MaterialApp(
-            home: ProjectTemplatePage(
-              localeTag: locale,
-              service: const UnsupportedScaffoldService(),
+        final semantics = tester.ensureSemantics();
+        try {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: ProjectTemplatePage(
+                localeTag: locale,
+                service: const UnsupportedScaffoldService(),
+              ),
             ),
-          ),
-        );
-        await tester.enterText(
-          find.byKey(const Key('scaffold-destination')),
-          'new',
-        );
-        await tester.tap(find.byKey(const Key('scaffold-create')));
-        await tester.pumpAndSettle();
-        expect(
-          find.textContaining(locale == 'en' ? 'available in' : 'disponível'),
-          findsOneWidget,
-        );
+          );
+          await tester.enterText(
+            find.byKey(const Key('scaffold-destination')),
+            'new',
+          );
+          await tester.tap(find.byKey(const Key('scaffold-create')));
+          await tester.pumpAndSettle();
+          expect(
+            find.textContaining(locale == 'en' ? 'available in' : 'disponível'),
+            findsOneWidget,
+          );
+          final status = find.semantics.byLabel(
+            locale == 'en'
+                ? 'Project creation is available in the Windows and Linux desktop and CLI applications.'
+                : 'A criação de projetos está disponível nos aplicativos desktop e CLI para Windows e Linux.',
+          );
+          expect(status, findsOne);
+          expect(
+            status.evaluate().single,
+            isSemantics(isLiveRegion: true, isTextField: false),
+          );
+        } finally {
+          semantics.dispose();
+        }
       },
     );
   }

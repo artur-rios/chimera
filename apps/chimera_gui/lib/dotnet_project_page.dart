@@ -103,7 +103,10 @@ final class _DotnetProjectPageState extends State<DotnetProjectPage> {
               ),
               if (_result != null) ...[
                 const SizedBox(height: 16),
-                Semantics(liveRegion: true, child: SelectableText(_result!)),
+                Semantics(
+                  liveRegion: true,
+                  child: SelectionArea(child: Text(_result!)),
+                ),
               ],
             ],
           ),
