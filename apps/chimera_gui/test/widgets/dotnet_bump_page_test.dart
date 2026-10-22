@@ -53,6 +53,14 @@ void main() {
         expect(service.request?.increment, isNull);
         expect(find.textContaining('1.2.3'), findsOneWidget);
         expect(find.textContaining('1.2.3 → 2.0.0'), findsOneWidget);
+        final status = find.semantics.byLabel(
+          RegExp(r'/src/App\.csproj: 1\.2\.3 → 2\.0\.0'),
+        );
+        expect(status, findsOne);
+        expect(
+          status.evaluate().single,
+          isSemantics(isLiveRegion: true, isTextField: false),
+        );
       },
     );
   }

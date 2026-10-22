@@ -150,7 +150,10 @@ final class _DotnetBumpPageState extends State<DotnetBumpPage> {
                 ),
                 if (_busy) const LinearProgressIndicator(),
                 if (_status != null)
-                  Semantics(liveRegion: true, child: SelectableText(_status!)),
+                  Semantics(
+                    liveRegion: true,
+                    child: SelectionArea(child: Text(_status!)),
+                  ),
               ],
             ],
           ),
