@@ -2,6 +2,8 @@ import 'dart:io';
 
 import 'package:path/path.dart' as p;
 
+import 'windows_short_path.dart';
+
 /// An OS short-name spelling of a real directory, without a filesystem link.
 /// Directory.path retains the lexical spelling just as dart:io does on Windows.
 final class NativeDirectoryAliasOverrides extends IOOverrides {
@@ -83,18 +85,7 @@ Future<String?> windowsShortFile(File file) => _windowsShortPath(file);
 Future<String?> _windowsShortPath(FileSystemEntity entity) async {
   final canonical = await entity.resolveSymbolicLinks();
   if (!p.equals(entity.path, canonical)) return entity.path;
-  final result = await Process.run('cmd', [
-    '/d',
-    '/c',
-    'for %I in ("${entity.path}") do @echo %~sI',
-  ]);
-  if (result.exitCode != 0) {
-    throw FileSystemException(
-      'Could not query Windows short path',
-      entity.path,
-    );
-  }
-  final alias = p.normalize((result.stdout as String).trim());
+  final alias = p.normalize(windowsShortPath(canonical));
   if (p.equals(alias, canonical)) return null;
   if (!FileSystemEntity.identicalSync(alias, canonical)) {
     throw FileSystemException('Short path is not the same object', alias);
