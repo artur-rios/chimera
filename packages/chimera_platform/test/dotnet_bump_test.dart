@@ -53,6 +53,23 @@ void main() {
       }
     },
   );
+  test(
+    'GivenWindowsCaseAlias_WhenSelected_ThenCanonicalProjectIsUpdated',
+    () async {
+      final result = await service().execute(
+        DotnetBumpRequest(
+          project: project.path.toUpperCase(),
+          version: '2.0.0',
+        ),
+      );
+      expect(result, isA<ChimeraSuccess<DotnetBumpOutput>>());
+      expect(
+        await project.readAsString(),
+        contains('<Version>2.0.0</Version>'),
+      );
+    },
+    skip: !Platform.isWindows,
+  );
   test('GivenZeroOrMultipleProjects_WhenDiscovered_ThenCandidatesReportedAndNoMutation', () async {
     final other = await File(p.join(source.path, 'Other.csproj'))
         .writeAsString('<Project/>');
