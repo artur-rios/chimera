@@ -37,13 +37,13 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
   void _safePath(String path, {bool mayBeMissing = false}) {
     final parent = Directory(p.dirname(path));
     if (!parent.existsSync() ||
-        parent.resolveSymbolicLinksSync() != parent.path) {
+        !p.equals(parent.resolveSymbolicLinksSync(), parent.path)) {
       throw const DotnetBumpBoundaryException('access');
     }
     final type = FileSystemEntity.typeSync(path, followLinks: false);
     if (mayBeMissing && type == FileSystemEntityType.notFound) return;
     if (type != FileSystemEntityType.file ||
-        File(path).resolveSymbolicLinksSync() != path) {
+        !p.equals(File(path).resolveSymbolicLinksSync(), path)) {
       throw const DotnetBumpBoundaryException('access');
     }
   }
@@ -64,10 +64,10 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
     if (type == FileSystemEntityType.file &&
         p.extension(selected).toLowerCase() == '.csproj') {
       _safePath(selected);
-      return selected;
+      return File(selected).resolveSymbolicLinksSync();
     }
     if (type != FileSystemEntityType.directory ||
-        Directory(selected).resolveSymbolicLinksSync() != selected) {
+        !p.equals(Directory(selected).resolveSymbolicLinksSync(), selected)) {
       throw const DotnetBumpBoundaryException(
         'discovery',
         details: {'candidates': <String>[]},
@@ -92,7 +92,7 @@ final class NativeDotnetBumpGateway implements DotnetBumpGateway {
       );
     }
     _safePath(candidates.single);
-    return candidates.single;
+    return File(candidates.single).resolveSymbolicLinksSync();
   }
 
   @override
