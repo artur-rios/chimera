@@ -44,6 +44,7 @@ import 'text_escape_page.dart';
 import 'text_transform_page.dart';
 import 'text_unescape_page.dart';
 import 'theme_preferences.dart';
+import 'type_periodic_page.dart';
 import 'update_page.dart';
 import 'url_decode_page.dart';
 import 'url_encode_page.dart';
@@ -254,6 +255,7 @@ GoRouter buildRouter({
   required XmlFormatFileSaver xmlFormatFileSaver,
   required XmlFormatClipboardReader xmlFormatClipboardReader,
   required XmlFormatClipboardWriter xmlFormatClipboardWriter,
+  TypePeriodicService Function()? typePeriodicServiceFactory,
   String initialLocation = '/',
 }) {
   String localeTag() => languageController.localeTag;
@@ -262,6 +264,14 @@ GoRouter buildRouter({
     refreshListenable: languageController,
     initialLocation: initialLocation,
     routes: <RouteBase>[
+      GoRoute(
+        path: '/terminal/type-periodic',
+        builder: (context, state) => TypePeriodicPage(
+          catalog: catalog,
+          localeTag: localeTag(),
+          serviceFactory: typePeriodicServiceFactory,
+        ),
+      ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
           path: '/update/check',
@@ -558,6 +568,17 @@ GoRouter buildRouter({
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag(), 'app.description')),
                       const SizedBox(height: 24),
+                      ElevatedButton(
+                        key: const Key('open-type-periodic'),
+                        onPressed: () => context.go('/terminal/type-periodic'),
+                        child: Text(
+                          catalog.lookup(
+                            localeTag(),
+                            'typePeriodic.openAction',
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       if (updateChecksEnabled &&
                           updateChecker != null) ...<Widget>[
                         ElevatedButton(

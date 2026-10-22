@@ -1154,6 +1154,58 @@ graph LR
 
 ---
 
+### UC-48: Type Periodic Commands
+
+**Actor:** Local desktop or CLI user. **Requirement:** FR-DW-02.
+
+**Purpose:** Run a visible sequence of fixed `echo Hello World <n>` commands
+inside a dedicated Windows console owned by this operation, until stopped.
+
+**Source traceability:** [issue #97](https://github.com/artur-rios/chimera/issues/97)
+and [`cli-utils/commands/ktype.ps1` at 3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/commands/ktype.ps1).
+
+**Main flow:**
+
+1. The actor opens `/terminal/type-periodic` or invokes
+   `chimera terminal type-periodic [--interval=<seconds>]`.
+2. The shared service normalizes the interval to a positive signed 32-bit
+   decimal integer and launches its own `cmd.exe /d` in a new console.
+3. After 1 second it activates that console and reports the effective interval
+   in the selected interface language. It waits 15 seconds, then the interval.
+4. Immediately before each input write the native adapter verifies that the
+   original child is alive, belongs to the attached console, and that the
+   captured console window is foreground. It writes `echo Hello World 1` plus
+   Enter through that console's scoped input handle. Each subsequent interval
+   increments the suffix by one.
+5. The actor selects Stop or uses Ctrl+C (also SIGTERM on Linux hosts). The
+   shared cancellation token interrupts pending timers; the service awaits
+   cleanup of the owned console and helper and reports the number sent.
+   Navigating away or detaching the desktop app also cancels its operation.
+
+| Alternative | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Interval is absent, empty, nondecimal, nonnumeric, nonpositive, or outside signed 32-bit range. | Use and report the 20-second default. |
+| AF-02 | Target is Linux or web. | Return typed `type_periodic_unsupported`; launch nothing. |
+| AF-03 | Launch, activation, console attachment, owned-input access, helper protocol, or input write fails. | Return typed `type_periodic_automation`; stop and await cleanup. Windows terminal hosts that cannot expose an owned foreground console fail closed. |
+| AF-04 | Captured console loses foreground or the original process/console cannot be verified at send time. | Stop with `type_periodic_focus_lost` or automation failure; never redirect input into another window. No automatic resume. |
+| AF-05 | Stop occurs before launch or during any delay. | Return a successful stopped result without further input; a pre-cancelled operation launches nothing. |
+| AF-06 | A service instance already has a running operation. | Return `type_periodic_busy` without sharing or replacing its child. |
+| AF-07 | Cleanup cannot be confirmed. | Return `type_periodic_cleanup`; no further commands are scheduled. |
+
+**Security boundary:** No global keyboard injection, clipboard paste, user-supplied
+command text, or network access. The native helper creates the child suspended,
+assigns it to a kill-on-close job, then resumes it. It attaches only to that
+child's console and writes through a captured `CONIN$` handle. Focus changes
+cannot redirect that handle. Only fixed failure codes cross the adapter;
+raw process output, paths, and exceptions are discarded.
+
+**Postconditions:** No pending service timer, active automation loop, or owned
+helper remains after the result completes. A stopped operation closes its own
+terminal and never closes unrelated terminals. English and Brazilian Portuguese
+messages cover start, effective interval, stop, and every failure.
+
+---
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1204,6 +1256,7 @@ graph LR
 | UC-44 Check for Update | FR-UP-02–FR-UP-04, FR-UP-08 |
 | UC-45 Apply Update | FR-UP-05–FR-UP-08 |
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
+| UC-48 Type Periodic Commands | FR-DW-02, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

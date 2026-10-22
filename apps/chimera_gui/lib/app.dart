@@ -267,6 +267,7 @@ final class ChimeraApp extends StatelessWidget {
     this.updateChecksEnabled = false,
     this.updateChecker,
     this.updateApplier,
+    this.typePeriodicServiceFactory,
     this.initialLocation = '/',
     super.key,
   });
@@ -474,6 +475,7 @@ final class ChimeraApp extends StatelessWidget {
   final bool updateChecksEnabled;
   final UpdateCheckCallback? updateChecker;
   final UpdateApplyCallback? updateApplier;
+  final TypePeriodicService Function()? typePeriodicServiceFactory;
   final String initialLocation;
 
   @override
@@ -683,6 +685,7 @@ final class ChimeraApp extends StatelessWidget {
         updateChecksEnabled: updateChecksEnabled && !kIsWeb,
         updateChecker: updateChecker,
         updateApplier: updateApplier,
+        typePeriodicServiceFactory: typePeriodicServiceFactory,
         initialLocation: initialLocation,
       ),
     );
@@ -894,6 +897,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
     required this.updateChecksEnabled,
     required this.updateChecker,
     required this.updateApplier,
+    required this.typePeriodicServiceFactory,
     required this.initialLocation,
   });
 
@@ -1032,6 +1036,7 @@ final class _RoutedChimeraApp extends StatefulWidget {
   final bool updateChecksEnabled;
   final UpdateCheckCallback? updateChecker;
   final UpdateApplyCallback? updateApplier;
+  final TypePeriodicService Function()? typePeriodicServiceFactory;
   final String initialLocation;
 
   @override
@@ -1325,6 +1330,7 @@ final class _RoutedChimeraAppState extends State<_RoutedChimeraApp> {
       updateChecksEnabled: widget.updateChecksEnabled,
       updateChecker: widget.updateChecker,
       updateApplier: widget.updateApplier,
+      typePeriodicServiceFactory: widget.typePeriodicServiceFactory,
       catalog: _catalog,
       languageController: _languageController,
       themeController: _themeController,

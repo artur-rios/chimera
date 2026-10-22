@@ -65,6 +65,12 @@ exist during an operation or in the small local preference store.
 | Alphabet | Must be Morse code, the NATO phonetic alphabet, or Braille. |
 | Release platform | Must be Windows or Linux for desktop and CLI artifacts. |
 
+## UC-48 Periodic Command Rules
+
+| ID | Rule | Rationale |
+| --- | --- | --- |
+| BR-DW-02 | Periodic commands run only inside a supported Windows native console created and owned by their operation. Missing or invalid positive signed 32-bit decimal intervals use 20 seconds. Startup waits 1 second before activation, 15 seconds initially, then one interval before every fixed `echo Hello World <n>` command, starting at 1. Verify ownership and foreground in the native send operation; stop on failure or focus loss. Cancellation removes timers and awaits owned helper/console cleanup. Linux and web return typed unsupported results. Never use global keystrokes, arbitrary command text, external services, or retained raw diagnostics. | Preserves the pinned ktype behavior while ensuring input cannot reach unrelated applications. |
+
 ## Permissions
 
 There are no roles or permission tiers. The local user may invoke every installed

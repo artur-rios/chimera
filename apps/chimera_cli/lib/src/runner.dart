@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,6 +9,7 @@ import 'package:chimera_platform/chimera_platform.dart';
 import 'package:chimera_platform/native_updates.dart';
 import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
+import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'output_sink.dart';
@@ -118,6 +120,8 @@ Future<int> runChimera(
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
+  TypePeriodicService? typePeriodicService,
+  PeriodicCancellation? periodicCancellation,
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
   DateTime Function()? currentTime,
@@ -128,7 +132,9 @@ Future<int> runChimera(
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'person'
+      final key = parsed.command?.name == 'terminal'
+          ? 'cli.typePeriodicUsage'
+          : parsed.command?.name == 'person'
           ? 'cli.personUsage'
           : parsed.command?.name == 'document'
           ? 'cli.documentUsage'
@@ -204,6 +210,60 @@ Future<int> runChimera(
     if (parsed.command == null) {
       err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
       return 64;
+    }
+    if (parsed.command!.name == 'terminal' &&
+        parsed.command!.command?.name == 'type-periodic') {
+      final command = parsed.command!.command!;
+      if (command.rest.isNotEmpty) {
+        err.writeln(catalog.lookup(localeTag, 'cli.typePeriodicUsage'));
+        return 64;
+      }
+      final cancellation = periodicCancellation ?? PeriodicCancellation();
+      final signals = <StreamSubscription<ProcessSignal>>[];
+      try {
+        if (periodicCancellation == null) {
+          signals.add(
+            ProcessSignal.sigint.watch().listen((_) => cancellation.cancel()),
+          );
+          if (!Platform.isWindows) {
+            signals.add(
+              ProcessSignal.sigterm.watch().listen(
+                (_) => cancellation.cancel(),
+              ),
+            );
+          }
+        }
+        final result =
+            await (typePeriodicService ??
+                    TypePeriodicService(terminal: createPeriodicTerminal()))
+                .run(
+                  interval: command.option('interval'),
+                  cancellation: cancellation,
+                  onStarted: (seconds) => out.writeln(
+                    catalog
+                        .lookup(localeTag, 'typePeriodic.running')
+                        .replaceAll('{seconds}', '$seconds'),
+                  ),
+                );
+        return result.fold<int>(
+          onSuccess: (value) {
+            out.writeln(
+              catalog
+                  .lookup(localeTag, 'typePeriodic.stopped')
+                  .replaceAll('{count}', '${value.sentCount}'),
+            );
+            return 0;
+          },
+          onFailure: (failure) {
+            err.writeln(catalog.lookup(localeTag, failure.messageKey));
+            return 1;
+          },
+        );
+      } finally {
+        for (final signal in signals) {
+          await signal.cancel();
+        }
+      }
     }
     if (parsed.command!.name == 'update' &&
         parsed.command!.command?.name == 'check') {
@@ -1758,6 +1818,11 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('uuid', uuid)
+    ..addCommand(
+      'terminal',
+      ArgParser()
+        ..addCommand('type-periodic', ArgParser()..addOption('interval')),
+    )
     ..addCommand('update', update)
     ..addCommand('xml', xml);
 }
