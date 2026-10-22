@@ -5,6 +5,23 @@ import 'package:chimera_cli/chimera_cli.dart';
 import 'package:test/test.dart';
 
 void main() {
+  test(
+    'GivenUnknownDotnetVerb_WhenCli_ThenReturnGeneralCommandUsage',
+    () async {
+      final err = StringBuffer();
+      expect(
+        await runChimera(
+          ['dotnet', 'unknown-subcommand'],
+          localeTag: 'en',
+          out: StringBuffer(),
+          err: err,
+        ),
+        64,
+      );
+      expect(err.toString(), contains('Usage: chimera <command>'));
+    },
+  );
+
   late Directory root;
   Future<ProcessResult> git(List<String> args) =>
       Process.run('git', args, workingDirectory: root.path);
