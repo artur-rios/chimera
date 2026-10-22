@@ -43,3 +43,4 @@ export 'src/url/url_encoder.dart';
 export 'src/uuid/uuid_generator.dart';
 export 'src/validation/positive_decimal_integer.dart';
 export 'src/xml_format/xml_formatter.dart';
+export 'src/dotnet_version/dotnet_version_editor.dart';

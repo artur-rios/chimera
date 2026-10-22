@@ -43,3 +43,4 @@ export 'src/url_decode_service.dart';
 export 'src/url_encode_service.dart';
 export 'src/uuid_service.dart';
 export 'src/xml_format_service.dart';
+export 'src/dotnet_bump_service.dart';
