@@ -103,6 +103,88 @@ void main() {
       }
     }, NativeDirectoryAliasOverrides(alias, home.path));
   });
+  test('GivenFinalFilenameShortAlias_WhenSelected_ThenCanonicalProjectExtensionIsAccepted', () async {
+    final createdHome = await Directory(
+      p.join(sandbox.path, 'runneradministrator'),
+    ).create();
+    final home = Directory(await createdHome.resolveSymbolicLinks());
+    final directory = await Directory(p.join(home.path, 'src')).create();
+    final file = await File(
+      p.join(directory.path, 'Application.Library.csproj'),
+    ).writeAsString(original);
+    final alias = p.join(sandbox.path, 'RUNNER~1');
+    await IOOverrides.runWithIOOverrides(
+      () async {
+        final result =
+            await DotnetBumpService(
+                  NativeDotnetBumpGateway(workingDirectory: alias),
+                ).execute(
+                  DotnetBumpRequest(
+                    project: p.join(alias, 'src', 'APPLIC~1.CSP'),
+                    version: '2.0.0',
+                  ),
+                )
+                as ChimeraSuccess<DotnetBumpOutput>;
+        expect(result.value.project, file.path);
+        expect(
+          await file.readAsString(),
+          original.replaceFirst('1.2.3', '2.0.0'),
+        );
+      },
+      NativeDirectoryAliasOverrides(
+        alias,
+        home.path,
+        fileAliases: {p.join(directory.path, 'APPLIC~1.CSP'): file.path},
+      ),
+    );
+  });
+  test('GivenAliasWithNonProjectCanonicalExtension_WhenSelected_ThenRejectedWithoutBackup', () async {
+    final createdHome = await Directory(
+      p.join(sandbox.path, 'runneradministrator'),
+    ).create();
+    final home = Directory(await createdHome.resolveSymbolicLinks());
+    final directory = await Directory(p.join(home.path, 'src')).create();
+    final file = await File(p.join(directory.path, 'Application.Library.txt'))
+        .writeAsString(original);
+    final alias = p.join(sandbox.path, 'RUNNER~1');
+    await IOOverrides.runWithIOOverrides(
+      () async {
+        final result =
+            await DotnetBumpService(
+                  NativeDotnetBumpGateway(workingDirectory: alias),
+                ).execute(
+                  DotnetBumpRequest(
+                    project: p.join(alias, 'src', 'APPLIC~1.CSP'),
+                    version: '2.0.0',
+                  ),
+                )
+                as ChimeraFailure<DotnetBumpOutput>;
+        expect(result.code, 'dotnet-bump-discovery');
+        expect(await file.readAsString(), original);
+        expect(directory.listSync().length, 1);
+      },
+      NativeDirectoryAliasOverrides(
+        alias,
+        home.path,
+        fileAliases: {p.join(directory.path, 'APPLIC~1.CSP'): file.path},
+      ),
+    );
+  });
+  test('GivenWindowsFinalFilenameShortAlias_WhenSelected_ThenCanonicalProjectIsUpdated', () async {
+    final alias = await windowsShortFile(project);
+    if (alias == null) {
+      markTestSkipped('The Windows test volume does not expose 8.3 aliases.');
+      return;
+    }
+    final result = await service().execute(
+      DotnetBumpRequest(project: alias, version: '2.0.0'),
+    ) as ChimeraSuccess<DotnetBumpOutput>;
+    expect(result.value.project, project.path);
+    expect(
+      await project.readAsString(),
+      original.replaceFirst('1.2.3', '2.0.0'),
+    );
+  }, skip: !Platform.isWindows);
   test('GivenDifferentObjectAliasAncestor_WhenSelected_ThenRejectBeforeResolvingChild', () async {
     final createdHome = await Directory(
       p.join(sandbox.path, 'runneradministrator'),

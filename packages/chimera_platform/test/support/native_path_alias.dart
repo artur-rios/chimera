@@ -9,14 +9,21 @@ final class NativeDirectoryAliasOverrides extends IOOverrides {
     this.alias,
     this.canonical, {
     this.sameObject = true,
+    this.fileAliases = const {},
   });
   final String alias;
   final String canonical;
   final bool sameObject;
+  final Map<String, String> fileAliases;
   final List<String> directoryRequests = [];
   bool _isAlias(String path) => path == alias || p.isWithin(alias, path);
-  String _map(String path) =>
-      _isAlias(path) ? p.join(canonical, p.relative(path, from: alias)) : path;
+  String _map(String path) {
+    final mapped = _isAlias(path)
+        ? p.join(canonical, p.relative(path, from: alias))
+        : path;
+    return fileAliases[mapped] ?? mapped;
+  }
+
   @override
   Directory createDirectory(String path) {
     directoryRequests.add(path);
@@ -68,24 +75,29 @@ final class _AliasDirectory implements Directory {
 }
 
 /// Obtain a real Windows 8.3 spelling when the test volume supports it.
-Future<String?> windowsShortDirectory(Directory directory) async {
-  final canonical = await directory.resolveSymbolicLinks();
-  if (!p.equals(directory.path, canonical)) return directory.path;
+Future<String?> windowsShortDirectory(Directory directory) =>
+    _windowsShortPath(directory);
+
+Future<String?> windowsShortFile(File file) => _windowsShortPath(file);
+
+Future<String?> _windowsShortPath(FileSystemEntity entity) async {
+  final canonical = await entity.resolveSymbolicLinks();
+  if (!p.equals(entity.path, canonical)) return entity.path;
   final result = await Process.run('cmd', [
     '/d',
     '/c',
-    'for %I in ("${directory.path}") do @echo %~sI',
+    'for %I in ("${entity.path}") do @echo %~sI',
   ]);
   if (result.exitCode != 0) {
     throw FileSystemException(
       'Could not query Windows short path',
-      directory.path,
+      entity.path,
     );
   }
   final alias = p.normalize((result.stdout as String).trim());
   if (p.equals(alias, canonical)) return null;
   if (!FileSystemEntity.identicalSync(alias, canonical)) {
-    throw FileSystemException('Short path is not the same directory', alias);
+    throw FileSystemException('Short path is not the same object', alias);
   }
   return alias;
 }
