@@ -25,6 +25,12 @@ void main() {
         expect(service.request!.push, isFalse);
         expect(service.request!.project, '/repo/src');
         expect(find.textContaining('v1.2.3'), findsOneWidget);
+        final status = find.semantics.byLabel(RegExp(r'v1\.2\.3'));
+        expect(status, findsOne);
+        expect(
+          status.evaluate().single,
+          isSemantics(isLiveRegion: true, isTextField: false),
+        );
       },
     );
     testWidgets(

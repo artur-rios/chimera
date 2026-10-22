@@ -110,7 +110,10 @@ final class _DotnetTagPageState extends State<DotnetTagPage> {
                 ),
               if (_result != null) ...[
                 const SizedBox(height: 16),
-                Semantics(liveRegion: true, child: SelectableText(_result!)),
+                Semantics(
+                  liveRegion: true,
+                  child: SelectionArea(child: Text(_result!)),
+                ),
               ],
             ],
           ),
