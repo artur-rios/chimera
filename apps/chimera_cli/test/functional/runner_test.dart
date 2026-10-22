@@ -3019,6 +3019,9 @@ void main() {
       expect(
         out.toString(),
         'Usage: chimera <command> [options]\n'
+        'Build .NET: chimera dotnet build [source-directory] [--help]\n'
+        'Test .NET: chimera dotnet test [base-directory] [--help]\n'
+        'Minimal .NET: chimera dotnet init-min --help\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]\n',
       );
       expect(err.toString(), isEmpty);

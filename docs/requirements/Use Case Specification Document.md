@@ -1154,6 +1154,279 @@ graph LR
 
 ---
 
+## 2.8 Developer Workflow Automation
+
+### UC-47: Create Project from Template
+
+**Actors:** Developer, local automation. **Targets:** native Windows/Linux GUI and CLI; web returns unsupported.
+
+**Requirements:** FR-DW-01 and shared FR-PL requirements.
+
+**Preconditions:** The actor selects a new destination under an existing writable parent.
+**Postconditions:** All pinned template files exist, or a typed failure is returned with no existing content overwritten.
+
+## Source traceability
+
+- [`cli-utils init-proj`](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/commands/init-proj.ps1)
+- [`cli-utils` documentation](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/README.md#init-proj)
+
+## Main flow
+
+1. The actor supplies a new destination name or path.
+2. Chimera validates that the parent is writable and the destination does not already exist.
+3. Chimera materializes a versioned `project-template` snapshot, including hidden files and excluding `.git`.
+4. Chimera reports the created path and template version.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | The destination is missing, invalid, already exists, or is not writable. | Return a typed validation or access failure without changing the destination. |
+| AF-02 | The packaged template is missing, corrupt, or cannot be copied completely. | Remove partial output when safe and report a typed scaffold failure. |
+
+## Acceptance criteria
+
+- [ ] The basic operation works offline using a versioned template bundled with Chimera.
+- [ ] The resulting tree matches the approved template fixture, including dotfiles and excluding `.git`.
+- [ ] CLI and supported native GUI surfaces use one shared scaffold service.
+- [ ] Failures do not overwrite an existing destination or report partial output as success.
+
+### UC-48: Type Periodic Commands
+
+**Actor:** Local desktop or CLI user. **Requirement:** FR-DW-02.
+
+**Purpose:** Run a visible sequence of fixed `echo Hello World <n>` commands
+inside a dedicated Windows console owned by this operation, until stopped.
+
+**Source traceability:** [issue #97](https://github.com/artur-rios/chimera/issues/97)
+and [`cli-utils/commands/ktype.ps1` at 3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff](https://github.com/artur-rios/cli-utils/blob/3f0c9a9a95ba9ef9d424377b10c94ca340feb0ff/commands/ktype.ps1).
+
+**Main flow:**
+
+1. The actor opens `/terminal/type-periodic` or invokes
+   `chimera terminal type-periodic [--interval=<seconds>]`.
+2. The shared service normalizes the interval to a positive signed 32-bit
+   decimal integer and launches its own `cmd.exe /d` in a new console.
+3. After 1 second it activates that console and reports the effective interval
+   in the selected interface language. It waits 15 seconds, then the interval.
+4. Immediately before each input write the native adapter verifies that the
+   original child is alive, belongs to the attached console, and that the
+   captured console window is foreground. It writes `echo Hello World 1` plus
+   Enter through that console's scoped input handle. Each subsequent interval
+   increments the suffix by one.
+5. The actor selects Stop or uses Ctrl+C (also SIGTERM on Linux hosts). The
+   shared cancellation token interrupts pending timers; the service awaits
+   cleanup of the owned console and helper and reports the number sent.
+   Navigating away or detaching the desktop app also cancels its operation.
+
+| Alternative | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Interval is absent, empty, nondecimal, nonnumeric, nonpositive, or outside signed 32-bit range. | Use and report the 20-second default. |
+| AF-02 | Target is Linux or web. | Return typed `type_periodic_unsupported`; launch nothing. |
+| AF-03 | Launch, activation, console attachment, owned-input access, helper protocol, or input write fails. | Return typed `type_periodic_automation`; stop and await cleanup. Windows terminal hosts that cannot expose an owned foreground console fail closed. |
+| AF-04 | Captured console loses foreground or the original process/console cannot be verified at send time. | Stop with `type_periodic_focus_lost` or automation failure; never redirect input into another window. No automatic resume. |
+| AF-05 | Stop occurs before launch or during any delay. | Return a successful stopped result without further input; a pre-cancelled operation launches nothing. |
+| AF-06 | A service instance already has a running operation. | Return `type_periodic_busy` without sharing or replacing its child. |
+| AF-07 | Cleanup cannot be confirmed. | Return `type_periodic_cleanup`; no further commands are scheduled. |
+
+**Security boundary:** No global keyboard injection, clipboard paste, user-supplied
+command text, or network access. The native helper creates the child suspended,
+assigns it to a kill-on-close job, then resumes it. It attaches only to that
+child's console and writes through a captured `CONIN$` handle. Focus changes
+cannot redirect that handle. Only fixed failure codes cross the adapter;
+raw process output, paths, and exceptions are discarded.
+
+**Postconditions:** No pending service timer, active automation loop, or owned
+helper remains after the result completes. A stopped operation closes its own
+terminal and never closes unrelated terminals. English and Brazilian Portuguese
+messages cover start, effective interval, stop, and every failure.
+
+---
+
+### UC-50: Clean .NET Build Artifacts
+
+| Field | Value |
+| --- | --- |
+| **ID** | UC-50 |
+| **Actors** | Developer, Local automation |
+| **Description** | Preview and remove native .NET build artifact directories inside one selected source root. |
+| **Preconditions** | A native Windows/Linux interface and a readable local source directory. |
+| **Postconditions** | Only approved artifact trees are removed; every retained artifact is reported. |
+| **Requirements** | FR-DW-04, BR-DW-04, FR-PL-03–FR-PL-06 |
+
+**Source traceability:** [PowerShell clean.ps1](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/clean.ps1), [Python clean.py](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/clean.py), [issue #99](https://github.com/artur-rios/chimera/issues/99).
+
+**Main Flow**
+
+1. The actor selects a source root, defaulting to `./src` when available.
+2. Chimera validates the root and previews its resolved path and topmost `bin`/`obj` directories, without following links or modifying files.
+3. The actor explicitly confirms the displayed scope in the desktop dialog or CLI prompt; automation uses `--yes`.
+4. The shared service revalidates scope, removes approved directories, and reports the actual removed count and every retained path.
+
+**Alternative Flows**
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Root missing, not a directory, contains traversal, resolves through a link/junction/case alias, or changes after preview. | Typed validation failure; delete nothing for an invalid root. Unsafe artifact paths are individually retained. |
+| AF-02 | No artifact directories exist. | Successful zero-count no-op without prompting. |
+| AF-03 | A path is locked, denied, changed, or unsafe at deletion. | Continue within validated scope; return a partial-failure report naming every retained artifact. |
+| AF-04 | Actor declines, closes the dialog, or provides no explicit affirmative answer. | Delete nothing; CLI exits nonzero. |
+| AF-05 | Web or another unsupported target is used. | Explain native Windows/Linux support and expose no filesystem action. |
+
+### UC-52: Bump .NET Project Version
+
+| Field | Value |
+| --- | --- |
+| **ID** | UC-52 |
+| **Actors** | Developer, Local automation |
+| **Description** | Set or increment a project's numeric version while preserving a recoverable original through verification. |
+| **Preconditions** | Native Windows/Linux interface and one readable/writable `.csproj`. |
+| **Postconditions** | Updated bytes and version are verified, or the original is restored/recoverable from the reported backup. |
+| **Requirements** | FR-DW-06, BR-DW-06, FR-PL-03–FR-PL-06 |
+
+**Source traceability:** [PowerShell bump.ps1](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/bump.ps1), [Python bump.py](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/bump.py), [issue #101](https://github.com/artur-rios/chimera/issues/101).
+
+**Main Flow**
+
+1. The actor supplies an explicit numeric `MAJOR.MINOR.PATCH` version or one major/minor/patch increment, and optionally a project file or directory.
+2. Chimera discovers exactly one immediate `.csproj` (default `./src`), validates its XML/encoding, reads `<Version>` and computes the target.
+3. Chimera creates and verifies an exclusive sibling backup, stages updated bytes and checks the source has not changed.
+4. Chimera replaces only the targeted version source span (or inserts a valid element), rereads and verifies the exact bytes and version, then removes the backup and reports old/new versions and project path.
+
+**Alternative Flows**
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Zero or multiple projects are discovered. | Typed discovery failure listing candidates; no backup or modification. |
+| AF-02 | Invalid/mixed version modes, invalid target, or increment without an existing valid version. | Typed version failure; no backup or modification. |
+| AF-03 | XML parsing, backup, staging, replacement or verification fails. | Never report success. Restore the original when safe; retain and report the backup path even after rollback. If restoration fails, explicitly report manual recovery is required. Source conflicts preserve the newer source and backup. |
+| AF-04 | Multiple/complex Version elements, DTD, unsupported encoding or linked project path. | Typed validation/access failure before mutation. |
+| AF-05 | Verification succeeds but backup cleanup is denied. | Report the verified bump and the retained original backup path. |
+| AF-06 | Web or another unsupported target is used. | Native-only message and no filesystem action. |
+
+
+### UC-53: Create .NET Release Tag
+
+**Actors:** Developer, local automation. **Targets:** Windows/Linux desktop and CLI; web unsupported.
+**Requirements:** FR-DW-07, shared FR-PL requirements.
+**Preconditions:** One project with a valid semantic Version exists inside a Git working tree.
+**Postconditions:** An annotated local tag exists; only an explicit push may publish it. Failed pushes retain and report the local tag.
+
+## Source traceability
+
+- [`dotnet-tools tag`](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/tag.ps1)
+- [`python-dotnet-tools tag`](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/tag.py)
+
+## Main flow
+
+1. The actor selects a project scope and whether to push, defaulting the remote to `origin`.
+2. Chimera resolves exactly one `.csproj`, reads its version, verifies the Git repository, and confirms that `v<version>` does not exist.
+3. Chimera creates annotated tag `v<version>` with message `Release <version>`.
+4. When requested, Chimera pushes only that tag to the selected remote and reports local and remote outcomes separately.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Project discovery is ambiguous, the project has no valid version, or the target is not a Git repository. | Return a typed validation or discovery failure without creating a tag. |
+| AF-02 | The tag already exists. | Return a conflict result and leave the existing tag unchanged. |
+| AF-03 | Local tag creation succeeds but push fails. | Report the retained local tag and failed remote operation without claiming complete success. |
+
+## Acceptance criteria
+
+- [ ] Tag naming, annotation, optional push, and remote selection match the source tools.
+- [ ] No force operation, tag overwrite, credential logging, or implicit push is allowed.
+- [ ] Native desktop and CLI adapters share project discovery, Git execution, cancellation, and diagnostics; web is explicitly unsupported.
+
+
+
+### UC-54: Scaffold NuGet Library Repository
+
+**Actors:** Developer and local automation. **Targets:** Windows/Linux native
+GUI and CLI; web returns a typed unsupported result. **Requirement:** FR-DW-08.
+**Prerequisite:** UC-47's shared transactional scaffold writer.
+
+**Traceability:** [issue #103](https://github.com/artur-rios/chimera/issues/103),
+[`dotnet-tools init-lib.ps1` at 7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-lib.ps1)
+and [`python-dotnet-tools init_lib.py` at c7255b386ca49a40cbafde7c6e4edd29b25fdebf](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_lib.py).
+
+**Main flow:**
+
+1. The actor opens `/dotnet/init-lib` or invokes `chimera dotnet init-lib`.
+   Supply every individual field/flag, or choose one UTF-8 JSON file using
+   `--parameters=<path>`; `--json` selects machine-readable result output.
+2. The shared parser validates required source keys `RootFolder`,
+   `SolutionName`, `ProjectName`, `Author`, `Company`, `Description`, `Version`,
+   `PackageId`, and `RepositoryUrl`. No implicit parameter file is loaded.
+   Names are portable dotted .NET identifiers (project namespaces exclude C#
+   reserved keywords); package IDs contain 1–100 ASCII letters, digits, dots,
+   underscores, or hyphens; strict SemVer numeric core components are at most
+   65534 for buildable assembly versions; repository URLs are absolute HTTPS
+   without credentials/fragments. Metadata is nonempty single-line XML text,
+   at most 4096 characters, with no MSBuild expressions or encoded expansions.
+   The explicit JSON document is at most 64 KiB and contains string values.
+3. The offline renderer uses versioned, embedded templates to produce
+   `.editorconfig`, `.gitignore`, `.wakatime-project`, original license and
+   attribution, README/versioning instructions, `src/<Solution>.sln`, the
+   NuGet library project and sample source, the referenced xUnit test project
+   and sample test, and `docs/.gitkeep`. The library targets .NET 10 and retains
+   supplied NuGet metadata. XML text is escaped without recursive substitution.
+4. UC-47's shared writer exclusively reserves a nonexistent destination under
+   an existing writable parent, creates and verifies every file, and returns
+   the absolute destination, template version, and every created file path.
+   Generation does not invoke dotnet, Git, restore, build, publish, or network
+   services. All request/output data is ephemeral.
+
+| Alternative | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | JSON and any individual value are mixed, including an explicit empty flag. | Reject input mode before reading the JSON file or writing anything. |
+| AF-02 | Required values, JSON shape, names, SemVer, destination name, or metadata are invalid. | Return `dotnet-scaffold-validation` with stable field identifiers and localized field feedback; create nothing. |
+| AF-03 | Parameter file is inaccessible or too large at the native read boundary. | Return a localized typed input-access error; do not invoke the scaffold service. |
+| AF-04 | Destination exists (file/directory/link), parent is absent, or access is denied. | Return the shared typed access/conflict result and preserve all existing content. |
+| AF-05 | Rendering, bundle validation, byte writing, or verification fails. | Return a typed rendering/scaffold error; remove only still-owned partial output when safe. Preserve externally introduced content and report retained paths if rollback cannot safely complete. |
+| AF-06 | Actor uses the web target. | Return `scaffold-unsupported`; no native writes, archive export, or network requests occur. |
+
+**Acceptance evidence:** Independent complete golden fixtures verify template
+output and equivalent field/JSON modes. Native tests verify every reported
+path, existing destinations, and rollback after partial writes. The acceptance
+tool restores, builds, tests, and packs a generated solution using a real .NET
+10 SDK; CI runs it on Windows and Linux. Source normalizations and build fixes
+are documented in [template provenance](../reference/dotnet-library-templates.md).
+
+### UC-56: Scaffold .NET Project
+
+**Actors:** Developer, local automation. **Targets:** native Windows/Linux desktop and CLI. Web returns unsupported.
+**Requirements:** FR-DW-10, shared FR-PL requirements.
+**Preconditions:** A valid project name and an existing writable parent are supplied.
+**Postconditions:** One approved project is written in a new destination, or existing content is preserved and safe partial output removed.
+
+## Source traceability
+
+- [`dotnet-tools init-proj`](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-proj.ps1)
+- [`python-dotnet-tools init-proj`](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_proj.py)
+
+## Main flow
+
+1. The actor supplies a project name and selects minimal or NuGet mode; minimal is the default.
+2. Chimera validates the name, mutually exclusive modes, and a target directory that does not exist.
+3. Chimera creates `<ProjectName>/<ProjectName>.csproj` from the selected versioned template.
+4. Chimera validates the generated project and reports its path and selected mode.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | The name is missing or invalid, both modes are selected, or an unknown option is supplied. | Return a typed validation failure and create nothing. |
+| AF-02 | The destination already exists or is not writable. | Return a typed access/conflict failure without overwriting content. |
+| AF-03 | Template rendering or validation fails after creation begins. | Remove partial output when safe and report a typed scaffold failure. |
+
+## Acceptance criteria
+
+- [ ] Minimal mode emits the approved minimal `.csproj`; NuGet mode retains all approved metadata elements with blank values.
+- [ ] Templates are versioned, available offline, and validated by golden fixtures plus a real `dotnet` project evaluation on Windows and Linux.
+- [ ] Native desktop and CLI adapters use one shared validation, rendering, and transactional-write service; web may export an archive if equivalent output is preserved.
+
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1204,6 +1477,16 @@ graph LR
 | UC-44 Check for Update | FR-UP-02–FR-UP-04, FR-UP-08 |
 | UC-45 Apply Update | FR-UP-05–FR-UP-08 |
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
+| UC-47 Create Project from Template | FR-DW-01, shared FR-PL requirements |
+| UC-48 Type Periodic Commands | FR-DW-02, shared FR-PL requirements |
+| UC-50 Clean .NET Build Artifacts | FR-DW-04 |
+| UC-52 Bump .NET Project Version | FR-DW-06 |
+| UC-53 Create .NET Release Tag | FR-DW-07, shared FR-PL requirements |
+| UC-54 Scaffold NuGet Library Repository | FR-DW-08, shared FR-PL requirements |
+| UC-56 Scaffold .NET Project | FR-DW-10, shared FR-PL requirements |
+| UC-49 Build .NET Solution | FR-DW-03, shared FR-PL requirements |
+| UC-51 Test .NET Projects with Coverage | FR-DW-05, shared FR-PL requirements |
+| UC-55 Scaffold Minimal .NET Library Repository | FR-DW-09, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.
@@ -1228,3 +1511,103 @@ stateDiagram-v2
     Installing --> Current : installation fails or rolls back
     Updated --> [*]
 ```
+
+## UC-49 — Build .NET Solution
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-03 |
+| Preconditions | Native Windows/Linux; a source directory containing a solution; .NET SDK on PATH. |
+| Success | Restore (unless disabled) and every requested build complete with exit status zero. |
+
+1. The actor selects a source directory (default `./src`), optional solution,
+   Debug/Release configuration (default both), and optional no-restore mode.
+2. Chimera validates the request, resolves exactly one `.sln` or the explicitly
+   selected file within the chosen directory, and checks installed SDKs.
+3. Chimera executes `dotnet restore` unless disabled, then `dotnet build` for
+   Debug followed by Release, or the explicit configuration. No-restore mode
+   passes `--no-restore` to each build.
+4. Chimera streams bounded/redacted diagnostics and returns a structured result
+   including the external exit status.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: No solution or ambiguous discovery | Typed discovery failure; list available solution names; run no build. |
+| AF-02: Invalid path/configuration or unavailable SDK | Typed validation/dependency failure; run no build. |
+| AF-03: Restore/build failure | Stop immediately, retain bounded diagnostics, propagate non-success and external exit status. |
+| AF-04: Cancellation | Terminate the owned process tree, stop subsequent commands, return cancelled. |
+| AF-05: Web | Show a localized unsupported-target explanation with build disabled. |
+
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).
+
+## UC-51 — Test .NET Projects with Coverage
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-05 |
+| Preconditions | Windows/Linux; test projects; .NET SDK, XPlat collector, and ReportGenerator available. |
+| Success | Every test project passes and HTML coverage output exists, or a documented successful no-test no-op. |
+
+1. The actor selects a base directory or uses `./tests`.
+2. Chimera resolves output paths and discovers test `.csproj` files recursively,
+   excluding any Setup directory, generated outputs, and linked directory trees.
+3. When projects exist, Chimera checks the SDK and ReportGenerator, proves both
+   output roots remain within the project scope, and clears old output contents.
+4. Chimera runs each project with JSON, LCOV, and Cobertura XPlat coverage,
+   verifying that new coverage artifacts exist after each successful project.
+5. Chimera generates an HTML ReportGenerator report and returns test results and
+   report locations with bounded/redacted diagnostics.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: No test project | Success with `noTests: true`; invoke no external tools and leave old output intact. |
+| AF-02: SDK, collector, or ReportGenerator unavailable | Typed dependency failure naming the prerequisite; retain available diagnostics/artifacts. |
+| AF-03: Test or report generation fails | Stop immediately; preserve test artifacts, diagnostic text, locations, and external exit status. |
+| AF-04: Unsafe or inaccessible output | Reject cleanup outside the selected project scope; do not follow symlink/junction output roots. |
+| AF-05: Cancellation | Terminate owned external process trees and prevent subsequent commands. |
+| AF-06: Web | Localized explicit unsupported message; execution disabled. |
+
+Defaults are `tests/TestResults` and `docs/coverage-report`. With an explicit
+base, use `<base>/TestResults` and `<base>/coverage-report`.
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/test.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/test.py).
+
+## UC-55 — Scaffold Minimal .NET Library Repository
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-09; business rule BR-DW-09 |
+| Trigger | Actor requests a minimal library repository. |
+| Preconditions | Windows/Linux desktop or CLI; an existing writable parent directory; destination does not exist. Scaffolding itself needs no SDK or network. |
+| Success | An approved minimal .NET 10 solution and library, repository configuration, license, READMEs, and docs/tests placeholders exist; every created file and template version is reported. |
+
+1. The actor supplies `RootFolder`, `SolutionName`, `ProjectName`, `Author`, and
+   `Description` through fields/flags, or selects one JSON file containing them.
+2. Chimera rejects mixed modes, malformed JSON, missing/invalid field values,
+   invalid portable names, and existing or inaccessible destinations.
+3. Chimera renders the versioned offline templates: `.editorconfig`, `.gitignore`,
+   `.wakatime-project`, `LICENSE`, root and source READMEs,
+   `src/<SolutionName>.sln`, `src/<ProjectName>/<ProjectName>.csproj`,
+   `docs/.gitkeep`, and `tests/.gitkeep`. No NuGet metadata or test `.csproj` is
+   generated.
+4. Chimera validates the complete bundle, reserves the destination exclusively,
+   writes through the shared scaffold writer, and verifies written content.
+5. Chimera reports every created path and the pinned template version.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: Mixed modes, missing/invalid values, malformed JSON, unknown CLI options | Typed validation failure with stable field identifiers, no rendering/writing. |
+| AF-02: Existing destination, missing parent, or denied access | Typed access/conflict failure; preserve all existing content. |
+| AF-03: Rendering, writing, or verification failure | Reject invalid bundles before writing; remove owned partial output when safe and report typed failure, retaining content whose ownership cannot be proven. |
+| AF-04: Web | Explicit localized unsupported message; no native file creation. |
+
+Native desktop and CLI share the parameter parser, minimal renderer,
+`ScaffoldService`, and transactional native writer. English and Brazilian
+Portuguese cover inputs and outcomes. Independent golden fixtures and real
+Windows/Linux Debug/Release builds validate the generated solution.
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).

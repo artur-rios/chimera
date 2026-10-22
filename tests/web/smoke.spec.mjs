@@ -3,6 +3,7 @@ import { createHmac, generateKeyPairSync, sign, verify } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { networkPolicyCases, networkRequestPolicyScript, unexpectedHttpRequests } from './network_policy.mjs';
+import { fillFlutterTextInput, observeFlutterTextInput } from './flutter_text_input.mjs';
 
 for (const value of networkPolicyCases) {
   test(`GivenNetworkPolicy${value.name}_WhenRequestsAreChecked_ThenOnlyUnexpectedRequestsRemain`, async ({ page }) => {
@@ -267,6 +268,7 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
       },
     });
   });
+  await observeFlutterTextInput(page);
   await page.goto('/');
   await enableFlutterSemantics(page);
   page.on('request', request => {
@@ -301,10 +303,8 @@ test('GivenCipherInput_WhenEncodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     name: 'Key (ASCII letters)',
     exact: true,
   });
-  await keyEditor.focus();
-  await keyEditor.fill('K3Y');
+  await fillFlutterTextInput(keyEditor, 'K3Y');
   await expect(keyEditor).toHaveValue('K3Y');
-  await keyEditor.press('Tab');
   await activateFlutterButton(
     page.getByRole('button', { name: 'Encode', exact: true }),
   );
@@ -372,7 +372,7 @@ test('GivenAlphabetSources_WhenEncodedAndRejected_ThenMappingAndFlowStayOffline'
     .toBe('... --- ... / ..---');
 
   const pendingChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await activateFlutterButton(page.getByRole('button', { name: 'Load UTF-8 file', exact: true }));
   await (await pendingChooser).setFiles({
     name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from('AZ', 'utf8'),
   });
@@ -446,7 +446,7 @@ test('GivenAlphabetSources_WhenDecodedAndRejected_ThenMappingAndFlowStayOffline'
     .toBe('SOS 2');
 
   const pendingChooser = page.waitForEvent('filechooser');
-  await page.getByRole('button', { name: 'Load UTF-8 file', exact: true }).click();
+  await activateFlutterButton(page.getByRole('button', { name: 'Load UTF-8 file', exact: true }));
   await (await pendingChooser).setFiles({
     name: 'source.txt', mimeType: 'text/plain', buffer: Buffer.from('Alfa Zulu', 'utf8'),
   });
@@ -489,6 +489,7 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
       },
     });
   });
+  await observeFlutterTextInput(page);
   await page.goto('/');
   await enableFlutterSemantics(page);
   page.on('request', request => {
@@ -507,7 +508,7 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     name: 'Key (ASCII letters)',
     exact: true,
   });
-  await fillFlutterTextBox(keyEditor, 'LEMON');
+  await fillFlutterTextInput(keyEditor, 'LEMON');
   await activateFlutterButton(
     page.getByRole('button', { name: 'Decode', exact: true }),
   );
@@ -522,7 +523,7 @@ test('GivenCipherInput_WhenDecodedAndRejected_ThenBrowserFlowStaysOffline', asyn
     .toBe('Attack!');
 
   await fillFlutterTextBox(editor, 'Lxfopv');
-  await fillFlutterTextBox(keyEditor, 'K3Y');
+  await fillFlutterTextInput(keyEditor, 'K3Y');
   await activateFlutterButton(
     page.getByRole('button', { name: 'Decode', exact: true }),
   );

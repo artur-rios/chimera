@@ -1,0 +1,2 @@
+# Rendered .NET project goldens use deterministic LF bytes on every host.
+/tests/fixtures/scaffolding/project.*.csproj text eol=lf

@@ -656,6 +656,7 @@ void main() {
       await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.byKey(const Key('open-json-yaml')));
       await tester.tap(find.byKey(const Key('open-json-yaml')));
       await tester.pumpAndSettle();
       await tester.enterText(
@@ -848,6 +849,7 @@ void main() {
     await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('open-json-csv')));
     await tester.tap(find.byKey(const Key('open-json-csv')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -1050,6 +1052,7 @@ void main() {
     await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('open-json-format')));
     await tester.tap(find.byKey(const Key('open-json-format')));
     await tester.pumpAndSettle();
     await tester.enterText(
@@ -1319,6 +1322,7 @@ void main() {
     await tester.pumpWidget(const ChimeraApp(localeTag: 'en'));
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.byKey(const Key('open-sql-format')));
     await tester.tap(find.byKey(const Key('open-sql-format')));
     await tester.pumpAndSettle();
     await tester.enterText(

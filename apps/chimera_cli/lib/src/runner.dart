@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -8,9 +9,19 @@ import 'package:chimera_platform/chimera_platform.dart';
 import 'package:chimera_platform/native_updates.dart';
 import 'package:chimera_platform/transactional_file_writer.dart'
     as native_output;
+import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
+import 'dotnet_build.dart';
+import 'dotnet_bump_command.dart';
+import 'dotnet_clean_command.dart';
+import 'dotnet_library_commands.dart';
+import 'dotnet_minimal_commands.dart';
+import 'dotnet_project_command.dart';
+import 'dotnet_tag.dart';
+import 'dotnet_test.dart';
 import 'output_sink.dart';
+import 'project_commands.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
   'CHIMERA_RELEASE_REPOSITORY',
@@ -118,17 +129,106 @@ Future<int> runChimera(
   TextUnescapeService textUnescapeService = const TextUnescapeService(),
   SqlFormatService sqlFormatService = const SqlFormatService(),
   XmlFormatService xmlFormatService = const XmlFormatService(),
+  TypePeriodicService? typePeriodicService,
+  PeriodicCancellation? periodicCancellation,
   UpdateCheckService? updateCheckService,
   UpdateApplyService? updateApplyService,
+  ScaffoldOperationService? scaffoldService,
+  DotnetTagOperationService? dotnetTagService,
+  DotnetScaffoldOperationService? dotnetLibraryScaffoldService,
+  DotnetScaffoldOperationService? minimalLibraryScaffoldService,
+  DotnetProjectOperationService? dotnetProjectService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-project') {
+    return runDotnetProjectCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetProjectService,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-min') {
+    return runMinimalLibraryCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: minimalLibraryScaffoldService,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-lib') {
+    return runDotnetLibraryCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetLibraryScaffoldService,
+      readFile: readFile,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'tag') {
+    return runDotnetTag(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetTagService,
+    );
+  }
+  if (args.isNotEmpty && args.first == 'project') {
+    return runProjectCommand(
+      args.sublist(1),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: scaffoldService,
+    );
+  }
+
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'build') {
+    return runDotnetBuild(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'test') {
+    return runDotnetTest(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+    );
+  }
   const catalog = MessageCatalog();
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'clean') {
+    return runDotnetCleanCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      readConfirmation: readStandardInput,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'bump') {
+    return runDotnetBumpCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+    );
+  }
   final parser = _buildParser();
 
   try {
     final parsed = parser.parse(_normalizeMultilineListOptions(args));
     if (parsed.flag('help')) {
-      final key = parsed.command?.name == 'person'
+      final key = parsed.command?.name == 'terminal'
+          ? 'cli.typePeriodicUsage'
+          : parsed.command?.name == 'person'
           ? 'cli.personUsage'
           : parsed.command?.name == 'document'
           ? 'cli.documentUsage'
@@ -202,8 +302,69 @@ Future<int> runChimera(
       return 0;
     }
     if (parsed.command == null) {
-      err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
+      err.writeln(
+        catalog.lookup(
+          localeTag,
+          args.isNotEmpty && args.first == 'dotnet'
+              ? 'cli.usage'
+              : 'cli.noCommand',
+        ),
+      );
       return 64;
+    }
+    if (parsed.command!.name == 'terminal' &&
+        parsed.command!.command?.name == 'type-periodic') {
+      final command = parsed.command!.command!;
+      if (command.rest.isNotEmpty) {
+        err.writeln(catalog.lookup(localeTag, 'cli.typePeriodicUsage'));
+        return 64;
+      }
+      final cancellation = periodicCancellation ?? PeriodicCancellation();
+      final signals = <StreamSubscription<ProcessSignal>>[];
+      try {
+        if (periodicCancellation == null) {
+          signals.add(
+            ProcessSignal.sigint.watch().listen((_) => cancellation.cancel()),
+          );
+          if (!Platform.isWindows) {
+            signals.add(
+              ProcessSignal.sigterm.watch().listen(
+                (_) => cancellation.cancel(),
+              ),
+            );
+          }
+        }
+        final result =
+            await (typePeriodicService ??
+                    TypePeriodicService(terminal: createPeriodicTerminal()))
+                .run(
+                  interval: command.option('interval'),
+                  cancellation: cancellation,
+                  onStarted: (seconds) => out.writeln(
+                    catalog
+                        .lookup(localeTag, 'typePeriodic.running')
+                        .replaceAll('{seconds}', '$seconds'),
+                  ),
+                );
+        return result.fold<int>(
+          onSuccess: (value) {
+            out.writeln(
+              catalog
+                  .lookup(localeTag, 'typePeriodic.stopped')
+                  .replaceAll('{count}', '${value.sentCount}'),
+            );
+            return 0;
+          },
+          onFailure: (failure) {
+            err.writeln(catalog.lookup(localeTag, failure.messageKey));
+            return 1;
+          },
+        );
+      } finally {
+        for (final signal in signals) {
+          await signal.cancel();
+        }
+      }
     }
     if (parsed.command!.name == 'update' &&
         parsed.command!.command?.name == 'check') {
@@ -1015,6 +1176,10 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    if (args.isNotEmpty && args.first == 'dotnet') {
+      err.writeln(catalog.lookup(localeTag, 'cli.usage'));
+      return 64;
+    }
     final isPerson =
         args.length >= 2 && args[0] == 'person' && args[1] == 'generate';
     final isIdentityDocument =
@@ -1758,6 +1923,11 @@ ArgParser _buildParser() {
     ..addCommand('sql', sql)
     ..addCommand('text', text)
     ..addCommand('uuid', uuid)
+    ..addCommand(
+      'terminal',
+      ArgParser()
+        ..addCommand('type-periodic', ArgParser()..addOption('interval')),
+    )
     ..addCommand('update', update)
     ..addCommand('xml', xml);
 }

@@ -166,6 +166,38 @@ permission denial is reported with retry guidance. Apply targets must match the
 host platform. Guided self-update rejects portable packages because replacing a
 running portable app cannot safely preserve the working version.
 
+### Build a .NET solution
+
+`chimera dotnet build` restores and builds the single `.sln` in `./src` for
+Debug and Release. Specify the source directory, solution, or one configuration:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart dotnet build ./src \
+  --solution Example.sln --configuration Release --no-restore --json
+```
+
+The Windows/Linux desktop route `/dotnet/build` shares this workflow and supports
+cancellation. Web displays an explicit unsupported message. An installed .NET
+SDK must be on `PATH`. `--no-restore` skips restoration in every build; otherwise
+NuGet may contact the actor's configured package sources. Diagnostics are bounded
+and redact URLs and common credential fields. Cancellation terminates the owned
+process tree and returns status 130; external failures preserve their exit code.
+
+### Test .NET projects with coverage
+
+`chimera dotnet test [base-directory] [--json]` discovers test `.csproj` files,
+excluding Setup fixtures, and collects JSON, LCOV, and Cobertura coverage before
+producing an HTML report. Defaults are `tests/TestResults` and
+`docs/coverage-report`; an explicit base keeps both outputs under that directory.
+The desktop route is `/dotnet/test`; web reports this workflow unsupported.
+
+Install the .NET SDK, reference `coverlet.collector` in test projects, and make
+`reportgenerator` available on `PATH`. Existing scoped outputs are cleared only
+after SDK/tool checks and path validation. No projects returns success without
+running tools or clearing output. Failures preserve available artifacts and
+external exit status; cancellation stops the owned process tree.
+
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.
@@ -506,15 +538,55 @@ access failures discard the source and expose no successful partial result.
 | Issue | Work | Source repositories |
 | --- | --- | --- |
 | [#96](https://github.com/artur-rios/chimera/issues/96) | UC-47 — Create Project from Template | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
-| [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
+| [#97](https://github.com/artur-rios/chimera/issues/97) | UC-48 — Type Periodic Commands — Implemented; human review pending | [`cli-utils`](https://github.com/artur-rios/cli-utils) |
 | [#98](https://github.com/artur-rios/chimera/issues/98) | UC-49 — Build .NET Solution | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-50-clean-net-build-artifacts) |
 | [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-52-bump-net-project-version) |
 | [#102](https://github.com/artur-rios/chimera/issues/102) | UC-53 — Create .NET Release Tag | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository — Implemented; human review pending | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#105](https://github.com/artur-rios/chimera/issues/105) | UC-56 — Scaffold .NET Project | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+
+
+UC-48 is available at `/terminal/type-periodic` and
+`chimera terminal type-periodic --interval=20`. It requires a supported native
+Windows console. Linux and web return a localized unsupported-target result.
+The first command follows the 1-second startup, 15-second initial delay, and
+selected interval. Stop with the desktop Stop button or CLI Ctrl+C; the owned
+terminal closes. Moving focus away stops input at the next send attempt.
+
+UC-54 creates a .NET 10 NuGet library repository at `/dotnet/init-lib` or
+`chimera dotnet init-lib`. Supply `--root`, `--solution`, `--project`, `--author`,
+`--company`, `--description`, `--version`, `--package-id`, and `--repository-url`,
+or use `--parameters=parameters.json` with the source keys documented in the
+[use case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-54-scaffold-nuget-library-repository).
+Add `--json` for destination, template version, and every created path.
+Generation is offline and transactional; the destination must not exist. Web
+returns an unsupported result. The acceptance tool and Windows/Linux CI verify
+the generated solution using a real .NET SDK; generation itself runs no commands.
+
+### Scaffold a minimal .NET library
+
+Create a minimal .NET 10 library repository with offline, versioned templates:
+
+```bash
+dart run apps/chimera_cli/bin/chimera.dart dotnet init-min \
+  --root ./ExampleRepo --solution Example --project Example.Library \
+  --author "Jane Doe" --description "Example library" --json
+```
+
+Alternatively pass `--parameters parameters.json` containing `RootFolder`,
+`SolutionName`, `ProjectName`, `Author`, and `Description`. Fields and a parameter
+file are mutually exclusive. The destination must not exist and its parent must
+be writable. The desktop route is `/dotnet/init-min`; web reports unsupported.
+
+Output includes configuration, original license attribution, READMEs,
+`src/<SolutionName>.sln`, `src/<ProjectName>/<ProjectName>.csproj`, and placeholder
+`docs`/`tests` directories. It intentionally omits NuGet metadata and a test
+project. SDK installation is required to build the result, but scaffolding works
+offline without it. Failures preserve existing content and remove owned partial
+output where safe; success reports every created file and the template version.
 
 ## Contributing
 
@@ -527,3 +599,35 @@ for the review gates, testing requirements, and Definition of Done.
 
 Chimera is distributed under the [Artur Rios Attribution License](LICENSE).
 Copyright © 2026 [Artur Rios](https://artur-rios.tech).
+
+### Clean .NET build artifacts (native Windows/Linux)
+
+Run `chimera dotnet clean --root=./src` to preview the exact resolved scope and
+artifact directories, then type `yes` (`sim` in Portuguese) to confirm. The default
+root is `./src` when it exists. For automation use
+`chimera dotnet clean --root=./src --yes`. Only directories named exactly `bin`
+or `obj` beneath that root qualify; source files and other directory names remain.
+Exit codes are 0 for success/no-op, 1 for partial failure with retained paths,
+and 2 for invalid or unconfirmed cleanup. The desktop tool presents the same
+preview and an explicit deletion dialog. Web displays native-only support.
+
+### Bump a .NET project version (native Windows/Linux)
+
+Use `chimera dotnet bump --version=2.0.0 --project=./src/App.csproj`, or select one
+increment with `--major`, `--minor` or `--patch`. Without `--project`, Chimera finds
+one immediate `.csproj` child of `./src`; a directory selection uses the same
+nonrecursive rule. Add `--json` for structured old/new versions, project path and
+recovery details. XML source and UTF-8/UTF-16 encoding are preserved. Failed
+transactions retain and report an original backup, including when automatic
+restoration succeeds. Exit codes: 0 verified success, 1 transaction/access failure,
+2 validation. The desktop form shares this behavior; web explains native-only
+support. Conditional projects with multiple Version nodes and other encodings
+are rejected before mutation.
+
+### .NET release tags (UC-53)
+
+`chimera dotnet tag [--project=<project.csproj-or-directory>] [--push] [--remote=origin] [--json]` recursively discovers one project in `./src` by default, reads its semantic `<Version>`, and creates annotated `v<version>` with `Release <version>`. Without `--push` it stays local. An explicit push sends only that tag. Existing tags are preserved; failed or cancelled pushes retain the local tag and report the remote outcome as unconfirmed. Desktop uses `/dotnet/tag`; browser receives an unsupported-target explanation. Git must be installed.
+
+### .NET project scaffolding (UC-56)
+
+`chimera dotnet init-project --name=Example --parent=./work [--minimal|--nuget] [--json]` creates one new project directory offline. Minimal is the default. NuGet mode keeps metadata elements with blank values. Existing destinations are never overwritten. Desktop uses the same service at `/dotnet/init-project`; browser users receive the native-target explanation. Templates target .NET 10 and are pinned to dotnet-tools commit `7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998`.

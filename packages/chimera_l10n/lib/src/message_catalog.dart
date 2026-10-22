@@ -3,6 +3,222 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "cli.dotnetLibraryUsage": "Usage: chimera dotnet init-lib --root=<destination> --solution=<name> --project=<name> --author=<author> --company=<company> --description=<description> --version=<semver> --package-id=<id> --repository-url=<https-url> [--json], OR --parameters=<JSON file> [--json]. Do not mix parameter files and individual values. Generates offline; never restores packages or runs dotnet.",
+    "dotnetScaffold.title": "Scaffold NuGet Library",
+    "dotnetScaffold.description": "Creates a complete .NET 10 NuGet library repository locally. The destination must not exist. Use all fields or one JSON parameter file. Generation does not restore, build, publish, or contact a network service. Web cannot write a native repository.",
+    "dotnetScaffold.fieldsMode": "Fields",
+    "dotnetScaffold.jsonMode": "JSON file",
+    "dotnetScaffold.pickJson": "Choose JSON parameter file",
+    "dotnetScaffold.jsonLoaded": "JSON parameters loaded locally.",
+    "dotnetScaffold.create": "Create repository",
+    "dotnetScaffold.working": "Creating repository…",
+    "dotnetScaffold.created": "Repository created",
+    "error.dotnetScaffold.validation": "Review the indicated fields. Names must be portable .NET identifiers, version must be valid SemVer with numeric parts at most 65534, and the repository URL must use HTTPS without credentials. Metadata cannot contain controls or MSBuild expressions.",
+    "error.dotnetScaffold.render":
+        "Repository templates could not be rendered. No output was created.",
+    "error.dotnetScaffold.mixedMode":
+        "Use either a JSON parameter file or individual values, never both.",
+    "error.dotnetScaffold.inputAccess":
+        "The JSON parameter file could not be read or exceeds 64 KiB.",
+    "error.dotnetScaffold.jsonRequired":
+        "Choose one JSON parameter file before creating the repository.",
+    "dotnetScaffold.field.RootFolder": "Repository destination",
+    "dotnetScaffold.field.SolutionName": "Solution name",
+    "dotnetScaffold.field.ProjectName": "Project name",
+    "dotnetScaffold.field.Author": "Author",
+    "dotnetScaffold.field.Company": "Company",
+    "dotnetScaffold.field.Description": "Description",
+    "dotnetScaffold.field.Version": "Semantic version",
+    "dotnetScaffold.field.PackageId": "NuGet package ID",
+    "dotnetScaffold.field.RepositoryUrl": "Repository HTTPS URL",
+    "dotnetScaffold.field.inputMode": "Input mode",
+    "dotnetScaffold.field.parametersJson": "JSON parameters",
+    "dotnetScaffold.invalidField": "Review this required field.",
+
+    'dotnetMinimal.title': 'Scaffold Minimal .NET Library',
+    'dotnetMinimal.description': 'Creates an offline minimal .NET library repository with docs and tests placeholders. No NuGet metadata or test project is generated. The destination must not exist.',
+    'dotnetMinimal.create': 'Create minimal repository',
+    'dotnetMinimal.created': 'Minimal repository created',
+    'dotnetMinimal.jsonMode': 'Use one parameters JSON file',
+    'dotnetMinimal.loadParameters': 'Load parameters JSON file',
+    'dotnetMinimal.parametersLoaded': 'Parameters file loaded.',
+    'dotnetMinimal.unsupported': 'Minimal .NET scaffolding requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'dotnetMinimal.field.RootFolder': 'New repository path',
+    'dotnetMinimal.field.SolutionName': 'Solution name',
+    'dotnetMinimal.field.ProjectName': 'Library project name',
+    'dotnetMinimal.field.Author': 'Author',
+    'dotnetMinimal.field.Description': 'Description',
+    'error.dotnetMinimal.validation': 'Provide all five required values with valid names, using fields or one JSON file. Review the identified fields.',
+    'error.dotnetMinimal.render': 'The minimal repository template could not be rendered. No repository was created.',
+    'error.dotnetMinimal.parametersRead':
+        'The parameters JSON file could not be read or exceeds its size limit.',
+    'cli.dotnetInitMinUsage': 'Usage: chimera dotnet init-min (--root <new-path> --solution <name> --project <name> --author <author> --description <text> | --parameters <file.json>) [--json]. Supply all five values or one JSON file; do not mix modes. Creates an offline .NET 10 library with docs/tests placeholders and no NuGet metadata or test project.',
+
+    "dotnetProject.title": "Scaffold .NET project",
+    "dotnetProject.name": "Project name",
+    "dotnetProject.parent": "Parent directory",
+    "dotnetProject.minimal": "Minimal project",
+    "dotnetProject.nuget": "NuGet project (blank metadata)",
+    "dotnetProject.create": "Create .NET project",
+    "error.dotnetProject.validation":
+        "Choose a valid project name and exactly one project mode.",
+    "cli.dotnetProjectUsage": "Usage: chimera dotnet init-project --name=<name> [--parent=<directory>] [--minimal|--nuget] [--json]",
+
+    "scaffold.title": "Create project from template",
+    "scaffold.destination": "New destination path",
+    "scaffold.create": "Create project",
+    "scaffold.created": "Project created",
+    "scaffold.working": "Creating project…",
+    "scaffold.description": "Creates an offline project template, including hidden files. The destination must not exist.",
+    "cli.projectTemplateUsage":
+        "Usage: chimera project from-template <destination> [--json]",
+    "error.scaffold.validation": "Choose a valid new destination.",
+    "error.scaffold.template":
+        "The bundled template is missing or invalid. Nothing was created.",
+    "error.scaffold.access": "The destination already exists or cannot be created. Existing content was preserved.",
+    "error.scaffold.failed": "Project creation failed. Partial output was removed where safe; inspect any retained destination.",
+    "error.scaffold.unsupported": "Project creation is available in the Windows and Linux desktop and CLI applications.",
+    "cli.typePeriodicUsage": "Usage: chimera terminal type-periodic [--interval=<seconds>]. Windows native only. Invalid intervals default to 20 seconds. Startup: 1 second, then 15 seconds, then the interval. Stop with Ctrl+C.",
+    "typePeriodic.pageTitle": "Type Periodic Commands",
+    "typePeriodic.openAction": "Type Periodic Commands",
+    "typePeriodic.description": "Opens a dedicated Windows command window and types echo Hello World with a sequential number. Focus must remain on that window. Startup waits 1 second, then 15 seconds, then the interval before the first command.",
+    "typePeriodic.interval": "Interval in seconds (default 20)",
+    "typePeriodic.start": "Start",
+    "typePeriodic.stop": "Stop",
+    "typePeriodic.starting": "Opening the owned Windows terminal.",
+    "typePeriodic.running":
+        "Running every {seconds} seconds. Stop with Ctrl+C or the Stop button.",
+    "typePeriodic.stopped": "Stopped. Commands sent: {count}.",
+    "error.typePeriodic.unsupported": "Periodic commands require a supported Windows native console; Linux and web are unsupported.",
+    "error.typePeriodic.automation": "The owned terminal could not be launched, activated, or written to safely. Automation stopped.",
+    "error.typePeriodic.focus_lost": "The owned terminal lost focus or exited. Automation stopped without typing into another window.",
+    "error.typePeriodic.cleanup":
+        "Terminal cleanup could not be confirmed. Automation has stopped.",
+    "error.typePeriodic.busy":
+        "A periodic command operation is already running.",
+
+    'dotnet.testTitle': 'Test .NET Projects with Coverage',
+    'error.dotnet.testCancelled':
+        'The test and coverage operation was cancelled.',
+    'dotnet.testDescription': 'Runs test projects with JSON, LCOV and Cobertura coverage, then generates HTML. Previous TestResults and coverage-report contents inside the project scope are cleared.',
+    'dotnet.testBase': 'Base directory (optional; default ./tests)',
+    'dotnet.testAction': 'Run tests and coverage',
+    'dotnet.testing': 'Running tests and generating coverage…',
+    'dotnet.testSucceeded':
+        'Tests and HTML coverage report completed successfully.',
+    'dotnet.noTests': 'No test projects found. No external tools were invoked.',
+    'error.dotnet.testUnsupported': 'Testing .NET projects requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'error.dotnet.unsafeOutput': 'The output directories could not be proven to stay within the selected project scope. Output preparation stopped.',
+    'error.dotnet.outputAccess': 'The scoped output directories could not be prepared. Check file access.',
+    'error.dotnet.reportGeneratorUnavailable': 'ReportGenerator is unavailable. Make reportgenerator available on PATH.',
+    'error.dotnet.collectorUnavailable': 'The XPlat Code Coverage collector did not produce all requested formats. Add coverlet.collector to each test project and restore it.',
+    'error.dotnet.testFailed': 'A test project failed. Available diagnostics and test artifacts were preserved.',
+    'error.dotnet.reportFailed': 'HTML coverage generation failed. Available coverage artifacts were preserved.',
+    'cli.dotnetTestUsage': 'Usage: chimera dotnet test [base-directory] [--json]. Defaults: ./tests, tests/TestResults and docs/coverage-report. Explicit base stores both outputs beneath it. Setup directories are excluded. No projects is a successful no-op. Existing scoped outputs are cleared only after SDK/tool checks and path validation.',
+
+    "error.dotnetTag.access":
+        "The project could not be read. No tag was created.",
+    "dotnetTag.title": "Create .NET release tag",
+    "dotnetTag.project": "Project file or source directory",
+    "dotnetTag.remote": "Remote name",
+    "dotnetTag.push": "Push this tag to the selected remote",
+    "dotnetTag.create": "Create annotated tag",
+    "dotnetTag.cancel": "Cancel operation",
+    "dotnetTag.created": "Annotated local tag created; no push requested",
+    "dotnetTag.pushed": "Annotated tag created and pushed",
+    "dotnetTag.busy": "Creating release tag…",
+    "cli.dotnetTagUsage": "Usage: chimera dotnet tag [--project=<file-or-directory>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Choose a valid named remote and project selection.",
+    "error.dotnetTag.discovery":
+        "Select exactly one .csproj; no tag was created.",
+    "error.dotnetTag.version": "The project has no unambiguous valid semantic Version; no tag was created.",
+    "error.dotnetTag.repository":
+        "The project is not inside a Git working tree; no tag was created.",
+    "error.dotnetTag.conflict":
+        "The release tag already exists and was preserved.",
+    "error.dotnetTag.command":
+        "The Git operation failed. Inspect the reported local tag status.",
+    "error.dotnetTag.pushFailed":
+        "The push failed or was not confirmed. The local tag was retained.",
+    "error.dotnetTag.cancelled":
+        "The operation was cancelled. Any created local tag was retained.",
+    "error.dotnetTag.gitUnavailable":
+        "Git is unavailable. Install Git to create a release tag.",
+    "error.dotnetTag.unsupported": "Release tags are available in the Windows and Linux desktop and CLI applications.",
+
+    'dotnet.title': 'Build .NET Solution',
+    'dotnet.exitStatus': 'External exit status: {code}',
+    'dotnet.source': 'Source directory',
+    'dotnet.solution': 'Solution (optional)',
+    'dotnet.configuration': 'Configuration',
+    'dotnet.both': 'Debug and Release',
+    'dotnet.noRestore': 'Skip restore',
+    'dotnet.build': 'Build',
+    'dotnet.cancel': 'Cancel',
+    'dotnet.running': 'Building solution…',
+    'dotnet.succeeded': 'Build completed successfully.',
+    'error.dotnet.validation':
+        'Specify a valid source directory and Debug or Release configuration.',
+    'error.dotnet.invalidPath':
+        'The source directory or solution path is invalid or inaccessible.',
+    'error.dotnet.noSolution': 'No solution (.sln) was found.',
+    'error.dotnet.ambiguousSolution':
+        'Multiple solutions were found. Select a solution explicitly.',
+    'error.dotnet.sdkUnavailable': 'The .NET SDK is unavailable. Install it and make dotnet available on PATH.',
+    'error.dotnet.commandFailed': 'The restore or build command failed. See diagnostics and the external exit status.',
+    'error.dotnet.cancelled': 'The build was cancelled.',
+    'error.dotnet.unsupported': 'Building .NET solutions requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'cli.dotnetBuildUsage': 'Usage: chimera dotnet build [source-directory] [--solution=<file.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Defaults: ./src, restore, Debug and Release.',
+
+    'dotnetClean.title': "Clean .NET build artifacts",
+    'dotnetClean.root': "Source root (defaults to ./src)",
+    'dotnetClean.preview': "Preview cleanup",
+    'dotnetClean.scope': "Selected scope",
+    'dotnetClean.confirm': "Delete listed directories",
+    'dotnetClean.cancel': "Cancel",
+    'dotnetClean.confirmPrompt': "Delete these directories? Type yes to confirm. Use --yes for automation.",
+    'dotnetClean.confirmationRequired':
+        "Confirmation is required; nothing was deleted.",
+    'dotnetClean.invalidRoot': "Select an existing directory without traversal, symbolic links, or junctions.",
+    'dotnetClean.invalidPreview':
+        "The preview has expired. Preview the scope again.",
+    'dotnetClean.invalidOptions':
+        "Invalid cleanup options. Use chimera dotnet clean --help.",
+    'dotnetClean.removed': "Removed {count} artifact directories.",
+    'dotnetClean.retained':
+        "Could not completely remove this path; it was retained",
+    'dotnetClean.unsupported': "Cleaning build artifacts is supported only on native Windows and Linux.",
+    'dotnetClean.usage': "Usage: chimera dotnet clean [--root=<directory>] [--yes]. Defaults to ./src when available. Previews exact bin/obj paths. Requires an explicit yes before deletion, or --yes for automation. Exit: 0 success/no-op, 1 partial failure with retained paths, 2 validation or unconfirmed operation.",
+
+    'dotnetBump.title': "Bump .NET project version",
+    'dotnetBump.project': "Project file or directory (defaults to ./src)",
+    'dotnetBump.mode': "Version change",
+    'dotnetBump.explicit': "Set explicit version",
+    'dotnetBump.major': "Increment major",
+    'dotnetBump.minor': "Increment minor",
+    'dotnetBump.patch': "Increment patch",
+    'dotnetBump.version': "Version (MAJOR.MINOR.PATCH)",
+    'dotnetBump.apply': "Update version",
+    'dotnetBump.success': "{project}: {previous} → {version}",
+    'dotnetBump.missing': "(no version)",
+    'dotnetBump.backupRetained': "Original backup retained",
+    'dotnetBump.restored': "The original project was restored.",
+    'dotnetBump.notRestored': "The project could not be restored automatically. Recover the original from the reported backup.",
+    'dotnetBump.invalidOptions':
+        "Invalid version options. Use chimera dotnet bump --help.",
+    'dotnetBump.invalid-version': "Supply one numeric MAJOR.MINOR.PATCH version or one increment. Increments require an existing valid version.",
+    'dotnetBump.invalid-xml':
+        "The project XML is invalid or is not a supported Project document.",
+    'dotnetBump.ambiguous-version': "The project has multiple or complex Version elements. Select an unambiguous project version.",
+    'dotnetBump.unsupported-encoding': "The project encoding is invalid or unsupported. UTF-8 and UTF-16 LE/BE are supported.",
+    'dotnetBump.discovery': "Select exactly one .csproj file, or a directory containing exactly one immediate .csproj child.",
+    'dotnetBump.access': "The project or backup could not be accessed safely.",
+    'dotnetBump.transactionFailed': "Version update failed. The original backup is retained at the reported path.",
+    'dotnetBump.unsupported':
+        "Version updates are supported only on native Windows and Linux.",
+    'dotnetBump.usage': "Usage: chimera dotnet bump (--version=MAJOR.MINOR.PATCH|--major|--minor|--patch) [--project=<csproj-or-directory>] [--json]. Defaults to one immediate .csproj child of ./src. Preserves XML and UTF-8/UTF-16 encoding. Keeps an original backup until reread verification succeeds. Exit: 0 success, 1 transaction/access failure, 2 validation.",
+
     'update.pageTitle': 'Check for updates',
     'update.openAction': 'Check for updates',
     'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
@@ -890,6 +1106,9 @@ _catalogs = <String, Map<String, String>>{
     'cli.noCommand': 'No command provided.',
     'cli.usage':
         'Usage: chimera <command> [options]\n'
+        'Build .NET: chimera dotnet build [source-directory] [--help]\n'
+        'Test .NET: chimera dotnet test [base-directory] [--help]\n'
+        'Minimal .NET: chimera dotnet init-min --help\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
@@ -1344,6 +1563,215 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "cli.dotnetLibraryUsage": "Uso: chimera dotnet init-lib --root=<destino> --solution=<nome> --project=<nome> --author=<autor> --company=<empresa> --description=<descrição> --version=<semver> --package-id=<id> --repository-url=<url-https> [--json], OU --parameters=<arquivo JSON> [--json]. Não misture arquivo e valores individuais. Gera offline; não restaura pacotes nem executa dotnet.",
+    "dotnetScaffold.title": "Criar Biblioteca NuGet",
+    "dotnetScaffold.description": "Cria localmente um repositório completo de biblioteca NuGet .NET 10. O destino não pode existir. Use todos os campos ou um arquivo JSON. A geração não restaura, compila, publica ou acessa serviços de rede. A web não pode gravar um repositório nativo.",
+    "dotnetScaffold.fieldsMode": "Campos",
+    "dotnetScaffold.jsonMode": "Arquivo JSON",
+    "dotnetScaffold.pickJson": "Escolher arquivo JSON de parâmetros",
+    "dotnetScaffold.jsonLoaded": "Parâmetros JSON carregados localmente.",
+    "dotnetScaffold.create": "Criar repositório",
+    "dotnetScaffold.working": "Criando repositório…",
+    "dotnetScaffold.created": "Repositório criado",
+    "error.dotnetScaffold.validation": "Revise os campos indicados. Use nomes .NET portáveis, SemVer válido com partes numéricas até 65534 e URL HTTPS sem credenciais. Metadados não podem conter controles ou expressões MSBuild.",
+    "error.dotnetScaffold.render":
+        "Não foi possível renderizar os modelos. Nenhum arquivo foi criado.",
+    "error.dotnetScaffold.mixedMode":
+        "Use um arquivo JSON ou valores individuais, nunca ambos.",
+    "error.dotnetScaffold.inputAccess":
+        "Não foi possível ler o arquivo JSON ou ele excede 64 KiB.",
+    "error.dotnetScaffold.jsonRequired":
+        "Escolha um arquivo JSON antes de criar o repositório.",
+    "dotnetScaffold.field.RootFolder": "Destino do repositório",
+    "dotnetScaffold.field.SolutionName": "Nome da solução",
+    "dotnetScaffold.field.ProjectName": "Nome do projeto",
+    "dotnetScaffold.field.Author": "Autor",
+    "dotnetScaffold.field.Company": "Empresa",
+    "dotnetScaffold.field.Description": "Descrição",
+    "dotnetScaffold.field.Version": "Versão semântica",
+    "dotnetScaffold.field.PackageId": "ID do pacote NuGet",
+    "dotnetScaffold.field.RepositoryUrl": "URL HTTPS do repositório",
+    "dotnetScaffold.field.inputMode": "Modo de entrada",
+    "dotnetScaffold.field.parametersJson": "Parâmetros JSON",
+    "dotnetScaffold.invalidField": "Revise este campo obrigatório.",
+
+    'dotnetMinimal.title': 'Criar biblioteca .NET mínima',
+    'dotnetMinimal.description': 'Cria um repositório de biblioteca .NET mínima com modelos locais e pastas docs e tests vazias. Não gera metadados NuGet nem projeto de testes. O destino não pode existir.',
+    'dotnetMinimal.create': 'Criar repositório mínimo',
+    'dotnetMinimal.created': 'Repositório mínimo criado',
+    'dotnetMinimal.jsonMode': 'Usar um arquivo JSON de parâmetros',
+    'dotnetMinimal.loadParameters': 'Carregar arquivo JSON de parâmetros',
+    'dotnetMinimal.parametersLoaded': 'Arquivo de parâmetros carregado.',
+    'dotnetMinimal.unsupported': 'A criação de bibliotecas .NET mínimas requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'dotnetMinimal.field.RootFolder': 'Caminho do novo repositório',
+    'dotnetMinimal.field.SolutionName': 'Nome da solução',
+    'dotnetMinimal.field.ProjectName': 'Nome do projeto da biblioteca',
+    'dotnetMinimal.field.Author': 'Autor',
+    'dotnetMinimal.field.Description': 'Descrição',
+    'error.dotnetMinimal.validation': 'Informe os cinco valores obrigatórios com nomes válidos, usando campos ou um arquivo JSON. Revise os campos indicados.',
+    'error.dotnetMinimal.render': 'Não foi possível gerar o modelo do repositório mínimo. Nenhum repositório foi criado.',
+    'error.dotnetMinimal.parametersRead': 'Não foi possível ler o arquivo JSON de parâmetros ou ele excede o limite de tamanho.',
+    'cli.dotnetInitMinUsage': 'Uso: chimera dotnet init-min (--root <novo-caminho> --solution <nome> --project <nome> --author <autor> --description <texto> | --parameters <arquivo.json>) [--json]. Informe os cinco valores ou um arquivo JSON; não misture os modos. Cria uma biblioteca .NET 10 com pastas docs/tests vazias, sem metadados NuGet nem projeto de testes.',
+
+    "dotnetProject.title": "Criar projeto .NET",
+    "dotnetProject.name": "Nome do projeto",
+    "dotnetProject.parent": "Diretório pai",
+    "dotnetProject.minimal": "Projeto mínimo",
+    "dotnetProject.nuget": "Projeto NuGet (metadados vazios)",
+    "dotnetProject.create": "Criar projeto .NET",
+    "error.dotnetProject.validation":
+        "Escolha um nome de projeto válido e apenas um modo de projeto.",
+    "cli.dotnetProjectUsage": "Uso: chimera dotnet init-project --name=<nome> [--parent=<diretório>] [--minimal|--nuget] [--json]",
+
+    "scaffold.title": "Criar projeto a partir de modelo",
+    "scaffold.destination": "Caminho do novo destino",
+    "scaffold.create": "Criar projeto",
+    "scaffold.created": "Projeto criado",
+    "scaffold.working": "Criando projeto…",
+    "scaffold.description": "Cria um projeto com modelo local, incluindo arquivos ocultos. O destino não pode existir.",
+    "cli.projectTemplateUsage":
+        "Uso: chimera project from-template <destino> [--json]",
+    "error.scaffold.validation": "Escolha um novo destino válido.",
+    "error.scaffold.template":
+        "O modelo incluído está ausente ou inválido. Nada foi criado.",
+    "error.scaffold.access": "O destino já existe ou não pode ser criado. O conteúdo existente foi preservado.",
+    "error.scaffold.failed": "Falha ao criar o projeto. A saída parcial foi removida quando seguro; verifique o destino mantido.",
+    "error.scaffold.unsupported": "A criação de projetos está disponível nos aplicativos desktop e CLI para Windows e Linux.",
+    "cli.typePeriodicUsage": "Uso: chimera terminal type-periodic [--interval=<segundos>]. Apenas Windows nativo. Intervalos inválidos usam 20 segundos. Início: 1 segundo, depois 15 segundos, depois o intervalo. Pare com Ctrl+C.",
+    "typePeriodic.pageTitle": "Digitar Comandos Periódicos",
+    "typePeriodic.openAction": "Digitar Comandos Periódicos",
+    "typePeriodic.description": "Abre uma janela de comando própria do Windows e digita echo Hello World com um número sequencial. Mantenha o foco nessa janela. Aguarda 1 segundo, depois 15 segundos, depois o intervalo antes do primeiro comando.",
+    "typePeriodic.interval": "Intervalo em segundos (padrão 20)",
+    "typePeriodic.start": "Iniciar",
+    "typePeriodic.stop": "Parar",
+    "typePeriodic.starting": "Abrindo o terminal próprio do Windows.",
+    "typePeriodic.running": "Executando a cada {seconds} segundos. Pare com Ctrl+C ou o botão Parar.",
+    "typePeriodic.stopped": "Parado. Comandos enviados: {count}.",
+    "error.typePeriodic.unsupported": "Comandos periódicos exigem um console nativo compatível do Windows; Linux e web não são compatíveis.",
+    "error.typePeriodic.automation": "Não foi possível abrir, ativar ou escrever com segurança no terminal próprio. Automação interrompida.",
+    "error.typePeriodic.focus_lost": "O terminal próprio perdeu o foco ou foi fechado. Automação interrompida sem digitar em outra janela.",
+    "error.typePeriodic.cleanup": "Não foi possível confirmar a limpeza do terminal. Automação interrompida.",
+    "error.typePeriodic.busy":
+        "Uma operação de comandos periódicos já está em execução.",
+
+    'dotnet.testTitle': 'Testar projetos .NET com cobertura',
+    'error.dotnet.testCancelled':
+        'A operação de testes e cobertura foi cancelada.',
+    'dotnet.testDescription': 'Executa testes com cobertura JSON, LCOV e Cobertura e gera HTML. O conteúdo anterior de TestResults e coverage-report dentro do projeto é removido.',
+    'dotnet.testBase': 'Diretório base (opcional; padrão ./tests)',
+    'dotnet.testAction': 'Executar testes e cobertura',
+    'dotnet.testing': 'Executando testes e gerando cobertura…',
+    'dotnet.testSucceeded':
+        'Testes e relatório HTML de cobertura concluídos com sucesso.',
+    'dotnet.noTests': 'Nenhum projeto de teste encontrado. Nenhuma ferramenta externa foi executada.',
+    'error.dotnet.testUnsupported': 'Os testes .NET requerem o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'error.dotnet.unsafeOutput': 'Não foi possível comprovar que os diretórios de saída permanecem dentro do projeto selecionado. A preparação foi interrompida.',
+    'error.dotnet.outputAccess': 'Não foi possível preparar os diretórios de saída do projeto. Verifique o acesso aos arquivos.',
+    'error.dotnet.reportGeneratorUnavailable': 'ReportGenerator está indisponível. Disponibilize reportgenerator no PATH.',
+    'error.dotnet.collectorUnavailable': 'O coletor XPlat Code Coverage não gerou todos os formatos solicitados. Adicione coverlet.collector a cada projeto de teste e restaure-o.',
+    'error.dotnet.testFailed': 'Um projeto de teste falhou. Os diagnósticos e artefatos disponíveis foram preservados.',
+    'error.dotnet.reportFailed': 'A geração do relatório HTML falhou. Os artefatos de cobertura disponíveis foram preservados.',
+    'cli.dotnetTestUsage': 'Uso: chimera dotnet test [diretório-base] [--json]. Padrões: ./tests, tests/TestResults e docs/coverage-report. Uma base explícita armazena ambas as saídas nela. Diretórios Setup são excluídos. Sem projetos, retorna sucesso sem executar ferramentas. As saídas existentes são removidas somente após verificar o SDK, a ferramenta e os caminhos.',
+
+    "error.dotnetTag.access":
+        "Não foi possível ler o projeto. Nenhuma tag foi criada.",
+    "dotnetTag.title": "Criar tag de versão .NET",
+    "dotnetTag.project": "Arquivo de projeto ou diretório de origem",
+    "dotnetTag.remote": "Nome do remoto",
+    "dotnetTag.push": "Enviar esta tag ao remoto selecionado",
+    "dotnetTag.create": "Criar tag anotada",
+    "dotnetTag.cancel": "Cancelar operação",
+    "dotnetTag.created": "Tag local anotada criada; envio não solicitado",
+    "dotnetTag.pushed": "Tag anotada criada e enviada",
+    "dotnetTag.busy": "Criando tag de versão…",
+    "cli.dotnetTagUsage": "Uso: chimera dotnet tag [--project=<arquivo-ou-diretório>] [--push] [--remote=origin] [--json]",
+    "error.dotnetTag.validation":
+        "Escolha um nome de remoto e uma seleção de projeto válidos.",
+    "error.dotnetTag.discovery":
+        "Selecione exatamente um .csproj; nenhuma tag foi criada.",
+    "error.dotnetTag.version": "O projeto não tem uma Version semântica válida e inequívoca; nenhuma tag foi criada.",
+    "error.dotnetTag.repository": "O projeto não está em uma árvore de trabalho Git; nenhuma tag foi criada.",
+    "error.dotnetTag.conflict": "A tag de versão já existe e foi preservada.",
+    "error.dotnetTag.command":
+        "A operação Git falhou. Verifique o estado da tag local informado.",
+    "error.dotnetTag.pushFailed":
+        "O envio falhou ou não foi confirmado. A tag local foi mantida.",
+    "error.dotnetTag.cancelled":
+        "A operação foi cancelada. Qualquer tag local criada foi mantida.",
+    "error.dotnetTag.gitUnavailable":
+        "O Git está indisponível. Instale o Git para criar uma tag de versão.",
+    "error.dotnetTag.unsupported": "Tags de versão estão disponíveis nos aplicativos desktop e CLI para Windows e Linux.",
+
+    'dotnet.title': 'Compilar solução .NET',
+    'dotnet.exitStatus': 'Código de saída externo: {code}',
+    'dotnet.source': 'Diretório de código-fonte',
+    'dotnet.solution': 'Solução (opcional)',
+    'dotnet.configuration': 'Configuração',
+    'dotnet.both': 'Debug e Release',
+    'dotnet.noRestore': 'Ignorar restauração',
+    'dotnet.build': 'Compilar',
+    'dotnet.cancel': 'Cancelar',
+    'dotnet.running': 'Compilando solução…',
+    'dotnet.succeeded': 'Compilação concluída com sucesso.',
+    'error.dotnet.validation':
+        'Informe um diretório válido e a configuração Debug ou Release.',
+    'error.dotnet.invalidPath': 'O diretório de código-fonte ou caminho da solução é inválido ou inacessível.',
+    'error.dotnet.noSolution': 'Nenhuma solução (.sln) foi encontrada.',
+    'error.dotnet.ambiguousSolution': 'Várias soluções foram encontradas. Selecione uma solução explicitamente.',
+    'error.dotnet.sdkUnavailable': 'O SDK .NET está indisponível. Instale-o e disponibilize dotnet no PATH.',
+    'error.dotnet.commandFailed': 'A restauração ou compilação falhou. Consulte os diagnósticos e o código de saída externo.',
+    'error.dotnet.cancelled': 'A compilação foi cancelada.',
+    'error.dotnet.unsupported': 'A compilação de soluções .NET requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'cli.dotnetBuildUsage': 'Uso: chimera dotnet build [diretório] [--solution=<arquivo.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Padrões: ./src, restauração, Debug e Release.',
+
+    'dotnetClean.title': "Limpar artefatos de compilação .NET",
+    'dotnetClean.root': "Diretório de origem (padrão: ./src)",
+    'dotnetClean.preview': "Visualizar limpeza",
+    'dotnetClean.scope': "Escopo selecionado",
+    'dotnetClean.confirm': "Excluir diretórios listados",
+    'dotnetClean.cancel': "Cancelar",
+    'dotnetClean.confirmPrompt': "Excluir estes diretórios? Digite sim para confirmar. Use --yes para automação.",
+    'dotnetClean.confirmationRequired':
+        "É necessário confirmar; nada foi excluído.",
+    'dotnetClean.invalidRoot': "Selecione um diretório existente sem navegação relativa, links simbólicos ou junções.",
+    'dotnetClean.invalidPreview':
+        "A visualização expirou. Visualize o escopo novamente.",
+    'dotnetClean.invalidOptions':
+        "Opções de limpeza inválidas. Use chimera dotnet clean --help.",
+    'dotnetClean.removed': "{count} diretórios de artefatos removidos.",
+    'dotnetClean.retained':
+        "Não foi possível remover completamente este caminho; ele foi mantido",
+    'dotnetClean.unsupported': "A limpeza de artefatos está disponível apenas no Windows e Linux nativos.",
+    'dotnetClean.usage': "Uso: chimera dotnet clean [--root=<diretório>] [--yes]. Usa ./src quando disponível. Exibe os caminhos bin/obj exatos. Exige sim antes de excluir ou --yes para automação. Saída: 0 sucesso/nenhuma alteração, 1 falha parcial com caminhos mantidos, 2 validação ou operação não confirmada.",
+
+    'dotnetBump.title': "Atualizar versão de projeto .NET",
+    'dotnetBump.project': "Arquivo de projeto ou diretório (padrão: ./src)",
+    'dotnetBump.mode': "Alteração de versão",
+    'dotnetBump.explicit': "Definir versão explícita",
+    'dotnetBump.major': "Incrementar versão principal",
+    'dotnetBump.minor': "Incrementar versão secundária",
+    'dotnetBump.patch': "Incrementar correção",
+    'dotnetBump.version': "Versão (MAJOR.MINOR.PATCH)",
+    'dotnetBump.apply': "Atualizar versão",
+    'dotnetBump.success': "{project}: {previous} → {version}",
+    'dotnetBump.missing': "(sem versão)",
+    'dotnetBump.backupRetained': "Backup original mantido",
+    'dotnetBump.restored': "O projeto original foi restaurado.",
+    'dotnetBump.notRestored': "Não foi possível restaurar o projeto automaticamente. Recupere o original do backup informado.",
+    'dotnetBump.invalidOptions':
+        "Opções de versão inválidas. Use chimera dotnet bump --help.",
+    'dotnetBump.invalid-version': "Informe uma versão numérica MAJOR.MINOR.PATCH ou um incremento. Incrementos exigem uma versão válida existente.",
+    'dotnetBump.invalid-xml':
+        "O XML do projeto é inválido ou não é um documento Project compatível.",
+    'dotnetBump.ambiguous-version': "O projeto contém elementos Version múltiplos ou complexos. Selecione uma versão de projeto inequívoca.",
+    'dotnetBump.unsupported-encoding': "A codificação do projeto é inválida ou incompatível. São aceitos UTF-8 e UTF-16 LE/BE.",
+    'dotnetBump.discovery': "Selecione um arquivo .csproj ou um diretório com exatamente um arquivo .csproj imediato.",
+    'dotnetBump.access':
+        "Não foi possível acessar o projeto ou o backup com segurança.",
+    'dotnetBump.transactionFailed': "A atualização da versão falhou. O backup original foi mantido no caminho informado.",
+    'dotnetBump.unsupported': "A atualização de versões está disponível apenas no Windows e Linux nativos.",
+    'dotnetBump.usage': "Uso: chimera dotnet bump (--version=MAJOR.MINOR.PATCH|--major|--minor|--patch) [--project=<csproj-ou-diretório>] [--json]. Usa o único .csproj imediato de ./src. Preserva XML e codificação UTF-8/UTF-16. Mantém backup original até a verificação por releitura. Saída: 0 sucesso, 1 falha transacional/de acesso, 2 validação.",
+
     'update.pageTitle': 'Verificar atualizações',
     'update.openAction': 'Verificar atualizações',
     'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',
@@ -2278,6 +2706,9 @@ _catalogs = <String, Map<String, String>>{
     'cli.noCommand': 'Nenhum comando foi informado.',
     'cli.usage':
         'Uso: chimera <comando> [opções]\n'
+        'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
+        'Testar .NET: chimera dotnet test [diretório-base] [--help]\n'
+        '.NET mínimo: chimera dotnet init-min --help\n'
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',

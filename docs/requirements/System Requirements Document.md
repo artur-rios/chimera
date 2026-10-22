@@ -198,6 +198,26 @@ preference, file/clipboard, and update adapters vary by target.
 
 ---
 
+### 3.9 Developer Workflow (`DW`)
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-02 | Chimera shall provide UC-48 on supported Windows native desktop and CLI interfaces through one shared lifecycle service: launch and activate its own `cmd.exe /d` console; normalize invalid, absent, nonpositive, or out-of-range intervals to 20 seconds; wait 1 second at startup, 15 seconds initially, and the interval before each fixed sequential `echo Hello World <n>` command starting at 1; verify live console/process ownership and foreground at every scoped console-input write; stop on ownership/focus or automation failure; cancel and await cleanup without affecting unrelated windows; return a typed unsupported result on Linux and web; localize effective interval, stop count, and redacted failures in English and Brazilian Portuguese. | Must |
+
+---
+
+### 3.9 Developer Workflow (`DW`): UC-50
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-04 | Native Windows/Linux desktop and CLI shall share a build-artifact cleanup service. Resolve the actor-selected directory (default `./src` only when it exists), discover only topmost directories named exactly `bin` or `obj` beneath it, preview the canonical root and exact directory paths, and require explicit confirmation or CLI `--yes`. Reject missing/non-directory roots, traversal, linked roots/ancestors, junctions and case aliases. Revalidate canonical scope at deletion and conservatively retain changed or unsafe paths. No matches succeeds with zero removals; access/locked failures report each retained artifact and continue within scope. Web shall explicitly report unsupported behavior. |
+
+### 3.9 Developer Workflow (`DW`): UC-52
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-06 | Native Windows/Linux desktop and CLI shall share project discovery, numeric MAJOR.MINOR.PATCH calculation, and transactional version writing. Discover one immediate `.csproj` child of `./src` by default, or accept an explicit file/directory. Require exactly one explicit version or major/minor/patch increment; increments require an existing valid version and reset lower components. Preserve unrelated XML source, attributes, comments, namespace prefixes, newlines and supported UTF-8/UTF-16 encoding. Create and verify an exclusive original backup before replacement; reread and verify the exact updated bytes/version before cleanup. Failed writes or verification must restore or retain the original backup, report its path and never report success. Ambiguous discovery/version nodes, malformed XML and unsupported encoding fail before backup creation. Web is explicitly unsupported. |
+
 ## 4. Data Model
 
 ### 4.0 Identifier Strategy
@@ -344,6 +364,9 @@ the selected operation supports them.
 | `chimera cipher decode` | Decode using a classical cipher | FR-CA-02–FR-CA-04 |
 | `chimera alphabet encode` | Encode using a representation alphabet | FR-CA-05, FR-CA-07 |
 | `chimera alphabet decode` | Decode a representation alphabet | FR-CA-06–FR-CA-07 |
+| `chimera dotnet clean [--root=<directory>] [--yes]` | Preview and explicitly confirm removal of build artifacts; default `./src` | FR-DW-04 |
+
+| `chimera dotnet bump` | Set or increment a project version with a recoverable backup | FR-DW-06 |
 | `chimera update check` | Check for a compatible update | FR-UP-02–FR-UP-04 |
 | `chimera update apply` | Download, verify, and apply an accepted update | FR-UP-05–FR-UP-08 |
 
@@ -429,3 +452,50 @@ approval, verified before application, and discarded or rolled back on failure.
 | BR-17 | FR-UP-02–FR-UP-08 |
 | BR-18 | NFR-10 |
 | BR-19 | FR-PL-09–FR-PL-11 |
+
+## Developer Workflow Automation
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-01 | Create a new native project from the offline, versioned canonical project-template snapshot, preserve hidden files, exclude Git metadata, validate destination access/conflicts before creation, and safely remove owned partial output after rendering or write failures. Desktop and CLI consume one shared service; unsupported targets return a typed result. |
+
+
+### Developer Workflows — UC-49
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-03 | Restore and build a selected `.sln` through one shared native service. Default to `./src`, automatic single-solution discovery, restoration enabled, and Debug followed by Release. Accept explicit solution, Debug/Release configuration, and no-restore mode. Validate discovery and SDK availability before building; stop on external failure, return its exit status, stream bounded/redacted diagnostics, and terminate the process tree on cancellation. CLI and Windows/Linux desktop are supported; web explicitly reports unsupported. | Must |
+
+Traceability: [UC-49 issue #98](https://github.com/artur-rios/chimera/issues/98),
+[PowerShell build](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1),
+[Python build](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).
+
+### Developer Workflows — UC-51
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-05 | Discover test `.csproj` files recursively beneath `./tests` or an explicit base, excluding Setup fixtures. Run every project with XPlat JSON/LCOV/Cobertura coverage and generate an HTML ReportGenerator report. Default outputs are `tests/TestResults` and `docs/coverage-report`; an explicit base contains both outputs. Validate resolved cleanup scope before removing old output. Return a successful no-op when no tests exist; report typed SDK/collector/ReportGenerator failures, preserve failure artifacts, and share native cancellation/diagnostics across CLI and desktop. Web is unsupported. | Must |
+
+Traceability: [UC-51 issue #100](https://github.com/artur-rios/chimera/issues/100),
+[PowerShell test](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/test.ps1),
+[Python test](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/test.py).
+
+## .NET release-tag automation
+
+| ID | Requirement |
+| --- | --- |
+| FR-DW-07 | Resolve exactly one .NET project, validate its semantic Version and Git working tree, and create annotated tag v<version> with message Release <version>. Existing tags are never changed; only an explicitly requested push sends that exact tag to the selected remote (default origin). Retain local tags after failed/cancelled pushes and report local/remote outcomes separately. Shared native desktop/CLI service supports cancellation and redacted diagnostics; web is unsupported. |
+
+| FR-DW-08 | Scaffold a complete .NET 10 NuGet library repository from mutually exclusive individual fields or one explicit JSON document; require repository, solution, project, author, company, description, SemVer, package ID and HTTPS repository URL; reject invalid metadata with field-level feedback before writes; render offline versioned configuration/license/README/solution/library/test templates into src/tests/docs; share UC-47's destination reservation, verified writes and safe rollback across native GUI and CLI; report template version and every created path; localize EN/PT; return typed unsupported on web. |
+
+### Developer Workflows — UC-55
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-09 | Scaffold a minimal .NET library repository from five common values supplied through fields/flags or one JSON file. Validate exclusive input modes, required values, portable names, and a new writable destination before rendering offline, versioned configuration, license, README, solution, and minimal library project files with docs/tests placeholders. Omit NuGet metadata and test projects. Native desktop and CLI shall share parameter validation, rendering, and transactional writing; web shall explicitly report unsupported. Preserve existing destinations, roll back owned partial output when safe, and report every created path. | Must |
+
+Traceability: [UC-55 issue #104](https://github.com/artur-rios/chimera/issues/104),
+[PowerShell init-min](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1),
+[Python init-min](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).
+
+| FR-DW-10 | Scaffold one validated .NET project offline using versioned minimal (default) or NuGet templates; reject mixed modes and invalid names/options, keep all NuGet metadata elements blank in NuGet mode, preserve existing paths, and safely roll back partial output. Native GUI and CLI use one shared renderer and transactional writer. |
