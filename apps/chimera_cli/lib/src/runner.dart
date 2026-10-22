@@ -15,6 +15,8 @@ import 'package:chimera_utilities/chimera_utilities.dart';
 import 'dotnet_build.dart';
 
 import 'dotnet_clean_command.dart';
+
+import 'dotnet_test.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -140,8 +142,18 @@ Future<int> runChimera(
       service: scaffoldService,
     );
   }
+
   if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'build') {
     return runDotnetBuild(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'test') {
+    return runDotnetTest(
       args.sublist(2),
       localeTag: localeTag,
       out: out,

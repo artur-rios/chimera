@@ -36,6 +36,25 @@ _catalogs = <String, Map<String, String>>{
     "error.typePeriodic.busy":
         "A periodic command operation is already running.",
 
+    'dotnet.testTitle': 'Test .NET Projects with Coverage',
+    'error.dotnet.testCancelled':
+        'The test and coverage operation was cancelled.',
+    'dotnet.testDescription': 'Runs test projects with JSON, LCOV and Cobertura coverage, then generates HTML. Previous TestResults and coverage-report contents inside the project scope are cleared.',
+    'dotnet.testBase': 'Base directory (optional; default ./tests)',
+    'dotnet.testAction': 'Run tests and coverage',
+    'dotnet.testing': 'Running tests and generating coverage…',
+    'dotnet.testSucceeded':
+        'Tests and HTML coverage report completed successfully.',
+    'dotnet.noTests': 'No test projects found. No external tools were invoked.',
+    'error.dotnet.testUnsupported': 'Testing .NET projects requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'error.dotnet.unsafeOutput': 'The output directories could not be proven to stay within the selected project scope. Output preparation stopped.',
+    'error.dotnet.outputAccess': 'The scoped output directories could not be prepared. Check file access.',
+    'error.dotnet.reportGeneratorUnavailable': 'ReportGenerator is unavailable. Make reportgenerator available on PATH.',
+    'error.dotnet.collectorUnavailable': 'The XPlat Code Coverage collector did not produce all requested formats. Add coverlet.collector to each test project and restore it.',
+    'error.dotnet.testFailed': 'A test project failed. Available diagnostics and test artifacts were preserved.',
+    'error.dotnet.reportFailed': 'HTML coverage generation failed. Available coverage artifacts were preserved.',
+    'cli.dotnetTestUsage': 'Usage: chimera dotnet test [base-directory] [--json]. Defaults: ./tests, tests/TestResults and docs/coverage-report. Explicit base stores both outputs beneath it. Setup directories are excluded. No projects is a successful no-op. Existing scoped outputs are cleared only after SDK/tool checks and path validation.',
+
     'dotnet.title': 'Build .NET Solution',
     'dotnet.exitStatus': 'External exit status: {code}',
     'dotnet.source': 'Source directory',
@@ -968,6 +987,7 @@ _catalogs = <String, Map<String, String>>{
     'cli.usage':
         'Usage: chimera <command> [options]\n'
         'Build .NET: chimera dotnet build [source-directory] [--help]\n'
+        'Test .NET: chimera dotnet test [base-directory] [--help]\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
@@ -1452,6 +1472,25 @@ _catalogs = <String, Map<String, String>>{
     "error.typePeriodic.cleanup": "Não foi possível confirmar a limpeza do terminal. Automação interrompida.",
     "error.typePeriodic.busy":
         "Uma operação de comandos periódicos já está em execução.",
+
+    'dotnet.testTitle': 'Testar projetos .NET com cobertura',
+    'error.dotnet.testCancelled':
+        'A operação de testes e cobertura foi cancelada.',
+    'dotnet.testDescription': 'Executa testes com cobertura JSON, LCOV e Cobertura e gera HTML. O conteúdo anterior de TestResults e coverage-report dentro do projeto é removido.',
+    'dotnet.testBase': 'Diretório base (opcional; padrão ./tests)',
+    'dotnet.testAction': 'Executar testes e cobertura',
+    'dotnet.testing': 'Executando testes e gerando cobertura…',
+    'dotnet.testSucceeded':
+        'Testes e relatório HTML de cobertura concluídos com sucesso.',
+    'dotnet.noTests': 'Nenhum projeto de teste encontrado. Nenhuma ferramenta externa foi executada.',
+    'error.dotnet.testUnsupported': 'Os testes .NET requerem o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'error.dotnet.unsafeOutput': 'Não foi possível comprovar que os diretórios de saída permanecem dentro do projeto selecionado. A preparação foi interrompida.',
+    'error.dotnet.outputAccess': 'Não foi possível preparar os diretórios de saída do projeto. Verifique o acesso aos arquivos.',
+    'error.dotnet.reportGeneratorUnavailable': 'ReportGenerator está indisponível. Disponibilize reportgenerator no PATH.',
+    'error.dotnet.collectorUnavailable': 'O coletor XPlat Code Coverage não gerou todos os formatos solicitados. Adicione coverlet.collector a cada projeto de teste e restaure-o.',
+    'error.dotnet.testFailed': 'Um projeto de teste falhou. Os diagnósticos e artefatos disponíveis foram preservados.',
+    'error.dotnet.reportFailed': 'A geração do relatório HTML falhou. Os artefatos de cobertura disponíveis foram preservados.',
+    'cli.dotnetTestUsage': 'Uso: chimera dotnet test [diretório-base] [--json]. Padrões: ./tests, tests/TestResults e docs/coverage-report. Uma base explícita armazena ambas as saídas nela. Diretórios Setup são excluídos. Sem projetos, retorna sucesso sem executar ferramentas. As saídas existentes são removidas somente após verificar o SDK, a ferramenta e os caminhos.',
 
     'dotnet.title': 'Compilar solução .NET',
     'dotnet.exitStatus': 'Código de saída externo: {code}',
@@ -2430,6 +2469,7 @@ _catalogs = <String, Map<String, String>>{
     'cli.usage':
         'Uso: chimera <comando> [opções]\n'
         'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
+        'Testar .NET: chimera dotnet test [diretório-base] [--help]\n'
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const pages = [["/dotnet/build", "Building .NET solutions requires", "Build", true]];
+const pages = [["/dotnet/build", "Building .NET solutions requires", "Build", true], ["/dotnet/test", "Testing .NET projects requires", "Run tests and coverage", true]];
 
 for (const [route, explanation, action, disabledAction] of pages) {
   test(`GivenBrowser_WhenOpening${route}_ThenNativeRequirementIsAccessibleOffline`, async ({ page }) => {

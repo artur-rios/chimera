@@ -50,3 +50,12 @@ abstract interface class ProjectDiscovery {
     String? selection,
   });
 }
+
+abstract interface class ProjectFileDiscovery {
+  Future<ChimeraResult<List<String>>> discover(
+    String root, {
+    required String extension,
+    bool recursive = false,
+    Set<String> excludedDirectories = const {},
+  });
+}

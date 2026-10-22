@@ -10,8 +10,57 @@ import 'package:path/path.dart' as p;
 
 import 'src/windows_process_helper.dart';
 
-final class NativeProjectDiscovery implements ProjectDiscovery {
+final class NativeProjectDiscovery
+    implements ProjectDiscovery, ProjectFileDiscovery {
   const NativeProjectDiscovery();
+
+  @override
+  Future<ChimeraResult<List<String>>> discover(
+    String root, {
+    required String extension,
+    bool recursive = false,
+    Set<String> excludedDirectories = const {},
+  }) async {
+    try {
+      if (!await Directory(root).exists()) {
+        return const ChimeraFailure(
+          kind: FailureKind.validation,
+          code: 'dotnet.invalidPath',
+          messageKey: 'error.dotnet.invalidPath',
+        );
+      }
+      final resolved = await Directory(root).resolveSymbolicLinks();
+      final excluded = excludedDirectories
+          .map((name) => name.toLowerCase())
+          .toSet();
+      final files = <String>[];
+      Future<void> visit(Directory directory) async {
+        await for (final entity in directory.list(followLinks: false)) {
+          if (entity is File &&
+              p.extension(entity.path).toLowerCase() ==
+                  extension.toLowerCase()) {
+            files.add(entity.path);
+          } else if (recursive &&
+              entity is Directory &&
+              !excluded.contains(p.basename(entity.path).toLowerCase())) {
+            await visit(entity);
+          }
+        }
+      }
+
+      // The actor selected this root. Exclusions apply only to directories we
+      // encounter beneath it, never to unrelated ancestor directory names.
+      await visit(Directory(resolved));
+      files.sort();
+      return ChimeraSuccess(List.unmodifiable(files));
+    } on FileSystemException {
+      return const ChimeraFailure(
+        kind: FailureKind.access,
+        code: 'dotnet.invalidPath',
+        messageKey: 'error.dotnet.invalidPath',
+      );
+    }
+  }
 
   @override
   Future<ChimeraResult<String>> find(

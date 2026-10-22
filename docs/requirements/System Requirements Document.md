@@ -460,3 +460,13 @@ approval, verified before application, and discarded or rolled back on failure.
 Traceability: [UC-49 issue #98](https://github.com/artur-rios/chimera/issues/98),
 [PowerShell build](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1),
 [Python build](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).
+
+### Developer Workflows — UC-51
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-05 | Discover test `.csproj` files recursively beneath `./tests` or an explicit base, excluding Setup fixtures. Run every project with XPlat JSON/LCOV/Cobertura coverage and generate an HTML ReportGenerator report. Default outputs are `tests/TestResults` and `docs/coverage-report`; an explicit base contains both outputs. Validate resolved cleanup scope before removing old output. Return a successful no-op when no tests exist; report typed SDK/collector/ReportGenerator failures, preserve failure artifacts, and share native cancellation/diagnostics across CLI and desktop. Web is unsupported. | Must |
+
+Traceability: [UC-51 issue #100](https://github.com/artur-rios/chimera/issues/100),
+[PowerShell test](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/test.ps1),
+[Python test](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/test.py).

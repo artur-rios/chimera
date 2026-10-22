@@ -20,6 +20,8 @@ import 'date_page.dart';
 import 'dotnet_build_page.dart';
 
 import 'dotnet_clean_page.dart';
+
+import 'dotnet_test_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -275,6 +277,11 @@ GoRouter buildRouter({
           localeTag: localeTag(),
           serviceFactory: typePeriodicServiceFactory,
         ),
+      ),
+      GoRoute(
+        path: '/dotnet/test',
+        builder: (context, state) =>
+            DotnetTestPage(catalog: catalog, localeTag: localeTag()),
       ),
       GoRoute(
         path: '/dotnet/build',
@@ -581,6 +588,13 @@ GoRouter buildRouter({
                       ),
                       const SizedBox(height: 12),
                       Text(catalog.lookup(localeTag(), 'app.description')),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-test'),
+                        onPressed: () => context.go('/dotnet/test'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnet.testTitle'),
+                        ),
+                      ),
                       ElevatedButton(
                         key: const Key('open-dotnet-build'),
                         onPressed: () => context.go('/dotnet/build'),

@@ -1381,3 +1381,36 @@ stateDiagram-v2
 
 Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/build.ps1)
 and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/build.py).
+
+## UC-51 — Test .NET Projects with Coverage
+
+| Field | Value |
+| --- | --- |
+| Actors | Developer, local automation |
+| Requirement | FR-DW-05 |
+| Preconditions | Windows/Linux; test projects; .NET SDK, XPlat collector, and ReportGenerator available. |
+| Success | Every test project passes and HTML coverage output exists, or a documented successful no-test no-op. |
+
+1. The actor selects a base directory or uses `./tests`.
+2. Chimera resolves output paths and discovers test `.csproj` files recursively,
+   excluding any Setup directory, generated outputs, and linked directory trees.
+3. When projects exist, Chimera checks the SDK and ReportGenerator, proves both
+   output roots remain within the project scope, and clears old output contents.
+4. Chimera runs each project with JSON, LCOV, and Cobertura XPlat coverage,
+   verifying that new coverage artifacts exist after each successful project.
+5. Chimera generates an HTML ReportGenerator report and returns test results and
+   report locations with bounded/redacted diagnostics.
+
+| Alternative | Outcome |
+| --- | --- |
+| AF-01: No test project | Success with `noTests: true`; invoke no external tools and leave old output intact. |
+| AF-02: SDK, collector, or ReportGenerator unavailable | Typed dependency failure naming the prerequisite; retain available diagnostics/artifacts. |
+| AF-03: Test or report generation fails | Stop immediately; preserve test artifacts, diagnostic text, locations, and external exit status. |
+| AF-04: Unsafe or inaccessible output | Reject cleanup outside the selected project scope; do not follow symlink/junction output roots. |
+| AF-05: Cancellation | Terminate owned external process trees and prevent subsequent commands. |
+| AF-06: Web | Localized explicit unsupported message; execution disabled. |
+
+Defaults are `tests/TestResults` and `docs/coverage-report`. With an explicit
+base, use `<base>/TestResults` and `<base>/coverage-report`.
+Source parity: [PowerShell](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/test.ps1)
+and [Python](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/test.py).

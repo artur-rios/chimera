@@ -124,3 +124,17 @@ after that user accepts the update prompt.
 | ID | Rule | Rationale |
 | --- | --- | --- |
 | BR-DW-04 | Cleanup operates only beneath one explicit resolved source root. Only exact `bin` and `obj` directory names qualify. Never traverse links or junctions, accept traversal/case aliases, delete the selected root itself, or expand scope after preview. Require explicit confirmation; `--yes` supplies it only for the current CLI invocation. Revalidate each entry before nonrecursive deletion, retain unsafe or inaccessible artifacts, and report actual removals. Empty discovery succeeds. | Destructive native actions require a visible, bounded and reviewable scope. |
+
+## .NET Tests and Coverage (UC-51)
+
+- Discover `.csproj` files recursively, excluding Setup fixtures regardless of
+  case, generated output directories, and linked trees. No projects is a
+  successful no-op without external tools or cleanup.
+- Default outputs are `tests/TestResults` and `docs/coverage-report`; an explicit
+  base stores both beneath itself. Prove both resolved output paths are within
+  the selected project scope before deleting old contents; reject output links.
+- Check SDK and ReportGenerator before cleanup. Verify new JSON, LCOV, and
+  Cobertura artifacts after each project to detect missing XPlat collectors.
+- Stop on the first failed test/report command. Retain artifacts and bounded,
+  redacted diagnostics, and terminate owned process trees on cancellation.
+  Desktop and CLI use the same service; web cannot execute local .NET tools.
