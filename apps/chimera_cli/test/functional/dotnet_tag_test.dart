@@ -57,6 +57,11 @@ void main() {
         expect(code, 0, reason: err.toString());
         final value = jsonDecode(out.toString()) as Map<String, dynamic>;
         expect(value['tag'], 'v1.2.3');
+        expect(
+          value['project'],
+          await File('${root.path}/src/Library/Example.csproj')
+              .resolveSymbolicLinks(),
+        );
         expect(value['pushed'], isFalse);
         expect(value['localCreated'], isTrue);
         expect(
