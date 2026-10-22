@@ -28,7 +28,7 @@ jobs:
           dotnet-version: 10.0.x
       - run: flutter pub get
       - name: Verify shared builds, discovery, diagnostics, and cancellation
-        run: dart test packages/chimera_core/test/dotnet_build_test.dart packages/chimera_platform/test/native_commands_test.dart packages/chimera_platform/test/dotnet_build_integration_test.dart apps/chimera_cli/test/functional/dotnet_build_test.dart
+        run: dart test packages/chimera_core/test/dotnet_build_test.dart packages/chimera_platform/test/native_commands_test.dart packages/chimera_platform/test/dotnet_build_integration_test.dart apps/chimera_cli/test/functional/dotnet_build_test.dart packages/chimera_platform/test/native_project_discovery_alias_test.dart packages/chimera_platform/test/windows_short_path_test.dart
 
       - name: Verify annotated tags, selected remote, and cancellation
         run: dart test packages/chimera_core/test/dotnet_tag_service_test.dart packages/chimera_platform/test/dotnet_tag_project_test.dart apps/chimera_cli/test/functional/dotnet_tag_test.dart apps/chimera_cli/test/functional/dotnet_tag_signal_test.dart

@@ -5,6 +5,8 @@ import 'package:chimera_platform/native_commands.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 
+import 'support/windows_short_path.dart';
+
 void main() {
   late Directory sandbox;
   late Directory source;
@@ -42,13 +44,7 @@ void main() {
   test(
     'GivenWindowsShortAbsolutePath_WhenSolutionSelected_ThenCanonicalFile',
     () async {
-      final shortPath = await Process.run('cmd.exe', [
-        '/d',
-        '/c',
-        'for %I in ("${solution.path}") do @echo %~sI',
-      ]);
-      expect(shortPath.exitCode, 0);
-      final alias = p.normalize((shortPath.stdout as String).trim());
+      final alias = p.normalize(windowsShortPath(solution.path));
       if (p.equals(alias, solution.path)) {
         markTestSkipped('The Windows test volume does not expose 8.3 aliases.');
         return;
