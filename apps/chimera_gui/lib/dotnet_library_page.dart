@@ -210,7 +210,7 @@ final class _DotnetLibraryPageState extends State<DotnetLibraryPage> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Semantics(
                     liveRegion: true,
-                    child: SelectableText(_result!),
+                    child: SelectionArea(child: Text(_result!)),
                   ),
                 ),
             ],

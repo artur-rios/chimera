@@ -102,6 +102,14 @@ void main() {
       expect(service.request!.parametersJson, json);
       expect(service.request!.fields, isEmpty);
       expect(find.textContaining('src/Example.sln'), findsOneWidget);
+      await tester.ensureVisible(find.textContaining('src/Example.sln'));
+      await tester.pumpAndSettle();
+      final status = find.semantics.byLabel(RegExp(r'src/Example\.sln'));
+      expect(status, findsOne);
+      expect(
+        status.evaluate().single,
+        isSemantics(isLiveRegion: true, isTextField: false),
+      );
     },
   );
   testWidgets(
