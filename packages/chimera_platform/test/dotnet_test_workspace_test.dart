@@ -8,7 +8,8 @@ import 'package:test/test.dart';
 void main() {
   late Directory root;
   setUp(() async {
-    root = await Directory.systemTemp.createTemp('chimera coverage ');
+    final created = await Directory.systemTemp.createTemp('chimera coverage ');
+    root = Directory(await created.resolveSymbolicLinks());
   });
   tearDown(() async {
     await root.delete(recursive: true);
