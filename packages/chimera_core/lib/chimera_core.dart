@@ -53,3 +53,5 @@ export 'src/dotnet_build_service.dart';
 export 'src/dotnet_clean_service.dart';
 
 export 'src/dotnet_test_service.dart';
+
+export 'src/dotnet_bump_service.dart';

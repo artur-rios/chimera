@@ -1,0 +1,27 @@
+name: Native project version editing
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version-contract:
+    name: Project version editing (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart test packages/chimera_utilities/test/dotnet_version/dotnet_version_editor_test.dart packages/chimera_core/test/dotnet_bump_service_test.dart packages/chimera_platform/test/dotnet_bump_test.dart apps/chimera_cli/test/functional/dotnet_bump_cli_test.dart

@@ -22,6 +22,8 @@ import 'dotnet_build_page.dart';
 import 'dotnet_clean_page.dart';
 
 import 'dotnet_test_page.dart';
+
+import 'dotnet_bump_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -292,6 +294,11 @@ GoRouter buildRouter({
         path: '/dotnet/clean',
         builder: (context, state) =>
             DotnetCleanPage(catalog: catalog, localeTag: localeTag()),
+      ),
+      GoRoute(
+        path: '/dotnet/bump',
+        builder: (context, state) =>
+            DotnetBumpPage(catalog: catalog, localeTag: localeTag()),
       ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
@@ -607,6 +614,13 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/dotnet/clean'),
                         child: Text(
                           catalog.lookup(localeTag(), 'dotnetClean.title'),
+                        ),
+                      ),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-bump'),
+                        onPressed: () => context.go('/dotnet/bump'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetBump.title'),
                         ),
                       ),
                       const SizedBox(height: 24),

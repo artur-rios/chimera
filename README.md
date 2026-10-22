@@ -541,7 +541,7 @@ access failures discard the source and expose no successful partial result.
 | [#98](https://github.com/artur-rios/chimera/issues/98) | UC-49 — Build .NET Solution | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#99](https://github.com/artur-rios/chimera/issues/99) | UC-50 — Clean .NET Build Artifacts (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-50-clean-net-build-artifacts) |
 | [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-52-bump-net-project-version) |
 | [#102](https://github.com/artur-rios/chimera/issues/102) | UC-53 — Create .NET Release Tag | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
@@ -577,3 +577,16 @@ or `obj` beneath that root qualify; source files and other directory names remai
 Exit codes are 0 for success/no-op, 1 for partial failure with retained paths,
 and 2 for invalid or unconfirmed cleanup. The desktop tool presents the same
 preview and an explicit deletion dialog. Web displays native-only support.
+
+### Bump a .NET project version (native Windows/Linux)
+
+Use `chimera dotnet bump --version=2.0.0 --project=./src/App.csproj`, or select one
+increment with `--major`, `--minor` or `--patch`. Without `--project`, Chimera finds
+one immediate `.csproj` child of `./src`; a directory selection uses the same
+nonrecursive rule. Add `--json` for structured old/new versions, project path and
+recovery details. XML source and UTF-8/UTF-16 encoding are preserved. Failed
+transactions retain and report an original backup, including when automatic
+restoration succeeds. Exit codes: 0 verified success, 1 transaction/access failure,
+2 validation. The desktop form shares this behavior; web explains native-only
+support. Conditional projects with multiple Version nodes and other encodings
+are rejected before mutation.

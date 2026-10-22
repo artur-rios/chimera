@@ -17,6 +17,8 @@ import 'dotnet_build.dart';
 import 'dotnet_clean_command.dart';
 
 import 'dotnet_test.dart';
+
+import 'dotnet_bump_command.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -168,6 +170,14 @@ Future<int> runChimera(
       out: out,
       err: err,
       readConfirmation: readStandardInput,
+    );
+  }
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'bump') {
+    return runDotnetBumpCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
     );
   }
   final parser = _buildParser();

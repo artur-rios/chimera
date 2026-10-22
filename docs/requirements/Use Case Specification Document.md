@@ -1273,6 +1273,38 @@ messages cover start, effective interval, stop, and every failure.
 | AF-04 | Actor declines, closes the dialog, or provides no explicit affirmative answer. | Delete nothing; CLI exits nonzero. |
 | AF-05 | Web or another unsupported target is used. | Explain native Windows/Linux support and expose no filesystem action. |
 
+### UC-52: Bump .NET Project Version
+
+| Field | Value |
+| --- | --- |
+| **ID** | UC-52 |
+| **Actors** | Developer, Local automation |
+| **Description** | Set or increment a project's numeric version while preserving a recoverable original through verification. |
+| **Preconditions** | Native Windows/Linux interface and one readable/writable `.csproj`. |
+| **Postconditions** | Updated bytes and version are verified, or the original is restored/recoverable from the reported backup. |
+| **Requirements** | FR-DW-06, BR-DW-06, FR-PL-03–FR-PL-06 |
+
+**Source traceability:** [PowerShell bump.ps1](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/bump.ps1), [Python bump.py](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/bump.py), [issue #101](https://github.com/artur-rios/chimera/issues/101).
+
+**Main Flow**
+
+1. The actor supplies an explicit numeric `MAJOR.MINOR.PATCH` version or one major/minor/patch increment, and optionally a project file or directory.
+2. Chimera discovers exactly one immediate `.csproj` (default `./src`), validates its XML/encoding, reads `<Version>` and computes the target.
+3. Chimera creates and verifies an exclusive sibling backup, stages updated bytes and checks the source has not changed.
+4. Chimera replaces only the targeted version source span (or inserts a valid element), rereads and verifies the exact bytes and version, then removes the backup and reports old/new versions and project path.
+
+**Alternative Flows**
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Zero or multiple projects are discovered. | Typed discovery failure listing candidates; no backup or modification. |
+| AF-02 | Invalid/mixed version modes, invalid target, or increment without an existing valid version. | Typed version failure; no backup or modification. |
+| AF-03 | XML parsing, backup, staging, replacement or verification fails. | Never report success. Restore the original when safe; retain and report the backup path even after rollback. If restoration fails, explicitly report manual recovery is required. Source conflicts preserve the newer source and backup. |
+| AF-04 | Multiple/complex Version elements, DTD, unsupported encoding or linked project path. | Typed validation/access failure before mutation. |
+| AF-05 | Verification succeeds but backup cleanup is denied. | Report the verified bump and the retained original backup path. |
+| AF-06 | Web or another unsupported target is used. | Native-only message and no filesystem action. |
+
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1325,8 +1357,8 @@ messages cover start, effective interval, stop, and every failure.
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
 | UC-47 Create Project from Template | FR-DW-01, shared FR-PL requirements |
 | UC-48 Type Periodic Commands | FR-DW-02, shared FR-PL requirements |
-
 | UC-50 Clean .NET Build Artifacts | FR-DW-04 |
+| UC-52 Bump .NET Project Version | FR-DW-06 |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

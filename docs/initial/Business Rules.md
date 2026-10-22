@@ -138,3 +138,9 @@ after that user accepts the update prompt.
 - Stop on the first failed test/report command. Retain artifacts and bounded,
   redacted diagnostics, and terminate owned process trees on cancellation.
   Desktop and CLI use the same service; web cannot execute local .NET tools.
+
+## UC-52 Project Version Transactions
+
+| ID | Rule | Rationale |
+| --- | --- | --- |
+| BR-DW-06 | Version changes accept one numeric MAJOR.MINOR.PATCH value or one major/minor/patch increment; incrementing resets lower components and requires a valid existing value. Discovery is nonrecursive and unambiguous. Preserve unrelated project bytes and supported encoding. Verify an exclusive backup before replacement and the complete updated bytes before removing the backup. Failed transactions always report the retained recovery path; no parse/validation failure creates a backup. | Project metadata edits must remain local, precise and recoverable. |
