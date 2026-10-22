@@ -140,19 +140,13 @@ Future<int> runChimera(
       service: scaffoldService,
     );
   }
-  if (args.isNotEmpty && args.first == 'dotnet') {
-    if (args.length >= 2 && args[1] == 'build') {
-      return runDotnetBuild(
-        args.sublist(2),
-        localeTag: localeTag,
-        out: out,
-        err: err,
-      );
-    }
-    err.writeln(
-      const MessageCatalog().lookup(localeTag, 'cli.dotnetBuildUsage'),
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'build') {
+    return runDotnetBuild(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
     );
-    return 64;
   }
   const catalog = MessageCatalog();
   if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'clean') {
@@ -245,7 +239,14 @@ Future<int> runChimera(
       return 0;
     }
     if (parsed.command == null) {
-      err.writeln(catalog.lookup(localeTag, 'cli.noCommand'));
+      err.writeln(
+        catalog.lookup(
+          localeTag,
+          args.isNotEmpty && args.first == 'dotnet'
+              ? 'cli.usage'
+              : 'cli.noCommand',
+        ),
+      );
       return 64;
     }
     if (parsed.command!.name == 'terminal' &&
@@ -1112,6 +1113,10 @@ Future<int> runChimera(
     err.writeln(catalog.lookup(localeTag, 'error.unexpected'));
     return 64;
   } on FormatException {
+    if (args.isNotEmpty && args.first == 'dotnet') {
+      err.writeln(catalog.lookup(localeTag, 'cli.usage'));
+      return 64;
+    }
     final isPerson =
         args.length >= 2 && args[0] == 'person' && args[1] == 'generate';
     final isIdentityDocument =
