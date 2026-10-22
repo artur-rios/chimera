@@ -4,6 +4,38 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
   test(
+    'GivenDotnetTestMessages_WhenLocalized_ThenBothLanguagesAreComplete',
+    () {
+      const keys = <String>{
+        'cli.dotnetTestUsage',
+        'dotnet.noTests',
+        'dotnet.testAction',
+        'dotnet.testBase',
+        'dotnet.testDescription',
+        'dotnet.testSucceeded',
+        'dotnet.testTitle',
+        'dotnet.testing',
+        'error.dotnet.collectorUnavailable',
+        'error.dotnet.outputAccess',
+        'error.dotnet.reportFailed',
+        'error.dotnet.reportGeneratorUnavailable',
+        'error.dotnet.testCancelled',
+        'error.dotnet.testFailed',
+        'error.dotnet.testUnsupported',
+        'error.dotnet.unsafeOutput',
+      };
+      for (final locale in supportedLocaleTags) {
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+        }
+      }
+      expect(
+        catalog.lookup('pt-BR', 'dotnet.testTitle'),
+        'Testar projetos .NET com cobertura',
+      );
+    },
+  );
+  test(
     'GivenDotnetBuildMessages_WhenLocalized_ThenBothLanguagesAreComplete',
     () {
       const keys = <String>{
@@ -1262,6 +1294,23 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'cli.dotnetTestUsage',
+      'dotnet.noTests',
+      'dotnet.testAction',
+      'dotnet.testBase',
+      'dotnet.testDescription',
+      'dotnet.testSucceeded',
+      'dotnet.testTitle',
+      'dotnet.testing',
+      'error.dotnet.collectorUnavailable',
+      'error.dotnet.outputAccess',
+      'error.dotnet.reportFailed',
+      'error.dotnet.reportGeneratorUnavailable',
+      'error.dotnet.testCancelled',
+      'error.dotnet.testFailed',
+      'error.dotnet.testUnsupported',
+      'error.dotnet.unsafeOutput',
+
       'cli.dotnetBuildUsage',
       'dotnet.both',
       'dotnet.build',

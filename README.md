@@ -183,6 +183,20 @@ NuGet may contact the actor's configured package sources. Diagnostics are bounde
 and redact URLs and common credential fields. Cancellation terminates the owned
 process tree and returns status 130; external failures preserve their exit code.
 
+### Test .NET projects with coverage
+
+`chimera dotnet test [base-directory] [--json]` discovers test `.csproj` files,
+excluding Setup fixtures, and collects JSON, LCOV, and Cobertura coverage before
+producing an HTML report. Defaults are `tests/TestResults` and
+`docs/coverage-report`; an explicit base keeps both outputs under that directory.
+The desktop route is `/dotnet/test`; web reports this workflow unsupported.
+
+Install the .NET SDK, reference `coverlet.collector` in test projects, and make
+`reportgenerator` available on `PATH`. Existing scoped outputs are cleared only
+after SDK/tool checks and path validation. No projects returns success without
+running tools or clearing output. Failures preserve available artifacts and
+external exit status; cancellation stops the owned process tree.
+
 ### Parse a cron expression
 
 `chimera cron parse` accepts five-field Unix syntax or six fields with seconds.

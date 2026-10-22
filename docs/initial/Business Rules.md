@@ -108,3 +108,17 @@ after that user accepts the update prompt.
 - CLI and Windows/Linux desktop share the service; web explicitly cannot build.
   Restore may contact the actor's configured NuGet sources as part of the
   explicitly requested native build workflow.
+
+## .NET Tests and Coverage (UC-51)
+
+- Discover `.csproj` files recursively, excluding Setup fixtures regardless of
+  case, generated output directories, and linked trees. No projects is a
+  successful no-op without external tools or cleanup.
+- Default outputs are `tests/TestResults` and `docs/coverage-report`; an explicit
+  base stores both beneath itself. Prove both resolved output paths are within
+  the selected project scope before deleting old contents; reject output links.
+- Check SDK and ReportGenerator before cleanup. Verify new JSON, LCOV, and
+  Cobertura artifacts after each project to detect missing XPlat collectors.
+- Stop on the first failed test/report command. Retain artifacts and bounded,
+  redacted diagnostics, and terminate owned process trees on cancellation.
+  Desktop and CLI use the same service; web cannot execute local .NET tools.

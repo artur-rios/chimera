@@ -11,6 +11,7 @@ import 'package:chimera_platform/transactional_file_writer.dart'
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'dotnet_build.dart';
+import 'dotnet_test.dart';
 import 'output_sink.dart';
 
 const String _defaultUpdateRepository = String.fromEnvironment(
@@ -126,6 +127,14 @@ Future<int> runChimera(
   if (args.isNotEmpty && args.first == 'dotnet') {
     if (args.length >= 2 && args[1] == 'build') {
       return runDotnetBuild(
+        args.sublist(2),
+        localeTag: localeTag,
+        out: out,
+        err: err,
+      );
+    }
+    if (args.length >= 2 && args[1] == 'test') {
+      return runDotnetTest(
         args.sublist(2),
         localeTag: localeTag,
         out: out,
