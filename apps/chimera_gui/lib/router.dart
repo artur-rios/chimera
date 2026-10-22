@@ -18,18 +18,12 @@ import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'dotnet_build_page.dart';
-
-import 'dotnet_clean_page.dart';
-
-import 'dotnet_test_page.dart';
-
 import 'dotnet_bump_page.dart';
-
-import 'dotnet_tag_page.dart';
-
+import 'dotnet_clean_page.dart';
 import 'dotnet_library_page.dart';
-
 import 'dotnet_project_page.dart';
+import 'dotnet_tag_page.dart';
+import 'dotnet_test_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -295,7 +289,6 @@ GoRouter buildRouter({
             DotnetTestPage(catalog: catalog, localeTag: localeTag()),
       ),
       GoRoute(
-
         path: '/dotnet/build',
         builder: (context, state) =>
             DotnetBuildPage(catalog: catalog, localeTag: localeTag()),
@@ -625,7 +618,6 @@ GoRouter buildRouter({
                         ),
                       ),
                       ElevatedButton(
-
                         key: const Key('open-dotnet-build'),
                         onPressed: () => context.go('/dotnet/build'),
                         child: Text(

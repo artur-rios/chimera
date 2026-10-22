@@ -7,6 +7,12 @@ void main() {
     ['terminal', 'type-periodic'],
     ['dotnet', 'build'],
     ['dotnet', 'clean'],
+    ['dotnet', 'test'],
+    ['dotnet', 'bump'],
+    ['dotnet', 'tag'],
+    ['dotnet', 'init-lib'],
+    ['dotnet', 'init-min'],
+    ['dotnet', 'init-project'],
   ]) {
     test(
       'GivenComposedBranches_WhenHelpFor${command.join('_')}_ThenReachAdapter',

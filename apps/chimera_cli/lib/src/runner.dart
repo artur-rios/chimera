@@ -13,16 +13,13 @@ import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'dotnet_build.dart';
-import 'dotnet_project_command.dart';
-import 'dotnet_minimal_commands.dart';
-import 'dotnet_library_commands.dart';
-
-import 'dotnet_clean_command.dart';
-
-import 'dotnet_test.dart';
-import 'dotnet_tag.dart';
-
 import 'dotnet_bump_command.dart';
+import 'dotnet_clean_command.dart';
+import 'dotnet_library_commands.dart';
+import 'dotnet_minimal_commands.dart';
+import 'dotnet_project_command.dart';
+import 'dotnet_tag.dart';
+import 'dotnet_test.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -196,7 +193,6 @@ Future<int> runChimera(
       localeTag: localeTag,
       out: out,
       err: err,
-
     );
   }
   if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'test') {

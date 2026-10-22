@@ -171,7 +171,6 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.unsupported': 'Building .NET solutions requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
     'cli.dotnetBuildUsage': 'Usage: chimera dotnet build [source-directory] [--solution=<file.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Defaults: ./src, restore, Debug and Release.',
 
-
     'dotnetClean.title': "Clean .NET build artifacts",
     'dotnetClean.root': "Source root (defaults to ./src)",
     'dotnetClean.preview': "Preview cleanup",
@@ -1109,8 +1108,6 @@ _catalogs = <String, Map<String, String>>{
         'Usage: chimera <command> [options]\n'
         'Build .NET: chimera dotnet build [source-directory] [--help]\n'
         'Test .NET: chimera dotnet test [base-directory] [--help]\n'
-
-
         'Minimal .NET: chimera dotnet init-min --help\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
@@ -1726,7 +1723,6 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.cancelled': 'A compilação foi cancelada.',
     'error.dotnet.unsupported': 'A compilação de soluções .NET requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
     'cli.dotnetBuildUsage': 'Uso: chimera dotnet build [diretório] [--solution=<arquivo.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Padrões: ./src, restauração, Debug e Release.',
-
 
     'dotnetClean.title': "Limpar artefatos de compilação .NET",
     'dotnetClean.root': "Diretório de origem (padrão: ./src)",
@@ -2712,8 +2708,6 @@ _catalogs = <String, Map<String, String>>{
         'Uso: chimera <comando> [opções]\n'
         'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
         'Testar .NET: chimera dotnet test [diretório-base] [--help]\n'
-
-
         '.NET mínimo: chimera dotnet init-min --help\n'
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',

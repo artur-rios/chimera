@@ -1482,10 +1482,11 @@ are documented in [template provenance](../reference/dotnet-library-templates.md
 | UC-50 Clean .NET Build Artifacts | FR-DW-04 |
 | UC-52 Bump .NET Project Version | FR-DW-06 |
 | UC-53 Create .NET Release Tag | FR-DW-07, shared FR-PL requirements |
-
 | UC-54 Scaffold NuGet Library Repository | FR-DW-08, shared FR-PL requirements |
-
 | UC-56 Scaffold .NET Project | FR-DW-10, shared FR-PL requirements |
+| UC-49 Build .NET Solution | FR-DW-03, shared FR-PL requirements |
+| UC-51 Test .NET Projects with Coverage | FR-DW-05, shared FR-PL requirements |
+| UC-55 Scaffold Minimal .NET Library Repository | FR-DW-09, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

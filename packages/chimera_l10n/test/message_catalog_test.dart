@@ -1345,7 +1345,6 @@ void main() {
       'error.dotnetMinimal.render',
       'error.dotnetMinimal.parametersRead',
       'cli.dotnetInitMinUsage',
-      'Repositório mínimo criado',
 
       'scaffold.title',
       'scaffold.destination',
@@ -1397,7 +1396,6 @@ void main() {
       'error.dotnet.sdkUnavailable',
       'error.dotnet.unsupported',
       'error.dotnet.validation',
-
 
       'dotnetClean.title',
       'dotnetClean.root',
@@ -1489,7 +1487,6 @@ void main() {
       "gzipDecompress.submitAction",
       "gzipDecompress.textMode",
 
-
       "dotnetProject.title",
       "dotnetProject.name",
       "dotnetProject.parent",
@@ -1498,18 +1495,6 @@ void main() {
       "dotnetProject.create",
       "error.dotnetProject.validation",
       "cli.dotnetProjectUsage",
-      "scaffold.title",
-      "scaffold.destination",
-      "scaffold.create",
-      "scaffold.created",
-      "scaffold.working",
-      "scaffold.description",
-      "cli.projectTemplateUsage",
-      "error.scaffold.validation",
-      "error.scaffold.template",
-      "error.scaffold.access",
-      "error.scaffold.failed",
-      "error.scaffold.unsupported",
 
       'update.pageTitle',
       'update.openAction',
@@ -2169,21 +2154,11 @@ void main() {
       'error.gzipDecompress.outputAccess',
       'error.gzipDecompress.resource',
       for (final name in [
-        'pageTitle',
-        'openAction',
-        'fileAction',
         'modeLabel',
         'textMode',
         'binaryMode',
-        'submitAction',
         'copyAction',
-        'saveAction',
         'copiedResult',
-        'fileSaved',
-        'outputLabel',
-        'resultSuccess',
-        'inputByteCountLabel',
-        'outputByteCountLabel',
       ])
         'gzipDecompress.$name',
       'error.gzipDecompress.interactiveInputAccess',
