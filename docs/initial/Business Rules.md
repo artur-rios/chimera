@@ -149,3 +149,20 @@ after that user accepts the update prompt.
 - BR-DW-07: Release tags are annotated, never forced or overwritten. Push is opt-in and sends one fully-qualified tag refspec with configured tag-following and submodule pushes explicitly disabled; cancellation or failed remote acknowledgement preserves and reports the local tag and an unconfirmed remote outcome. Tag discovery recursively scans the selected source scope without following links; explicit project files resolve ambiguity.
 
 - BR-DW-08: NuGet library generation accepts either complete source-compatible fields or one explicit JSON document, validates field-level metadata before any write, preserves source capabilities and attribution using versioned offline templates, and delegates native writes/rollback to the shared scaffold service. Generation performs no dependency restore, build, Git initialization, publication, or network request; web returns typed unsupported.
+
+## BR-DW-09 — Minimal .NET Library Repositories (UC-55)
+
+- Require `RootFolder`, `SolutionName`, `ProjectName`, `Author`, and `Description`
+  through fields/flags or one JSON file, never mixed modes. Return stable field
+  identifiers for invalid data without logging supplied values.
+- Use the pinned offline templates and retain original license attribution.
+  Generate one minimal .NET 10 library below `src/<ProjectName>`, its solution,
+  configuration and READMEs, plus empty docs/tests placeholders. Intentionally
+  omit NuGet metadata and any generated test project.
+- Reuse the shared transactional scaffold service/writer: reserve a new
+  destination exclusively, verify file content, never overwrite an existing
+  destination, and remove owned partial output on failure when safe.
+- Desktop and CLI share validation/rendering/writing; web explicitly reports
+  unsupported. Report every created file and the template version. SDK-backed
+  Windows/Linux golden/build checks validate templates without requiring an
+  installed SDK or network for the scaffold operation itself.

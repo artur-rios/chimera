@@ -35,6 +35,25 @@ _catalogs = <String, Map<String, String>>{
     "dotnetScaffold.field.parametersJson": "JSON parameters",
     "dotnetScaffold.invalidField": "Review this required field.",
 
+    'dotnetMinimal.title': 'Scaffold Minimal .NET Library',
+    'dotnetMinimal.description': 'Creates an offline minimal .NET library repository with docs and tests placeholders. No NuGet metadata or test project is generated. The destination must not exist.',
+    'dotnetMinimal.create': 'Create minimal repository',
+    'dotnetMinimal.created': 'Minimal repository created',
+    'dotnetMinimal.jsonMode': 'Use one parameters JSON file',
+    'dotnetMinimal.loadParameters': 'Load parameters JSON file',
+    'dotnetMinimal.parametersLoaded': 'Parameters file loaded.',
+    'dotnetMinimal.unsupported': 'Minimal .NET scaffolding requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
+    'dotnetMinimal.field.RootFolder': 'New repository path',
+    'dotnetMinimal.field.SolutionName': 'Solution name',
+    'dotnetMinimal.field.ProjectName': 'Library project name',
+    'dotnetMinimal.field.Author': 'Author',
+    'dotnetMinimal.field.Description': 'Description',
+    'error.dotnetMinimal.validation': 'Provide all five required values with valid names, using fields or one JSON file. Review the identified fields.',
+    'error.dotnetMinimal.render': 'The minimal repository template could not be rendered. No repository was created.',
+    'error.dotnetMinimal.parametersRead':
+        'The parameters JSON file could not be read or exceeds its size limit.',
+    'cli.dotnetInitMinUsage': 'Usage: chimera dotnet init-min (--root <new-path> --solution <name> --project <name> --author <author> --description <text> | --parameters <file.json>) [--json]. Supply all five values or one JSON file; do not mix modes. Creates an offline .NET 10 library with docs/tests placeholders and no NuGet metadata or test project.',
+
     "scaffold.title": "Create project from template",
     "scaffold.destination": "New destination path",
     "scaffold.create": "Create project",
@@ -1081,6 +1100,8 @@ _catalogs = <String, Map<String, String>>{
         'Build .NET: chimera dotnet build [source-directory] [--help]\n'
         'Test .NET: chimera dotnet test [base-directory] [--help]\n'
 
+
+        'Minimal .NET: chimera dotnet init-min --help\n'
         'QR decode: chimera qr decode (--file=<path>|--stdin) [--output=<path>] [--json]',
     'base64Encode.copiedResult': 'Base64 copied.',
     'base64Encode.copyAction': 'Copy Base64',
@@ -1566,6 +1587,24 @@ _catalogs = <String, Map<String, String>>{
     "dotnetScaffold.field.inputMode": "Modo de entrada",
     "dotnetScaffold.field.parametersJson": "Parâmetros JSON",
     "dotnetScaffold.invalidField": "Revise este campo obrigatório.",
+
+    'dotnetMinimal.title': 'Criar biblioteca .NET mínima',
+    'dotnetMinimal.description': 'Cria um repositório de biblioteca .NET mínima com modelos locais e pastas docs e tests vazias. Não gera metadados NuGet nem projeto de testes. O destino não pode existir.',
+    'dotnetMinimal.create': 'Criar repositório mínimo',
+    'dotnetMinimal.created': 'Repositório mínimo criado',
+    'dotnetMinimal.jsonMode': 'Usar um arquivo JSON de parâmetros',
+    'dotnetMinimal.loadParameters': 'Carregar arquivo JSON de parâmetros',
+    'dotnetMinimal.parametersLoaded': 'Arquivo de parâmetros carregado.',
+    'dotnetMinimal.unsupported': 'A criação de bibliotecas .NET mínimas requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
+    'dotnetMinimal.field.RootFolder': 'Caminho do novo repositório',
+    'dotnetMinimal.field.SolutionName': 'Nome da solução',
+    'dotnetMinimal.field.ProjectName': 'Nome do projeto da biblioteca',
+    'dotnetMinimal.field.Author': 'Autor',
+    'dotnetMinimal.field.Description': 'Descrição',
+    'error.dotnetMinimal.validation': 'Informe os cinco valores obrigatórios com nomes válidos, usando campos ou um arquivo JSON. Revise os campos indicados.',
+    'error.dotnetMinimal.render': 'Não foi possível gerar o modelo do repositório mínimo. Nenhum repositório foi criado.',
+    'error.dotnetMinimal.parametersRead': 'Não foi possível ler o arquivo JSON de parâmetros ou ele excede o limite de tamanho.',
+    'cli.dotnetInitMinUsage': 'Uso: chimera dotnet init-min (--root <novo-caminho> --solution <nome> --project <nome> --author <autor> --description <texto> | --parameters <arquivo.json>) [--json]. Informe os cinco valores ou um arquivo JSON; não misture os modos. Cria uma biblioteca .NET 10 com pastas docs/tests vazias, sem metadados NuGet nem projeto de testes.',
 
     "scaffold.title": "Criar projeto a partir de modelo",
     "scaffold.destination": "Caminho do novo destino",
@@ -2654,6 +2693,8 @@ _catalogs = <String, Map<String, String>>{
         'Compilar .NET: chimera dotnet build [diretório] [--help]\n'
         'Testar .NET: chimera dotnet test [diretório-base] [--help]\n'
 
+
+        '.NET mínimo: chimera dotnet init-min --help\n'
         'Decodificar QR: chimera qr decode (--file=<caminho>|--stdin) [--output=<caminho>] [--json]',
     'base64Encode.copiedResult': 'Base64 copiado.',
     'base64Encode.copyAction': 'Copiar Base64',

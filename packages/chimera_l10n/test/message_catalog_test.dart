@@ -4,6 +4,40 @@ import 'package:test/test.dart';
 void main() {
   const catalog = MessageCatalog();
   test(
+    'GivenMinimalDotnetMessages_WhenLocalized_ThenBothLanguagesAreComplete',
+    () {
+      const keys = <String>{
+        'dotnetMinimal.title',
+        'dotnetMinimal.description',
+        'dotnetMinimal.create',
+        'dotnetMinimal.created',
+        'dotnetMinimal.jsonMode',
+        'dotnetMinimal.loadParameters',
+        'dotnetMinimal.parametersLoaded',
+        'dotnetMinimal.unsupported',
+        'dotnetMinimal.field.RootFolder',
+        'dotnetMinimal.field.SolutionName',
+        'dotnetMinimal.field.ProjectName',
+        'dotnetMinimal.field.Author',
+        'dotnetMinimal.field.Description',
+        'error.dotnetMinimal.validation',
+        'error.dotnetMinimal.render',
+        'error.dotnetMinimal.parametersRead',
+        'cli.dotnetInitMinUsage',
+      };
+      for (final locale in supportedLocaleTags) {
+        for (final key in keys) {
+          expect(catalog.lookup(locale, key), isNotEmpty);
+        }
+      }
+      expect(
+        catalog.lookup('pt-BR', 'dotnetMinimal.created'),
+        'Repositório mínimo criado',
+      );
+    },
+  );
+
+  test(
     'GivenDotnetTestMessages_WhenLocalized_ThenBothLanguagesAreComplete',
     () {
       const keys = <String>{
@@ -1294,6 +1328,25 @@ void main() {
     expect(supportedLocaleTags, <String>['en', 'pt-BR']);
     expect(catalog.keysFor('pt-BR'), catalog.keysFor('en'));
     expect(catalog.keysFor('en'), <String>{
+      'dotnetMinimal.title',
+      'dotnetMinimal.description',
+      'dotnetMinimal.create',
+      'dotnetMinimal.created',
+      'dotnetMinimal.jsonMode',
+      'dotnetMinimal.loadParameters',
+      'dotnetMinimal.parametersLoaded',
+      'dotnetMinimal.unsupported',
+      'dotnetMinimal.field.RootFolder',
+      'dotnetMinimal.field.SolutionName',
+      'dotnetMinimal.field.ProjectName',
+      'dotnetMinimal.field.Author',
+      'dotnetMinimal.field.Description',
+      'error.dotnetMinimal.validation',
+      'error.dotnetMinimal.render',
+      'error.dotnetMinimal.parametersRead',
+      'cli.dotnetInitMinUsage',
+      'Repositório mínimo criado',
+
       'scaffold.title',
       'scaffold.destination',
       'scaffold.create',

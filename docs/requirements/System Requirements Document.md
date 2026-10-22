@@ -487,3 +487,13 @@ Traceability: [UC-51 issue #100](https://github.com/artur-rios/chimera/issues/10
 | FR-DW-07 | Resolve exactly one .NET project, validate its semantic Version and Git working tree, and create annotated tag v<version> with message Release <version>. Existing tags are never changed; only an explicitly requested push sends that exact tag to the selected remote (default origin). Retain local tags after failed/cancelled pushes and report local/remote outcomes separately. Shared native desktop/CLI service supports cancellation and redacted diagnostics; web is unsupported. |
 
 | FR-DW-08 | Scaffold a complete .NET 10 NuGet library repository from mutually exclusive individual fields or one explicit JSON document; require repository, solution, project, author, company, description, SemVer, package ID and HTTPS repository URL; reject invalid metadata with field-level feedback before writes; render offline versioned configuration/license/README/solution/library/test templates into src/tests/docs; share UC-47's destination reservation, verified writes and safe rollback across native GUI and CLI; report template version and every created path; localize EN/PT; return typed unsupported on web. |
+
+### Developer Workflows — UC-55
+
+| ID | Requirement | Priority |
+| --- | --- | --- |
+| FR-DW-09 | Scaffold a minimal .NET library repository from five common values supplied through fields/flags or one JSON file. Validate exclusive input modes, required values, portable names, and a new writable destination before rendering offline, versioned configuration, license, README, solution, and minimal library project files with docs/tests placeholders. Omit NuGet metadata and test projects. Native desktop and CLI shall share parameter validation, rendering, and transactional writing; web shall explicitly report unsupported. Preserve existing destinations, roll back owned partial output when safe, and report every created path. | Must |
+
+Traceability: [UC-55 issue #104](https://github.com/artur-rios/chimera/issues/104),
+[PowerShell init-min](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1),
+[Python init-min](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).

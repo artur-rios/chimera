@@ -33,6 +33,8 @@ export 'src/jwt_inspect_service.dart';
 export 'src/list_compare_service.dart';
 export 'src/lorem_service.dart';
 export 'src/native_commands.dart';
+
+export 'src/minimal_library_scaffold_service.dart';
 export 'src/number_base_service.dart';
 export 'src/operation_service.dart';
 export 'src/password_service.dart';
