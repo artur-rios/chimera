@@ -192,7 +192,10 @@ class _MinimalLibraryPageState extends State<MinimalLibraryPage> {
                   ),
                 ),
                 if (_result != null)
-                  Semantics(liveRegion: true, child: SelectableText(_result!)),
+                  Semantics(
+                    liveRegion: true,
+                    child: SelectionArea(child: Text(_result!)),
+                  ),
               ],
             ),
           ),

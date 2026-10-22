@@ -92,6 +92,16 @@ void main() {
     expect(service.request!.fields['ProjectName'], 'Example.Library');
     expect(service.request!.parametersJson, isNull);
     expect(find.textContaining('Repositório mínimo criado'), findsOneWidget);
+    await tester.ensureVisible(
+      find.textContaining('Repositório mínimo criado'),
+    );
+    await tester.pumpAndSettle();
+    final status = find.semantics.byLabel(RegExp(r'/new/README\.md'));
+    expect(status, findsOne);
+    expect(
+      status.evaluate().single,
+      isSemantics(isLiveRegion: true, isTextField: false),
+    );
   });
   testWidgets('GivenJsonFileMode_WhenCreate_ThenOnlyJsonIsPassed', (
     tester,
