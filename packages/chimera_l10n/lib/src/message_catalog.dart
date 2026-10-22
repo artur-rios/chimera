@@ -60,6 +60,26 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.unsupported': 'Building .NET solutions requires the Windows or Linux desktop application or CLI. It is unavailable on web.',
     'cli.dotnetBuildUsage': 'Usage: chimera dotnet build [source-directory] [--solution=<file.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Defaults: ./src, restore, Debug and Release.',
 
+
+    'dotnetClean.title': "Clean .NET build artifacts",
+    'dotnetClean.root': "Source root (defaults to ./src)",
+    'dotnetClean.preview': "Preview cleanup",
+    'dotnetClean.scope': "Selected scope",
+    'dotnetClean.confirm': "Delete listed directories",
+    'dotnetClean.cancel': "Cancel",
+    'dotnetClean.confirmPrompt': "Delete these directories? Type yes to confirm. Use --yes for automation.",
+    'dotnetClean.confirmationRequired':
+        "Confirmation is required; nothing was deleted.",
+    'dotnetClean.invalidRoot': "Select an existing directory without traversal, symbolic links, or junctions.",
+    'dotnetClean.invalidPreview':
+        "The preview has expired. Preview the scope again.",
+    'dotnetClean.invalidOptions':
+        "Invalid cleanup options. Use chimera dotnet clean --help.",
+    'dotnetClean.removed': "Removed {count} artifact directories.",
+    'dotnetClean.retained':
+        "Could not completely remove this path; it was retained",
+    'dotnetClean.unsupported': "Cleaning build artifacts is supported only on native Windows and Linux.",
+    'dotnetClean.usage': "Usage: chimera dotnet clean [--root=<directory>] [--yes]. Defaults to ./src when available. Previews exact bin/obj paths. Requires an explicit yes before deletion, or --yes for automation. Exit: 0 success/no-op, 1 partial failure with retained paths, 2 validation or unconfirmed operation.",
     'update.pageTitle': 'Check for updates',
     'update.openAction': 'Check for updates',
     'update.description': 'Checks release metadata only. Chimera will not download or install anything without your approval.',
@@ -1455,6 +1475,26 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnet.unsupported': 'A compilação de soluções .NET requer o aplicativo desktop Windows ou Linux ou a CLI. Indisponível na web.',
     'cli.dotnetBuildUsage': 'Uso: chimera dotnet build [diretório] [--solution=<arquivo.sln>] [--configuration=Debug|Release] [--no-restore] [--json]. Padrões: ./src, restauração, Debug e Release.',
 
+
+    'dotnetClean.title': "Limpar artefatos de compilação .NET",
+    'dotnetClean.root': "Diretório de origem (padrão: ./src)",
+    'dotnetClean.preview': "Visualizar limpeza",
+    'dotnetClean.scope': "Escopo selecionado",
+    'dotnetClean.confirm': "Excluir diretórios listados",
+    'dotnetClean.cancel': "Cancelar",
+    'dotnetClean.confirmPrompt': "Excluir estes diretórios? Digite sim para confirmar. Use --yes para automação.",
+    'dotnetClean.confirmationRequired':
+        "É necessário confirmar; nada foi excluído.",
+    'dotnetClean.invalidRoot': "Selecione um diretório existente sem navegação relativa, links simbólicos ou junções.",
+    'dotnetClean.invalidPreview':
+        "A visualização expirou. Visualize o escopo novamente.",
+    'dotnetClean.invalidOptions':
+        "Opções de limpeza inválidas. Use chimera dotnet clean --help.",
+    'dotnetClean.removed': "{count} diretórios de artefatos removidos.",
+    'dotnetClean.retained':
+        "Não foi possível remover completamente este caminho; ele foi mantido",
+    'dotnetClean.unsupported': "A limpeza de artefatos está disponível apenas no Windows e Linux nativos.",
+    'dotnetClean.usage': "Uso: chimera dotnet clean [--root=<diretório>] [--yes]. Usa ./src quando disponível. Exibe os caminhos bin/obj exatos. Exige sim antes de excluir ou --yes para automação. Saída: 0 sucesso/nenhuma alteração, 1 falha parcial com caminhos mantidos, 2 validação ou operação não confirmada.",
     'update.pageTitle': 'Verificar atualizações',
     'update.openAction': 'Verificar atualizações',
     'update.description': 'Verifica apenas os metadados da versão. O Chimera não baixará nem instalará nada sem sua aprovação.',

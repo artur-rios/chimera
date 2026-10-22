@@ -18,6 +18,8 @@ import 'cipher_encode_page.dart';
 import 'cron_page.dart';
 import 'date_page.dart';
 import 'dotnet_build_page.dart';
+
+import 'dotnet_clean_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -278,6 +280,11 @@ GoRouter buildRouter({
         path: '/dotnet/build',
         builder: (context, state) =>
             DotnetBuildPage(catalog: catalog, localeTag: localeTag()),
+      ),
+      GoRoute(
+        path: '/dotnet/clean',
+        builder: (context, state) =>
+            DotnetCleanPage(catalog: catalog, localeTag: localeTag()),
       ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
@@ -579,6 +586,13 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/dotnet/build'),
                         child: Text(
                           catalog.lookup(localeTag(), 'dotnet.title'),
+                        ),
+                      ),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-clean'),
+                        onPressed: () => context.go('/dotnet/clean'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetClean.title'),
                         ),
                       ),
                       const SizedBox(height: 24),

@@ -1243,6 +1243,36 @@ messages cover start, effective interval, stop, and every failure.
 
 ---
 
+### UC-50: Clean .NET Build Artifacts
+
+| Field | Value |
+| --- | --- |
+| **ID** | UC-50 |
+| **Actors** | Developer, Local automation |
+| **Description** | Preview and remove native .NET build artifact directories inside one selected source root. |
+| **Preconditions** | A native Windows/Linux interface and a readable local source directory. |
+| **Postconditions** | Only approved artifact trees are removed; every retained artifact is reported. |
+| **Requirements** | FR-DW-04, BR-DW-04, FR-PL-03–FR-PL-06 |
+
+**Source traceability:** [PowerShell clean.ps1](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/clean.ps1), [Python clean.py](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/clean.py), [issue #99](https://github.com/artur-rios/chimera/issues/99).
+
+**Main Flow**
+
+1. The actor selects a source root, defaulting to `./src` when available.
+2. Chimera validates the root and previews its resolved path and topmost `bin`/`obj` directories, without following links or modifying files.
+3. The actor explicitly confirms the displayed scope in the desktop dialog or CLI prompt; automation uses `--yes`.
+4. The shared service revalidates scope, removes approved directories, and reports the actual removed count and every retained path.
+
+**Alternative Flows**
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | Root missing, not a directory, contains traversal, resolves through a link/junction/case alias, or changes after preview. | Typed validation failure; delete nothing for an invalid root. Unsafe artifact paths are individually retained. |
+| AF-02 | No artifact directories exist. | Successful zero-count no-op without prompting. |
+| AF-03 | A path is locked, denied, changed, or unsafe at deletion. | Continue within validated scope; return a partial-failure report naming every retained artifact. |
+| AF-04 | Actor declines, closes the dialog, or provides no explicit affirmative answer. | Delete nothing; CLI exits nonzero. |
+| AF-05 | Web or another unsupported target is used. | Explain native Windows/Linux support and expose no filesystem action. |
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1295,6 +1325,8 @@ messages cover start, effective interval, stop, and every failure.
 | UC-46 Publish Release (Operations document) | FR-UP-01 |
 | UC-47 Create Project from Template | FR-DW-01, shared FR-PL requirements |
 | UC-48 Type Periodic Commands | FR-DW-02, shared FR-PL requirements |
+
+| UC-50 Clean .NET Build Artifacts | FR-DW-04 |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

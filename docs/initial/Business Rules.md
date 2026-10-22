@@ -118,3 +118,9 @@ after that user accepts the update prompt.
 - CLI and Windows/Linux desktop share the service; web explicitly cannot build.
   Restore may contact the actor's configured NuGet sources as part of the
   explicitly requested native build workflow.
+
+## UC-50 Cleanup Safety
+
+| ID | Rule | Rationale |
+| --- | --- | --- |
+| BR-DW-04 | Cleanup operates only beneath one explicit resolved source root. Only exact `bin` and `obj` directory names qualify. Never traverse links or junctions, accept traversal/case aliases, delete the selected root itself, or expand scope after preview. Require explicit confirmation; `--yes` supplies it only for the current CLI invocation. Revalidate each entry before nonrecursive deletion, retain unsafe or inaccessible artifacts, and report actual removals. Empty discovery succeeds. | Destructive native actions require a visible, bounded and reviewable scope. |

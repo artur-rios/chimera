@@ -13,6 +13,8 @@ import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'dotnet_build.dart';
+
+import 'dotnet_clean_command.dart';
 import 'output_sink.dart';
 import 'project_commands.dart';
 
@@ -153,6 +155,15 @@ Future<int> runChimera(
     return 64;
   }
   const catalog = MessageCatalog();
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'clean') {
+    return runDotnetCleanCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      readConfirmation: readStandardInput,
+    );
+  }
   final parser = _buildParser();
 
   try {

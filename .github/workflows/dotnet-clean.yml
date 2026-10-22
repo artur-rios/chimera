@@ -1,0 +1,27 @@
+name: Native build artifact cleanup
+
+on:
+  pull_request:
+    branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cleanup-contract:
+    name: Artifact cleanup (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart test packages/chimera_core/test/dotnet_clean_service_test.dart packages/chimera_platform/test/dotnet_clean_test.dart apps/chimera_cli/test/functional/dotnet_clean_cli_test.dart
