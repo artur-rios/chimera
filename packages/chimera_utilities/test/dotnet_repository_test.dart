@@ -35,6 +35,29 @@ void main() {
     },
   );
   test(
+    'GivenPackableEdgeFixture_WhenParsed_ThenPreservesNugetIdentifier',
+    () async {
+      final library = await Isolate.resolvePackageUri(
+        Uri.parse('package:chimera_utilities/chimera_utilities.dart'),
+      );
+      final fixture = File.fromUri(
+        library!.resolve(
+          '../test/fixtures/dotnet_library/packable-edge-parameters.json',
+        ),
+      );
+      final parameters = DotnetRepositoryParameters.parse(
+        parametersJson: await fixture.readAsString(),
+      );
+      expect(parameters['PackageId'], '_Example.Library_Pack-1');
+      expect(
+        const DotnetRepositoryRenderer()
+            .renderNugetLibrary(parameters, year: 2026)
+            .files['src/Example.Library.csproj'],
+        contains('<PackageId>_Example.Library_Pack-1</PackageId>'),
+      );
+    },
+  );
+  test(
     'GivenEquivalentFlagsAndJson_WhenParsed_ThenRenderIdenticalRepositories',
     () {
       final flags = DotnetRepositoryParameters.parse(fields: fields);
@@ -72,6 +95,82 @@ void main() {
         a.files['src/Example.Solution.sln'],
         contains('..\\tests\\Example.Library.Tests.csproj'),
       );
+    },
+  );
+  test('GivenInvalidNugetIdGrammar_WhenParsed_ThenRejectsPackageId', () {
+    for (final packageId in [
+      '.',
+      '-',
+      '.Example',
+      '-Example',
+      'Example.',
+      'Example-',
+      'Example..Library',
+      'Example--Library',
+      'Example.-Library',
+      'Example-.Library',
+      'A' * 101,
+    ]) {
+      expect(
+        () => DotnetRepositoryParameters.parse(
+          fields: {...fields, 'PackageId': packageId},
+        ),
+        throwsA(
+          isA<DotnetParameterException>().having(
+            (error) => error.fields,
+            'fields',
+            contains('PackageId'),
+          ),
+        ),
+        reason: packageId,
+      );
+    }
+  });
+  test(
+    'GivenNugetWordGroups_WhenParsed_ThenPreservesValidUnderscoreAndNumericIds',
+    () {
+      for (final packageId in [
+        '_',
+        '_Example.Library_Pack-1',
+        'Example__Library',
+        '123',
+        'Example_',
+        'A' * 100,
+      ]) {
+        expect(
+          DotnetRepositoryParameters.parse(
+            fields: {...fields, 'PackageId': packageId},
+          )['PackageId'],
+          packageId,
+        );
+      }
+    },
+  );
+  test(
+    'GivenSpecialCSharpKeywordSegment_WhenParsed_ThenRejectsProjectName',
+    () {
+      for (final keyword in [
+        '__arglist',
+        '__makeref',
+        '__reftype',
+        '__refvalue',
+      ]) {
+        for (final projectName in [keyword, 'Example.$keyword.Library']) {
+          expect(
+            () => DotnetRepositoryParameters.parse(
+              fields: {...fields, 'ProjectName': projectName},
+            ),
+            throwsA(
+              isA<DotnetParameterException>().having(
+                (error) => error.fields,
+                'fields',
+                contains('ProjectName'),
+              ),
+            ),
+            reason: projectName,
+          );
+        }
+      }
     },
   );
   test('GivenInvalidMetadata_WhenParsed_ThenReturnsOnlyFieldIdentifiers', () {

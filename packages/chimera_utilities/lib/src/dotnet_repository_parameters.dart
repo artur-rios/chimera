@@ -111,8 +111,13 @@ final class DotnetRepositoryParameters {
               false)) {
         errors.add('Version');
       }
-      if (!RegExp(r'^[A-Za-z0-9_.-]{1,100}$')
-          .hasMatch(values['PackageId'] ?? '')) {
+      final packageId = values['PackageId'] ?? '';
+      // NuGet's ^\w+([.-]\w+)*$ grammar within the approved portable ASCII set.
+      // Keep underscores (including initial/final ones); punctuation separates
+      // nonempty word groups and cannot start, end, or repeat.
+      if (packageId.length > 100 ||
+          !RegExp(r'^[A-Za-z0-9_]+(?:[.-][A-Za-z0-9_]+)*$')
+              .hasMatch(packageId)) {
         errors.add('PackageId');
       }
       final uri = Uri.tryParse(values['RepositoryUrl'] ?? '');
@@ -130,6 +135,10 @@ final class DotnetRepositoryParameters {
   }
 
   static const _keywords = {
+    '__arglist',
+    '__makeref',
+    '__reftype',
+    '__refvalue',
     'abstract',
     'as',
     'base',
