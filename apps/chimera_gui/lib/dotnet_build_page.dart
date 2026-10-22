@@ -156,8 +156,13 @@ class _DotnetBuildPageState extends State<DotnetBuildPage> {
                 child: Text(text('dotnet.cancel')),
               ),
             if (_status != null)
-              Text(text(_status!), key: const Key('dotnet-status')),
-            SelectableText(_diagnostics, key: const Key('dotnet-diagnostics')),
+              Semantics(
+                liveRegion: true,
+                child: Text(text(_status!), key: const Key('dotnet-status')),
+              ),
+            SelectionArea(
+              child: Text(_diagnostics, key: const Key('dotnet-diagnostics')),
+            ),
           ],
         ),
       ),

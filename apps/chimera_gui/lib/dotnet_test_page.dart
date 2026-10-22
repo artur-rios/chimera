@@ -120,12 +120,22 @@ class _DotnetTestPageState extends State<DotnetTestPage> {
                 child: Text(text('dotnet.cancel')),
               ),
             if (_status != null)
-              Text(text(_status!), key: const Key('dotnet-test-status')),
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  text(_status!),
+                  key: const Key('dotnet-test-status'),
+                ),
+              ),
             if (_paths != null)
-              SelectableText(_paths!, key: const Key('dotnet-test-paths')),
-            SelectableText(
-              _diagnostics,
-              key: const Key('dotnet-test-diagnostics'),
+              SelectionArea(
+                child: Text(_paths!, key: const Key('dotnet-test-paths')),
+              ),
+            SelectionArea(
+              child: Text(
+                _diagnostics,
+                key: const Key('dotnet-test-diagnostics'),
+              ),
             ),
           ],
         ),

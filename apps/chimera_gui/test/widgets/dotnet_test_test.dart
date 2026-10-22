@@ -51,6 +51,54 @@ void main() {
       );
     },
   );
+  for (final locale in ['en', 'pt-BR']) {
+    testWidgets(
+      'Given${locale}CoverageOutcome_WhenCompleted_ThenAnnouncesStatusAndExposesArtifactsAsText',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: DotnetTestPage(
+              catalog: const MessageCatalog(),
+              localeTag: locale,
+              supported: true,
+              tester: (request, {cancellation, onDiagnostic}) async {
+                onDiagnostic?.call('coverage detail');
+                return const ChimeraSuccess(
+                  DotnetTestOutput(
+                    resultsDirectory: '/tests/TestResults',
+                    reportDirectory: '/docs/coverage-report',
+                    projectsTested: 1,
+                    noTests: false,
+                  ),
+                );
+              },
+            ),
+          ),
+        );
+        await tester.tap(find.byKey(const Key('dotnet-test')));
+        await tester.pumpAndSettle();
+        final status = find.semantics.byLabel(
+          locale == 'en'
+              ? 'Tests and HTML coverage report completed successfully.'
+              : 'Testes e relatório HTML de cobertura concluídos com sucesso.',
+        );
+        expect(status, findsOne);
+        expect(
+          status.evaluate().single,
+          isSemantics(isLiveRegion: true, isTextField: false),
+        );
+        final paths = find.semantics.byLabel(RegExp(r'/tests/TestResults'));
+        expect(paths, findsOne);
+        expect(paths.evaluate().single, isSemantics(isTextField: false));
+        final diagnostics = find.semantics.byLabel('coverage detail');
+        expect(diagnostics, findsOne);
+        expect(
+          diagnostics.evaluate().single,
+          isSemantics(isLiveRegion: false, isTextField: false),
+        );
+      },
+    );
+  }
   testWidgets('GivenWeb_WhenTestPage_ThenUnsupported', (tester) async {
     await tester.pumpWidget(
       const MaterialApp(
