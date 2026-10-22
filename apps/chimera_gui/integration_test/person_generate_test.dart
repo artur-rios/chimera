@@ -56,19 +56,21 @@ void main() {
         final target = File('${directory.path}/people.txt');
         await target.writeAsString('previous');
         String? copied;
+        Future<bool>? saveOperation;
         await tester.pumpWidget(
           ChimeraApp(
             localeTag: locale,
             initialLocation: '/person/generate',
             personService: _service(_brPerson()),
             personClipboardWriter: (value) async => copied = value,
-            personFileSaver: (name, bytes, mime) => saveLocalFile(
-              name,
-              bytes,
-              mime,
-              extensions: const ['txt'],
-              chooseLocation: (_, _) async => target.path,
-            ),
+            personFileSaver: (name, bytes, mime) =>
+                saveOperation = saveLocalFile(
+                  name,
+                  bytes,
+                  mime,
+                  extensions: const ['txt'],
+                  chooseLocation: (_, _) async => target.path,
+                ),
           ),
         );
         await _choose(
@@ -95,6 +97,9 @@ void main() {
         expect(copied, expected);
         await tester.ensureVisible(find.byKey(const Key('person-save')));
         await tester.tap(find.byKey(const Key('person-save')));
+        // Frame settling does not wait for the native file transaction.
+        expect(saveOperation, isNotNull);
+        expect(await saveOperation!, isTrue);
         await tester.pumpAndSettle();
         expect(await target.readAsBytes(), utf8.encode(expected));
         expect(directory.listSync(), hasLength(1));
