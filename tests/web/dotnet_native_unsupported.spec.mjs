@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const pages = [["/dotnet/build", "Building .NET solutions requires", "Build", true], ["/dotnet/test", "Testing .NET projects requires", "Run tests and coverage", true], ["/dotnet/bump", "Windows and Linux", "Update version", false]];
+const pages = [["/dotnet/build", "Building .NET solutions requires", "Build", true], ["/dotnet/test", "Testing .NET projects requires", "Run tests and coverage", true], ["/dotnet/bump", "Windows and Linux", "Update version", false], ["/dotnet/clean", "Windows and Linux", "Preview cleanup", false]];
 
 for (const [route, explanation, action, disabledAction] of pages) {
   test(`GivenBrowser_WhenOpening${route}_ThenNativeRequirementIsAccessibleOffline`, async ({ page }) => {
