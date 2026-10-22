@@ -23,16 +23,18 @@ void main() {
         addTearDown(() => directory.delete(recursive: true));
         final saved = File('${directory.path}/chimera-alphabet-decoded.txt');
         String? copied;
+        Future<bool>? saveOperation;
         await tester.pumpWidget(
           ChimeraApp(
             localeTag: locale,
             initialLocation: '/alphabet/decode',
             alphabetDecodeClipboardWriter: (value) async => copied = value,
-            alphabetDecodeFileSaver: (name, bytes, mime) async {
+            alphabetDecodeFileSaver: (name, bytes, mime) {
               expect(name, 'chimera-alphabet-decoded.txt');
               expect(mime, 'text/plain; charset=utf-8');
-              await saved.writeAsBytes(bytes, flush: true);
-              return true;
+              return saveOperation = saved
+                  .writeAsBytes(bytes, flush: true)
+                  .then((_) => true);
             },
           ),
         );
@@ -71,6 +73,8 @@ void main() {
           find.byKey(const Key('alphabet-decode-save')),
         );
         await tester.tap(find.byKey(const Key('alphabet-decode-save')));
+        expect(saveOperation, isNotNull);
+        expect(await saveOperation!, isTrue);
         await tester.pumpAndSettle();
         expect(await saved.readAsString(), 'SOS 2');
         expect(network.attempts, 0);

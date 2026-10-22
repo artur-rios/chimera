@@ -50,13 +50,14 @@ void main() {
         final target = File('${directory.path}/cards.txt');
         await target.writeAsString('previous');
         String? copied;
+        Future<bool>? saveOperation;
         await tester.pumpWidget(
           ChimeraApp(
             localeTag: locale,
             initialLocation: '/card/generate',
             cardService: _service('5555555555554444'),
             cardClipboardWriter: (value) async => copied = value,
-            cardFileSaver: (name, bytes, mime) => saveLocalFile(
+            cardFileSaver: (name, bytes, mime) => saveOperation = saveLocalFile(
               name,
               bytes,
               mime,
@@ -88,6 +89,8 @@ void main() {
         expect(copied, expected);
         await tester.ensureVisible(find.byKey(const Key('card-save')));
         await tester.tap(find.byKey(const Key('card-save')));
+        expect(saveOperation, isNotNull);
+        expect(await saveOperation!, isTrue);
         await tester.pumpAndSettle();
         expect(await target.readAsBytes(), utf8.encode(expected));
         expect(directory.listSync(), hasLength(1));

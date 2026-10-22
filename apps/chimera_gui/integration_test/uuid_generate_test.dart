@@ -63,13 +63,14 @@ void main() {
         final target = File('${directory.path}/identifiers.txt');
         await target.writeAsString('previous');
         String? copied;
+        Future<bool>? saveOperation;
         await tester.pumpWidget(
           ChimeraApp(
             localeTag: locale,
             initialLocation: '/uuid/generate',
             uuidService: deterministic(),
             uuidClipboardWriter: (value) async => copied = value,
-            uuidFileSaver: (name, bytes, mime) => saveLocalFile(
+            uuidFileSaver: (name, bytes, mime) => saveOperation = saveLocalFile(
               name,
               bytes,
               mime,
@@ -121,6 +122,8 @@ void main() {
         expect(copied, expected);
         await tester.ensureVisible(find.byKey(const Key('uuid-save')));
         await tester.tap(find.byKey(const Key('uuid-save')));
+        expect(saveOperation, isNotNull);
+        expect(await saveOperation!, isTrue);
         await tester.pumpAndSettle();
         expect(await target.readAsBytes(), utf8.encode(expected));
         expect(directory.listSync(), hasLength(1));

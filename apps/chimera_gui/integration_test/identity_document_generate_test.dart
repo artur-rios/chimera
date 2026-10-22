@@ -53,19 +53,21 @@ void main() {
           final target = File('${directory.path}/documents.txt');
           await target.writeAsString('previous');
           String? copied;
+          Future<bool>? saveOperation;
           await tester.pumpWidget(
             ChimeraApp(
               localeTag: locale,
               initialLocation: '/document/generate',
               identityDocumentService: _service(fixture.value),
               identityDocumentClipboardWriter: (value) async => copied = value,
-              identityDocumentFileSaver: (name, bytes, mime) => saveLocalFile(
-                name,
-                bytes,
-                mime,
-                extensions: const ['txt'],
-                chooseLocation: (_, _) async => target.path,
-              ),
+              identityDocumentFileSaver: (name, bytes, mime) =>
+                  saveOperation = saveLocalFile(
+                    name,
+                    bytes,
+                    mime,
+                    extensions: const ['txt'],
+                    chooseLocation: (_, _) async => target.path,
+                  ),
             ),
           );
           await _choose(
@@ -115,6 +117,8 @@ void main() {
             find.byKey(const Key('identity-document-save')),
           );
           await tester.tap(find.byKey(const Key('identity-document-save')));
+          expect(saveOperation, isNotNull);
+          expect(await saveOperation!, isTrue);
           await tester.pumpAndSettle();
           expect(await target.readAsBytes(), utf8.encode(expected));
           expect(directory.listSync(), hasLength(1));

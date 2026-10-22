@@ -28,6 +28,7 @@ void main() {
           final saved = File('${directory.path}/lorem.txt');
           await saved.writeAsString('previous');
           String? copied;
+          Future<bool>? saveOperation;
           await tester.pumpWidget(
             ChimeraApp(
               localeTag: locale,
@@ -35,13 +36,14 @@ void main() {
               loremClipboardWriter: (v) async {
                 copied = v;
               },
-              loremFileSaver: (name, bytes, mime) => saveLocalFile(
-                name,
-                bytes,
-                mime,
-                extensions: const ['txt'],
-                chooseLocation: (_, _) async => saved.path,
-              ),
+              loremFileSaver: (name, bytes, mime) =>
+                  saveOperation = saveLocalFile(
+                    name,
+                    bytes,
+                    mime,
+                    extensions: const ['txt'],
+                    chooseLocation: (_, _) async => saved.path,
+                  ),
             ),
           );
           await tester.pumpAndSettle();
@@ -81,6 +83,8 @@ void main() {
           await tap('copy');
           expect(copied, expected);
           await tap('save');
+          expect(saveOperation, isNotNull);
+          expect(await saveOperation!, isTrue);
           for (
             var turn = 0;
             turn < 100 &&

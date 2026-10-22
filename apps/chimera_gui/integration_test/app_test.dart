@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_gui/app.dart';
+import 'package:chimera_gui/base64_decode_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -47,6 +48,7 @@ void main() {
             String? copied;
             var copies = 0;
             var saves = 0;
+            Future<bool>? saveOperation;
             final saved = File('${directory.path}/chimera-url-encoded.txt');
             await tester.pumpWidget(
               ChimeraApp(
@@ -58,12 +60,13 @@ void main() {
                   copies++;
                   copied = value;
                 },
-                urlEncodeFileSaver: (name, bytes, mime) async {
+                urlEncodeFileSaver: (name, bytes, mime) {
                   saves++;
                   expect(name, 'chimera-url-encoded.txt');
                   expect(mime, 'text/plain; charset=utf-8');
-                  await saved.writeAsBytes(bytes, flush: true);
-                  return true;
+                  return saveOperation = saved
+                      .writeAsBytes(bytes, flush: true)
+                      .then((_) => true);
                 },
               ),
             );
@@ -151,8 +154,10 @@ void main() {
             expect(copies, 1);
             await tester.sendKeyEvent(LogicalKeyboardKey.tab);
             await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-            await tester.pumpAndSettle();
             expect(saves, 1);
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
             expect(await saved.readAsBytes(), utf8.encode(expected));
             expect(network.attempts, 0);
           } finally {
@@ -265,6 +270,7 @@ void main() {
             String? copied;
             var copies = 0;
             var saves = 0;
+            Future<bool>? saveOperation;
             final saved = File('${directory.path}/chimera-html-encoded.txt');
             await tester.pumpWidget(
               ChimeraApp(
@@ -276,12 +282,13 @@ void main() {
                   copies++;
                   copied = value;
                 },
-                htmlEncodeFileSaver: (name, bytes, mime) async {
+                htmlEncodeFileSaver: (name, bytes, mime) {
                   saves++;
                   expect(name, 'chimera-html-encoded.txt');
                   expect(mime, 'text/plain; charset=utf-8');
-                  await saved.writeAsBytes(bytes, flush: true);
-                  return true;
+                  return saveOperation = saved
+                      .writeAsBytes(bytes, flush: true)
+                      .then((_) => true);
                 },
               ),
             );
@@ -380,8 +387,10 @@ void main() {
             expect(copies, 1);
             await tester.sendKeyEvent(LogicalKeyboardKey.tab);
             await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-            await tester.pumpAndSettle();
             expect(saves, 1);
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
             expect(await saved.readAsBytes(), utf8.encode(expected));
             expect(network.attempts, 0);
           } finally {
@@ -485,6 +494,7 @@ void main() {
           String? copied;
           var copies = 0;
           var saves = 0;
+          Future<bool>? saveOperation;
           final saved = File('${directory.path}/chimera-url-decoded.txt');
           await tester.pumpWidget(
             ChimeraApp(
@@ -496,12 +506,13 @@ void main() {
                 copies++;
                 copied = value;
               },
-              urlDecodeFileSaver: (name, bytes, mime) async {
+              urlDecodeFileSaver: (name, bytes, mime) {
                 saves++;
                 expect(name, 'chimera-url-decoded.txt');
                 expect(mime, 'text/plain; charset=utf-8');
-                await saved.writeAsBytes(bytes, flush: true);
-                return true;
+                return saveOperation = saved
+                    .writeAsBytes(bytes, flush: true)
+                    .then((_) => true);
               },
             ),
           );
@@ -572,8 +583,10 @@ void main() {
           expect(copies, 1);
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-          await tester.pumpAndSettle();
           expect(saves, 1);
+          expect(saveOperation, isNotNull);
+          expect(await saveOperation!, isTrue);
+          await tester.pumpAndSettle();
           expect(await saved.readAsBytes(), utf8.encode(expected));
           expect(network.attempts, 0);
         } finally {
@@ -687,6 +700,7 @@ void main() {
           String? copied;
           var copies = 0;
           var saves = 0;
+          Future<bool>? saveOperation;
           final saved = File('${directory.path}/chimera-html-decoded.txt');
           await tester.pumpWidget(
             ChimeraApp(
@@ -698,12 +712,13 @@ void main() {
                 copies++;
                 copied = value;
               },
-              htmlDecodeFileSaver: (name, bytes, mime) async {
+              htmlDecodeFileSaver: (name, bytes, mime) {
                 saves++;
                 expect(name, 'chimera-html-decoded.txt');
                 expect(mime, 'text/plain; charset=utf-8');
-                await saved.writeAsBytes(bytes, flush: true);
-                return true;
+                return saveOperation = saved
+                    .writeAsBytes(bytes, flush: true)
+                    .then((_) => true);
               },
             ),
           );
@@ -774,8 +789,10 @@ void main() {
           expect(copies, 1);
           await tester.sendKeyEvent(LogicalKeyboardKey.tab);
           await tester.sendKeyEvent(LogicalKeyboardKey.enter);
-          await tester.pumpAndSettle();
           expect(saves, 1);
+          expect(saveOperation, isNotNull);
+          expect(await saveOperation!, isTrue);
+          await tester.pumpAndSettle();
           expect(await saved.readAsBytes(), utf8.encode(expected));
           expect(network.attempts, 0);
         } finally {
@@ -846,6 +863,7 @@ void main() {
               : '1f8b08000000000000ff63f8dfc008002c4358d304000000';
           final outputCount = source == 'text' ? 32 : 24;
           var saves = 0;
+          Future<bool>? saveOperation;
           final saved = File('${directory.path}/chimera-compressed.gz');
           try {
             await tester.pumpWidget(
@@ -853,12 +871,13 @@ void main() {
                 localeTag: locale,
                 initialLocation: '/gzip/compress',
                 gzipCompressFilePicker: () async => sourceBytes,
-                gzipCompressFileSaver: (name, bytes, mime) async {
+                gzipCompressFileSaver: (name, bytes, mime) {
                   saves++;
                   expect(name, 'chimera-compressed.gz');
                   expect(mime, 'application/gzip');
-                  await saved.writeAsBytes(bytes, flush: true);
-                  return true;
+                  return saveOperation = saved
+                      .writeAsBytes(bytes, flush: true)
+                      .then((_) => true);
                 },
               ),
             );
@@ -908,8 +927,10 @@ void main() {
             final save = find.byKey(const Key('gzip-compress-save'));
             await tester.ensureVisible(save);
             await tester.tap(save);
-            await tester.pumpAndSettle();
             expect(saves, 1);
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
             _assertGzipMember(
               await saved.readAsBytes(),
               expectedHex,
@@ -955,6 +976,7 @@ void main() {
           );
           String? copied;
           var saves = 0;
+          Future<bool>? saveOperation;
           final saved = File(
             '${directory.path}/${textMode ? 'chimera-decompressed.txt' : 'chimera-decompressed.bin'}',
           );
@@ -965,7 +987,7 @@ void main() {
                 initialLocation: '/gzip/decompress',
                 gzipDecompressFilePicker: () async => source,
                 gzipDecompressClipboardWriter: (value) async => copied = value,
-                gzipDecompressFileSaver: (name, bytes, mime) async {
+                gzipDecompressFileSaver: (name, bytes, mime) {
                   saves++;
                   expect(
                     name,
@@ -979,8 +1001,9 @@ void main() {
                         ? 'text/plain; charset=utf-8'
                         : 'application/octet-stream',
                   );
-                  await saved.writeAsBytes(bytes, flush: true);
-                  return true;
+                  return saveOperation = saved
+                      .writeAsBytes(bytes, flush: true)
+                      .then((_) => true);
                 },
               ),
             );
@@ -1050,8 +1073,10 @@ void main() {
               find.byKey(const Key('gzip-decompress-save')),
             );
             await tester.tap(find.byKey(const Key('gzip-decompress-save')));
-            await tester.pumpAndSettle();
             expect(saves, 1);
+            expect(saveOperation, isNotNull);
+            expect(await saveOperation!, isTrue);
+            await tester.pumpAndSettle();
             expect(await saved.readAsBytes(), expected);
             expect(network.attempts, 0);
           } finally {
@@ -1704,10 +1729,16 @@ void main() {
     (tester) async {
       String? savedName;
       List<int>? savedBytes;
+      Future<Base64DecodePreview?>? previewOperation;
       await tester.pumpWidget(
         ChimeraApp(
           localeTag: 'en',
           initialLocation: '/base64/decode',
+          base64DecodePreviewDecoder: (bytes, {required mediaType}) =>
+              previewOperation = decodeBase64Preview(
+                bytes,
+                mediaType: mediaType,
+              ),
           base64DecodeFileSaver: (name, bytes) async {
             savedName = name;
             savedBytes = List<int>.of(bytes);
@@ -1723,6 +1754,8 @@ void main() {
         _validPngBase64,
       );
       await tester.tap(find.byKey(const Key('base64-decode-submit')));
+      expect(previewOperation, isNotNull);
+      expect(await previewOperation!, isNotNull);
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('base64-decode-preview')), findsOneWidget);
