@@ -3,6 +3,38 @@ const List<String> supportedLocaleTags = <String>['en', 'pt-BR'];
 const Map<String, Map<String, String>>
 _catalogs = <String, Map<String, String>>{
   'en': <String, String>{
+    "cli.dotnetLibraryUsage": "Usage: chimera dotnet init-lib --root=<destination> --solution=<name> --project=<name> --author=<author> --company=<company> --description=<description> --version=<semver> --package-id=<id> --repository-url=<https-url> [--json], OR --parameters=<JSON file> [--json]. Do not mix parameter files and individual values. Generates offline; never restores packages or runs dotnet.",
+    "dotnetScaffold.title": "Scaffold NuGet Library",
+    "dotnetScaffold.description": "Creates a complete .NET 10 NuGet library repository locally. The destination must not exist. Use all fields or one JSON parameter file. Generation does not restore, build, publish, or contact a network service. Web cannot write a native repository.",
+    "dotnetScaffold.fieldsMode": "Fields",
+    "dotnetScaffold.jsonMode": "JSON file",
+    "dotnetScaffold.pickJson": "Choose JSON parameter file",
+    "dotnetScaffold.jsonLoaded": "JSON parameters loaded locally.",
+    "dotnetScaffold.create": "Create repository",
+    "dotnetScaffold.working": "Creating repository…",
+    "dotnetScaffold.created": "Repository created",
+    "error.dotnetScaffold.validation": "Review the indicated fields. Names must be portable .NET identifiers, version must be valid SemVer with numeric parts at most 65534, and the repository URL must use HTTPS without credentials. Metadata cannot contain controls or MSBuild expressions.",
+    "error.dotnetScaffold.render":
+        "Repository templates could not be rendered. No output was created.",
+    "error.dotnetScaffold.mixedMode":
+        "Use either a JSON parameter file or individual values, never both.",
+    "error.dotnetScaffold.inputAccess":
+        "The JSON parameter file could not be read or exceeds 64 KiB.",
+    "error.dotnetScaffold.jsonRequired":
+        "Choose one JSON parameter file before creating the repository.",
+    "dotnetScaffold.field.RootFolder": "Repository destination",
+    "dotnetScaffold.field.SolutionName": "Solution name",
+    "dotnetScaffold.field.ProjectName": "Project name",
+    "dotnetScaffold.field.Author": "Author",
+    "dotnetScaffold.field.Company": "Company",
+    "dotnetScaffold.field.Description": "Description",
+    "dotnetScaffold.field.Version": "Semantic version",
+    "dotnetScaffold.field.PackageId": "NuGet package ID",
+    "dotnetScaffold.field.RepositoryUrl": "Repository HTTPS URL",
+    "dotnetScaffold.field.inputMode": "Input mode",
+    "dotnetScaffold.field.parametersJson": "JSON parameters",
+    "dotnetScaffold.invalidField": "Review this required field.",
+
     "scaffold.title": "Create project from template",
     "scaffold.destination": "New destination path",
     "scaffold.create": "Create project",
@@ -1503,6 +1535,38 @@ _catalogs = <String, Map<String, String>>{
     'error.unexpected': 'An unexpected error occurred.',
   },
   'pt-BR': <String, String>{
+    "cli.dotnetLibraryUsage": "Uso: chimera dotnet init-lib --root=<destino> --solution=<nome> --project=<nome> --author=<autor> --company=<empresa> --description=<descrição> --version=<semver> --package-id=<id> --repository-url=<url-https> [--json], OU --parameters=<arquivo JSON> [--json]. Não misture arquivo e valores individuais. Gera offline; não restaura pacotes nem executa dotnet.",
+    "dotnetScaffold.title": "Criar Biblioteca NuGet",
+    "dotnetScaffold.description": "Cria localmente um repositório completo de biblioteca NuGet .NET 10. O destino não pode existir. Use todos os campos ou um arquivo JSON. A geração não restaura, compila, publica ou acessa serviços de rede. A web não pode gravar um repositório nativo.",
+    "dotnetScaffold.fieldsMode": "Campos",
+    "dotnetScaffold.jsonMode": "Arquivo JSON",
+    "dotnetScaffold.pickJson": "Escolher arquivo JSON de parâmetros",
+    "dotnetScaffold.jsonLoaded": "Parâmetros JSON carregados localmente.",
+    "dotnetScaffold.create": "Criar repositório",
+    "dotnetScaffold.working": "Criando repositório…",
+    "dotnetScaffold.created": "Repositório criado",
+    "error.dotnetScaffold.validation": "Revise os campos indicados. Use nomes .NET portáveis, SemVer válido com partes numéricas até 65534 e URL HTTPS sem credenciais. Metadados não podem conter controles ou expressões MSBuild.",
+    "error.dotnetScaffold.render":
+        "Não foi possível renderizar os modelos. Nenhum arquivo foi criado.",
+    "error.dotnetScaffold.mixedMode":
+        "Use um arquivo JSON ou valores individuais, nunca ambos.",
+    "error.dotnetScaffold.inputAccess":
+        "Não foi possível ler o arquivo JSON ou ele excede 64 KiB.",
+    "error.dotnetScaffold.jsonRequired":
+        "Escolha um arquivo JSON antes de criar o repositório.",
+    "dotnetScaffold.field.RootFolder": "Destino do repositório",
+    "dotnetScaffold.field.SolutionName": "Nome da solução",
+    "dotnetScaffold.field.ProjectName": "Nome do projeto",
+    "dotnetScaffold.field.Author": "Autor",
+    "dotnetScaffold.field.Company": "Empresa",
+    "dotnetScaffold.field.Description": "Descrição",
+    "dotnetScaffold.field.Version": "Versão semântica",
+    "dotnetScaffold.field.PackageId": "ID do pacote NuGet",
+    "dotnetScaffold.field.RepositoryUrl": "URL HTTPS do repositório",
+    "dotnetScaffold.field.inputMode": "Modo de entrada",
+    "dotnetScaffold.field.parametersJson": "Parâmetros JSON",
+    "dotnetScaffold.invalidField": "Revise este campo obrigatório.",
+
     "scaffold.title": "Criar projeto a partir de modelo",
     "scaffold.destination": "Caminho do novo destino",
     "scaffold.create": "Criar projeto",

@@ -26,6 +26,8 @@ import 'dotnet_test_page.dart';
 import 'dotnet_bump_page.dart';
 
 import 'dotnet_tag_page.dart';
+
+import 'dotnet_library_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -266,6 +268,8 @@ GoRouter buildRouter({
   required XmlFormatClipboardReader xmlFormatClipboardReader,
   required XmlFormatClipboardWriter xmlFormatClipboardWriter,
   TypePeriodicService Function()? typePeriodicServiceFactory,
+
+  DotnetScaffoldOperationService? dotnetLibraryScaffoldService,
   String initialLocation = '/',
 }) {
   String localeTag() => languageController.localeTag;
@@ -304,6 +308,13 @@ GoRouter buildRouter({
             DotnetBumpPage(catalog: catalog, localeTag: localeTag()),
       ),
 
+      GoRoute(
+        path: '/dotnet/init-lib',
+        builder: (context, state) => DotnetLibraryPage(
+          localeTag: localeTag(),
+          service: dotnetLibraryScaffoldService,
+        ),
+      ),
       if (updateChecksEnabled && updateChecker != null)
         GoRoute(
           path: '/update/check',
@@ -1019,6 +1030,14 @@ GoRouter buildRouter({
                         onPressed: () => context.go('/qr/decode'),
                         child: Text(
                           catalog.lookup(localeTag(), 'qrDecode.openAction'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-library'),
+                        onPressed: () => context.go('/dotnet/init-lib'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetScaffold.title'),
                         ),
                       ),
                       const SizedBox(height: 12),

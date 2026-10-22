@@ -7,6 +7,14 @@ test('GivenBrowser_WhenCreatingProject_ThenNativeRequirementIsExplainedOffline',
   await placeholder.evaluate(node => node.click());
   await page.context().setOffline(true);
   await page.getByRole('textbox', { name: 'New destination path', exact: true }).fill('new-project');
+  await page.locator('[aria-live="polite"]').evaluate(node => {
+    window.projectTemplateAnnouncements = [];
+    new MutationObserver(() => {
+      window.projectTemplateAnnouncements.push(node.textContent);
+    }).observe(node, { childList: true, characterData: true, subtree: true });
+  });
   await page.getByRole('button', { name: 'Create project', exact: true }).click();
-  await expect(page.getByText('Project creation is available in the Windows and Linux desktop and CLI applications.', { exact: true })).toBeVisible();
+  const explanation = 'Project creation is available in the Windows and Linux desktop and CLI applications.';
+  await expect(page.getByRole('group', { name: explanation, exact: true })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.projectTemplateAnnouncements)).toContain(explanation);
 });

@@ -544,7 +544,7 @@ access failures discard the source and expose no successful partial result.
 | [#100](https://github.com/artur-rios/chimera/issues/100) | UC-51 — Test .NET Projects with Coverage | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#101](https://github.com/artur-rios/chimera/issues/101) | UC-52 — Bump .NET Project Version (implemented; awaiting human review) | [Use Case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-52-bump-net-project-version) |
 | [#102](https://github.com/artur-rios/chimera/issues/102) | UC-53 — Create .NET Release Tag | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
-| [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
+| [#103](https://github.com/artur-rios/chimera/issues/103) | UC-54 — Scaffold NuGet Library Repository — Implemented; human review pending | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#104](https://github.com/artur-rios/chimera/issues/104) | UC-55 — Scaffold Minimal .NET Library Repository | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 | [#105](https://github.com/artur-rios/chimera/issues/105) | UC-56 — Scaffold .NET Project | [`dotnet-tools`](https://github.com/artur-rios/dotnet-tools), [`python-dotnet-tools`](https://github.com/artur-rios/python-dotnet-tools) |
 
@@ -555,6 +555,16 @@ Windows console. Linux and web return a localized unsupported-target result.
 The first command follows the 1-second startup, 15-second initial delay, and
 selected interval. Stop with the desktop Stop button or CLI Ctrl+C; the owned
 terminal closes. Moving focus away stops input at the next send attempt.
+
+UC-54 creates a .NET 10 NuGet library repository at `/dotnet/init-lib` or
+`chimera dotnet init-lib`. Supply `--root`, `--solution`, `--project`, `--author`,
+`--company`, `--description`, `--version`, `--package-id`, and `--repository-url`,
+or use `--parameters=parameters.json` with the source keys documented in the
+[use case](docs/requirements/Use%20Case%20Specification%20Document.md#uc-54-scaffold-nuget-library-repository).
+Add `--json` for destination, template version, and every created path.
+Generation is offline and transactional; the destination must not exist. Web
+returns an unsupported result. The acceptance tool and Windows/Linux CI verify
+the generated solution using a real .NET SDK; generation itself runs no commands.
 
 ## Contributing
 
