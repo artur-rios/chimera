@@ -29,7 +29,7 @@ Future<int> runProjectCommand(
     final result =
         await (service ?? ScaffoldService(const NativeScaffoldWriter()))
             .execute(ScaffoldRequest(destination: parsed.rest.single));
-    return result.fold(
+    return result.fold<int>(
       onSuccess: (value) {
         out.writeln(
           parsed.flag('json')
