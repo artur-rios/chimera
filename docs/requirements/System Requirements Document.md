@@ -497,3 +497,5 @@ Traceability: [UC-51 issue #100](https://github.com/artur-rios/chimera/issues/10
 Traceability: [UC-55 issue #104](https://github.com/artur-rios/chimera/issues/104),
 [PowerShell init-min](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-min.ps1),
 [Python init-min](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_min.py).
+
+| FR-DW-10 | Scaffold one validated .NET project offline using versioned minimal (default) or NuGet templates; reject mixed modes and invalid names/options, keep all NuGet metadata elements blank in NuGet mode, preserve existing paths, and safely roll back partial output. Native GUI and CLI use one shared renderer and transactional writer. |

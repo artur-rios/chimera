@@ -1393,6 +1393,40 @@ tool restores, builds, tests, and packs a generated solution using a real .NET
 10 SDK; CI runs it on Windows and Linux. Source normalizations and build fixes
 are documented in [template provenance](../reference/dotnet-library-templates.md).
 
+### UC-56: Scaffold .NET Project
+
+**Actors:** Developer, local automation. **Targets:** native Windows/Linux desktop and CLI. Web returns unsupported.
+**Requirements:** FR-DW-10, shared FR-PL requirements.
+**Preconditions:** A valid project name and an existing writable parent are supplied.
+**Postconditions:** One approved project is written in a new destination, or existing content is preserved and safe partial output removed.
+
+## Source traceability
+
+- [`dotnet-tools init-proj`](https://github.com/artur-rios/dotnet-tools/blob/7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998/commands/init-proj.ps1)
+- [`python-dotnet-tools init-proj`](https://github.com/artur-rios/python-dotnet-tools/blob/c7255b386ca49a40cbafde7c6e4edd29b25fdebf/src/commands/init_proj.py)
+
+## Main flow
+
+1. The actor supplies a project name and selects minimal or NuGet mode; minimal is the default.
+2. Chimera validates the name, mutually exclusive modes, and a target directory that does not exist.
+3. Chimera creates `<ProjectName>/<ProjectName>.csproj` from the selected versioned template.
+4. Chimera validates the generated project and reports its path and selected mode.
+
+## Alternative flows
+
+| ID | Condition | Outcome |
+| --- | --- | --- |
+| AF-01 | The name is missing or invalid, both modes are selected, or an unknown option is supplied. | Return a typed validation failure and create nothing. |
+| AF-02 | The destination already exists or is not writable. | Return a typed access/conflict failure without overwriting content. |
+| AF-03 | Template rendering or validation fails after creation begins. | Remove partial output when safe and report a typed scaffold failure. |
+
+## Acceptance criteria
+
+- [ ] Minimal mode emits the approved minimal `.csproj`; NuGet mode retains all approved metadata elements with blank values.
+- [ ] Templates are versioned, available offline, and validated by golden fixtures plus a real `dotnet` project evaluation on Windows and Linux.
+- [ ] Native desktop and CLI adapters use one shared validation, rendering, and transactional-write service; web may export an archive if equivalent output is preserved.
+
+
 ## 3. Use Case — Requirements Traceability
 
 | Use Case | Requirements |
@@ -1450,6 +1484,8 @@ are documented in [template provenance](../reference/dotnet-library-templates.md
 | UC-53 Create .NET Release Tag | FR-DW-07, shared FR-PL requirements |
 
 | UC-54 Scaffold NuGet Library Repository | FR-DW-08, shared FR-PL requirements |
+
+| UC-56 Scaffold .NET Project | FR-DW-10, shared FR-PL requirements |
 
 For rows marked **shared FR-PL requirements**, the complete set is FR-PL-01
 through FR-PL-06 and FR-PL-09 through FR-PL-11, as listed in each use case.

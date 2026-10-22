@@ -17,6 +17,8 @@ export 'src/dotnet_version/dotnet_version_editor.dart';
 
 export 'src/dotnet_repository_parameters.dart';
 export 'src/dotnet_repository_renderer.dart';
+
+export 'src/dotnet_project_template.dart';
 export 'src/gzip/gzip_compressor.dart';
 export 'src/gzip/gzip_decompressor.dart';
 export 'src/hash/hash_generator.dart';

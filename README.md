@@ -627,3 +627,7 @@ are rejected before mutation.
 ### .NET release tags (UC-53)
 
 `chimera dotnet tag [--project=<project.csproj-or-directory>] [--push] [--remote=origin] [--json]` recursively discovers one project in `./src` by default, reads its semantic `<Version>`, and creates annotated `v<version>` with `Release <version>`. Without `--push` it stays local. An explicit push sends only that tag. Existing tags are preserved; failed or cancelled pushes retain the local tag and report the remote outcome as unconfirmed. Desktop uses `/dotnet/tag`; browser receives an unsupported-target explanation. Git must be installed.
+
+### .NET project scaffolding (UC-56)
+
+`chimera dotnet init-project --name=Example --parent=./work [--minimal|--nuget] [--json]` creates one new project directory offline. Minimal is the default. NuGet mode keeps metadata elements with blank values. Existing destinations are never overwritten. Desktop uses the same service at `/dotnet/init-project`; browser users receive the native-target explanation. Templates target .NET 10 and are pinned to dotnet-tools commit `7cd0a4867dbbd0301ddb5e6a207fbb0b29c56998`.

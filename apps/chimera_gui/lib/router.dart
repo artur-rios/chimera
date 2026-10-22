@@ -28,6 +28,8 @@ import 'dotnet_bump_page.dart';
 import 'dotnet_tag_page.dart';
 
 import 'dotnet_library_page.dart';
+
+import 'dotnet_project_page.dart';
 import 'gzip_compress_page.dart';
 import 'gzip_decompress_page.dart';
 import 'hash_generate_page.dart';
@@ -1067,6 +1069,14 @@ GoRouter buildRouter({
                           catalog.lookup(localeTag(), 'dotnetTag.title'),
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      ElevatedButton(
+                        key: const Key('open-dotnet-project'),
+                        onPressed: () => context.go('/dotnet/init-project'),
+                        child: Text(
+                          catalog.lookup(localeTag(), 'dotnetProject.title'),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       _ThemePreferencePanel(
                         controller: themeController,
@@ -1094,6 +1104,10 @@ GoRouter buildRouter({
       GoRoute(
         path: '/dotnet/tag',
         builder: (context, state) => DotnetTagPage(localeTag: localeTag()),
+      ),
+      GoRoute(
+        path: '/dotnet/init-project',
+        builder: (context, state) => DotnetProjectPage(localeTag: localeTag()),
       ),
       GoRoute(
         path: '/cron/parse',

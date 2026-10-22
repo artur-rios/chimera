@@ -13,6 +13,7 @@ import 'package:chimera_platform/type_periodic_terminal.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 
 import 'dotnet_build.dart';
+import 'dotnet_project_command.dart';
 import 'dotnet_minimal_commands.dart';
 import 'dotnet_library_commands.dart';
 
@@ -139,8 +140,18 @@ Future<int> runChimera(
   DotnetTagOperationService? dotnetTagService,
   DotnetScaffoldOperationService? dotnetLibraryScaffoldService,
   DotnetScaffoldOperationService? minimalLibraryScaffoldService,
+  DotnetProjectOperationService? dotnetProjectService,
   DateTime Function()? currentTime,
 }) async {
+  if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-project') {
+    return runDotnetProjectCommand(
+      args.sublist(2),
+      localeTag: localeTag,
+      out: out,
+      err: err,
+      service: dotnetProjectService,
+    );
+  }
   if (args.length >= 2 && args[0] == 'dotnet' && args[1] == 'init-min') {
     return runMinimalLibraryCommand(
       args.sublist(2),

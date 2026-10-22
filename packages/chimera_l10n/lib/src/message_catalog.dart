@@ -54,6 +54,16 @@ _catalogs = <String, Map<String, String>>{
         'The parameters JSON file could not be read or exceeds its size limit.',
     'cli.dotnetInitMinUsage': 'Usage: chimera dotnet init-min (--root <new-path> --solution <name> --project <name> --author <author> --description <text> | --parameters <file.json>) [--json]. Supply all five values or one JSON file; do not mix modes. Creates an offline .NET 10 library with docs/tests placeholders and no NuGet metadata or test project.',
 
+    "dotnetProject.title": "Scaffold .NET project",
+    "dotnetProject.name": "Project name",
+    "dotnetProject.parent": "Parent directory",
+    "dotnetProject.minimal": "Minimal project",
+    "dotnetProject.nuget": "NuGet project (blank metadata)",
+    "dotnetProject.create": "Create .NET project",
+    "error.dotnetProject.validation":
+        "Choose a valid project name and exactly one project mode.",
+    "cli.dotnetProjectUsage": "Usage: chimera dotnet init-project --name=<name> [--parent=<directory>] [--minimal|--nuget] [--json]",
+
     "scaffold.title": "Create project from template",
     "scaffold.destination": "New destination path",
     "scaffold.create": "Create project",
@@ -1605,6 +1615,16 @@ _catalogs = <String, Map<String, String>>{
     'error.dotnetMinimal.render': 'Não foi possível gerar o modelo do repositório mínimo. Nenhum repositório foi criado.',
     'error.dotnetMinimal.parametersRead': 'Não foi possível ler o arquivo JSON de parâmetros ou ele excede o limite de tamanho.',
     'cli.dotnetInitMinUsage': 'Uso: chimera dotnet init-min (--root <novo-caminho> --solution <nome> --project <nome> --author <autor> --description <texto> | --parameters <arquivo.json>) [--json]. Informe os cinco valores ou um arquivo JSON; não misture os modos. Cria uma biblioteca .NET 10 com pastas docs/tests vazias, sem metadados NuGet nem projeto de testes.',
+
+    "dotnetProject.title": "Criar projeto .NET",
+    "dotnetProject.name": "Nome do projeto",
+    "dotnetProject.parent": "Diretório pai",
+    "dotnetProject.minimal": "Projeto mínimo",
+    "dotnetProject.nuget": "Projeto NuGet (metadados vazios)",
+    "dotnetProject.create": "Criar projeto .NET",
+    "error.dotnetProject.validation":
+        "Escolha um nome de projeto válido e apenas um modo de projeto.",
+    "cli.dotnetProjectUsage": "Uso: chimera dotnet init-project --name=<nome> [--parent=<diretório>] [--minimal|--nuget] [--json]",
 
     "scaffold.title": "Criar projeto a partir de modelo",
     "scaffold.destination": "Caminho do novo destino",

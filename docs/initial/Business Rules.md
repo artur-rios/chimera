@@ -166,3 +166,5 @@ after that user accepts the update prompt.
   unsupported. Report every created file and the template version. SDK-backed
   Windows/Linux golden/build checks validate templates without requiring an
   installed SDK or network for the scaffold operation itself.
+
+- BR-DW-10: Single-project scaffolding defaults to minimal; explicit minimal and NuGet modes are mutually exclusive. NuGet project scaffolds retain all metadata elements with empty values. Project names cannot be paths or reserved device names.
