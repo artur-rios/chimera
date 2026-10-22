@@ -19,6 +19,26 @@ void main() {
     await file.writeAsString('<Project/>');
   }
 
+  test('GivenExcludedNameInAncestor_WhenResolvingSelectedTests_ThenDiscoverProjects', () async {
+    for (final ancestor in [
+      'setup',
+      'bin',
+      'obj',
+      'TestResults',
+      'coverage-report',
+    ]) {
+      await project('$ancestor/repository/tests/Real.Tests.csproj');
+      await project('$ancestor/repository/tests/Setup/Fixture.csproj');
+      final workspace = NativeDotnetTestWorkspace(
+        currentDirectory: p.join(root.path, ancestor, 'repository'),
+      );
+      final result = await workspace.resolve(
+        const DotnetTestRequest(),
+      ) as ChimeraSuccess<DotnetTestLayout>;
+      expect(result.value.projects.map(p.basename), ['Real.Tests.csproj']);
+    }
+  });
+
   Future<bool> linkDirectory(String link, String target) async {
     if (Platform.isWindows) {
       final result = await Process.run('cmd.exe', [

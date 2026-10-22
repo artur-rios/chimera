@@ -48,11 +48,9 @@ final class NativeProjectDiscovery
         }
       }
 
-      if (!p
-          .split(resolved)
-          .any((part) => excluded.contains(part.toLowerCase()))) {
-        await visit(Directory(resolved));
-      }
+      // The actor selected this root. Exclusions apply only to directories we
+      // encounter beneath it, never to unrelated ancestor directory names.
+      await visit(Directory(resolved));
       files.sort();
       return ChimeraSuccess(List.unmodifiable(files));
     } on FileSystemException {
