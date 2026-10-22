@@ -43,15 +43,48 @@ final class NativeProjectDiscovery implements ProjectDiscovery {
       final choices = files.map(p.basename).toList();
       if (selection != null) {
         final candidate = p.normalize(p.join(resolved, selection));
-        if (!p.isWithin(resolved, candidate) ||
-            p.extension(candidate).toLowerCase() != extension.toLowerCase()) {
+        if (p.extension(candidate).toLowerCase() != extension.toLowerCase()) {
           return fail('dotnet.invalidPath');
         }
-        if (!await File(candidate).exists()) {
+        // A Windows 8.3 spelling can name the same file outside the lexical
+        // spelling of resolved. Inspect ancestors before resolving the file:
+        // accept same-object spellings, never linked or redirected ancestors.
+        final ancestors = <String>[];
+        var ancestor = p.dirname(candidate);
+        while (true) {
+          ancestors.add(ancestor);
+          final parent = p.dirname(ancestor);
+          if (parent == ancestor) break;
+          ancestor = parent;
+        }
+        for (final ancestor in ancestors.reversed) {
+          final type = await FileSystemEntity.type(
+            ancestor,
+            followLinks: false,
+          );
+          if (type == FileSystemEntityType.notFound) {
+            return fail('dotnet.noSolution', choices: choices);
+          }
+          if (type != FileSystemEntityType.directory) {
+            return fail('dotnet.invalidPath');
+          }
+          final canonical = await Directory(ancestor).resolveSymbolicLinks();
+          if (!await FileSystemEntity.identical(ancestor, canonical)) {
+            return fail('dotnet.invalidPath');
+          }
+        }
+        final type = await FileSystemEntity.type(candidate, followLinks: false);
+        if (type == FileSystemEntityType.notFound) {
           return fail('dotnet.noSolution', choices: choices);
         }
+        if (type != FileSystemEntityType.file) {
+          return fail('dotnet.invalidPath');
+        }
         final actual = await File(candidate).resolveSymbolicLinks();
-        if (!p.isWithin(resolved, actual)) return fail('dotnet.invalidPath');
+        if (!p.isWithin(resolved, actual) ||
+            !await FileSystemEntity.identical(candidate, actual)) {
+          return fail('dotnet.invalidPath');
+        }
         return ChimeraSuccess(actual);
       }
       if (files.length != 1) {
