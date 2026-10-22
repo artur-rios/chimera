@@ -1,0 +1,11 @@
+{
+  "RootFolder": "ExampleRepository",
+  "SolutionName": "Example",
+  "ProjectName": "Example.Library",
+  "Author": "Jane Doe",
+  "Company": "Example & Co",
+  "Description": "A <useful> library",
+  "Version": "1.2.3-beta.1",
+  "PackageId": "_Example.Library_Pack-1",
+  "RepositoryUrl": "https://example.com/repository"
+}

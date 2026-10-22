@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:chimera_core/chimera_core.dart';
@@ -42,6 +43,44 @@ void main() {
       expect(await File('$destination/src/Example.sln').exists(), isTrue);
     },
   );
+  test('GivenInvalidPackageIdOrKeyword_WhenScaffoldedInEitherMode_ThenCreatesNothing', () async {
+    final invalidFields = [
+      for (final packageId in [
+        '.',
+        '-',
+        'Example..Library',
+        'Example-',
+        '_Example.-Library',
+      ])
+        {'PackageId': packageId},
+      for (final keyword in [
+        '__arglist',
+        '__makeref',
+        '__reftype',
+        '__refvalue',
+      ])
+        {'ProjectName': keyword},
+    ];
+    for (final indexed in invalidFields.indexed) {
+      for (final jsonMode in [false, true]) {
+        final destination = '${parent.path}/invalid-${indexed.$1}-$jsonMode';
+        final values = {...parameters(destination), ...indexed.$2};
+        final result =
+            await NugetLibraryScaffoldService(const NativeScaffoldWriter())
+                .execute(
+                  DotnetScaffoldRequest(
+                    fields: jsonMode ? const {} : values,
+                    parametersJson: jsonMode ? jsonEncode(values) : null,
+                  ),
+                );
+        expect(result, isA<ChimeraFailure<ScaffoldOutput>>());
+        final failure = result as ChimeraFailure<ScaffoldOutput>;
+        expect(failure.code, 'dotnet-scaffold-validation');
+        expect(failure.details['fields'], contains(indexed.$2.keys.single));
+        expect(await Directory(destination).exists(), isFalse);
+      }
+    }
+  });
   test(
     'GivenExistingDestination_WhenScaffolded_ThenPreservesAllContent',
     () async {
