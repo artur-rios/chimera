@@ -8,7 +8,9 @@ void main() {
   test('GivenTemporarySolution_WhenRealSdkBuilds_ThenBothConfigurationsAndFailureStatus', () async {
     ProcessResult sdk;
     try {
-      sdk = await Process.run('dotnet', ['--list-sdks']);
+      // Match the SDK selected by the build runner, rather than the
+      // oldest installed SDK, whose offline reference packs may be absent.
+      sdk = await Process.run('dotnet', ['--version']);
     } on ProcessException {
       markTestSkipped('.NET SDK unavailable');
       return;
