@@ -15,8 +15,9 @@ void main() {
       var workspace = Directory.current.absolute;
       while (!File('${workspace.path}/.dart_tool/package_config.json')
           .existsSync()) {
-        if (workspace.parent.path == workspace.path)
+        if (workspace.parent.path == workspace.path) {
           throw StateError('Workspace configuration missing');
+        }
         workspace = workspace.parent;
       }
       final probe = File('${directory.path}/probe.dart');
