@@ -47,6 +47,17 @@ void main() {
       await tester.tap(find.byKey(const Key('dotnet-clean-confirm')));
       await tester.pumpAndSettle();
       expect(gateway.deleted, ['/selected/src/Project/bin']);
+      final status = find.semantics.byLabel(
+        locale == 'en'
+            ? 'Removed 1 artifact directories.'
+            : '1 diretórios de artefatos removidos.',
+      );
+      expect(status, findsOne);
+      expect(
+        status.evaluate().single,
+        isSemantics(isLiveRegion: true, isTextField: false),
+      );
+
       expect(find.byKey(const Key('dotnet-clean-delete')), findsNothing);
     });
   }

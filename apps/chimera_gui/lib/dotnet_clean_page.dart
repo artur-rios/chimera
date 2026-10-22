@@ -159,7 +159,10 @@ final class _DotnetCleanPageState extends State<DotnetCleanPage> {
                 ],
                 if (_busy) const LinearProgressIndicator(),
                 if (_status != null)
-                  Semantics(liveRegion: true, child: SelectableText(_status!)),
+                  Semantics(
+                    liveRegion: true,
+                    child: SelectionArea(child: Text(_status!)),
+                  ),
               ],
             ],
           ),
