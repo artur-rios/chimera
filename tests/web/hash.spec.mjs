@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { unexpectedHttpRequests } from './network_policy.mjs';
+import { fillFlutterTextInput, observeFlutterTextInput } from './flutter_text_input.mjs';
 
 const hashSource=readFileSync(new URL('./hash_browser.js',import.meta.url),'utf8');
 const saveSource=readFileSync(new URL('./gzip_save_observer.js',import.meta.url),'utf8');
@@ -18,6 +19,7 @@ function visibleError(page, message) {
   return page.locator('span', { hasText: new RegExp(`^${escaped}$`) });
 }
 async function openHash(page) {
+  await observeFlutterTextInput(page);
   await page.goto('/');
   const placeholder=page.locator('flt-semantics-placeholder'); await placeholder.waitFor({state:'attached'});await placeholder.evaluate(node=>node.click());
   await page.getByRole('button',{name:'Generate hash',exact:true}).click();
@@ -32,7 +34,7 @@ for(const algorithm of ['sha256','sha384','sha512','md5','sha1']) {
     const vector=vectors.find(v=>v.name===(source==='empty'?'empty':source==='file'?'binary':'abc'));
     const expected=vector.digests[algorithm]; await probe(page,'setup','abc');
     const editor=page.getByRole('textbox',{name:'Text to hash (UTF-8)',exact:true});
-    if(source==='text'){await editor.fill('abc');await editor.press('Tab');}
+    if(source==='text'){await fillFlutterTextInput(editor,'abc');}
     if(source==='clipboard'){await page.getByRole('button',{name:'Paste text',exact:true}).evaluate(node=>node.click());await expect.poll(()=>probe(page,'inputHasValue','abc')).toBe(true);}
     if(source==='file'){
       const oldEditor=await editor.elementHandle();const chooser=page.waitForEvent('filechooser');
@@ -58,7 +60,7 @@ for(const algorithm of ['sha256','sha384','sha512','md5','sha1']) {
 for(const action of ['read','copy','save']) {
  test(`Given${action}Failure_WhenHashActionRuns_ThenNoPartialResultOrSourceOffline`,async({page})=>{
   const requests=[];await openHash(page);await page.context().setOffline(true);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});await probe(page,'setup','abc');
-  const editor=page.getByRole('textbox',{name:'Text to hash (UTF-8)',exact:true});await editor.fill('SECRET');await editor.press('Tab');
+  const editor=page.getByRole('textbox',{name:'Text to hash (UTF-8)',exact:true});await fillFlutterTextInput(editor,'SECRET');
   if(action!=='read'){await page.getByRole('button',{name:'Generate hash',exact:true}).click();await expect(page.getByRole('region',{name:/^Hash result Hash generated\./})).toBeVisible();}
   await probe(page,`${action}Failure`);await page.getByRole('button',{name:action==='read'?'Paste text':action==='copy'?'Copy digest':'Save digest',exact:true}).evaluate(node=>node.click());
   await expect(visibleError(page,action==='read'?'Clipboard text could not be read.':action==='copy'?'The digest could not be copied.':'The digest could not be saved or written.')).toBeVisible();
@@ -90,7 +92,7 @@ test('GivenDelayedLocalFileRead_WhenSafariChecksReadiness_ThenWaitForReplacement
  const requests=[];await openHash(page);await page.context().setOffline(true);page.on('request',request=>{if(/^https?:/.test(request.url()))requests.push(request.url());});await probe(page,'setup','abc');
  const vector=vectors.find(v=>v.name==='binary');
  const editor=page.getByRole('textbox',{name:'Text to hash (UTF-8)',exact:true});
- await editor.fill('previous source');await editor.press('Tab');
+ await fillFlutterTextInput(editor,'previous source');
  // Hold the actual browser read, then release the original method with the
  // original File. Keep the compiled app's picker and byte processing intact.
  await page.evaluate(()=>{
