@@ -344,7 +344,7 @@ void main() {
     expect(accessibility, contains('apps/chimera_gui/coverage/lcov.info'));
     expect(
       _readNormalized('ci/analyze-and-test.sh'),
-      contains('dart test --coverage='),
+      contains('dart test --concurrency=2 --coverage='),
     );
     expect(
       _readNormalized('ci/accessibility-performance.sh'),

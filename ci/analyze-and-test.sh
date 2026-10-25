@@ -30,7 +30,10 @@ mkdir -p evidence
 dart run melos run test:unit 2>&1 | tee evidence/unit-tests.txt
 dart run melos run test:deployment 2>&1 | tee evidence/deployment-tests.txt
 
-dart test --coverage=coverage/dart \
+# --concurrency=2 is what dart test chose on the GitHub runner (half of its 4 vCPUs). On a larger agent the default
+# runs so many suites at once that gathering their coverage overloads the VM service: on a 32-core machine the step
+# lost its service connection once and stalled for over 30 minutes the next time, and took 197 s at 2.
+dart test --concurrency=2 --coverage=coverage/dart \
   packages/chimera_core/test \
   packages/chimera_l10n/test \
   packages/chimera_platform/test \
