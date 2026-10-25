@@ -197,7 +197,7 @@ locally built container or the explicitly selected deployment environment.
 | Containers | Docker Engine | Latest stable supported by the VPS |
 | Edge routing | Traefik | Existing VPS installation |
 | Web hosting | Ubuntu VPS | Existing supported installation |
-| Artifact hosting | GitHub Releases | Managed current service |
+| Artifact hosting | Git server releases, copied to GitHub Releases | Yggdrasil-managed Forgejo; managed GitHub service |
 | Testing | test | Latest stable at implementation time |
 | Testing | flutter_test | Flutter SDK |
 | Testing | integration_test | Flutter SDK |

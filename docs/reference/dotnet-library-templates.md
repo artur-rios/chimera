@@ -35,4 +35,5 @@ repository, restores, builds, tests and packs it, then removes the temporary
 output. Set `CHIMERA_DOTNET_RESTORE_SOURCE` to an existing local feed directory to
 verify using cached packages without a remote source. The `generated-library`
 Jenkins check (`ci/generated-library.sh`) runs these checks on Linux and the
-workflow `.github/workflows/dotnet-library-scaffold.yml` on Windows, with .NET 10. Those verification commands are never part of generation.
+workflow `.github/workflows/dotnet-library-scaffold.yml` on Windows, with .NET 10.
+Those verification commands are never part of generation.

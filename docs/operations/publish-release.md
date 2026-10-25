@@ -106,7 +106,8 @@ Windows packages and sidecars, and downloads them. `ci/release-validate.sh` then
 combines both sets and runs:
 
 ```text
-dart run tool/validate_release_bundle.dart <bundle>   --version X.Y.Z --repository artur-rios/chimera
+dart run tool/validate_release_bundle.dart <bundle> \
+  --version X.Y.Z --repository artur-rios/chimera
 ```
 
 Only a valid bundle is published: Jenkins creates draft releases on the git
