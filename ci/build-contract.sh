@@ -17,7 +17,7 @@ source ci/flutter-env.sh
 REPORTGENERATOR_VERSION=5.5.11
 if [ ! -x .dotnet-test-tools/reportgenerator ]; then
   dotnet tool install dotnet-reportgenerator-globaltool --version "$REPORTGENERATOR_VERSION" \
-    --tool-path .dotnet-test-tools --allow-roll-forward
+    --tool-path .dotnet-test-tools
 fi
 export PATH="$PWD/.dotnet-test-tools:$PATH"
 
