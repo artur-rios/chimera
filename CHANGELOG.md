@@ -46,3 +46,9 @@ Versioning and use tags in the form `vX.Y.Z`.
   `ci/`, and publishes releases on the git server and on GitHub; the Windows and
   macOS jobs stay GitHub Actions workflows on the mirror. Renovate proposes
   dependency updates.
+
+### Fixed
+
+- Installed ReportGenerator in the .NET workflow without `--allow-roll-forward`,
+  which writes an invalid runtime config on .NET SDK 10.0.402 and broke the
+  tool and the coverage integration test.
