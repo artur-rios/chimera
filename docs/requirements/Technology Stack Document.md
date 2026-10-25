@@ -117,20 +117,21 @@ Chimera has no accounts or protected operations.
 
 | Concern | Technology | Version | Role |
 | --- | --- | --- | --- |
-| Continuous integration | **GitHub Actions** | Managed current service with action references pinned in workflow files | Runs application analysis, tests, builds, and native artifact packaging. |
+| Continuous integration | **Self-hosted Jenkins managed by Yggdrasil**, plus **GitHub Actions** on the GitHub mirror | Images pinned by version and digest in `yggdrasil.yml`; action references pinned in workflow files | Jenkins runs the Linux analysis, tests, builds, and release packaging (`ci/*.sh`); GitHub Actions runs the Windows and macOS jobs and the Windows release packaging. |
 | Release and deployment manager | **[Yggdrasil](https://github.com/artur-rios/yggdrasil)** | Owner-managed compatible release | Enforces the repository release flow and resolves deployment behavior from its catalog. |
-| Deployment orchestration | **Self-hosted Jenkins managed by Yggdrasil** | Yggdrasil-managed installation | Receives GitHub webhooks, invokes the shared Yggdrasil pipeline, gates environments, and completes releases. |
+| Deployment orchestration | **Self-hosted Jenkins managed by Yggdrasil** | Yggdrasil-managed installation | Receives the git server's webhooks, invokes the shared Yggdrasil pipeline, gates environments, and completes releases. |
 | Environment deployment | **Docker Compose through Yggdrasil** | Docker-compatible Compose implementation | Builds, labels, deploys, health-checks, and rolls back the environment workload on its host. |
 | Web container | **NGINX** | Latest stable container image at implementation time | Serves compiled Flutter web assets and the liveness response. |
 | Container runtime | **Docker Engine** | Latest stable supported by the VPS | Builds and runs the web image. |
 | Edge routing | **Traefik** | Existing VPS installation | Terminates ingress and routes traffic to the web container. |
 | Web host | **Ubuntu VPS** | Existing supported installation | Runs Docker and the web workload. |
-| Native artifact hosting | **GitHub Releases** | Managed current service | Publishes portable packages, installers, checksums, and release metadata. |
+| Native artifact hosting | **Git server releases, copied to GitHub Releases** | Yggdrasil-managed Forgejo; managed GitHub service | Publishes portable packages, installers, checksums, and release metadata. |
 
-Build and test checks remain in GitHub Actions. Chimera carries Yggdrasil's root
-`Jenkinsfile` and branch-policy workflow; the Yggdrasil catalog defines its
-environments, required checks, health probe, host name, deployment triggers, and
-approval policy. Yggdrasil's Jenkins agent runs deployment on the target host,
+Build and test checks run in Yggdrasil's Jenkins pipeline, from Chimera's
+`yggdrasil.yml` and `ci/` scripts; the Windows and macOS jobs stay GitHub Actions
+workflows on the GitHub mirror. The Yggdrasil catalog defines its environments,
+required checks, health probe, host name, deployment triggers, and approval
+policy. Yggdrasil's Jenkins agent runs deployment on the target host,
 rolls back an unhealthy replacement, and completes the release promotion after
 all configured gates pass.
 
@@ -188,7 +189,7 @@ locally built container or the explicitly selected deployment environment.
 | QR | zxing2 | Latest stable at implementation time |
 | Text comparison | diff_match_patch | Latest stable at implementation time |
 | Identifiers | uuid | Latest stable at implementation time |
-| CI/CD | GitHub Actions | Managed current service; actions pinned in workflows |
+| CI/CD | Yggdrasil's Jenkins; GitHub Actions for Windows and macOS | Images pinned in `yggdrasil.yml`; actions pinned in workflows |
 | Deployment | Yggdrasil | Owner-managed compatible release |
 | Deployment | Self-hosted Jenkins | Managed by the Yggdrasil installation |
 | Deployment | Docker Compose | Compatible with the deployed Docker Engine |

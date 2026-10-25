@@ -28,32 +28,15 @@ dart run melos run test:all
 dart run tool/check_boundaries.dart
 ```
 
-Confirm the companion Yggdrasil release contract has been reviewed, merged to
-Yggdrasil `main`, and rolled out on the controller host. A green remote catalog
-is not enough: Jenkins reads the controller's mounted checkout. On that host,
-update and restart the platform as described by Yggdrasil, then prove both the
-host and controller see the approved contract:
-
-```text
-cd /opt/yggdrasil
-git fetch origin main
-git pull --ff-only origin main
-scripts/platform.sh up
-docker restart yggdrasil-status-1 yggdrasil-jenkins-1
-test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"
-test "$(python3 scripts/catalog.py get chimera production approval)" = true
-python3 scripts/catalog.py show chimera | jq -e '.releaseArtifacts == true'
-docker exec yggdrasil-jenkins-1 cat /etc/jenkins/catalog.yaml |
-  cmp --silent catalog.yaml -
-```
-
-The Jenkins GitHub App installation must also show **Actions: Read and write**.
-Confirm its protected stores contain that credential, the required agent,
-environment variables, public routing configuration, and the production
-approval owner. Do not print or copy their values. Stop if any command or
-permission check fails. The release branch-policy independently loads
-Yggdrasil `main`, validates it, and runs the Chimera catalog contract test; this
-guards repository drift, while the checks above guard controller drift.
+Confirm the companion Yggdrasil release contract has been reviewed and rolled
+out on the Yggdrasil installation that deploys Chimera: Jenkins reads its own
+yggdrasil checkout, and the release pull request's `branch-policy` validates
+that very catalog (`ci/branch-policy.sh` runs `tool/validate_yggdrasil_contract.py`
+and Yggdrasil's `ChimeraCatalogTests` on it). Confirm the installation's
+protected stores contain the required agent, environment variables, public
+routing configuration, the production approval owner and, for the Windows
+files, the GitHub App that dispatches workflows on the mirror (**Actions: Read
+and write**). Do not print or copy their values. Stop if any check fails.
 
 Record the approved `develop` commit:
 
@@ -72,15 +55,20 @@ commits to the branch.
 ```text
 git switch -c release/X.Y.Z <approved-develop-commit>
 git push -u origin release/X.Y.Z
-gh pr create --base main --head release/X.Y.Z --title "release: vX.Y.Z"
 ```
+
+Open the pull request from `release/X.Y.Z` into `main` on
+<https://git.techcraftsmen.net/artur-rios/chimera>, titled `release: vX.Y.Z`.
 
 The pull request must remain open unless all of these are successful:
 
-- `branch-policy`, including ancestry, unused tag, source readiness, and live
-  Yggdrasil catalog checks;
-- `Analyze and test`, `Cross-platform`, `Container`, and
-  `Accessibility and performance`;
+- `branch-policy`: Yggdrasil's ancestry and unused-tag rules, then Chimera's
+  source readiness and catalog contract (`ci/branch-policy.sh`);
+- every Jenkins check of `yggdrasil.yml` (`analyze-and-test`, `browser-tests`,
+  `native-linux`, `container`, `accessibility-performance`, `cleanup-contract`,
+  `generated-library`, `evaluate-projects`, `version-contract`,
+  `build-contract`, `minimal-library`) and every GitHub Actions job the catalog
+  lists in `actionsChecks`, which Jenkins copies from the mirror;
 - every Yggdrasil deployment status and the required production approval.
 
 The `release/*` push may deploy the on-demand homologation environment. Verify
@@ -89,19 +77,20 @@ the selected commit, image label, route, and exact public health response
 
 ## 3. Observe Yggdrasil promotion
 
-The root `Jenkinsfile` invokes `yggdrasilPipeline(stack: 'chimera')`. For a valid
-release pull request the shared pipeline:
+Jenkins runs Yggdrasil's shared pipeline on the repository (its
+`Jenkinsfile.default`; Chimera has no `Jenkinsfile` of its own), which reads
+`yggdrasil.yml`. For a valid release pull request it:
 
-1. waits for the catalog-required GitHub checks;
+1. runs the branch policy and every check `main` requires, and waits for the
+   GitHub Actions checks;
 2. marks each configured release environment pending;
 3. waits for the required production approval;
 4. deploys on the catalog-selected agent and verifies health;
-5. promotes only after the preceding environment succeeds; and
-6. after the last environment succeeds, merges the exact pull-request head,
-   creates tag `vX.Y.Z` and a private draft release, and dispatches the native
-   artifact workflow with that release's immutable ID;
-7. waits for the artifact workflow to publish the verified draft, then deletes
-   the release branch.
+5. promotes only after the preceding environment succeeds;
+6. after the last environment succeeds, merges the exact pull-request head and
+   tags `vX.Y.Z`;
+7. builds, validates and publishes the release files (below), then deletes the
+   release branch where the git server allows it.
 
 Observe the pull request checks, Jenkins stage view, Yggdrasil status API, public
 health route, container state, logs, and platform metrics. These surfaces may
@@ -109,23 +98,23 @@ contain operational signals only—never utility input, output, or secrets.
 
 ## 4. Verify native publication
 
-Yggdrasil dispatches `Release Artifacts` while the GitHub release is private.
-Its read-only jobs repeat source verification and build the Windows and Linux
-desktop/CLI portable and installer packages. A separate read-only job combines
-the packages and runs:
+From the tag, on the release agent, `ci/release-build.sh` repeats the source
+verification and builds, packages and smoke-tests the Linux GUI and CLI
+packages with their sidecars. Jenkins dispatches the mirror's
+`Release Windows` workflow (`release-windows.yml`) on the tag, which builds the
+Windows packages and sidecars, and downloads them. `ci/release-validate.sh` then
+combines both sets and runs:
 
 ```text
-dart run tool/validate_release_bundle.dart dist \
-  --version X.Y.Z --repository artur-rios/chimera
+dart run tool/validate_release_bundle.dart <bundle>   --version X.Y.Z --repository artur-rios/chimera
 ```
 
-Only then may the write-scoped job revalidate and upload the bundle. Work for a
-tag is serialized. The job reads GitHub's remote asset list and verifies all 24
-asset names, uploaded states, sizes, and SHA-256 digests against its local files.
-Only that successful check changes the draft into a public release. Confirm the
-release has eight native artifacts and, for each artifact, one `.sha256` and one
-`.release.json` sidecar (24 files total). Download to an isolated directory and
-rerun the validator before announcing the release.
+Only a valid bundle is published: Jenkins creates draft releases on the git
+server and on GitHub, uploads the files it took before validation, checks each
+by name and size, and publishes the git server's release, then GitHub's last.
+Confirm the release has eight native artifacts and, for each artifact, one
+`.sha256` and one `.release.json` sidecar (24 files total). Download to an
+isolated directory and rerun the validator before announcing the release.
 
 ## 5. Stop and recover safely
 
@@ -138,14 +127,15 @@ rerun the validator before announcing the release.
 - **Missing catalog, agent, variable, approval, or credential:** stop before the
   next environment. Restore the external prerequisite in Yggdrasil or its
   protected store; never add it to Chimera source or artifacts.
-- **Native build, upload, or validation failure:** the release remains a private
-  draft, even if it contains partial assets. A serialized retry may replace
-  those draft assets against the unchanged tag. If source or workflow code must
-  change, keep the existing tag immutable and prepare a new reviewed patch
-  release; delete or retain the failed draft according to operator policy, but
-  never publish it.
+- **Native build, upload, or validation failure:** after the merge the release
+  cannot run again; nothing is published while the bundle is incomplete or
+  invalid (a Windows run that failed, or GitHub Actions checks skipped, leaves
+  the bundle incomplete). Finish it with Yggdrasil's `release-resume` job
+  (`REPOSITORY=chimera`, `TAG=vX.Y.Z`), which rebuilds and revalidates the files
+  from the unchanged tag. If source or workflow code must change, keep the
+  existing tag immutable and prepare a new reviewed patch release.
 
-After success, record the pull request, merge commit, tag, GitHub release,
-workflow run, Jenkins run, deployment statuses, health evidence, and bundle
+After success, record the pull request, merge commit, tag, releases (git server
+and GitHub), Windows workflow run, Jenkins run, deployment statuses, health evidence, and bundle
 validation result. Closing the UC-46 issue still requires explicit human
 approval after its implementation pull request is reviewed and merged.

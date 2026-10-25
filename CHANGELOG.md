@@ -37,3 +37,12 @@ Versioning and use tags in the form `vX.Y.Z`.
   localized file/clipboard GUI flows.
 - Strict concatenated-member GZIP decompression with text and binary modes,
   typed validation and resource limits, and localized CLI and GUI flows.
+
+### Changed
+
+- The repository moved to <https://git.techcraftsmen.net/artur-rios/chimera>,
+  with GitHub as a read-only mirror. Yggdrasil's Jenkins pipeline runs the Linux
+  checks, the branch policy, and the release builds from `yggdrasil.yml` and
+  `ci/`, and publishes releases on the git server and on GitHub; the Windows and
+  macOS jobs stay GitHub Actions workflows on the mirror. Renovate proposes
+  dependency updates.

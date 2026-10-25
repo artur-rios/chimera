@@ -33,6 +33,6 @@ records independent expected content for all eleven generated files. The
 acceptance command `dart run tool/verify_dotnet_library.dart` creates a temporary
 repository, restores, builds, tests and packs it, then removes the temporary
 output. Set `CHIMERA_DOTNET_RESTORE_SOURCE` to an existing local feed directory to
-verify using cached packages without a remote source. The workflow
-`.github/workflows/dotnet-library-scaffold.yml` runs these checks on Windows and
-Linux with .NET 10. Those verification commands are never part of generation.
+verify using cached packages without a remote source. The `generated-library`
+Jenkins check (`ci/generated-library.sh`) runs these checks on Linux and the
+workflow `.github/workflows/dotnet-library-scaffold.yml` on Windows, with .NET 10. Those verification commands are never part of generation.
