@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:test/test.dart';
+import 'package:yaml/yaml.dart';
 
 void main() {
   late Directory temporaryDirectory;
@@ -71,6 +73,43 @@ void main() {
       expect(result.stderr, isNot(contains('chimera.actionsChecks')));
     },
   );
+
+  // The validator's lists are written by hand: they must stay the checks yggdrasil.yml defines, in its order,
+  // and the jobs the GitHub Actions workflows declare (the release's Windows build is not a check).
+  test('GivenValidatorLists_WhenComparedWithTheRepository_ThenTheyNameItsChecksAndWorkflowJobs', () async {
+    final result = await Process.run(python, <String>[
+      '-c',
+      'import json, sys; sys.path.insert(0, "tool"); '
+          'import validate_yggdrasil_contract as v; '
+          'print(json.dumps([v.REQUIRED_CHECKS, v.REQUIRED_ACTIONS_CHECKS]))',
+    ]);
+    expect(result.exitCode, 0, reason: result.stderr as String);
+    final lists = jsonDecode(result.stdout as String) as List<Object?>;
+    final requiredChecks = (lists[0] as List<Object?>).cast<String>();
+    final requiredActionsChecks = (lists[1] as List<Object?>).cast<String>();
+
+    final pipeline =
+        loadYaml(File('yggdrasil.yml').readAsStringSync()) as YamlMap;
+    final checks = (pipeline['checks'] as YamlMap).keys.cast<String>();
+    final jobNames = <String>[
+      for (final file
+          in Directory('.github/workflows')
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.yml'))
+              .where((file) => !file.path.endsWith('release-windows.yml')))
+        for (final job
+            in ((loadYaml(file.readAsStringSync()) as YamlMap)['jobs']
+                    as YamlMap)
+                .values
+                .cast<YamlMap>())
+          job['name'] as String,
+    ];
+
+    expect(requiredChecks, checks.toList());
+    expect(requiredActionsChecks, unorderedEquals(jobNames));
+    expect(requiredActionsChecks.toSet(), hasLength(jobNames.length));
+  });
 }
 
 Future<ProcessResult> _validate(String python, File catalog) => Process.run(

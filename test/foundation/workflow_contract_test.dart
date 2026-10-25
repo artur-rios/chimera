@@ -359,7 +359,15 @@ void main() {
 
   test('GivenJenkins_WhenItBuildsChimera_ThenTheSharedPipelineReadsThePipelineFile', () {
     expect(File('Jenkinsfile').existsSync(), isFalse);
-    expect(pipelineFile, contains('describe chimera'));
+    expect(pipeline.keys.cast<String>().toSet(), <String>{
+      'checks',
+      'branchPolicy',
+      'release',
+    });
+    expect(
+      (pipeline['release'] as YamlMap).keys.cast<String>().toSet(),
+      <String>{'build', 'windows', 'validate'},
+    );
   });
 }
 
