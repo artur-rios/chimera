@@ -37,3 +37,9 @@ Versioning and use tags in the form `vX.Y.Z`.
   localized file/clipboard GUI flows.
 - Strict concatenated-member GZIP decompression with text and binary modes,
   typed validation and resource limits, and localized CLI and GUI flows.
+
+### Fixed
+
+- Installed ReportGenerator in the .NET workflow without `--allow-roll-forward`,
+  which writes an invalid runtime config on .NET SDK 10.0.402 and broke the
+  tool and the coverage integration test.
