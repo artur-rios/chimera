@@ -1,0 +1,12 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["local>artur-rios/yggdrasil//renovate/default"],
+  "packageRules": [
+    {
+      "description": "The browser check runs the harness (@playwright/test in tests/web) in Playwright's image, whose browsers are built for that very version: the two move in one pull request, monthly, which the owner merges (yggdrasil.yml is protected on develop).",
+      "matchPackageNames": ["@playwright/test", "mcr.microsoft.com/playwright"],
+      "groupName": "playwright",
+      "schedule": ["on the first day of the month"]
+    }
+  ]
+}
