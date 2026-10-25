@@ -106,22 +106,30 @@ void main() {
     expect(File('.github/dependabot.yml').existsSync(), isFalse);
   });
 
-  test('GivenActionsChecks_WhenTriggered_ThenPushesAndPullRequestsRunThem', () {
-    for (final MapEntry(key: file, value: workflow) in workflows.entries) {
-      if (file == 'release-windows.yml') {
-        continue;
-      }
-      final on = workflow['on'] as YamlMap;
-      final push = on['push'] as YamlMap;
+  // Pull requests exist only on Forgejo; the mirror pushes every branch, and Jenkins copies the results of the
+  // pull request's head commit. A job that skips a branch or a path would leave its required check pending.
+  test(
+    'GivenActionsChecks_WhenTheMirrorPushesAnyBranch_ThenTheyRunUnfiltered',
+    () {
+      for (final MapEntry(key: file, value: workflow) in workflows.entries) {
+        final on = workflow['on'] as YamlMap;
+        if (file == 'release-windows.yml') {
+          expect(on.keys.cast<String>().toList(), <String>[
+            'workflow_dispatch',
+          ]);
+          continue;
+        }
+        final push = on['push'] as YamlMap;
 
-      expect((push['branches'] as YamlList).cast<String>(), <String>[
-        'develop',
-        'main',
-        'release/*',
-      ], reason: file);
-      expect(on.containsKey('pull_request'), isTrue, reason: file);
-    }
-  });
+        expect((push['branches'] as YamlList).cast<String>(), <String>[
+          '**',
+        ], reason: file);
+        expect(push.containsKey('paths'), isFalse, reason: file);
+        expect(on.containsKey('pull_request'), isFalse, reason: file);
+        expect(on.containsKey('workflow_dispatch'), isTrue, reason: file);
+      }
+    },
+  );
 
   test('GivenPullRequest_WhenBranchPolicyRuns_ThenReleasesAreCheckedAgainstThePipelineCatalog', () {
     final policy = pipeline['branchPolicy'] as YamlMap;

@@ -1,9 +1,10 @@
 name: Windows periodic terminal
 
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
 on:
   push:
-    branches: [develop, main, 'release/*']
-  pull_request:
+    branches: ['**']
   workflow_dispatch:
 
 permissions:

@@ -6,10 +6,11 @@ name: Continuous Integration
 # and accessibility-performance; Cross-platform, which only gathered the browser, Safari and native results, is
 # gone: each is required by itself.
 
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
 on:
   push:
-    branches: [develop, main, 'release/*']
-  pull_request:
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
