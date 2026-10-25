@@ -70,8 +70,10 @@ void main() {
   test(
     'GivenReleaseBuilds_WhenCompiled_ThenInstalledVersionAndRepositoryAreBound',
     () {
-      final workflow = File('.github/workflows/release-artifacts.yml')
-          .readAsStringSync();
+      // The Windows build (GitHub Actions) and the Linux build (Jenkins' release agent).
+      final workflow =
+          File('.github/workflows/release-windows.yml').readAsStringSync() +
+          File('ci/release-build.sh').readAsStringSync();
 
       expect(
         RegExp('CHIMERA_VERSION=\\\$version').allMatches(workflow),

@@ -1,8 +1,9 @@
 name: Windows periodic terminal
 
 on:
+  push:
+    branches: [develop, main, 'release/*']
   pull_request:
-    branches: [develop, main]
   workflow_dispatch:
 
 permissions:

@@ -1,8 +1,9 @@
 name: Native .NET workflows
 
 on:
+  push:
+    branches: [develop, main, 'release/*']
   pull_request:
-    branches: [develop, main]
   workflow_dispatch:
 
 permissions:
@@ -10,12 +11,10 @@ permissions:
 
 jobs:
   build-contract:
-    name: .NET build, coverage and process lifecycle (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    # The Windows leg of the old ubuntu/windows matrix, under the name GitHub reported for it (the catalog's
+    # actionsCheck); the Linux leg is a Jenkins check now (yggdrasil.yml).
+    name: .NET build, coverage and process lifecycle (windows-latest)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: subosito/flutter-action@v2

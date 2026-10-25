@@ -3,59 +3,170 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:yaml/yaml.dart';
 
+// Chimera's CI is yggdrasil's Jenkins pipeline: the Linux checks, the branch policy and the release are
+// yggdrasil.yml and ci/*.sh, and the Windows and macOS jobs stay GitHub Actions workflows on the GitHub mirror,
+// whose results Jenkins copies under the names GitHub reports (the catalog's actionsChecks).
+const List<String> _checks = <String>[
+  'analyze-and-test',
+  'browser-tests',
+  'native-linux',
+  'container',
+  'accessibility-performance',
+  'cleanup-contract',
+  'generated-library',
+  'evaluate-projects',
+  'version-contract',
+  'build-contract',
+  'minimal-library',
+];
+
+const List<String> _actionsChecks = <String>[
+  'Safari',
+  'Native (windows)',
+  'Artifact cleanup (windows-latest)',
+  'Generated NuGet library (windows-latest)',
+  '.NET project evaluation (windows-latest)',
+  'Project version editing (windows-latest)',
+  '.NET build, coverage and process lifecycle (windows-latest)',
+  'Minimal library contracts (windows-latest)',
+  'Windows owned terminal lifecycle',
+];
+
 void main() {
+  late String pipelineFile;
+  late YamlMap pipeline;
   late String branchPolicy;
   late String continuousIntegration;
-  late String releaseArtifacts;
+  late String releaseBuild;
+  late String releaseValidate;
+  late String releaseWindows;
   late String safariSmoke;
+  late Map<String, YamlMap> workflows;
 
   setUpAll(() {
-    branchPolicy = _readNormalized('.github/workflows/branch-policy.yml');
+    pipelineFile = _readNormalized('yggdrasil.yml');
+    pipeline = loadYaml(pipelineFile) as YamlMap;
+    branchPolicy = _readNormalized('ci/branch-policy.sh');
     continuousIntegration = _readNormalized('.github/workflows/ci.yml');
-    releaseArtifacts = _readNormalized(
-      '.github/workflows/release-artifacts.yml',
-    );
+    releaseBuild = _readNormalized('ci/release-build.sh');
+    releaseValidate = _readNormalized('ci/release-validate.sh');
+    releaseWindows = _readNormalized('.github/workflows/release-windows.yml');
     safariSmoke = _readNormalized('tests/web/safari_smoke.dart');
+    workflows = <String, YamlMap>{
+      for (final file
+          in Directory('.github/workflows')
+              .listSync()
+              .whereType<File>()
+              .where((file) => file.path.endsWith('.yml')))
+        file.uri.pathSegments.last:
+            loadYaml(_readNormalized(file.path)) as YamlMap,
+    };
   });
 
-  test('GivenPullRequest_WhenBranchPolicyRuns_ThenOnlyDocumentedBranchFlowsAreAccepted', () {
-    expect(branchPolicy, contains('branches: [develop, main]'));
-    expect(branchPolicy, contains(r'^(feature|fix)/'));
-    expect(branchPolicy, contains(r'^release/[0-9]+\.[0-9]+\.[0-9]+$'));
-    expect(branchPolicy, contains('git merge-base --is-ancestor'));
+  test(
+    'GivenPipelineFile_WhenChecksAreListed_ThenTheyAreTheCatalogChecksInOrder',
+    () {
+      final checks = pipeline['checks'] as YamlMap;
+
+      expect(checks.keys.cast<String>().toList(), _checks);
+      for (final name in _checks) {
+        final check = checks[name] as YamlMap;
+        expect(check['run'], 'ci/$name.sh');
+        expect(File('ci/$name.sh').existsSync(), isTrue, reason: name);
+        expect(
+          check['image'] as String,
+          matches(RegExp(r'^[^\s@]+:[^\s@]+@sha256:[0-9a-f]{64}$')),
+          reason: '$name: images are pinned by version and digest',
+        );
+      }
+      expect((checks['container'] as YamlMap)['docker'], isTrue);
+    },
+  );
+
+  test('GivenWorkflows_WhenJobsAreListed_ThenOnlyWindowsAndMacosJobsRemainUnderTheirGitHubNames', () {
+    final names = <String>[];
+    for (final MapEntry(key: file, value: workflow) in workflows.entries) {
+      final jobs = workflow['jobs'] as YamlMap;
+      for (final job in jobs.values.cast<YamlMap>()) {
+        final runner = job['runs-on'] as String;
+        expect(runner, anyOf('windows-latest', 'macos-latest'), reason: file);
+        expect(job['needs'], isNull, reason: '$file: no job to wait for');
+        if (file != 'release-windows.yml') {
+          names.add(job['name'] as String);
+        }
+      }
+    }
+
+    expect(names, unorderedEquals(_actionsChecks));
+    expect(File('.github/workflows/branch-policy.yml').existsSync(), isFalse);
+    expect(
+      File('.github/workflows/release-artifacts.yml').existsSync(),
+      isFalse,
+    );
+    expect(File('.github/dependabot.yml').existsSync(), isFalse);
+  });
+
+  test('GivenActionsChecks_WhenTriggered_ThenPushesAndPullRequestsRunThem', () {
+    for (final MapEntry(key: file, value: workflow) in workflows.entries) {
+      if (file == 'release-windows.yml') {
+        continue;
+      }
+      final on = workflow['on'] as YamlMap;
+      final push = on['push'] as YamlMap;
+
+      expect((push['branches'] as YamlList).cast<String>(), <String>[
+        'develop',
+        'main',
+        'release/*',
+      ], reason: file);
+      expect(on.containsKey('pull_request'), isTrue, reason: file);
+    }
+  });
+
+  test('GivenPullRequest_WhenBranchPolicyRuns_ThenReleasesAreCheckedAgainstThePipelineCatalog', () {
+    final policy = pipeline['branchPolicy'] as YamlMap;
+
+    expect(policy['run'], 'ci/branch-policy.sh');
+    expect(branchPolicy, contains('if [ "\$base" != main ]; then'));
     expect(
       branchPolicy,
       contains(
-        'dart tool/check_branch_origin.dart origin/main origin/develop '
-        '"\$HEAD_SHA"',
+        'dart tool/validate_release_readiness.dart --version "\$version"',
       ),
     );
     expect(
       branchPolicy,
-      isNot(contains('dart run tool/check_branch_origin.dart')),
+      contains('python3 "\$yggdrasil/scripts/catalog.py" validate'),
     );
-    expect(branchPolicy, contains('name: branch-policy'));
-  });
-
-  test('GivenCiWorkflow_WhenChecksRun_ThenCatalogCheckNamesRemainStable', () {
-    for (final checkName in <String>[
-      'Analyze and test',
-      'Cross-platform',
-      'Container',
-      'Accessibility and performance',
-    ]) {
-      expect(continuousIntegration, contains('name: $checkName'));
-    }
+    expect(
+      branchPolicy,
+      contains(
+        'python3 tool/validate_yggdrasil_contract.py "\$yggdrasil/catalog.yaml"',
+      ),
+    );
+    expect(
+      branchPolicy,
+      contains(
+        'PYTHONPATH="\$yggdrasil/scripts\${PYTHONPATH:+:\$PYTHONPATH}" '
+        'python3 -m unittest test_catalog.ChimeraCatalogTests',
+      ),
+    );
+    expect(branchPolicy, isNot(contains('-k ChimeraCatalogTests')));
+    expect(branchPolicy, isNot(contains('github.com')));
   });
 
   test(
-    'GivenCiWorkflow_WhenWebTestsRun_ThenEverySupportedBrowserIsCovered',
+    'GivenBrowserCheck_WhenWebTestsRun_ThenEverySupportedBrowserIsCovered',
     () {
-      expect(
-        continuousIntegration,
-        contains('browser: [chromium, firefox, webkit]'),
-      );
-      expect(continuousIntegration, contains('tests/web'));
+      final browserTests = _readNormalized('ci/browser-tests.sh');
+      final playwright = _readNormalized('tests/web/playwright.config.mjs');
+
+      expect(browserTests, contains('browsers=(chromium firefox webkit)'));
+      expect(browserTests, contains('--no-web-resources-cdn'));
+      expect(browserTests, contains('cd tests/web'));
+      for (final browser in <String>['chromium', 'firefox', 'webkit']) {
+        expect(playwright, contains("name: '$browser'"));
+      }
       expect(continuousIntegration, contains('name: Safari'));
       expect(continuousIntegration, contains('runs-on: macos-latest'));
       expect(continuousIntegration, contains('safaridriver'));
@@ -113,28 +224,22 @@ void main() {
     );
   });
 
-  test('GivenCiWorkflow_WhenNativeBuildsRun_ThenWindowsAndLinuxAreCovered', () {
-    expect(continuousIntegration, contains('os: windows-latest'));
-    expect(continuousIntegration, contains('target: windows'));
-    expect(continuousIntegration, contains('os: ubuntu-latest'));
-    expect(continuousIntegration, contains('target: linux'));
-    final workflow = loadYaml(continuousIntegration) as YamlMap;
-    final jobs = workflow['jobs'] as YamlMap;
+  test('GivenNativeChecks_WhenBuildsRun_ThenWindowsAndLinuxAreCovered', () {
+    final nativeLinux = _readNormalized('ci/native-linux.sh');
+    final jobs = workflows['ci.yml']!['jobs'] as YamlMap;
     final native = jobs['native-tests'] as YamlMap;
     final steps = (native['steps'] as YamlList).cast<YamlMap>();
     final windows = steps.singleWhere(
       (step) => step['name'] == 'Test Windows integration',
     );
-    final linux = steps.singleWhere(
-      (step) => step['name'] == 'Test Linux integration',
-    );
+
+    expect(native['runs-on'], 'windows-latest');
     expect(windows['run'], 'dart run tool/run_native_gui_tests.dart windows');
-    expect(
-      linux['run'],
-      'xvfb-run -a dart run tool/run_native_gui_tests.dart linux',
-    );
     expect(windows['working-directory'], isNull);
-    expect(linux['working-directory'], isNull);
+    expect(
+      nativeLinux,
+      contains('xvfb-run -a dart run tool/run_native_gui_tests.dart linux'),
+    );
     final local = _readNormalized('tool/run_gui_tests.dart');
     expect(local, contains("const <String>['test', 'test']"));
     expect(local, contains('runNativeGuiTests(device: device)'));
@@ -146,107 +251,107 @@ void main() {
       reason: 'The Windows AOT compiler does not create parent directories.',
     );
     expect(
-      continuousIntegration,
+      nativeLinux,
       contains('mkdir -p build/cli/linux'),
       reason: 'The Linux AOT compiler does not create parent directories.',
     );
   });
 
   test(
-    'GivenReleaseWorkflow_WhenPackagingRuns_ThenVerificationCompletesFirst',
+    'GivenReleaseBuild_WhenPackagingRuns_ThenVerificationCompletesFirst',
     () {
-      expect(releaseArtifacts, contains('name: Verify before packaging'));
-      expect(releaseArtifacts, contains('needs: verify'));
-      expect(releaseArtifacts, contains('tool/package_windows.ps1'));
-      expect(releaseArtifacts, contains('tool/package_linux.sh'));
-    },
-  );
+      final verify = releaseBuild.indexOf(
+        'dart tool/validate_release_readiness.dart --version "\$version"',
+      );
+      final package = releaseBuild.indexOf('sh tool/package_linux.sh');
 
-  test(
-    'GivenReleasePullRequest_WhenBranchPolicyRuns_ThenSourceAndCatalogAreReady',
-    () {
+      expect(verify, isNonNegative);
+      expect(package, greaterThan(verify));
+      expect(releaseBuild, contains('dart run melos run test:unit'));
       expect(
-        branchPolicy,
-        contains('dart tool/validate_release_readiness.dart'),
-      );
-      expect(branchPolicy, contains('repository: artur-rios/yggdrasil'));
-      expect(
-        branchPolicy,
-        contains('python3 .yggdrasil/scripts/catalog.py validate'),
-      );
-      expect(branchPolicy, contains('ChimeraCatalogTests'));
-      expect(branchPolicy, contains('tool/validate_yggdrasil_contract.py'));
-      expect(
-        branchPolicy,
+        releaseBuild,
         contains(
-          'PYTHONPATH=.yggdrasil/scripts python3 -m unittest '
-          'test_catalog.ChimeraCatalogTests',
+          'dart test test tests/deployment tests/update tests/performance',
         ),
       );
-      expect(branchPolicy, isNot(contains('-k ChimeraCatalogTests')));
-      expect(
-        releaseArtifacts,
-        contains('dart tool/validate_release_readiness.dart'),
-      );
+      expect(releaseWindows, contains('tool/package_windows.ps1'));
     },
   );
 
-  test('GivenReleaseWorkflow_WhenArtifactsArePublished_ThenIntegrityAndMetadataAreIncluded', () {
-    expect(releaseArtifacts, contains('tool/write_checksums.dart'));
-    expect(releaseArtifacts, contains('.sha256'));
-    expect(releaseArtifacts, contains('.release.json'));
-    expect(releaseArtifacts, contains('actions/upload-artifact@'));
-    expect(releaseArtifacts, contains('name: Validate complete native bundle'));
-    expect(
-      releaseArtifacts,
-      contains('dart run tool/validate_release_bundle.dart'),
-    );
-    expect(releaseArtifacts, contains('tool/validate_release_upload.dart'));
-    expect(releaseArtifacts, contains('inputs.publish'));
-    expect(releaseArtifacts, contains('inputs.release_id'));
-    expect(releaseArtifacts, contains('cancel-in-progress: false'));
-    expect(releaseArtifacts, contains('Require an unpublished draft release'));
-    expect(releaseArtifacts, contains('Publish the verified release'));
-    expect(releaseArtifacts, isNot(contains('types: [published]')));
-    expect(releaseArtifacts, contains('needs: validate-artifacts'));
-  });
+  test('GivenRelease_WhenArtifactsArePublished_ThenIntegrityAndMetadataAreValidatedTogether', () {
+    final release = pipeline['release'] as YamlMap;
+    final build = release['build'] as YamlMap;
+    final windows = release['windows'] as YamlMap;
+    final validate = release['validate'] as YamlMap;
 
-  test('GivenCiWorkflow_WhenEvidenceIsProduced_ThenItIsPreserved', () {
-    expect(continuousIntegration, contains('accessibility-review'));
-    expect(continuousIntegration, contains('acceptance_thresholds.json'));
-    expect(continuousIntegration, contains('actions/upload-artifact@'));
-    expect(continuousIntegration, contains('dart test --coverage='));
-    expect(continuousIntegration, contains('flutter test --coverage'));
-    expect(continuousIntegration, contains('test-and-coverage-evidence'));
+    expect(build['run'], 'ci/release-build.sh');
+    expect((build['files'] as YamlList).cast<String>(), <String>[
+      'dist/linux/*',
+    ]);
+    expect(windows['workflow'], 'release-windows.yml');
+    expect((windows['files'] as YamlList).cast<String>(), <String>[
+      'chimera-windows-packages/*',
+    ]);
+    expect(validate['run'], 'ci/release-validate.sh');
+
+    expect(releaseBuild, contains('tool/write_checksums.dart'));
+    expect(releaseWindows, contains('tool/write_checksums.dart'));
+    expect(releaseWindows, contains('.sha256'));
+    expect(releaseWindows, contains('.release.json'));
+    expect(releaseWindows, contains('name: chimera-windows-packages'));
+    expect(releaseWindows, contains('actions/upload-artifact@'));
+    expect(releaseWindows, contains('cancel-in-progress: false'));
+    expect(releaseWindows, contains('inputs.tag'));
     expect(
-      continuousIntegration,
-      contains('accessibility-and-performance-evidence'),
+      releaseValidate,
+      contains('dart run tool/validate_release_bundle.dart "\$bundle"'),
+    );
+    expect(releaseValidate, contains(r'$files/build/dist/linux'));
+    expect(
+      releaseValidate,
+      contains(r'$files/windows/chimera-windows-packages'),
     );
   });
 
-  test(
-    'GivenReleaseWorkflow_WhenPermissionsAreScoped_ThenOnlyPublisherCanWrite',
-    () {
-      expect(releaseArtifacts, contains('permissions:\n  contents: read'));
-      expect(
-        releaseArtifacts,
-        contains(
-          'publish:\n    name: Attach native artifacts\n    permissions:\n      contents: write',
-        ),
-      );
-    },
-  );
-
-  test('GivenJenkinsEntryPoint_WhenLoaded_ThenChimeraStackIsSelected', () {
-    final jenkinsfile = File('Jenkinsfile').readAsStringSync();
-
-    expect(jenkinsfile, contains("yggdrasilPipeline(stack: 'chimera')"));
+  test('GivenLinuxRelease_WhenPackagesAreBuilt_ThenTheInstalledPackagesAreSmokeTested', () {
+    expect(releaseBuild, contains('dpkg --install'));
+    expect(releaseBuild, contains('xvfb-run -a timeout 5s chimera-gui'));
+    expect(releaseBuild, contains('"\$status" -ne 124'));
   });
 
-  test('GivenWorkflowFiles_WhenParsed_ThenEachDocumentIsValidYaml', () {
-    expect(() => loadYaml(branchPolicy), returnsNormally);
-    expect(() => loadYaml(continuousIntegration), returnsNormally);
-    expect(() => loadYaml(releaseArtifacts), returnsNormally);
+  test('GivenChecks_WhenEvidenceIsProduced_ThenItIsArchived', () {
+    final checks = pipeline['checks'] as YamlMap;
+    final analyze =
+        (checks['analyze-and-test'] as YamlMap)['archive'] as String;
+    final accessibility =
+        (checks['accessibility-performance'] as YamlMap)['archive'] as String;
+
+    expect(analyze, contains('evidence/unit-tests.txt'));
+    expect(analyze, contains('coverage/dart/lcov.info'));
+    expect(accessibility, contains('docs/operations/accessibility-review.md'));
+    expect(
+      accessibility,
+      contains('tests/performance/acceptance_thresholds.json'),
+    );
+    expect(accessibility, contains('apps/chimera_gui/coverage/lcov.info'));
+    expect(
+      _readNormalized('ci/analyze-and-test.sh'),
+      contains('dart test --coverage='),
+    );
+    expect(
+      _readNormalized('ci/accessibility-performance.sh'),
+      contains('flutter test --coverage'),
+    );
+  });
+
+  test('GivenReleaseWorkflow_WhenPermissionsAreScoped_ThenItOnlyReads', () {
+    expect(releaseWindows, contains('permissions:\n  contents: read'));
+    expect(releaseWindows, isNot(contains('contents: write')));
+  });
+
+  test('GivenJenkins_WhenItBuildsChimera_ThenTheSharedPipelineReadsThePipelineFile', () {
+    expect(File('Jenkinsfile').existsSync(), isFalse);
+    expect(pipelineFile, contains('describe chimera'));
   });
 }
 
