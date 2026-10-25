@@ -40,7 +40,8 @@ void main() {
           )
           .replaceFirst('    approval: true\n', '    approval: false\n')
           .replaceFirst('        releaseArtifacts: true\n', '')
-          .replaceFirst('      - Cross-platform\n', ''),
+          .replaceFirst('          - native-linux\n', '')
+          .replaceFirst('          - Native (windows)\n', ''),
     );
 
     final result = await _validate(python, catalog);
@@ -50,7 +51,26 @@ void main() {
     expect(result.stderr, contains('production.approval'));
     expect(result.stderr, contains('chimera.releaseArtifacts'));
     expect(result.stderr, contains('chimera.checks'));
+    expect(result.stderr, contains('chimera.actionsChecks'));
   });
+
+  test(
+    'GivenGitHubJobNamesAsChecks_WhenValidated_ThenTheOldCheckNamesAreRejected',
+    () async {
+      catalog.writeAsStringSync(
+        _validCatalog.replaceFirst(
+          '          - analyze-and-test\n',
+          '          - Analyze and test\n          - Cross-platform\n',
+        ),
+      );
+
+      final result = await _validate(python, catalog);
+
+      expect(result.exitCode, isNot(0));
+      expect(result.stderr, contains('chimera.checks'));
+      expect(result.stderr, isNot(contains('chimera.actionsChecks')));
+    },
+  );
 }
 
 Future<ProcessResult> _validate(String python, File catalog) => Process.run(
@@ -90,9 +110,26 @@ systems:
         host: chimera
         releaseArtifacts: true
         checks:
-          - Analyze and test
-          - Cross-platform
-          - Container
-          - Accessibility and performance
+          - analyze-and-test
+          - browser-tests
+          - native-linux
+          - container
+          - accessibility-performance
+          - cleanup-contract
+          - generated-library
+          - evaluate-projects
+          - version-contract
+          - build-contract
+          - minimal-library
+        actionsChecks:
+          - Safari
+          - Native (windows)
+          - Artifact cleanup (windows-latest)
+          - Generated NuGet library (windows-latest)
+          - .NET project evaluation (windows-latest)
+          - Project version editing (windows-latest)
+          - .NET build, coverage and process lifecycle (windows-latest)
+          - Minimal library contracts (windows-latest)
+          - Windows owned terminal lifecycle
         container: { service: web }
 ''';

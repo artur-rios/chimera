@@ -1,4 +1,9 @@
-"""Validate Chimera's live Yggdrasil release and deployment contract."""
+"""Validate Chimera's Yggdrasil release and deployment contract.
+
+The catalog is the one of the yggdrasil installation that deploys Chimera: ci/branch-policy.sh passes
+"$YGGDRASIL_DIR/catalog.yaml", the pipeline's own yggdrasil checkout, so a release is checked against the
+catalog it is released with. Any path works by hand.
+"""
 
 from __future__ import annotations
 
@@ -10,11 +15,31 @@ import yaml
 
 
 ENVIRONMENT_IDS = ["local", "development", "homologation", "production"]
+# The checks Jenkins runs, named as in Chimera's yggdrasil.yml, in the catalog's order.
 REQUIRED_CHECKS = [
-    "Analyze and test",
-    "Cross-platform",
-    "Container",
-    "Accessibility and performance",
+    "analyze-and-test",
+    "browser-tests",
+    "native-linux",
+    "container",
+    "accessibility-performance",
+    "cleanup-contract",
+    "generated-library",
+    "evaluate-projects",
+    "version-contract",
+    "build-contract",
+    "minimal-library",
+]
+# The Windows and macOS jobs that stay GitHub Actions workflows, exactly as GitHub reports them.
+REQUIRED_ACTIONS_CHECKS = [
+    "Safari",
+    "Native (windows)",
+    "Artifact cleanup (windows-latest)",
+    "Generated NuGet library (windows-latest)",
+    ".NET project evaluation (windows-latest)",
+    "Project version editing (windows-latest)",
+    ".NET build, coverage and process lifecycle (windows-latest)",
+    "Minimal library contracts (windows-latest)",
+    "Windows owned terminal lifecycle",
 ]
 
 
@@ -57,7 +82,11 @@ def validate(catalog: Any) -> list[str]:
     if application.get("releaseArtifacts") is not True:
         errors.append("chimera.releaseArtifacts: expected true")
     if application.get("checks") != REQUIRED_CHECKS:
-        errors.append("chimera.checks: required GitHub check names or order changed")
+        errors.append("chimera.checks: required check names or order changed")
+    if application.get("actionsChecks") != REQUIRED_ACTIONS_CHECKS:
+        errors.append(
+            "chimera.actionsChecks: required GitHub Actions check names or order changed"
+        )
     container = application.get("container")
     if not isinstance(container, dict) or container.get("service") != "web":
         errors.append("chimera.container.service: expected web")
