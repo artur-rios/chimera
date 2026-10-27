@@ -1,5 +1,11 @@
 # Chimera
 
+> [!NOTE]
+> This is the real, open-source code of chimera. Its home is Forgejo, at
+> https://git.techcraftsmen.net/artur-rios/chimera; the copy on GitHub is a read-only mirror, for viewing only, and
+> its issues and pull requests are not followed. If you want to contribute, email me at
+> arturdev@duck.com.
+
 Chimera is a multilingual, cross-platform developer toolbox that combines
 common conversion, encoding, formatting, comparison, analysis, and synthetic
 test-data utilities in one local-first application. It targets the browser,
