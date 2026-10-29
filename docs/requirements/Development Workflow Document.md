@@ -124,8 +124,8 @@ and stop for approval before opening a pull request.
 ### Step 7 — Open the Pull Request
 
 After approval, push the branch and open a pull request into `develop`. The
-Yggdrasil branch-policy check and all catalog-required GitHub Actions checks must
-pass. The pull request body:
+Yggdrasil branch-policy check, all catalog-required Jenkins checks, and the
+catalog's GitHub Actions checks must pass. The pull request body:
 
 - identifies the use case and traced requirements;
 - summarizes the implementation and test evidence;

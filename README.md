@@ -17,6 +17,15 @@ Windows and Linux desktops, and the command line.
 
 Delivery is tracked in the public [Chimera GitHub Project](https://github.com/users/artur-rios/projects/17).
 
+The repository lives at <https://git.techcraftsmen.net/artur-rios/chimera>, where
+pull requests are opened and Jenkins checks, deploys, and releases it.
+[GitHub](https://github.com/artur-rios/chimera) is a read-only mirror: it runs
+the Windows and macOS jobs and receives a copy of every release.
+
+```bash
+git clone https://git.techcraftsmen.net/artur-rios/chimera.git
+```
+
 ## What it does
 
 - Converts, formats, compares, encodes, decodes, and analyzes developer data.
@@ -373,8 +382,11 @@ Individual suites are `analyze`, `test:unit`, `test:cli`, `test:gui`,
 application and runs the pinned Playwright harness natively on Linux or in its
 official Linux container on Windows, where Docker must be available. CI covers
 unit, widget, CLI, native GUI, Chromium, Firefox, WebKit, native Safari,
-deployment, update, accessibility, and performance behavior. CI publishes LCOV,
-test logs, accessibility results, and performance results as build evidence.
+deployment, update, accessibility, and performance behavior: Yggdrasil's
+Jenkins pipeline runs the Linux checks of [`yggdrasil.yml`](yggdrasil.yml)
+(each a script under `ci/`), and GitHub Actions the Windows and Safari jobs on
+the mirror. The checks keep LCOV, test logs, accessibility results, and
+performance results as build artifacts.
 
 ## Web container
 
@@ -392,10 +404,12 @@ utility input or output is sent to those operational surfaces.
 ## Releases
 
 Release preparation happens on `develop`; an unchanged `release/X.Y.Z` snapshot
-targets `main`. After Yggdrasil completes its environment gates and creates
-the `vX.Y.Z` tag and private draft release, GitHub Actions publishes that draft
-only after verifying the complete Windows and Linux GUI/CLI portable and
-installer bundle locally and on GitHub. Every native artifact has a SHA-256
+targets `main`. After Yggdrasil completes its environment gates, merges, and
+tags `vX.Y.Z`, Jenkins builds the Linux packages on its release agent
+(`ci/release-build.sh`), has the mirror's `release-windows.yml` workflow build
+the Windows ones, validates the complete Windows and Linux GUI/CLI portable and
+installer bundle (`ci/release-validate.sh`), and only then publishes the
+release on the git server and its copy on GitHub. Every native artifact has a SHA-256
 sidecar and six-field release-metadata sidecar. See
 [Release artifacts](docs/operations/release-artifacts.md) for formats and the
 infrastructure-requirement evidence map, and use the

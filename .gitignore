@@ -12,3 +12,7 @@ node_modules/
 playwright-report/
 test-results/
 *.iml
+# What the ci/ scripts leave in the checkout.
+/.dotnet-test-tools/
+/dist/
+/evidence/

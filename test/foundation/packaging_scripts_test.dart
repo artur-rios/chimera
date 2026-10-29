@@ -88,8 +88,7 @@ void main() {
 
   test('GivenLinuxGuiPackage_WhenControlFileIsBuilt_ThenRuntimeDependenciesAreDeclared', () {
     final script = File('tool/package_linux.sh').readAsStringSync();
-    final releaseWorkflow = File('.github/workflows/release-artifacts.yml')
-        .readAsStringSync();
+    final releaseBuild = File('ci/release-build.sh').readAsStringSync();
 
     expect(
       script,
@@ -99,9 +98,9 @@ void main() {
       ),
     );
     expect(script, contains('Depends: pkexec | policykit-1'));
-    expect(releaseWorkflow, contains('Smoke-test installed Linux packages'));
-    expect(releaseWorkflow, contains('dpkg --install'));
-    expect(releaseWorkflow, contains('xvfb-run -a timeout 5s chimera-gui'));
+    expect(releaseBuild, contains('Smoke-test the installed Linux packages'));
+    expect(releaseBuild, contains('dpkg --install'));
+    expect(releaseBuild, contains('xvfb-run -a timeout 5s chimera-gui'));
   });
 
   test(

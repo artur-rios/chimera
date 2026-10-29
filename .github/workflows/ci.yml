@@ -1,10 +1,16 @@
 name: Continuous Integration
 
+# The macOS and Windows jobs, which stay on GitHub Actions: Jenkins runs the Linux checks (yggdrasil.yml, from
+# ci/) and copies these jobs' results ("Safari" and "Native (windows)", the catalog's actionsChecks) onto the
+# Forgejo commit. The old Linux jobs are the checks analyze-and-test, browser-tests, native-linux, container
+# and accessibility-performance; Cross-platform, which only gathered the browser, Safari and native results, is
+# gone: each is required by itself.
+
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
 on:
   push:
-    branches: [develop, main]
-  pull_request:
-    branches: [develop, main]
+    branches: ['**']
   workflow_dispatch:
 
 permissions:
@@ -18,85 +24,6 @@ env:
   FLUTTER_VERSION: 3.47.7
 
 jobs:
-  analyze-and-test:
-    name: Analyze and test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - name: Resolve workspace
-        run: flutter pub get
-      - name: Verify formatting
-        run: dart format --output=none --set-exit-if-changed apps packages test tests tool
-      - name: Analyze
-        run: dart analyze --fatal-infos
-      - name: Verify boundaries
-        run: dart run tool/check_boundaries.dart
-      - name: Run Dart and contract tests
-        run: |
-          mkdir -p evidence
-          set -o pipefail
-          dart run melos run test:unit 2>&1 | tee evidence/unit-tests.txt
-          dart run melos run test:deployment 2>&1 | tee evidence/deployment-tests.txt
-      - name: Generate Dart coverage evidence
-        run: |
-          dart test --coverage=coverage/dart \
-            packages/chimera_core/test \
-            packages/chimera_l10n/test \
-            packages/chimera_platform/test \
-            apps/chimera_cli/test
-          dart run coverage:format_coverage \
-            --packages=.dart_tool/package_config.json \
-            --report-on=packages \
-            --in=coverage/dart \
-            --lcov \
-            --out=coverage/dart/lcov.info
-      - name: Preserve test and coverage evidence
-        uses: actions/upload-artifact@v6
-        with:
-          name: test-and-coverage-evidence
-          path: |
-            evidence/*.txt
-            coverage/dart/lcov.info
-          if-no-files-found: error
-
-  browser-tests:
-    name: Browser (${{ matrix.browser }})
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        browser: [chromium, firefox, webkit]
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: tests/web/package-lock.json
-      - name: Build web application
-        run: |
-          flutter pub get
-          cd apps/chimera_gui
-          flutter build web --release --no-web-resources-cdn
-      - name: Install browser harness
-        working-directory: tests/web
-        run: |
-          npm ci
-          npx playwright install --with-deps ${{ matrix.browser }}
-      - name: Run browser smoke
-        working-directory: tests/web
-        run: npx playwright test --project=${{ matrix.browser }}
-
   safari-tests:
     name: Safari
     runs-on: macos-latest
@@ -134,22 +61,13 @@ jobs:
             safari-diagnostics/
           if-no-files-found: error
 
+  # The Windows leg of the old native-tests matrix, under the name GitHub reported for it; the Linux leg is the
+  # native-linux check (ci/native-linux.sh).
   native-tests:
-    name: Native (${{ matrix.target }})
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            target: windows
-          - os: ubuntu-latest
-            target: linux
-    runs-on: ${{ matrix.os }}
+    name: Native (windows)
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Install Linux desktop prerequisites
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install --yes clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev xvfb
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -158,13 +76,8 @@ jobs:
       - name: Resolve workspace
         run: flutter pub get
       - name: Test Windows integration
-        if: runner.os == 'Windows'
         run: dart run tool/run_native_gui_tests.dart windows
-      - name: Test Linux integration
-        if: runner.os == 'Linux'
-        run: xvfb-run -a dart run tool/run_native_gui_tests.dart linux
       - name: Build Windows GUI and CLI
-        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           Push-Location apps/chimera_gui
@@ -172,66 +85,3 @@ jobs:
           Pop-Location
           New-Item -ItemType Directory -Force build/cli/windows | Out-Null
           dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe
-      - name: Build Linux GUI and CLI
-        if: runner.os == 'Linux'
-        run: |
-          cd apps/chimera_gui
-          flutter build linux --release
-          cd ../..
-          mkdir -p build/cli/linux
-          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/linux/chimera
-
-  cross-platform:
-    name: Cross-platform
-    needs: [browser-tests, safari-tests, native-tests]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Require every browser and native target
-        env:
-          BROWSER_RESULT: ${{ needs.browser-tests.result }}
-          SAFARI_RESULT: ${{ needs.safari-tests.result }}
-          NATIVE_RESULT: ${{ needs.native-tests.result }}
-        run: test "$BROWSER_RESULT" = success && test "$SAFARI_RESULT" = success && test "$NATIVE_RESULT" = success
-
-  container:
-    name: Container
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Build and smoke-test web container
-        run: sh tool/smoke_container.sh chimera-ci:${{ github.sha }} chimera-ci-${{ github.run_id }} 18080
-
-  accessibility-performance:
-    name: Accessibility and performance
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - name: Resolve workspace
-        run: flutter pub get
-      - name: Run semantic widget checks
-        working-directory: apps/chimera_gui
-        run: |
-          mkdir -p ../../evidence
-          set -o pipefail
-          flutter test --coverage test/widgets 2>&1 | tee ../../evidence/accessibility-tests.txt
-      - name: Run performance contracts
-        run: |
-          set -o pipefail
-          dart run melos run test:performance 2>&1 | tee evidence/performance-tests.txt
-      - name: Preserve accessibility and performance evidence
-        uses: actions/upload-artifact@v6
-        with:
-          name: accessibility-and-performance-evidence
-          path: |
-            docs/operations/accessibility-review.md
-            tests/performance/acceptance_thresholds.json
-            evidence/accessibility-tests.txt
-            evidence/performance-tests.txt
-            apps/chimera_gui/coverage/lcov.info
-          if-no-files-found: error

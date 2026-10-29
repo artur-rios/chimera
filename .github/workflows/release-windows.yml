@@ -1,0 +1,78 @@
+name: Release Windows
+
+# The Windows files of a release (release.windows in yggdrasil.yml): the old release-artifacts.yml's
+# package-windows job. Jenkins builds and checks the Linux files from the release's tag (ci/release-build.sh,
+# which also verifies the source first, as the old verify job did), dispatches this workflow on the tag once the
+# mirror has pushed it, waits for it and downloads the chimera-windows-packages artifact; ci/release-validate.sh
+# then validates the whole bundle, and Jenkins publishes it. It is not a pull request check.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing vX.Y.Z tag to package
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  RELEASE_TAG: ${{ inputs.tag }}
+
+concurrency:
+  group: release-windows-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  package-windows:
+    name: Package Windows
+    runs-on: windows-latest
+    steps:
+      - name: Validate release tag
+        shell: bash
+        run: echo "$RELEASE_TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build native applications
+        shell: pwsh
+        run: |
+          flutter pub get
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          Push-Location apps/chimera_gui
+          flutter build windows --release `
+            --build-name=$version `
+            --dart-define="CHIMERA_RELEASE_REPOSITORY=$env:GITHUB_REPOSITORY"
+          Pop-Location
+          New-Item -ItemType Directory -Force build/cli/windows | Out-Null
+          dart compile exe apps/chimera_cli/bin/chimera.dart `
+            --define="CHIMERA_VERSION=$version" `
+            --define="CHIMERA_RELEASE_REPOSITORY=$env:GITHUB_REPOSITORY" `
+            -o build/cli/windows/chimera.exe
+      - name: Install installer compiler
+        run: choco install innosetup --no-progress --yes
+      - name: Package applications and write integrity sidecars
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_TAG.TrimStart('v')
+          & ./tool/package_windows.ps1 `
+            -Version $version `
+            -GuiInputDirectory apps/chimera_gui/build/windows/x64/runner/Release `
+            -CliExecutable build/cli/windows/chimera.exe `
+            -OutputDirectory dist/windows
+          dart run tool/write_checksums.dart dist/windows --version $version --repository $env:GITHUB_REPOSITORY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: chimera-windows-packages
+          path: |
+            dist/windows/*
+            dist/windows/*.sha256
+            dist/windows/*.release.json
+          if-no-files-found: error

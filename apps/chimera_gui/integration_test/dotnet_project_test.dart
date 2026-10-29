@@ -40,6 +40,17 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 25));
         }
       });
+      // The page shows the result once the service returns, after the
+      // file is written: on a busy machine that is later than the file
+      // appears, and pumpAndSettle cannot wait for it (it runs outside
+      // the test's clock).
+      final created = find.textContaining(project.path);
+      for (var i = 0; i < 200 && created.evaluate().isEmpty; i++) {
+        await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 25)),
+        );
+        await tester.pump();
+      }
       await tester.pumpAndSettle();
       expect(project.readAsStringSync(), contains('<PackageId></PackageId>'));
       expect(project.readAsStringSync(), contains('<Version></Version>'));
