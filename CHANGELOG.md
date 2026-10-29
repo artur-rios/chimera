@@ -5,6 +5,8 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-29
+
 ### Added
 
 - Native GitHub release checks with strict shared metadata validation, SemVer
