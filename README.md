@@ -1,11 +1,5 @@
 # Chimera
 
-> [!NOTE]
-> This is the real, open-source code of chimera. Its home is Forgejo, at
-> https://git.techcraftsmen.net/artur-rios/chimera; the copy on GitHub is a read-only mirror, for viewing only, and
-> its issues and pull requests are not followed. If you want to contribute, email me at
-> arturdev@duck.com.
-
 Chimera is a multilingual, cross-platform developer toolbox that combines
 common conversion, encoding, formatting, comparison, analysis, and synthetic
 test-data utilities in one local-first application. It targets the browser,
@@ -16,11 +10,6 @@ Windows and Linux desktops, and the command line.
 > utility use cases are delivered through the public backlog below.
 
 Delivery is tracked in the public [Chimera GitHub Project](https://github.com/users/artur-rios/projects/17).
-
-The repository lives at <https://git.techcraftsmen.net/artur-rios/chimera>, where
-pull requests are opened and Jenkins checks, deploys, and releases it.
-[GitHub](https://github.com/artur-rios/chimera) is a read-only mirror: it runs
-the Windows and macOS jobs and receives a copy of every release.
 
 ```bash
 git clone https://git.techcraftsmen.net/artur-rios/chimera.git
@@ -614,6 +603,9 @@ One use case equals one issue, branch, and pull request. Feature and fix branche
 target `develop`; release branches target `main`. See the
 [Development Workflow](docs/requirements/Development%20Workflow%20Document.md)
 for the review gates, testing requirements, and Definition of Done.
+
+The GitHub repository is a read-only mirror for the real, open-source code of chimera. Its home is Forgejo, at
+https://git.techcraftsmen.net/artur-rios/chimera. If you want to contribute, e-mail me at arturdev@duck.com.
 
 ## License and attribution
 
