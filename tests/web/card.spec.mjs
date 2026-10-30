@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { unexpectedHttpRequests } from './network_policy.mjs';
+import { fillFlutterTextInput, observeFlutterTextInput } from './flutter_text_input.mjs';
 
 const source = readFileSync(new URL('./card_browser.js', import.meta.url), 'utf8');
 const saveSource = readFileSync(new URL('./gzip_save_observer.js', import.meta.url), 'utf8');
@@ -18,15 +19,8 @@ function visibleText(page, text) {
   return page.locator('span', { hasText: new RegExp(`^${escaped}$`) });
 }
 
-async function fillCount(count, value) {
-  await count.click();
-  await expect(count).toBeFocused();
-  await count.fill(value);
-  await count.press('Tab');
-  await expect(count).toHaveValue(value);
-}
-
 async function openCard(page) {
+  await observeFlutterTextInput(page);
   await page.goto('/');
   const placeholder = page.locator('flt-semantics-placeholder');
   await placeholder.waitFor({ state: 'attached' });
@@ -42,7 +36,7 @@ test('GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSafeTransfer', as
   await page.addInitScript(`${saveSource}\nobserveGzipSaves();`);
   await openCard(page);
   page.on('request', request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
-  await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '2');
+  await fillFlutterTextInput(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '2');
   await page.getByRole('button', { name: 'Generate synthetic cards', exact: true }).click();
   await expect(page.getByRole('region', {
     name: new RegExp(`^Generated synthetic cards Synthetic cards generated\\. ${syntheticLabel}`),
@@ -63,7 +57,7 @@ test('GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSafeTransfer', as
   for await (const chunk of await download.createReadStream()) chunks.push(chunk);
   expect(Buffer.concat(chunks)).toEqual(Buffer.from(transferred));
   await expect.poll(() => probe(page, 'saved', [...Buffer.from(transferred)])).toBe(true);
-  await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '3');
+  await fillFlutterTextInput(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '3');
   await expect.poll(() => probe(page, 'noResult')).toBe(true);
   expect(unexpectedHttpRequests(requests, page.url())).toEqual([]);
 });
@@ -89,7 +83,7 @@ for (const failure of ['validation', 'processing', 'copy', 'save']) {
     const requests = [];
     await openCard(page);
     page.on('request', request => { if (/^https?:/.test(request.url())) requests.push(request.url()); });
-    if (failure === 'validation') await fillCount(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '0');
+    if (failure === 'validation') await fillFlutterTextInput(page.getByRole('textbox', { name: 'Positive integer count', exact: true }), '0');
     if (failure === 'processing') await probe(page, 'entropyFailure');
     await page.getByRole('button', { name: 'Generate synthetic cards', exact: true }).click();
     if (failure === 'copy' || failure === 'save') {

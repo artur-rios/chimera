@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
+import {
+  fillFlutterTextInput,
+  observeFlutterTextInput,
+} from "./flutter_text_input.mjs";
 import { unexpectedHttpRequests } from "./network_policy.mjs";
 
 const source = readFileSync(
@@ -28,14 +32,8 @@ function visibleText(page, text) {
   return page.locator("span", { hasText: new RegExp(`^${escaped}$`) });
 }
 
-async function fill(field, value) {
-  await field.click();
-  await field.fill(value);
-  await field.press("Tab");
-  await expect(field).toHaveValue(value);
-}
-
 async function openPerson(page) {
+  await observeFlutterTextInput(page);
   await page.goto("/");
   const placeholder = page.locator("flt-semantics-placeholder");
   await placeholder.waitFor({ state: "attached" });
@@ -46,6 +44,10 @@ async function openPerson(page) {
   await expect(
     page.getByRole("textbox", { name: "Positive integer count", exact: true }),
   ).toBeVisible();
+  // Minimum age autofocuses; let it land before a test focuses another field.
+  await expect(
+    page.getByRole("textbox", { name: "Minimum age (0-130)", exact: true }),
+  ).toBeFocused();
   await page.context().setOffline(true);
   await probe(page, "setup");
 }
@@ -64,7 +66,7 @@ test("GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSyntheticTransfer
   page.on("request", (request) => {
     if (/^https?:/.test(request.url())) requests.push(request.url());
   });
-  await fill(
+  await fillFlutterTextInput(
     page.getByRole("textbox", { name: "Positive integer count", exact: true }),
     "2",
   );
@@ -95,7 +97,7 @@ test("GivenDefaults_WhenGeneratedCopiedSavedOffline_ThenLabeledSyntheticTransfer
   await expect
     .poll(() => probe(page, "saved", [...Buffer.from(transferred)]))
     .toBe(true);
-  await fill(
+  await fillFlutterTextInput(
     page.getByRole("textbox", { name: "Positive integer count", exact: true }),
     "3",
   );
@@ -108,11 +110,11 @@ test("GivenBrazilAndAgeRange_WhenGeneratedOffline_ThenLocaleConsistentPersonRetu
 }) => {
   await openPerson(page);
   await select(page, "Country or locale", "Brazil");
-  await fill(
+  await fillFlutterTextInput(
     page.getByRole("textbox", { name: "Minimum age (0-130)", exact: true }),
     "21",
   );
-  await fill(
+  await fillFlutterTextInput(
     page.getByRole("textbox", { name: "Maximum age (0-130)", exact: true }),
     "40",
   );
@@ -137,7 +139,7 @@ for (const failure of ["validation", "processing", "copy", "save"]) {
       if (/^https?:/.test(request.url())) requests.push(request.url());
     });
     if (failure === "validation")
-      await fill(
+      await fillFlutterTextInput(
         page.getByRole("textbox", {
           name: "Positive integer count",
           exact: true,
