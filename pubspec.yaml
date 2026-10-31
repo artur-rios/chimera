@@ -1,7 +1,7 @@
 name: chimera_workspace
 description: Workspace tooling for the Chimera monorepo.
 publish_to: none
-version: 0.1.0
+version: 0.1.1
 
 environment:
   sdk: ^3.13.0

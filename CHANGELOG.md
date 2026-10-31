@@ -5,6 +5,13 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-10-30
+
+### Fixed
+
+- CLI process tests no longer time out on a loaded build agent: they run a CLI
+  compiled once instead of compiling it from source in each test.
+
 ## [0.1.0] - 2026-10-29
 
 ### Added
