@@ -1,3 +1,8 @@
+// Covers the compilation in setUpAll, which a loaded agent can take past the
+// default 30 seconds.
+@Timeout(Duration(minutes: 2))
+library;
+
 import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
@@ -5,12 +10,28 @@ import 'dart:isolate';
 import 'package:test/test.dart';
 
 void main() {
-  late String entryPoint;
+  late String executable;
   setUpAll(() async {
     final library = await Isolate.resolvePackageUri(
       Uri.parse('package:chimera_cli/chimera_cli.dart'),
     );
-    entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
+    final entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
+    final buildDirectory = await Directory.systemTemp.createTemp(
+      'chimera-url-cli-',
+    );
+    addTearDown(() => buildDirectory.delete(recursive: true));
+    executable =
+        '${buildDirectory.path}/chimera${Platform.isWindows ? '.exe' : ''}';
+    // Compile once: each test then runs the executable instead of compiling
+    // the CLI from source within its own deadline.
+    final compilation = await Process.run(Platform.resolvedExecutable, [
+      'compile',
+      'exe',
+      entryPoint,
+      '-o',
+      executable,
+    ]);
+    expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
   });
 
   for (final source in ['arguments', 'stdin', 'file']) {
@@ -28,9 +49,7 @@ void main() {
           const expected = '\uFEFFOlá+ 🙂%20\r\n';
           await input.writeAsString(encoded, flush: true);
           await output.writeAsString('old bytes', flush: true);
-          final process = await Process.start(Platform.resolvedExecutable, [
-            'run',
-            entryPoint,
+          final process = await Process.start(executable, [
             'url',
             'decode',
             if (source == 'arguments') '--input=$encoded',
@@ -72,9 +91,7 @@ void main() {
       );
       addTearDown(() => directory.delete(recursive: true));
       final output = File('${directory.path}/output.txt');
-      final process = await Process.start(Platform.resolvedExecutable, [
-        'run',
-        entryPoint,
+      final process = await Process.start(executable, [
         'url',
         'decode',
         '--stdin',

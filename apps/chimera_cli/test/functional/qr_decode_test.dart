@@ -410,20 +410,6 @@ void main() {
     },
   );
 
-  test('GivenBinaryStdinStream_WhenInvoked_ThenPngBytesDecodeWithoutTextConversion', () async {
-    final process = await Process.start(
-      Platform.resolvedExecutable,
-      _cliArguments(['qr', 'decode', '--stdin', '--json']),
-    );
-    final out = process.stdout.transform(utf8.decoder).join();
-    final err = process.stderr.transform(utf8.decoder).join();
-    process.stdin.add(_image('binary stdin'));
-    await process.stdin.close();
-    expect(await process.exitCode, 0);
-    expect((jsonDecode(await out) as Map)['text'], 'binary stdin');
-    expect(await err, isEmpty);
-  });
-
   test(
     'GivenOversizedFile_WhenRead_ThenBoundedReadReturnsResourceExit',
     () async {
@@ -447,7 +433,7 @@ void main() {
     },
   );
 
-  group('Native bounded stdin', () {
+  group('Native stdin', () {
     late Directory buildDirectory;
     late String executable;
     setUpAll(() async {
@@ -455,7 +441,7 @@ void main() {
       addTearDown(() => buildDirectory.delete(recursive: true));
       executable =
           '${buildDirectory.path}/chimera${Platform.isWindows ? '.exe' : ''}';
-      // Keep cold source compilation outside the open-input rejection deadline.
+      // Keep cold source compilation outside each test's deadline.
       final build = await Process.run(Platform.resolvedExecutable, [
         'compile',
         'exe',
@@ -464,6 +450,21 @@ void main() {
         executable,
       ]);
       expect(build.exitCode, 0, reason: '${build.stdout}\n${build.stderr}');
+    });
+    test('GivenBinaryStdinStream_WhenInvoked_ThenPngBytesDecodeWithoutTextConversion', () async {
+      final process = await Process.start(executable, [
+        'qr',
+        'decode',
+        '--stdin',
+        '--json',
+      ]);
+      final out = process.stdout.transform(utf8.decoder).join();
+      final err = process.stderr.transform(utf8.decoder).join();
+      process.stdin.add(_image('binary stdin'));
+      await process.stdin.close();
+      expect(await process.exitCode, 0);
+      expect((jsonDecode(await out) as Map)['text'], 'binary stdin');
+      expect(await err, isEmpty);
     });
     test('GivenOversizedOpenStdin_WhenRead_ThenLimitReturnsWithoutWaitingForEof', () async {
       final process = await Process.start(executable, [
@@ -567,13 +568,4 @@ String _cliEntrypoint() {
     }
     directory = directory.parent;
   }
-}
-
-List<String> _cliArguments(List<String> args) {
-  final entrypoint = _cliEntrypoint();
-  final config = File.fromUri(
-    File(entrypoint).parent.uri
-        .resolve('../../../.dart_tool/package_config.json'),
-  );
-  return ['--packages=${config.path}', entrypoint, ...args];
 }
