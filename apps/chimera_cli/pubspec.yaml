@@ -1,7 +1,7 @@
 name: chimera_cli
 description: Command-line adapter for Chimera utilities.
 publish_to: none
-version: 0.1.0
+version: 0.1.1
 resolution: workspace
 
 environment:
