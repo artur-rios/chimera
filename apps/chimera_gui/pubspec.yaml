@@ -1,7 +1,7 @@
 name: chimera_gui
 description: Flutter web and desktop adapter for Chimera utilities.
 publish_to: none
-version: 0.1.0+1
+version: 0.1.1+2
 resolution: workspace
 
 environment:

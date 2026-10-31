@@ -29,7 +29,7 @@ const String _defaultUpdateRepository = String.fromEnvironment(
 );
 const String _defaultInstalledVersion = String.fromEnvironment(
   'CHIMERA_VERSION',
-  defaultValue: '0.1.0',
+  defaultValue: '0.1.1',
 );
 
 typedef TextReader = Future<String> Function();
