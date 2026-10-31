@@ -17,8 +17,8 @@ specific tools and version policy are defined in the
 - Container liveness.
 - Local, development, homologation, and production environments as resolved by
   the Yggdrasil catalog.
-- GitHub Actions integration, native packaging, Yggdrasil release promotion, and
-  web deployment.
+- Yggdrasil's Jenkins checks, the GitHub Actions jobs on the GitHub mirror,
+  native packaging, Yggdrasil release promotion, and web deployment.
 - The operational use case for publishing a release.
 
 ---
@@ -50,8 +50,8 @@ graph TD
     end
 
     subgraph GitHub
-        CI[GitHub Actions<br/>build and test checks]
-        RELEASES[GitHub Releases<br/>native artifacts]
+        CI[GitHub Actions on the mirror<br/>Windows and macOS checks]
+        RELEASES[GitHub Releases<br/>copy of each release]
     end
 
     subgraph Yggdrasil
@@ -103,22 +103,25 @@ deploy/
 docs/
 ├── initial/
 └── requirements/
+ci/
+└── <check>.sh, branch-policy.sh, release-build.sh, release-validate.sh
 .github/
 └── workflows/
-    ├── branch-policy.yml
-    ├── ci.yml
-    └── release-artifacts.yml
+    ├── ci.yml, dotnet-*.yml, minimal-dotnet-library.yml, periodic-terminal.yml
+    └── release-windows.yml
 CHANGELOG.md
 CONTRIBUTING.md
-Jenkinsfile
-melos.yaml
+renovate.json
+yggdrasil.yml
 pubspec.yaml
 ```
 
 The Yggdrasil repository—not this application repository—owns Chimera's catalog
 entry, environment options, host assignment, Compose stack overlays, deployment
-variables, and platform services. Chimera's root `Jenkinsfile` invokes the
-Yggdrasil shared pipeline with the exact application identifier from that catalog.
+variables, and platform services. Jenkins runs Yggdrasil's shared pipeline on
+the repository, which lives at <https://git.techcraftsmen.net/artur-rios/chimera>
+(GitHub is a read-only mirror); the pipeline reads Chimera's root `yggdrasil.yml`:
+its checks, its branch policy, and its release files.
 
 ### 2.4 Platform Requirements
 
@@ -140,7 +143,7 @@ Yggdrasil shared pipeline with the exact application identifier from that catalo
 | IR-14 | A release shall publish portable and installer artifacts for desktop and CLI targets. |
 | IR-15 | A release shall publish a checksum for every native artifact. |
 | IR-16 | Yggdrasil shall build and label an environment-specific web image from the selected Chimera commit. |
-| IR-17 | Chimera's root `Jenkinsfile` shall invoke Yggdrasil's shared pipeline, whose agent deploys the Docker workload on the environment host. |
+| IR-17 | Chimera's root `yggdrasil.yml` shall describe its checks and release files for Yggdrasil's shared pipeline, whose agent deploys the Docker workload on the environment host. |
 | IR-18 | Deployment variables and secrets shall be managed by Yggdrasil's host-side variable store or protected environment files and shall not be copied into application artifacts or images. |
 | IR-19 | A failed web deployment shall keep or restore the previous healthy container. |
 | IR-20 | Release metadata shall identify compatible platform, application, package type, version, URL, and checksum values. |
@@ -149,7 +152,7 @@ Yggdrasil shared pipeline with the exact application identifier from that catalo
 | IR-23 | A production availability objective and measurement mechanism shall be documented before the first production release. |
 | IR-24 | Dependency selection and updates shall follow the Technology Stack Document's stable-release policy. |
 | IR-25 | The repository shall enforce Yggdrasil's `feature/*` or `fix/*` to `develop` and `release/x.y.z` to `main` branch policy. |
-| IR-26 | The Yggdrasil catalog entry shall define Chimera as a web application with its required GitHub Actions checks, health probe, public host, and environment options. |
+| IR-26 | The Yggdrasil catalog entry shall define Chimera as a web application with its required Jenkins checks and GitHub Actions checks, health probe, public host, and environment options. |
 | IR-27 | For configured release environments, Yggdrasil shall merge the successful release pull request, create tag and release `vx.y.z`, and delete the release branch. |
 | IR-28 | Yggdrasil shall expose Chimera's deployment status, health, logs, and platform metrics through its configured operational surfaces without receiving utility data. |
 
@@ -176,7 +179,7 @@ environment configuration.
 | Configuration | Owner | Purpose |
 | --- | --- | --- |
 | Chimera catalog entry | Yggdrasil repository | Defines the application identifier, repository, required checks, health URL, public host, environment order, triggers, and approvals. |
-| Root `Jenkinsfile` application identifier | Chimera repository | Selects Chimera's Yggdrasil catalog entry and shared pipeline. |
+| Root `yggdrasil.yml` | Chimera repository | The checks, branch policy, and release files Yggdrasil's shared pipeline runs for Chimera's catalog entry. |
 | Environment variables | Yggdrasil encrypted variable store or protected environment files | Supplies environment-specific values to the workload on the assigned host. |
 | Registry and GitHub credentials | Yggdrasil/Jenkins credential facilities | Allows the deployment pipeline to retrieve source metadata and publish or pull images when required. |
 
@@ -238,7 +241,8 @@ host, build, or dependency details.
 
 The Yggdrasil catalog is authoritative for the enabled environments, their
 ordering, triggers, approvals, host assignments, and Compose options. Native
-build artifacts are produced by GitHub Actions. Update tests use fixtures and
+build artifacts are produced by Yggdrasil's release agent (Linux) and by
+GitHub Actions on the mirror (Windows). Update tests use fixtures and
 prerelease artifacts rather than the production update channel.
 
 ---
@@ -255,27 +259,29 @@ prerelease artifacts rather than the production update channel.
 4. Run unit, widget, CLI functional, and affected GUI integration suites.
 5. Build the web application and container and execute container smoke tests.
 6. Run supported browser and native target matrices when the change affects them.
-7. Publish test, coverage, accessibility, and performance evidence as workflow
+7. Keep test, coverage, accessibility, and performance evidence as Jenkins build
    artifacts without publishing product releases.
 
 ### 7.2 Release Pipeline
 
 1. Prepare the version and changelog on `develop`, then create `release/x.y.z`
    from the intended release commit.
-2. Open the release pull request against `main`; Yggdrasil's branch-policy
-   workflow rejects invalid source and target combinations.
-3. GitHub Actions repeats every catalog-required application check and builds the
-   Windows and Linux desktop and CLI portable packages and installers.
+2. Open the release pull request against `main`; Yggdrasil's branch policy
+   rejects invalid source and target combinations.
+3. Jenkins repeats every catalog-required check and copies the GitHub Actions
+   checks from the mirror.
 4. Yggdrasil's self-hosted Jenkins pipeline builds and labels the selected web
    image, deploys the configured release environments in catalog order, and
    verifies their health.
 5. A failed deployment or health check causes Yggdrasil to restore the prior
    healthy workload and prevents promotion to later environments.
 6. After required checks, deployments, and approvals succeed, Yggdrasil merges
-   the release pull request, creates tag and GitHub release `vx.y.z`, and deletes
-   the release branch.
-7. GitHub Actions attaches native packages, installers, checksums, and release
-   metadata to that GitHub release.
+   the release pull request and creates tag `vx.y.z`.
+7. Yggdrasil's release agent builds the Linux desktop and CLI portable packages
+   and installers, the mirror's `release-windows.yml` the Windows ones; the
+   complete bundle with checksums and release metadata is validated, then
+   published as release `vx.y.z` on the git server and on GitHub, and the release
+   branch is deleted where the git server allows it.
 
 ### 7.3 Operational Use Case — UC-46: Publish Release
 
@@ -283,7 +289,7 @@ prerelease artifacts rather than the production update channel.
 | --- | --- |
 | **ID** | UC-46 |
 | **Name** | Publish Release |
-| **Actors** | Contributor, Product owner, GitHub Actions, Yggdrasil, self-hosted Jenkins, VPS operator |
+| **Actors** | Contributor, Product owner, Yggdrasil, self-hosted Jenkins, GitHub Actions on the mirror, VPS operator |
 | **Description** | Build, verify, publish, and deploy one approved Chimera release. |
 | **Preconditions** | The release is prepared on `develop`; Chimera is registered in the Yggdrasil catalog; required checks, agents, variables, and environments are configured. |
 | **Postconditions** | Native artifacts and checksums are published and the healthy web image is deployed, or prior production remains active. |
@@ -293,16 +299,16 @@ prerelease artifacts rather than the production update channel.
 
 1. A contributor prepares the changelog and application version on `develop`, then cuts `release/x.y.z` from that exact commit.
 2. The release branch is pushed and a pull request is opened from it to `main`.
-3. GitHub Actions runs every catalog-required application check while Yggdrasil deploys matching branch environments such as homologation.
+3. Jenkins runs every catalog-required check, and GitHub Actions the Windows and macOS checks on the mirror, while Yggdrasil deploys matching branch environments such as homologation.
 4. Yggdrasil's Jenkins pipeline waits for green checks and approvals, then deploys release environments in catalog order and verifies health.
-5. After every release environment succeeds, Jenkins merges the pull request, creates tag and release `vx.y.z`, and deletes the release branch.
-6. The native artifact workflow attaches portable packages, installers, checksums, and release metadata to the GitHub release.
+5. After every release environment succeeds, Jenkins merges the pull request and creates tag `vx.y.z`.
+6. Jenkins builds the Linux packages, has the mirror's Windows workflow build the Windows ones, validates the complete bundle of portable packages, installers, checksums, and release metadata, and publishes release `vx.y.z` with it on the git server and on GitHub.
 
 **Alternative Flows**
 
 | ID | Condition | Outcome |
 | --- | --- | --- |
-| AF-01 | A required GitHub Actions check or branch-policy check fails. | Keep the release pull request open and do not deploy later release environments. |
+| AF-01 | A required Jenkins check, GitHub Actions check, or branch-policy check fails. | Keep the release pull request open and do not deploy later release environments. |
 | AF-02 | A Yggdrasil deployment or health verification fails. | Roll back to the prior image, mark the environment deployment failed, and keep the pull request open. |
 | AF-03 | A required catalog entry, agent, variable, approval, or credential is unavailable. | Stop the Yggdrasil pipeline without changing the next environment. |
 

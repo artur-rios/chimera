@@ -1,0 +1,87 @@
+name: Continuous Integration
+
+# The macOS and Windows jobs, which stay on GitHub Actions: Jenkins runs the Linux checks (yggdrasil.yml, from
+# ci/) and copies these jobs' results ("Safari" and "Native (windows)", the catalog's actionsChecks) onto the
+# Forgejo commit. The old Linux jobs are the checks analyze-and-test, browser-tests, native-linux, container
+# and accessibility-performance; Cross-platform, which only gathered the browser, Safari and native results, is
+# gone: each is required by itself.
+
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.7
+
+jobs:
+  safari-tests:
+    name: Safari
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Build web application
+        run: |
+          flutter pub get
+          cd apps/chimera_gui
+          flutter build web --release --no-web-resources-cdn
+      - name: Run Safari WebDriver smoke
+        timeout-minutes: 15
+        run: |
+          sudo safaridriver --enable
+          safaridriver -p 4444 > safari-driver.log 2>&1 &
+          python3 -m http.server 4173 --directory apps/chimera_gui/build/web > safari-server.log 2>&1 &
+          for _ in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4173 >/dev/null && break
+            sleep 1
+          done
+          dart run tests/web/safari_smoke.dart
+      - name: Preserve Safari diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: safari-diagnostics
+          path: |
+            safari-driver.log
+            safari-server.log
+            safari-diagnostics/
+          if-no-files-found: error
+
+  # The Windows leg of the old native-tests matrix, under the name GitHub reported for it; the Linux leg is the
+  # native-linux check (ci/native-linux.sh).
+  native-tests:
+    name: Native (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Resolve workspace
+        run: flutter pub get
+      - name: Test Windows integration
+        run: dart run tool/run_native_gui_tests.dart windows
+      - name: Build Windows GUI and CLI
+        shell: pwsh
+        run: |
+          Push-Location apps/chimera_gui
+          flutter build windows --release
+          Pop-Location
+          New-Item -ItemType Directory -Force build/cli/windows | Out-Null
+          dart compile exe apps/chimera_cli/bin/chimera.dart -o build/cli/windows/chimera.exe

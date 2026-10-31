@@ -1,0 +1,60 @@
+name: chimera_workspace
+description: Workspace tooling for the Chimera monorepo.
+publish_to: none
+version: 0.1.0
+
+environment:
+  sdk: ^3.13.0
+
+workspace:
+  - apps/chimera_cli
+  - apps/chimera_gui
+  - packages/chimera_core
+  - packages/chimera_l10n
+  - packages/chimera_platform
+  - packages/chimera_utilities
+
+dev_dependencies:
+  chimera_platform:
+    path: packages/chimera_platform
+  chimera_core:
+    path: packages/chimera_core
+  chimera_l10n:
+    path: packages/chimera_l10n
+  coverage: ^1.15.1
+  crypto: ^3.0.7
+  lints: ^6.0.0
+  melos: ^8.9.0
+  test: ^1.26.0
+  webdriver: ^3.2.0
+  yaml: ^3.1.3
+
+melos:
+  command:
+    bootstrap:
+      runPubGetInParallel: false
+  scripts:
+    analyze:
+      description: Analyze every application, package, and repository test.
+      run: dart run melos exec -- "dart analyze --fatal-infos"
+    test:unit:
+      description: Run repository, package, and CLI unit tests.
+      run: dart test test && dart run melos exec --no-flutter --dir-exists=test -- "dart test"
+    test:cli:
+      description: Run CLI functional tests.
+      run: dart run melos exec --scope=chimera_cli --dir-exists=test -- "dart test"
+    test:gui:
+      description: Run Flutter widget and integration tests.
+      run: dart run tool/run_gui_tests.dart
+    test:web:
+      description: Run the compiled web application in every supported browser.
+      run: dart run tool/run_web_tests.dart
+    test:deployment:
+      description: Run deployment and update contract tests.
+      run: dart test tests/deployment tests/update
+    test:performance:
+      description: Run committed performance acceptance contracts.
+      run: dart run tool/run_performance_tests.dart
+    test:all:
+      description: Run every Chimera test suite.
+      run: dart run melos run test:unit && dart run melos run test:cli && dart run melos run test:gui && dart run melos run test:web && dart run melos run test:deployment && dart run melos run test:performance

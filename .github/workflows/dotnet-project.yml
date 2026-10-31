@@ -1,0 +1,30 @@
+name: .NET project scaffold evaluation
+
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate-projects:
+    # The Windows leg of the old ubuntu/windows matrix, under the name GitHub reported for it (the catalog's
+    # actionsCheck); the Linux leg is a Jenkins check now (yggdrasil.yml).
+    name: .NET project evaluation (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - run: flutter pub get
+      - run: dart test packages/chimera_platform/test/dotnet_project_scaffold_test.dart

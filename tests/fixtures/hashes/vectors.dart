@@ -1,0 +1,35 @@
+// Literal known answers shared with native tests; see README.md for provenance.
+const hashKnownVectors = <String, Map<String, String>>{
+  'empty': {
+    'sha256':
+        'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    'sha384': '38b060a751ac96384cd9327eb1b1e36a21fdb71114be07434c0cc7bf63f6e1da274edebfe76f65fbd51ad2f14898b95b',
+    'sha512': 'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e',
+    'md5': 'd41d8cd98f00b204e9800998ecf8427e',
+    'sha1': 'da39a3ee5e6b4b0d3255bfef95601890afd80709',
+  },
+  'abc': {
+    'sha256':
+        'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    'sha384': 'cb00753f45a35e8bb5a03d699ac65007272c32ab0eded1631a8b605a43ff5bed8086072ba1e7cc2358baeca134c825a7',
+    'sha512': 'ddaf35a193617abacc417349ae20413112e6fa4e89a97ea20a9eeee64b55d39a2192992a274fc1a836ba3c23a3feebbd454d4423643ce80e2a9ac94fa54ca49f',
+    'md5': '900150983cd24fb0d6963f7d28e17f72',
+    'sha1': 'a9993e364706816aba3e25717850c26c9cd0d89d',
+  },
+  'binary': {
+    'sha256':
+        '94d3fc070eeffc2292a104943e2c958ae65060f8b97f23c7dc0f93f0cab88af2',
+    'sha384': '471eab9b6f907fb729735a7c2a3455add1e1770ea5a3e4bdae35f830edf5adb04e818b721c5dc6c8a058921a6f7ab94d',
+    'sha512': '3709560c0a38145d8799c777e8c5363a16c5c4bf83cd0b43c16d9216e79e6d41653c8bc8ce5d431d5f72dfe7202707ecd1af700e88360e8c43d531211b68966a',
+    'md5': '5efd7ec4e2a338d9f145803adbe295f2',
+    'sha1': '7c8c9cc3f4411d9fcf6fa7bf3932148aa93f836b',
+  },
+  'bom': {
+    'sha256':
+        'f1945cd6c19e56b3c1c78943ef5ec18116907a4ca1efc40a57d48ab1db7adfc5',
+    'sha384': '223ad280a5ee41dc17bc36148df935ce33ac89dd6eba04107b3da70589a75ec0f147451f3516410fd7f379da80cfc6c4',
+    'sha512': '37c783b80b1d458b89e712c2dfe2777050eff0aefc9f6d8beedee77807d9aeb2e27d14815cf4f0229b1d36c186bb5f2b5ef55e632b108cc41e9fb964c39b42a5',
+    'md5': 'ecaa88f7fa0bf610a5a26cf545dcd3aa',
+    'sha1': '57218c316b6921e2cd61027a2387edc31a2d9471',
+  },
+};

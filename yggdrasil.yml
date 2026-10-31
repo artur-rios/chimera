@@ -1,0 +1,75 @@
+# What Jenkins checks and releases for this repository, read by the pipeline of the yggdrasil installation that
+# deploys it (yggdrasil's docs/catalog.md, "Repository pipeline file", has every field). It is data, never code:
+# images (pinned by version and digest, which Renovate keeps up to date: the owner merges those changes), commands,
+# globs and the names of Jenkins credentials. The commands are scripts under ci/ that run from the repository's
+# root, so you can run them on your own machine too. Every check the catalog lists in chimera's `checks` is defined
+# here, under the same name; the Windows and macOS jobs stay GitHub Actions workflows (the catalog's
+# `actionsChecks`), run on the GitHub mirror.
+#
+# Flutter 3.47.7 is pinned in ci/flutter-env.sh, not by the images: no Flutter image has that version. The
+# Flutter image (ghcr.io/cirruslabs/flutter) supplies git, curl, xz, python3 and Ubuntu 24.04, as the GitHub runner
+# did; the .NET SDK image (setup-dotnet 10.0.x) runs the checks and the release build that need the SDK (the whole
+# test suite does: the runner had .NET, Node and Python, which the scripts fetch where the image has none), and
+# Playwright's image the browser check, at the version tests/web pins.
+#
+# Check it where the catalog is, in the yggdrasil checkout:
+#   python3 scripts/pipeline_config.py describe chimera <this repository's checkout>
+
+checks:
+  analyze-and-test:                      # format, analyze, boundaries, Dart and contract tests, Dart coverage
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/analyze-and-test.sh
+    archive: "evidence/unit-tests.txt,evidence/deployment-tests.txt,coverage/dart/lcov.info"
+  browser-tests:                         # the release web build in Chromium, Firefox and WebKit (Playwright)
+    image: mcr.microsoft.com/playwright:v1.64.1-noble@sha256:47b510dd9230bf0b9bfc9b20102241e577ea7a99334ab4c3ca19f19770e9b8ea
+    run: ci/browser-tests.sh
+  native-linux:                          # native GUI integration tests under Xvfb, Linux GUI and CLI release builds
+    image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+    run: ci/native-linux.sh               # apt-installs the Linux desktop prerequisites (checks run as root)
+  container:                             # the web image builds and answers its health contract
+    image: docker:29.7.2-cli@sha256:3f4743208d2338c934d7b8bcfbe1bb54c0b2355c510ad5e0f31c0c4a54bd704e
+    run: ci/container.sh
+    docker: true                         # the CI engine's socket: the image is built and run by it
+  accessibility-performance:             # semantic widget checks and the performance contracts
+    image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+    run: ci/accessibility-performance.sh
+    archive: "docs/operations/accessibility-review.md,tests/performance/acceptance_thresholds.json,evidence/accessibility-tests.txt,evidence/performance-tests.txt,apps/chimera_gui/coverage/lcov.info"
+  cleanup-contract:                      # native build artifact cleanup
+    image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+    run: ci/cleanup-contract.sh
+  generated-library:                     # the NuGet library scaffold, restored, built, tested and packed
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/generated-library.sh
+  evaluate-projects:                     # the .NET project scaffold, evaluated by the SDK
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/evaluate-projects.sh
+  version-contract:                      # .NET project version editing
+    image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+    run: ci/version-contract.sh
+  build-contract:                        # .NET build, coverage, tags and process lifecycle
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/build-contract.sh
+  minimal-library:                       # the minimal .NET library scaffold, with real Debug and Release builds
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/minimal-library.sh
+
+# After yggdrasil's own branch policy: a release pull request into main is ready (the version, the changelog) and
+# the installation's catalog still keeps chimera's contract (tool/validate_yggdrasil_contract.py).
+branchPolicy:
+  image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+  run: ci/branch-policy.sh
+
+# The release files, built from the release's tag once production is deployed and the pull request merged. Linux on
+# the release agent, Windows by the release-windows.yml workflow on the GitHub mirror; the whole set is validated
+# before anything is published (the old release-artifacts.yml's validate-artifacts).
+release:
+  build:
+    image: mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:747cbade5bfd918a175ac32f8f1d931edec2c7d0d5397a3de72eaef1ac1f66d2
+    run: ci/release-build.sh             # verify, build, package, sidecars, install smoke (root: apt and dpkg)
+    files: ["dist/linux/*"]
+  windows:
+    workflow: release-windows.yml
+    files: ["chimera-windows-packages/*"]
+  validate:
+    image: ghcr.io/cirruslabs/flutter:3.44.0@sha256:46691e311715845de03a3ba4753a475476936805b29431b1f00f1816981033f8
+    run: ci/release-validate.sh

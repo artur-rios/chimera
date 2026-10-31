@@ -47,7 +47,8 @@ implementation of an algorithm.
 | **flutter_localizations** | Flutter SDK | GUI | Supplies Flutter localization integration. |
 | **intl** | Latest stable at implementation time | GUI and core | Resolves localized messages, dates, and locale data. |
 | **shared_preferences** | Latest stable at implementation time | GUI | Stores only theme and language preferences. |
-| **file_picker** | Latest stable at implementation time | GUI | Selects local input and output files on supported GUI targets. |
+| **file_picker** | Latest stable at implementation time | GUI | Selects local input files and browser output downloads. |
+| **file_selector** | Latest stable at implementation time (1.1.0 verified 2026-10-19) | GUI native output | Obtains a path-only save location before the project-owned transactional file writer touches the destination. |
 | **cross_file** | Latest stable at implementation time | GUI and core | Normalizes selected files without introducing remote storage. |
 | **path** | Latest stable at implementation time | CLI and desktop | Handles platform-safe local paths. |
 | **http** | Latest stable at implementation time | Update service | Reads GitHub release metadata and downloads accepted updates. |
@@ -66,7 +67,8 @@ implementation of an algorithm.
 | **timezone** | Latest stable at implementation time | Date conversion | Resolves IANA time zones and daylight-saving transitions. |
 | **jose** | Latest stable at implementation time | JWT | Creates, signs, decodes, and verifies tokens locally. |
 | **x509** | Latest stable at implementation time | Certificates | Parses and inspects supported certificate structures. |
-| **qr_flutter** | Latest stable at implementation time | QR encoding | Renders QR images from local text. |
+| **qr** | Latest stable at implementation time | QR encoding | Builds platform-neutral QR matrices from local text. |
+| **image** | Latest stable at implementation time | QR images | Renders shared QR matrices as portable PNG bytes. |
 | **zxing2** | Latest stable at implementation time | QR decoding | Decodes QR images locally. |
 | **diff_match_patch** | Latest stable at implementation time | Text comparison | Produces word- and character-level differences. |
 | **uuid** | Latest stable at implementation time | Identifiers | Generates supported UUID and GUID values. |
@@ -115,20 +117,21 @@ Chimera has no accounts or protected operations.
 
 | Concern | Technology | Version | Role |
 | --- | --- | --- | --- |
-| Continuous integration | **GitHub Actions** | Managed current service with action references pinned in workflow files | Runs application analysis, tests, builds, and native artifact packaging. |
+| Continuous integration | **Self-hosted Jenkins managed by Yggdrasil**, plus **GitHub Actions** on the GitHub mirror | Images pinned by version and digest in `yggdrasil.yml`; action references pinned in workflow files | Jenkins runs the Linux analysis, tests, builds, and release packaging (`ci/*.sh`); GitHub Actions runs the Windows and macOS jobs and the Windows release packaging. |
 | Release and deployment manager | **[Yggdrasil](https://github.com/artur-rios/yggdrasil)** | Owner-managed compatible release | Enforces the repository release flow and resolves deployment behavior from its catalog. |
-| Deployment orchestration | **Self-hosted Jenkins managed by Yggdrasil** | Yggdrasil-managed installation | Receives GitHub webhooks, invokes the shared Yggdrasil pipeline, gates environments, and completes releases. |
+| Deployment orchestration | **Self-hosted Jenkins managed by Yggdrasil** | Yggdrasil-managed installation | Receives the git server's webhooks, invokes the shared Yggdrasil pipeline, gates environments, and completes releases. |
 | Environment deployment | **Docker Compose through Yggdrasil** | Docker-compatible Compose implementation | Builds, labels, deploys, health-checks, and rolls back the environment workload on its host. |
 | Web container | **NGINX** | Latest stable container image at implementation time | Serves compiled Flutter web assets and the liveness response. |
 | Container runtime | **Docker Engine** | Latest stable supported by the VPS | Builds and runs the web image. |
 | Edge routing | **Traefik** | Existing VPS installation | Terminates ingress and routes traffic to the web container. |
 | Web host | **Ubuntu VPS** | Existing supported installation | Runs Docker and the web workload. |
-| Native artifact hosting | **GitHub Releases** | Managed current service | Publishes portable packages, installers, checksums, and release metadata. |
+| Native artifact hosting | **Git server releases, copied to GitHub Releases** | Yggdrasil-managed Forgejo; managed GitHub service | Publishes portable packages, installers, checksums, and release metadata. |
 
-Build and test checks remain in GitHub Actions. Chimera carries Yggdrasil's root
-`Jenkinsfile` and branch-policy workflow; the Yggdrasil catalog defines its
-environments, required checks, health probe, host name, deployment triggers, and
-approval policy. Yggdrasil's Jenkins agent runs deployment on the target host,
+Build and test checks run in Yggdrasil's Jenkins pipeline, from Chimera's
+`yggdrasil.yml` and `ci/` scripts; the Windows and macOS jobs stay GitHub Actions
+workflows on the GitHub mirror. The Yggdrasil catalog defines its environments,
+required checks, health probe, host name, deployment triggers, and approval
+policy. Yggdrasil's Jenkins agent runs deployment on the target host,
 rolls back an unhealthy replacement, and completes the release promotion after
 all configured gates pass.
 
@@ -144,7 +147,7 @@ Testing behavior, structure, and commands are defined in the
 | Dart unit tests | **test** | Latest stable at implementation time | Tests shared packages and CLI behavior. |
 | Flutter unit and widget tests | **flutter_test** | Flutter SDK | Tests presentation behavior and shared Flutter adapters. |
 | Full-application tests | **integration_test** | Flutter SDK | Exercises browser and desktop workflows through the built application. |
-| Cross-browser automation | **webdriver** | Latest stable at implementation time | Drives Chromium, Firefox, and Safari against the compiled web application. |
+| Cross-browser automation | **Playwright + webdriver** | Latest stable compatible releases, pinned in test configuration | Playwright drives Chromium, Firefox, and WebKit in its official Linux image; webdriver drives native Safari on macOS against the same compiled web application. |
 | Coverage | Flutter/Dart coverage tooling and **LCOV** | Latest stable compatible release | Produces and reports coverage while traceability governs completeness. |
 | Test doubles | Hand-written fakes and in-memory adapters | Project-owned | Replaces update transport, file access, clipboard access, and local preferences. |
 | Test data | Version-controlled fixtures and builders | Project-owned | Covers valid, invalid, boundary, localized, and standard-derived examples. |
@@ -168,6 +171,7 @@ locally built container or the explicitly selected deployment environment.
 | Localization | intl | Latest stable at implementation time |
 | Local state | shared_preferences | Latest stable at implementation time |
 | Files | file_picker | Latest stable at implementation time |
+| Native save location | file_selector | Latest stable at implementation time |
 | Files | cross_file | Latest stable at implementation time |
 | Files | path | Latest stable at implementation time |
 | Networking | http | Latest stable at implementation time |
@@ -181,11 +185,11 @@ locally built container or the explicitly selected deployment environment.
 | Date and time | timezone | Latest stable at implementation time |
 | Tokens | jose | Latest stable at implementation time |
 | Certificates | x509 | Latest stable at implementation time |
-| QR | qr_flutter | Latest stable at implementation time |
+| QR | qr and image | Latest stable at implementation time |
 | QR | zxing2 | Latest stable at implementation time |
 | Text comparison | diff_match_patch | Latest stable at implementation time |
 | Identifiers | uuid | Latest stable at implementation time |
-| CI/CD | GitHub Actions | Managed current service; actions pinned in workflows |
+| CI/CD | Yggdrasil's Jenkins; GitHub Actions for Windows and macOS | Images pinned in `yggdrasil.yml`; actions pinned in workflows |
 | Deployment | Yggdrasil | Owner-managed compatible release |
 | Deployment | Self-hosted Jenkins | Managed by the Yggdrasil installation |
 | Deployment | Docker Compose | Compatible with the deployed Docker Engine |
@@ -193,9 +197,9 @@ locally built container or the explicitly selected deployment environment.
 | Containers | Docker Engine | Latest stable supported by the VPS |
 | Edge routing | Traefik | Existing VPS installation |
 | Web hosting | Ubuntu VPS | Existing supported installation |
-| Artifact hosting | GitHub Releases | Managed current service |
+| Artifact hosting | Git server releases, copied to GitHub Releases | Yggdrasil-managed Forgejo; managed GitHub service |
 | Testing | test | Latest stable at implementation time |
 | Testing | flutter_test | Flutter SDK |
 | Testing | integration_test | Flutter SDK |
-| Testing | webdriver | Latest stable at implementation time |
+| Testing | Playwright + webdriver | Latest stable compatible releases pinned by the repository |
 | Coverage | LCOV | Latest stable compatible release |

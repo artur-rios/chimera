@@ -1,0 +1,27 @@
+name: Native project version editing
+
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  version-contract:
+    # The Windows leg of the old ubuntu/windows matrix, under the name GitHub reported for it (the catalog's
+    # actionsCheck); the Linux leg is a Jenkins check now (yggdrasil.yml).
+    name: Project version editing (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart test packages/chimera_utilities/test/dotnet_version/dotnet_version_editor_test.dart packages/chimera_core/test/dotnet_bump_service_test.dart packages/chimera_platform/test/dotnet_bump_test.dart apps/chimera_cli/test/functional/dotnet_bump_cli_test.dart packages/chimera_platform/test/windows_short_path_test.dart

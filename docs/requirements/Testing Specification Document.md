@@ -243,3 +243,35 @@ melos run test:all
 Suite scripts are defined at the repository root and select projects or folders,
 so each category can run independently. CI expands GUI, browser, and native
 commands into the supported target matrix.
+
+## UC-50 Cleanup Coverage
+
+Native tests create isolated real temporary trees and verify discovery and deletion,
+source-file preservation, default `src`, missing/non-directory/traversal roots,
+zero no-op, exact `bin`/`obj` selection, no mutation before confirmation, locked
+paths through an injected per-entry delete failure, symlink/junction escapes,
+artifact replacement after preview, linked roots, and changed scope. Windows
+runs create real directory junctions with `mklink /J`; Linux runs create symlinks.
+Pure path contracts exercise Windows and Linux separators, exact case, traversal,
+and component-prefix collisions on every host. CLI tests cover English/Portuguese,
+explicit affirmative/negative answers, `--yes`, invalid/duplicate options, and help.
+Widget tests verify scope preview, cancel/confirm, stale preview invalidation, and
+an explicitly unsupported target. Windows native execution remains a CI matrix
+requirement; a Linux run alone is not evidence of Windows filesystem behavior.
+
+## UC-52 Version Update Coverage
+
+Pure editor tests verify explicit versions and all increments, lower-component
+resets, insertion/replacement, empty/self-closing nodes, namespaces, comments,
+CDATA, attributes, unrelated XML, CRLF, Unicode, UTF-8 BOM and UTF-16 LE/BE.
+Reject invalid/mixed version modes, increments without a current version,
+malformed/ambiguous XML, DTD and unsupported/corrupt encoding before mutation.
+Core transaction tests verify backup lifetime, failed writes/verification,
+rollback success/failure and retained-backup warnings. Native tests use isolated
+real temporary projects for default/explicit nonrecursive discovery, candidate
+lists, exact replacement, backup preservation, stage/verification/restore failures,
+and concurrent source changes. Windows additionally tests case aliases with
+canonical project paths; file-symlink tests run on Linux without requiring Windows
+symlink privileges. CLI and widgets cover English/Portuguese, shared requests,
+JSON reports, recovery paths, mode exclusivity and explicit unsupported targets.
+Windows native execution remains required in the CI matrix.

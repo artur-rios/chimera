@@ -1,0 +1,25 @@
+name: Windows periodic terminal
+
+# Every branch the mirror pushes: Jenkins copies these results onto the Forgejo pull request by its head
+# commit, and pull requests exist only on Forgejo.
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terminal-contract:
+    name: Windows owned terminal lifecycle
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.7
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart test packages/chimera_core/test/type_periodic_service_test.dart packages/chimera_platform/test/type_periodic_terminal_test.dart packages/chimera_platform/test/type_periodic_windows_test.dart apps/chimera_cli/test/functional/type_periodic_test.dart

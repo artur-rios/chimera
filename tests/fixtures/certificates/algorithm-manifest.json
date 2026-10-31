@@ -1,0 +1,22 @@
+{
+  "notBefore": "1950-01-01T00:00:00.000Z",
+  "notAfter": "2049-12-31T23:59:59.000Z",
+  "signatureAlgorithm": {
+    "oid": "1.3.101.112",
+    "name": null
+  },
+  "fixtures": [
+    {
+      "id": "ed25519",
+      "oid": "1.3.101.112",
+      "derCount": 335,
+      "pemCount": 509
+    },
+    {
+      "id": "unknown-key",
+      "oid": "2.999.5",
+      "derCount": 335,
+      "pemCount": 509
+    }
+  ]
+}
