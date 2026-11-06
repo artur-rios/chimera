@@ -1,4 +1,4 @@
-FROM debian:12.15-slim@sha256:7ff6ba31527b9e336162fa061746c366c4b2032f4d2cff2078bea43f78efe3f8 AS build
+FROM debian:12.15-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a961d3376b179bc AS build
 
 # Renovate bumps the version, not the checksum: copy FLUTTER_SHA256 from Flutter's releases_linux.json with it,
 # and the same two lines in ci/flutter-env.sh.
