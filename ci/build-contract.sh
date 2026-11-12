@@ -14,7 +14,7 @@ ensure_python3
 source ci/flutter-env.sh
 
 # renovate: datasource=nuget depName=dotnet-reportgenerator-globaltool
-REPORTGENERATOR_VERSION=5.5.11
+REPORTGENERATOR_VERSION=5.6.0
 if [ ! -x .dotnet-test-tools/reportgenerator ]; then
   dotnet tool install dotnet-reportgenerator-globaltool --version "$REPORTGENERATOR_VERSION" \
     --tool-path .dotnet-test-tools
