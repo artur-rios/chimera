@@ -12,7 +12,7 @@ void main() {
   });
 
   test('GivenWebImage_WhenBuilt_ThenFlutterAndRuntimeStagesArePinnedAndUnprivileged', () {
-    expect(dockerfile, contains('ARG FLUTTER_VERSION=3.47.7'));
+    expect(dockerfile, contains('ARG FLUTTER_VERSION=3.50.0'));
     expect(dockerfile, contains('ARG FLUTTER_SHA256='));
     expect(dockerfile, contains('nginxinc/nginx-unprivileged:'));
     expect(dockerfile, contains('USER 101'));
