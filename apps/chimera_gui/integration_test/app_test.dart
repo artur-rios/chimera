@@ -62,8 +62,8 @@ void main() {
                 },
                 urlEncodeFileSaver: (name, bytes, mime) {
                   saves++;
-                  expect(name, 'chimera-url-encoded.txt');
-                  expect(mime, 'text/plain; charset=utf-8');
+                  expectSync(name, 'chimera-url-encoded.txt');
+                  expectSync(mime, 'text/plain; charset=utf-8');
                   return saveOperation = saved
                       .writeAsBytes(bytes, flush: true)
                       .then((_) => true);
@@ -284,8 +284,8 @@ void main() {
                 },
                 htmlEncodeFileSaver: (name, bytes, mime) {
                   saves++;
-                  expect(name, 'chimera-html-encoded.txt');
-                  expect(mime, 'text/plain; charset=utf-8');
+                  expectSync(name, 'chimera-html-encoded.txt');
+                  expectSync(mime, 'text/plain; charset=utf-8');
                   return saveOperation = saved
                       .writeAsBytes(bytes, flush: true)
                       .then((_) => true);
@@ -508,8 +508,8 @@ void main() {
               },
               urlDecodeFileSaver: (name, bytes, mime) {
                 saves++;
-                expect(name, 'chimera-url-decoded.txt');
-                expect(mime, 'text/plain; charset=utf-8');
+                expectSync(name, 'chimera-url-decoded.txt');
+                expectSync(mime, 'text/plain; charset=utf-8');
                 return saveOperation = saved
                     .writeAsBytes(bytes, flush: true)
                     .then((_) => true);
@@ -714,8 +714,8 @@ void main() {
               },
               htmlDecodeFileSaver: (name, bytes, mime) {
                 saves++;
-                expect(name, 'chimera-html-decoded.txt');
-                expect(mime, 'text/plain; charset=utf-8');
+                expectSync(name, 'chimera-html-decoded.txt');
+                expectSync(mime, 'text/plain; charset=utf-8');
                 return saveOperation = saved
                     .writeAsBytes(bytes, flush: true)
                     .then((_) => true);
@@ -873,8 +873,8 @@ void main() {
                 gzipCompressFilePicker: () async => sourceBytes,
                 gzipCompressFileSaver: (name, bytes, mime) {
                   saves++;
-                  expect(name, 'chimera-compressed.gz');
-                  expect(mime, 'application/gzip');
+                  expectSync(name, 'chimera-compressed.gz');
+                  expectSync(mime, 'application/gzip');
                   return saveOperation = saved
                       .writeAsBytes(bytes, flush: true)
                       .then((_) => true);
@@ -989,13 +989,13 @@ void main() {
                 gzipDecompressClipboardWriter: (value) async => copied = value,
                 gzipDecompressFileSaver: (name, bytes, mime) {
                   saves++;
-                  expect(
+                  expectSync(
                     name,
                     textMode
                         ? 'chimera-decompressed.txt'
                         : 'chimera-decompressed.bin',
                   );
-                  expect(
+                  expectSync(
                     mime,
                     textMode
                         ? 'text/plain; charset=utf-8'
@@ -1933,8 +1933,8 @@ void main() {
               initialLocation: '/jwt/create',
               jwtCreateClipboardWriter: (value) async => copied = value,
               jwtCreateFileSaver: (name, bytes, mime) async {
-                expect(name, 'chimera-jwt.txt');
-                expect(mime, 'application/jwt');
+                expectSync(name, 'chimera-jwt.txt');
+                expectSync(mime, 'application/jwt');
                 saved = List<int>.of(bytes);
                 return true;
               },
@@ -2107,8 +2107,8 @@ void main() {
               localeTag: locale,
               initialLocation: '/qr/encode',
               qrEncodeFileSaver: (name, bytes, mime) async {
-                expect(name, 'chimera-qr.png');
-                expect(mime, 'image/png');
+                expectSync(name, 'chimera-qr.png');
+                expectSync(mime, 'image/png');
                 saved = List<int>.of(bytes);
                 return true;
               },
@@ -2193,8 +2193,8 @@ void main() {
                 copied = value;
               },
               qrDecodeFileSaver: (name, bytes, mime) async {
-                expect(name, 'chimera-qr-decoded.txt');
-                expect(mime, 'text/plain');
+                expectSync(name, 'chimera-qr-decoded.txt');
+                expectSync(mime, 'text/plain');
                 saved = List<int>.of(bytes);
                 return true;
               },

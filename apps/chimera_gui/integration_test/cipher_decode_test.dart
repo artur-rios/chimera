@@ -32,8 +32,8 @@ void main() {
               initialLocation: '/cipher/decode',
               cipherDecodeClipboardWriter: (value) async => copied = value,
               cipherDecodeFileSaver: (name, bytes, mime) {
-                expect(name, 'chimera-cipher-decoded.txt');
-                expect(mime, 'text/plain; charset=utf-8');
+                expectSync(name, 'chimera-cipher-decoded.txt');
+                expectSync(mime, 'text/plain; charset=utf-8');
                 return saveOperation = saved
                     .writeAsBytes(bytes, flush: true)
                     .then((_) => true);

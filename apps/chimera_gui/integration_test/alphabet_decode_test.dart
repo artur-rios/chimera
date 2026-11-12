@@ -30,8 +30,8 @@ void main() {
             initialLocation: '/alphabet/decode',
             alphabetDecodeClipboardWriter: (value) async => copied = value,
             alphabetDecodeFileSaver: (name, bytes, mime) {
-              expect(name, 'chimera-alphabet-decoded.txt');
-              expect(mime, 'text/plain; charset=utf-8');
+              expectSync(name, 'chimera-alphabet-decoded.txt');
+              expectSync(mime, 'text/plain; charset=utf-8');
               return saveOperation = saved
                   .writeAsBytes(bytes, flush: true)
                   .then((_) => true);

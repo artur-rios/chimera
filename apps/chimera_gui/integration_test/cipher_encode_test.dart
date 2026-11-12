@@ -32,8 +32,8 @@ void main() {
               initialLocation: '/cipher/encode',
               cipherEncodeClipboardWriter: (value) async => copied = value,
               cipherEncodeFileSaver: (name, bytes, mime) {
-                expect(name, 'chimera-cipher-encoded.txt');
-                expect(mime, 'text/plain; charset=utf-8');
+                expectSync(name, 'chimera-cipher-encoded.txt');
+                expectSync(mime, 'text/plain; charset=utf-8');
                 return saveOperation = saved
                     .writeAsBytes(bytes, flush: true)
                     .then((_) => true);
