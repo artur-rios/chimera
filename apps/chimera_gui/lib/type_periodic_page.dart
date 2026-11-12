@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_platform/type_periodic_terminal.dart';
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 final class TypePeriodicPage extends StatefulWidget {
   const TypePeriodicPage({

@@ -10,8 +10,8 @@ import 'package:file_picker/file_picker.dart';
 // ignore: implementation_imports
 import 'package:file_picker_web/src/file_picker_web_options.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef QrEncodeOperationService =
     OperationService<QrEncodeOperationRequest, QrEncodeOutput>;
