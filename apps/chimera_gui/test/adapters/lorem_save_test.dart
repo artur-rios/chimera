@@ -4,8 +4,8 @@ import 'dart:io';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/lorem_page.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 final class _PathChooser extends FileSelectorPlatform {
   _PathChooser(this.path, {this.failure = false});

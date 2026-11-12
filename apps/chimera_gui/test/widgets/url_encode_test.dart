@@ -6,10 +6,10 @@ import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/url_encode_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_selector_platform_interface/file_selector_platform_interface.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
 Finder _control(String name) => find.byKey(Key('url-encode-$name'));
 

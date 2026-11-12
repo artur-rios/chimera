@@ -4,10 +4,10 @@ import 'dart:io';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/base64_decode_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import '../../../tests/fixtures/certificates/algorithm_fixtures.dart';
 import '../../../tests/fixtures/jwt_signing_keys.dart';

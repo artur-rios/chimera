@@ -6,8 +6,8 @@ import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/person_page.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   final today = DateTime.utc(2026, 10, 20);
