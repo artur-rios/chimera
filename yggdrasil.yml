@@ -6,7 +6,7 @@
 # here, under the same name; the Windows and macOS jobs stay GitHub Actions workflows (the catalog's
 # `actionsChecks`), run on the GitHub mirror.
 #
-# Flutter 3.47.7 is pinned in ci/flutter-env.sh, not by the images: no Flutter image has that version. The
+# Flutter 3.50.0 is pinned in ci/flutter-env.sh, not by the images: no Flutter image has that version. The
 # Flutter image (ghcr.io/cirruslabs/flutter) supplies git, curl, xz, python3 and Ubuntu 24.04, as the GitHub runner
 # did; the .NET SDK image (setup-dotnet 10.0.x) runs the checks and the release build that need the SDK (the whole
 # test suite does: the runner had .NET, Node and Python, which the scripts fetch where the image has none), and
