@@ -1,6 +1,6 @@
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_platform/chimera_platform.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 enum ThemePreferenceStatus { idle, saving, saved, notSaved }
 

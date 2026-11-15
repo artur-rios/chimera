@@ -4,7 +4,7 @@ import 'dart:typed_data';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef JsonYamlFilePicker = Future<String?> Function();
 typedef JsonYamlFileSaver = Future<bool> Function(
@@ -25,8 +25,6 @@ Future<bool> saveJsonYamlFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'application/yaml',
-    type: FileType.custom,
-    allowedExtensions: const <String>['yaml', 'yml'],
   );
   return uri != null;
 }

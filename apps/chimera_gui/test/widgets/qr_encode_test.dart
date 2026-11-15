@@ -8,9 +8,9 @@ import 'package:chimera_l10n/chimera_l10n.dart';
 // The public web library imports browser-only SDKs into this VM test.
 // ignore: implementation_imports
 import 'package:file_picker_web/src/file_picker_web_options.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   test('GivenQrFilePicker_WhenOpenedOnWeb_ThenPreloadingIsDisabled', () async {

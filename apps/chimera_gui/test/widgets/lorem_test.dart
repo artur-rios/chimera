@@ -5,8 +5,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/app.dart';
 import 'package:chimera_gui/lorem_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   for (final locale in ['en', 'pt-BR']) {

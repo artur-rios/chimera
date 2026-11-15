@@ -11,8 +11,8 @@ import 'package:chimera_gui/minimal_library_page.dart';
 import 'package:chimera_gui/project_template_page.dart';
 import 'package:chimera_gui/type_periodic_page.dart';
 import 'package:chimera_platform/chimera_platform.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('GivenComposedBranches_WhenHomeOpened_ThenAllTenEntriesExist', (

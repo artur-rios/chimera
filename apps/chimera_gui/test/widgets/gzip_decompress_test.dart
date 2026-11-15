@@ -8,9 +8,9 @@ import 'package:chimera_gui/empty_file_save.dart';
 import 'package:chimera_gui/gzip_decompress_page.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 Finder _control(String name) => find.byKey(Key('gzip-decompress-$name'));
 

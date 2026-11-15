@@ -44,6 +44,7 @@ implementation of an algorithm.
 
 | Package | Version | Used by | Role |
 | --- | --- | --- | --- |
+| **material_ui** | Latest stable at implementation time | GUI | Supplies the Material widgets and theme, which Flutter 3.50 moved out of the SDK (`package:flutter/material.dart` is deprecated there). Every Material import comes from this package. |
 | **flutter_localizations** | Flutter SDK | GUI | Supplies Flutter localization integration. |
 | **intl** | Latest stable at implementation time | GUI and core | Resolves localized messages, dates, and locale data. |
 | **shared_preferences** | Latest stable at implementation time | GUI | Stores only theme and language preferences. |
@@ -167,6 +168,7 @@ locally built container or the explicitly selected deployment environment.
 | Architecture | flutter_riverpod | Latest stable at implementation time |
 | Architecture | go_router | Latest stable at implementation time |
 | CLI | args | Latest stable at implementation time |
+| Design system | material_ui | Latest stable at implementation time |
 | Localization | flutter_localizations | Flutter SDK |
 | Localization | intl | Latest stable at implementation time |
 | Local state | shared_preferences | Latest stable at implementation time |

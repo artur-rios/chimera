@@ -4,8 +4,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/shared_preferences_gateway.dart';
 import 'package:chimera_gui/theme_preferences.dart';
 import 'package:chimera_platform/chimera_platform.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

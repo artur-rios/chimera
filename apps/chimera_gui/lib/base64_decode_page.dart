@@ -5,8 +5,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'base64_preview_fallback.dart';
 
@@ -47,12 +47,9 @@ Future<List<int>?> pickBase64DecodeFile() async {
 }
 
 Future<bool> saveBase64DecodeFile(String fileName, List<int> bytes) async {
-  final extension = fileName.split('.').last;
   final uri = await FilePicker.saveFile(
     fileName: fileName,
     bytes: bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
-    type: FileType.custom,
-    allowedExtensions: <String>[extension],
   );
   return uri != null;
 }

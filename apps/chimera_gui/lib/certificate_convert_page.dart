@@ -4,8 +4,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef CertificateConvertOperationService =
     OperationService<
@@ -30,8 +30,6 @@ Future<bool> saveCertificateConvertFile(String name, List<int> bytes) async {
   final uri = await FilePicker.saveFile(
     fileName: name,
     bytes: bytes as Uint8List,
-    type: FileType.custom,
-    allowedExtensions: [name.split('.').last],
   );
   return uri != null;
 }

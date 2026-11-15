@@ -50,7 +50,7 @@ normative implementation source.
 
 ## Installation
 
-Install Flutter 3.47.7 (which includes Dart 3.13.5), Node.js 24, and Docker.
+Install Flutter 3.50.0 (which includes Dart 3.14.0), Node.js 24, and Docker.
 Windows desktop builds additionally need Visual Studio's Desktop development
 with C++ workload; Linux desktop builds need the Flutter Linux prerequisites.
 

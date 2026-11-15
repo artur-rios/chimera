@@ -1,7 +1,7 @@
 name: chimera_gui
 description: Flutter web and desktop adapter for Chimera utilities.
 publish_to: none
-version: 0.1.1+2
+version: 0.1.2+3
 resolution: workspace
 
 environment:
@@ -17,21 +17,22 @@ dependencies:
     path: ../../packages/chimera_platform
   chimera_utilities:
     path: ../../packages/chimera_utilities
-  cross_file: ^0.3.5+2
-  file_picker: ^13.1.0
-  file_picker_web: 4.2.0
+  cross_file: ^0.3.5+5
+  file_picker: ^13.3.3
+  file_picker_web: 4.2.1
   file_selector: 1.1.0
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  flutter_riverpod: ^3.4.3
-  go_router: ^18.0.2
+  flutter_riverpod: ^3.5.0
+  go_router: ^18.1.4
   intl: ^0.20.3
   logging: ^1.3.0
+  material_ui: ^1.11.0
   package_info_plus: ^10.2.2
-  shared_preferences: ^2.5.5
-  web: ^1.1.1
+  shared_preferences: ^2.5.6
+  web: ^1.1.2
 
 dev_dependencies:
   file_selector_platform_interface: 2.7.0
@@ -39,7 +40,7 @@ dev_dependencies:
     sdk: flutter
   integration_test:
     sdk: flutter
-  lints: ^6.0.0
+  lints: ^6.1.0
 
 flutter:
   uses-material-design: true

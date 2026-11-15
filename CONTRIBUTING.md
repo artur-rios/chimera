@@ -9,7 +9,7 @@ the Windows and macOS jobs run.
 git clone https://git.techcraftsmen.net/artur-rios/chimera.git
 ```
 
-Install Flutter 3.47.7, Dart 3.13.5, Docker, and the native toolchain for the
+Install Flutter 3.50.0, Dart 3.14.0, Docker, and the native toolchain for the
 platform you plan to change. Resolve the workspace with `flutter pub get`.
 
 ## Branches and pull requests

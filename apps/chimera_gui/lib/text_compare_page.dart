@@ -5,9 +5,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show ScrollCacheExtent;
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef TextCompareFilePicker = Future<String?> Function();
 typedef TextCompareFileSaver = Future<bool> Function(
@@ -30,8 +29,6 @@ Future<bool> saveTextCompareFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'application/json',
-    type: FileType.custom,
-    allowedExtensions: const <String>['json'],
   );
   return uri != null;
 }

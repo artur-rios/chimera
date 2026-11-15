@@ -16,3 +16,5 @@ test-results/
 /.dotnet-test-tools/
 /dist/
 /evidence/
+# Bytecode Python leaves when a check runs tool/validate_yggdrasil_contract.py.
+__pycache__/

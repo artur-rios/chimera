@@ -4,8 +4,8 @@ import 'dart:ui' show SemanticsRole;
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:material_ui/material_ui.dart';
 
 typedef Base64EncodeFilePicker = Future<List<int>?> Function();
 typedef Base64EncodeFileSaver = Future<bool> Function(
@@ -26,8 +26,6 @@ Future<bool> saveBase64EncodeFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'text/plain',
-    type: FileType.custom,
-    allowedExtensions: const <String>['txt'],
   );
   return uri != null;
 }

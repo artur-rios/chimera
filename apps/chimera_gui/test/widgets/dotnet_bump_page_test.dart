@@ -1,8 +1,8 @@
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_gui/dotnet_bump_page.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 final class _Service
     implements OperationService<DotnetBumpRequest, DotnetBumpOutput> {

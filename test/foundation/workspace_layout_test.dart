@@ -59,7 +59,7 @@ void main() {
     expect(File('tool/run_performance_tests.dart').existsSync(), isTrue);
 
     final webRunner = File('tool/run_web_tests.dart').readAsStringSync();
-    expect(webRunner, contains('mcr.microsoft.com/playwright:v1.64.1-noble'));
+    expect(webRunner, contains('mcr.microsoft.com/playwright:v1.65.1-noble'));
     expect(webRunner, isNot(contains('if (Platform.isWindows)')));
   });
 }

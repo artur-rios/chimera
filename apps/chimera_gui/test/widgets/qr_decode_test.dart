@@ -11,9 +11,9 @@ import 'package:cross_file/cross_file.dart';
 import 'package:file_picker/file_picker.dart';
 // ignore: implementation_imports
 import 'package:file_picker_web/src/file_picker_web_options.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 void main() {
   testWidgets('GivenHomeAction_WhenActivated_ThenQrDecodeRouteOpens', (
