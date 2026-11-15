@@ -5,6 +5,18 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ## [Unreleased]
 
+### Fixed
+
+- CLI executable and full-stdout tests no longer time out on a loaded build
+  agent: the CLI is compiled once per test run, outside their deadlines,
+  instead of once per suite or from source in each test.
+
+### Changed
+
+- The `analyze-and-test` check runs the package and CLI suites once, with
+  coverage, instead of a second time without it, and `browser-tests` runs the
+  three browsers in one Playwright run.
+
 ## [0.1.2] - 2026-11-15
 
 ### Changed
