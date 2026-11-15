@@ -15,12 +15,6 @@ Future<bool> saveLocalFile(
 }) async {
   final emptyWebSave = await trySaveEmptyFile(name, bytes, mimeType);
   if (emptyWebSave != null) return emptyWebSave;
-  await FilePicker.saveFile(
-    fileName: name,
-    bytes: bytes,
-    mimeType: mimeType,
-    type: extensions.isEmpty ? FileType.any : FileType.custom,
-    allowedExtensions: extensions.isEmpty ? null : extensions,
-  );
+  await FilePicker.saveFile(fileName: name, bytes: bytes, mimeType: mimeType);
   return true;
 }

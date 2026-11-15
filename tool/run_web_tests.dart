@@ -1,6 +1,6 @@
 import 'dart:io';
 
-const _playwrightImage = 'mcr.microsoft.com/playwright:v1.64.1-noble';
+const _playwrightImage = 'mcr.microsoft.com/playwright:v1.65.1-noble';
 
 Future<void> main() async {
   final repository = Directory.current.absolute;

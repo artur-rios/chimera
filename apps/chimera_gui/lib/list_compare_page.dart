@@ -29,8 +29,6 @@ Future<bool> saveListCompareFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'text/plain',
-    type: FileType.custom,
-    allowedExtensions: const <String>['txt'],
   );
   return uri != null;
 }

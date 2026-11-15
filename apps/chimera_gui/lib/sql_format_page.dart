@@ -28,8 +28,6 @@ Future<bool> saveSqlFormatFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'application/sql',
-    type: FileType.custom,
-    allowedExtensions: const <String>['sql'],
   );
   return uri != null;
 }

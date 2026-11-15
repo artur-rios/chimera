@@ -30,8 +30,6 @@ Future<bool> saveCertificateConvertFile(String name, List<int> bytes) async {
   final uri = await FilePicker.saveFile(
     fileName: name,
     bytes: bytes as Uint8List,
-    type: FileType.custom,
-    allowedExtensions: [name.split('.').last],
   );
   return uri != null;
 }

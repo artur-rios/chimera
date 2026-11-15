@@ -85,8 +85,6 @@ Future<bool> saveQrDecodeFile(
     fileName: name,
     bytes: bytes,
     mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: const ['txt'],
   );
   return kIsWeb || path != null;
 }

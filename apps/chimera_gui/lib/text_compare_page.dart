@@ -29,8 +29,6 @@ Future<bool> saveTextCompareFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'application/json',
-    type: FileType.custom,
-    allowedExtensions: const <String>['json'],
   );
   return uri != null;
 }

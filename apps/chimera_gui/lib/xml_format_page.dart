@@ -27,8 +27,6 @@ Future<bool> saveXmlFormatFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'application/xml',
-    type: FileType.custom,
-    allowedExtensions: const <String>['xml'],
   );
   return uri != null;
 }

@@ -37,8 +37,6 @@ Future<bool> saveJwtCreateFile(
     fileName: name,
     bytes: bytes,
     mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: <String>['txt', 'jwt'],
   );
   return kIsWeb || result != null;
 }

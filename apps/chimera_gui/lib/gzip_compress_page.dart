@@ -34,8 +34,6 @@ Future<bool> saveGzipCompressFile(
       fileName: name,
       bytes: bytes,
       mimeType: mimeType,
-      type: FileType.custom,
-      allowedExtensions: ['gz'],
     ) !=
     null;
 

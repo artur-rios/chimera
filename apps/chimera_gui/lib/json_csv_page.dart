@@ -25,8 +25,6 @@ Future<bool> saveJsonCsvFile(String fileName, List<int> bytes) async {
     fileName: fileName,
     bytes: Uint8List.fromList(bytes),
     mimeType: 'text/csv',
-    type: FileType.custom,
-    allowedExtensions: const <String>['csv'],
   );
   return uri != null;
 }

@@ -46,8 +46,6 @@ Future<bool> saveHtmlEncodeFile(
     fileName: name,
     bytes: bytes,
     mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: ['txt'],
   );
   return kIsWeb || result != null;
 }

@@ -75,8 +75,6 @@ Future<bool> saveQrEncodeFile(
     fileName: fileName,
     bytes: bytes,
     mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: const <String>['png'],
   );
   return kIsWeb || result != null;
 }

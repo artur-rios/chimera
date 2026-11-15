@@ -40,8 +40,6 @@ Future<bool> saveGzipDecompressFile(
     fileName: name,
     bytes: bytes,
     mimeType: mimeType,
-    type: FileType.custom,
-    allowedExtensions: [name.split('.').last],
   );
   return kIsWeb || result != null;
 }
