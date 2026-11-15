@@ -5,6 +5,18 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-11-15
+
+### Changed
+
+- Built with Flutter 3.50.0 (Dart 3.14.0); Material widgets now come from the
+  `material_ui` package.
+- Dependencies updated to their latest stable releases, including go_router
+  18.1.4, flutter_riverpod 3.5.0, file_picker 13.3.3, archive 4.7.1 and
+  crypto 3.0.8; the web image builds on a refreshed `debian:12.15-slim`.
+- Save dialogs no longer pass the `type` and `allowedExtensions` arguments that
+  file_picker deprecated and that never had any effect.
+
 ## [0.1.1] - 2026-10-30
 
 ### Fixed
