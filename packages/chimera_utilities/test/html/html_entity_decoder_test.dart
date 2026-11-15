@@ -14,7 +14,7 @@ void main() {
     };
     for (final entry in namedReferences.entries) {
       test(
-        'Given${entry.key}WhenTextDecodesThenExactNamedCharacterReturns',
+        'Given${entry.key}_WhenTextDecodes_ThenExactNamedCharacterReturns',
         () {
           final result = decoder.decodeText(
             HtmlEntityDecodeRequest(input: entry.key),
@@ -34,16 +34,19 @@ void main() {
       '&#x1F600;': '😀',
     };
     for (final entry in numericReferences.entries) {
-      test('Given${entry.key}WhenTextDecodesThenExactNumericScalarReturns', () {
-        final result = decoder.decodeText(
-          HtmlEntityDecodeRequest(input: entry.key),
-        );
+      test(
+        'Given${entry.key}_WhenTextDecodes_ThenExactNumericScalarReturns',
+        () {
+          final result = decoder.decodeText(
+            HtmlEntityDecodeRequest(input: entry.key),
+          );
 
-        expect(result.decoded, entry.value);
-      });
+          expect(result.decoded, entry.value);
+        },
+      );
     }
 
-    test('GivenNestedEntityTextWhenDecodedThenItDecodesExactlyOnce', () {
+    test('GivenNestedEntityText_WhenDecoded_ThenItDecodesExactlyOnce', () {
       final result = decoder.decodeText(
         const HtmlEntityDecodeRequest(input: '&amp;lt;'),
       );
@@ -59,7 +62,7 @@ void main() {
       '\uFEFFleading BOM',
     ];
     for (var index = 0; index < preservedText.length; index += 1) {
-      test('GivenLiteralText${index}WhenDecodedThenTextIsPreserved', () {
+      test('GivenLiteralText${index}_WhenDecoded_ThenTextIsPreserved', () {
         final result = decoder.decodeText(
           HtmlEntityDecodeRequest(input: preservedText[index]),
         );
@@ -68,7 +71,7 @@ void main() {
       });
     }
 
-    test('GivenUtf8WithBomControlsAndEntitiesWhenDecodedThenAllAreExact', () {
+    test('GivenUtf8WithBomControlsAndEntities_WhenDecoded_ThenAllAreExact', () {
       final result = decoder.decodeUtf8(<int>[
         0xef,
         0xbb,
@@ -91,7 +94,7 @@ void main() {
       expect(result.decoded, '\uFEFF\u0000\r\nç😀<');
     });
 
-    test('GivenRepeatedCallsWhenSourcesChangeThenResultsAreIndependent', () {
+    test('GivenRepeatedCalls_WhenSourcesChange_ThenResultsAreIndependent', () {
       final first = decoder.decodeText(
         const HtmlEntityDecodeRequest(input: '&lt;first&gt;'),
       );
@@ -130,7 +133,7 @@ void main() {
     ];
     for (var index = 0; index < malformedText.length; index += 1) {
       test(
-        'GivenMalformedEntity${index}WhenDecodedThenTypedFailureReturns',
+        'GivenMalformedEntity${index}_WhenDecoded_ThenTypedFailureReturns',
         () {
           final testCase = malformedText[index];
 
@@ -150,7 +153,7 @@ void main() {
       );
     }
 
-    test('GivenLiteralSurrogatesWhenDecodedThenExactOffsetsReturn', () {
+    test('GivenLiteralSurrogates_WhenDecoded_ThenExactOffsetsReturn', () {
       for (final testCase in <({String input, int offset})>[
         (input: String.fromCharCode(0xd800), offset: 0),
         (input: String.fromCharCode(0xdc00), offset: 0),
@@ -183,7 +186,7 @@ void main() {
       (input: <int>[0x61, 256], offset: 1),
     ];
     for (var index = 0; index < malformedUtf8.length; index += 1) {
-      test('GivenMalformedUtf8${index}WhenDecodedThenByteOffsetReturns', () {
+      test('GivenMalformedUtf8${index}_WhenDecoded_ThenByteOffsetReturns', () {
         final testCase = malformedUtf8[index];
 
         expect(
@@ -199,7 +202,7 @@ void main() {
       });
     }
 
-    test('GivenPrivateSourceWhenValidationFailsThenErrorIsRedacted', () {
+    test('GivenPrivateSource_WhenValidationFails_ThenErrorIsRedacted', () {
       try {
         decoder.decodeText(
           const HtmlEntityDecodeRequest(input: 'private-source-&marker;'),
@@ -216,7 +219,7 @@ void main() {
   });
 
   group('HtmlEntityDecoder resource boundaries', () {
-    test('GivenInputBudgetWhenAtBoundaryThenOnlyOverflowFails', () {
+    test('GivenInputBudget_WhenAtBoundary_ThenOnlyOverflowFails', () {
       const decoder = HtmlEntityDecoder(maxInputCharacters: 2);
 
       expect(
@@ -234,7 +237,7 @@ void main() {
       );
     });
 
-    test('GivenOutputBudgetWhenAtBoundaryThenOnlyOverflowFails', () {
+    test('GivenOutputBudget_WhenAtBoundary_ThenOnlyOverflowFails', () {
       const decoder = HtmlEntityDecoder(maxOutputCharacters: 1);
 
       expect(
@@ -266,7 +269,7 @@ void main() {
       );
     });
 
-    test('GivenZeroBudgetsWhenInputIsEmptyThenEmptyOutputSucceeds', () {
+    test('GivenZeroBudgets_WhenInputIsEmpty_ThenEmptyOutputSucceeds', () {
       const decoder = HtmlEntityDecoder(
         maxInputCharacters: 0,
         maxOutputCharacters: 0,
@@ -279,30 +282,33 @@ void main() {
       expect(decoder.decodeUtf8(<int>[]).decoded, '');
     });
 
-    test('GivenConversionOutOfMemoryWhenDecodedThenResourceFailureReturns', () {
-      final decoder = HtmlEntityDecoder.forTesting(
-        convert: (_) => throw OutOfMemoryError(),
-      );
-
-      for (final decode in <void Function()>[
-        () => decoder.decodeText(
-          const HtmlEntityDecodeRequest(input: 'private-source'),
-        ),
-        () => decoder.decodeUtf8(<int>[0x61]),
-      ]) {
-        expect(
-          decode,
-          _failure(
-            kind: HtmlEntityDecodeFailureKind.resource,
-            code: 'html-decode.resource-limit',
-            field: 'decoded',
-            reason: 'allocation-limit',
-          ),
+    test(
+      'GivenConversionOutOfMemory_WhenDecoded_ThenResourceFailureReturns',
+      () {
+        final decoder = HtmlEntityDecoder.forTesting(
+          convert: (_) => throw OutOfMemoryError(),
         );
-      }
-    });
 
-    test('GivenNegativeBudgetsWhenConstructedThenAssertionsRejectThem', () {
+        for (final decode in <void Function()>[
+          () => decoder.decodeText(
+            const HtmlEntityDecodeRequest(input: 'private-source'),
+          ),
+          () => decoder.decodeUtf8(<int>[0x61]),
+        ]) {
+          expect(
+            decode,
+            _failure(
+              kind: HtmlEntityDecodeFailureKind.resource,
+              code: 'html-decode.resource-limit',
+              field: 'decoded',
+              reason: 'allocation-limit',
+            ),
+          );
+        }
+      },
+    );
+
+    test('GivenNegativeBudgets_WhenConstructed_ThenAssertionsRejectThem', () {
       expect(
         () => HtmlEntityDecoder(maxInputCharacters: -1),
         throwsA(isA<AssertionError>()),

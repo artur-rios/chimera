@@ -350,7 +350,7 @@ void main() {
 
   for (final failure in ['file', 'copy', 'save']) {
     testWidgets(
-      'Given$failure AccessFailure_WhenActionRuns_ThenSafeLocalizedErrorClearsSourceAndResult',
+      'Given${failure}AccessFailure_WhenActionRuns_ThenSafeLocalizedErrorClearsSourceAndResult',
       (tester) async {
         var fail = failure == 'file';
         await tester.pumpWidget(

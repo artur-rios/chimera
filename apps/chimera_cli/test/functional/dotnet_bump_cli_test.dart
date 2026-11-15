@@ -19,7 +19,7 @@ void main() {
   });
   for (final locale in ['en', 'pt-BR']) {
     test(
-      'Given$locale explicit version_WhenBumped_ThenOldNewAndProjectReported',
+      'Given${locale}ExplicitVersion_WhenBumped_ThenOldNewAndProjectReported',
       () async {
         final out = StringBuffer();
         final code = await runChimera(
@@ -41,7 +41,7 @@ void main() {
   }
   for (final mode in ['major', 'minor', 'patch']) {
     test(
-      'Given$mode increment_WhenJsonRequested_ThenStructuredResult',
+      'Given${mode}Increment_WhenJsonRequested_ThenStructuredResult',
       () async {
         final out = StringBuffer();
         final code = await runChimera(
