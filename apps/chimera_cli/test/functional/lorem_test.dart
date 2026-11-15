@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
+
+import '../support/compiled_program.dart';
 
 void main() {
   for (final locale in ['en', 'pt-BR']) {
@@ -115,33 +116,8 @@ void main() {
       () {
         late String executable;
         setUpAll(() async {
-          final library = (await Isolate.resolvePackageUri(
-            Uri.parse('package:chimera_cli/chimera_cli.dart'),
-          ))!;
-          final config = File.fromUri(
-            library.resolve('../../../.dart_tool/package_config.json'),
-          ).path;
-          final directory = await Directory.systemTemp.createTemp(
-            'lorem-stdout-',
-          );
-          addTearDown(() => directory.delete(recursive: true));
-          final harness = File('${directory.path}/locale.dart');
-          await harness.writeAsString(
-            "import 'dart:io'; import 'package:chimera_cli/chimera_cli.dart'; Future<void> main(List<String> args) async { exitCode = await runChimera(args, localeTag: '$locale', out: stdout, err: stderr); }",
-          );
-          executable = '${directory.path}/chimera';
-          // Cold source compilation must not consume the output-failure deadline.
-          final build = await Process.run(Platform.resolvedExecutable, [
-            'compile',
-            'exe',
-            '--packages=$config',
-            locale == 'en'
-                ? File.fromUri(library.resolve('../bin/chimera.dart')).path
-                : harness.path,
-            '-o',
-            executable,
-          ]);
-          expect(build.exitCode, 0, reason: '${build.stdout}\n${build.stderr}');
+          // Compiled once per run, outside the output-failure deadline.
+          executable = await compiledChimeraIn(locale);
         });
         for (final json in [false, true]) {
           test(
@@ -178,7 +154,7 @@ void main() {
         }
       },
       skip: !Platform.isLinux,
-      timeout: const Timeout(Duration(minutes: 2)),
+      timeout: compilationTimeout,
     );
   }
   test('GivenInjectedResource_WhenGenerated_Then75WithoutOutput', () async {
