@@ -26,7 +26,7 @@ final class _Service
 void main() {
   for (final locale in ['en', 'pt-BR']) {
     testWidgets(
-      'Given$locale explicit version_WhenApplied_ThenSharedRequestAndOldNewDisplayed',
+      'Given${locale}ExplicitVersion_WhenApplied_ThenSharedRequestAndOldNewDisplayed',
       (tester) async {
         final service = _Service();
         await tester.pumpWidget(

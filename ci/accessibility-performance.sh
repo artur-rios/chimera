@@ -11,5 +11,10 @@ source ci/flutter-env.sh
 
 flutter pub get
 mkdir -p evidence
-(cd apps/chimera_gui && flutter test --coverage test/widgets 2>&1 | tee ../../evidence/accessibility-tests.txt)
+# The widget checks, then the GUI's other suites (the adapters and the pages' own), which no other check runs;
+# test/performance is the performance contracts' below.
+(
+  cd apps/chimera_gui
+  flutter test --coverage test/widgets test/adapters test/*_test.dart 2>&1 | tee ../../evidence/accessibility-tests.txt
+)
 dart run melos run test:performance 2>&1 | tee evidence/performance-tests.txt

@@ -7,6 +7,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
+import '../support/compiled_program.dart';
+
 void main() {
   test('GivenAbc_WhenChecksumCommandRuns_ThenHumanChecksum', () async {
     final out = StringBuffer();
@@ -131,75 +133,68 @@ void main() {
       );
     }
   }
-  test('GivenBinaryFile_WhenSubprocessReadsFileAndStdin_ThenExactKnownChecksum', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'chimera-checksum-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
-    final file = File('${directory.path}/input.bin');
-    await file.writeAsBytes([0, 255, 128, 13, 10]);
-    final library = (await Isolate.resolvePackageUri(
-      Uri.parse('package:chimera_cli/chimera_cli.dart'),
-    ))!;
-    final entrypoint = File.fromUri(library.resolve('../bin/chimera.dart'))
-        .path;
-    final executable =
-        '${directory.path}/chimera-checksum${Platform.isWindows ? '.exe' : ''}';
-    final compilation = await Process.run(Platform.resolvedExecutable, [
-      'compile',
-      'exe',
-      entrypoint,
-      '-o',
-      executable,
-    ]);
-    expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
-    final fixture =
-        (jsonDecode(
-              File.fromUri(
-                library.resolve(
-                  '../../../tests/fixtures/checksums/vectors.json',
-                ),
-              ).readAsStringSync(),
-            ) as List<dynamic>)[3]
-            as Map<String, dynamic>;
-    for (final algorithm in ['crc32', 'adler32']) {
-      final process = await Process.start(executable, [
-        'checksum',
-        'generate',
-        '--stdin',
-        '--algorithm=$algorithm',
-        '--json',
-      ]);
-      process.stdin.add(await file.readAsBytes());
-      await process.stdin.close();
-      final stdout = await process.stdout.transform(utf8.decoder).join();
-      final stderr = await process.stderr.transform(utf8.decoder).join();
-      expect(await process.exitCode, 0, reason: stderr);
-      expect(
-        (jsonDecode(stdout) as Map<String, dynamic>)['checksum'],
-        (fixture['checksums'] as Map<String, dynamic>)[algorithm],
+  test(
+    'GivenBinaryFile_WhenSubprocessReadsFileAndStdin_ThenExactKnownChecksum',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'chimera-checksum-',
       );
-      final saved = File('${directory.path}/$algorithm.txt');
-      await saved.writeAsString('previous');
-      final result = await Process.run(executable, [
-        'checksum',
-        'generate',
-        '--file=${file.path}',
-        '--algorithm=$algorithm',
-        '--output=${saved.path}',
-        '--json',
-      ]);
-      expect(result.exitCode, 0, reason: result.stderr.toString());
-      expect(
-        await saved.readAsString(),
-        '${(fixture['checksums'] as Map<String, dynamic>)[algorithm]}\n',
-      );
-      expect(
-        directory.listSync().where((e) => e.path.contains('.tmp')),
-        isEmpty,
-      );
-    }
-  }, timeout: const Timeout(Duration(minutes: 2)));
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/input.bin');
+      await file.writeAsBytes([0, 255, 128, 13, 10]);
+      final library = (await Isolate.resolvePackageUri(
+        Uri.parse('package:chimera_cli/chimera_cli.dart'),
+      ))!;
+      final executable = await compiledChimera();
+      final fixture =
+          (jsonDecode(
+                File.fromUri(
+                  library.resolve(
+                    '../../../tests/fixtures/checksums/vectors.json',
+                  ),
+                ).readAsStringSync(),
+              ) as List<dynamic>)[3]
+              as Map<String, dynamic>;
+      for (final algorithm in ['crc32', 'adler32']) {
+        final process = await Process.start(executable, [
+          'checksum',
+          'generate',
+          '--stdin',
+          '--algorithm=$algorithm',
+          '--json',
+        ]);
+        process.stdin.add(await file.readAsBytes());
+        await process.stdin.close();
+        final stdout = await process.stdout.transform(utf8.decoder).join();
+        final stderr = await process.stderr.transform(utf8.decoder).join();
+        expect(await process.exitCode, 0, reason: stderr);
+        expect(
+          (jsonDecode(stdout) as Map<String, dynamic>)['checksum'],
+          (fixture['checksums'] as Map<String, dynamic>)[algorithm],
+        );
+        final saved = File('${directory.path}/$algorithm.txt');
+        await saved.writeAsString('previous');
+        final result = await Process.run(executable, [
+          'checksum',
+          'generate',
+          '--file=${file.path}',
+          '--algorithm=$algorithm',
+          '--output=${saved.path}',
+          '--json',
+        ]);
+        expect(result.exitCode, 0, reason: result.stderr.toString());
+        expect(
+          await saved.readAsString(),
+          '${(fixture['checksums'] as Map<String, dynamic>)[algorithm]}\n',
+        );
+        expect(
+          directory.listSync().where((e) => e.path.contains('.tmp')),
+          isEmpty,
+        );
+      }
+    },
+    timeout: compilationTimeout,
+  );
   for (final failure in ['writer', 'json', 'resource']) {
     test(
       'Given${failure}Failure_WhenOutputPrepared_ThenNoSuccessOrPartialOutput',

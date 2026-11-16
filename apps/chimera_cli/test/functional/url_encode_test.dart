@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
+
+import '../support/compiled_program.dart';
 
 void main() {
   const source = 'https://example.test/ação 😀?a=1&b=%20\r\n';
@@ -393,20 +394,7 @@ void main() {
       final source = File('${directory.path}/source.txt');
       await source.writeAsBytes([239, 187, 191, 97, 32, 47, 0]);
       final output = File('${directory.path}/out.txt');
-      final library = await Isolate.resolvePackageUri(
-        Uri.parse('package:chimera_cli/chimera_cli.dart'),
-      );
-      final entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
-      final executable =
-          '${directory.path}/chimera-url${Platform.isWindows ? '.exe' : ''}';
-      final compilation = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'exe',
-        entryPoint,
-        '-o',
-        executable,
-      ]);
-      expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+      final executable = await compiledChimera();
       final process = await Process.start(executable, [
         'url',
         'encode',
@@ -438,7 +426,7 @@ void main() {
         'mode': 'component',
       });
     },
-    timeout: const Timeout(Duration(minutes: 2)),
+    timeout: compilationTimeout,
   );
 }
 

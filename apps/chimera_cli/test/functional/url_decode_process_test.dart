@@ -1,37 +1,23 @@
-// Covers the compilation in setUpAll, which a loaded agent can take past the
-// default 30 seconds.
-@Timeout(Duration(minutes: 2))
+// Covers the shared compilation in setUpAll (compilationTimeout), which a
+// loaded agent can take past the default 30 seconds.
+@Timeout(Duration(minutes: 6))
 library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:test/test.dart';
+
+import '../support/compiled_program.dart';
 
 void main() {
   late String executable;
   setUpAll(() async {
-    final library = await Isolate.resolvePackageUri(
-      Uri.parse('package:chimera_cli/chimera_cli.dart'),
-    );
-    final entryPoint = library!.resolve('../bin/chimera.dart').toFilePath();
     final buildDirectory = await Directory.systemTemp.createTemp(
       'chimera-url-cli-',
     );
     addTearDown(() => buildDirectory.delete(recursive: true));
-    executable =
-        '${buildDirectory.path}/chimera${Platform.isWindows ? '.exe' : ''}';
-    // Compile once: each test then runs the executable instead of compiling
-    // the CLI from source within its own deadline.
-    final compilation = await Process.run(Platform.resolvedExecutable, [
-      'compile',
-      'exe',
-      entryPoint,
-      '-o',
-      executable,
-    ]);
-    expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+    executable = await compiledChimera();
   });
 
   for (final source in ['arguments', 'stdin', 'file']) {

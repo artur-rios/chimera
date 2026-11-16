@@ -20,7 +20,7 @@ final class _Gateway implements DotnetCleanGateway {
 
 void main() {
   for (final locale in ['en', 'pt-BR']) {
-    testWidgets('Given$locale scope_WhenPreviewAndCancel_ThenNoDeletion', (
+    testWidgets('Given${locale}Scope_WhenPreviewAndCancel_ThenNoDeletion', (
       tester,
     ) async {
       final gateway = _Gateway();

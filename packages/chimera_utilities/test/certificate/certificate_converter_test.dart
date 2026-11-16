@@ -1,13 +1,20 @@
 import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
 
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final fixtures = Directory('../../tests/fixtures/certificates');
+  // Resolved from the package, not the working directory, so the suite runs
+  // from the package or from the repository root.
+  final fixtures = Directory.fromUri(
+    Isolate.resolvePackageUriSync(
+      Uri.parse('package:chimera_utilities/chimera_utilities.dart'),
+    )!.resolve('../../../tests/fixtures/certificates'),
+  );
   final pem = File('${fixtures.path}/certificate.pem').readAsStringSync();
   final encoded = File('${fixtures.path}/certificate.base64')
       .readAsStringSync()
