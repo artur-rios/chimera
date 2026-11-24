@@ -7,12 +7,17 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ### Fixed
 
+- On Linux with an NVIDIA graphics card, the GUI window shows the whole
+  application again, under Wayland and X11 alike. Since 0.1.2 it showed
+  only the top-right quarter, drawn into the window's bottom-left quarter:
+  a Flutter 3.50.0 bug, fixed in 3.50.1.
 - CLI executable and full-stdout tests no longer time out on a loaded build
   agent: the CLI is compiled once per test run, outside their deadlines,
   instead of once per suite or from source in each test.
 
 ### Changed
 
+- Built with Flutter 3.50.1.
 - The `analyze-and-test` check runs the package and CLI suites once, with
   coverage, instead of a second time without it, and `browser-tests` runs the
   three browsers in one Playwright run.

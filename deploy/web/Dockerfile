@@ -3,8 +3,8 @@ FROM debian:12.15-slim@sha256:734a72b3d6142a71993b4bc580ca01d8ca687f77a2c422d96a
 # Renovate bumps the version, not the checksum: copy FLUTTER_SHA256 from Flutter's releases_linux.json with it,
 # and the same two lines in ci/flutter-env.sh.
 # renovate: datasource=github-tags depName=flutter/flutter versioning=regex:^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$
-ARG FLUTTER_VERSION=3.50.0
-ARG FLUTTER_SHA256=6ea2d806fd57269ae783e6788e2a81fc26eaad782f1e0d0ff38623bb765ff9f5
+ARG FLUTTER_VERSION=3.50.1
+ARG FLUTTER_SHA256=4ad17fc8462fbcef2ba19ff4a78c0a16b7147fde1add8578e267ea62cdb92678
 
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates curl git xz-utils \
