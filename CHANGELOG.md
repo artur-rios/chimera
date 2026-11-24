@@ -5,6 +5,8 @@ Versioning and use tags in the form `vX.Y.Z`.
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-24
+
 ### Fixed
 
 - On Linux with an NVIDIA graphics card, the GUI window shows the whole
