@@ -1,7 +1,7 @@
 # shellcheck shell=bash
 # Puts the pinned Flutter SDK on PATH. Sourced by the other scripts under ci/, not run.
 #
-# The GitHub workflows pin Flutter 3.50.0 too (subosito/flutter-action). No published Flutter image has that
+# The GitHub workflows pin Flutter 3.50.1 too (subosito/flutter-action). No published Flutter image has that
 # version (ghcr.io/cirruslabs/flutter stops at 3.44.0, whose Dart 3.12 is older than pubspec.yaml's
 # `sdk: ^3.13.0`), so the images in yggdrasil.yml only supply the tools around it, and the SDK itself is
 # fetched here from Flutter's release archive and checked against its checksum, as deploy/web/Dockerfile
@@ -12,8 +12,8 @@
 # FLUTTER_SDK_DIR reuses an unpacked SDK between runs (default: a directory under $TMPDIR).
 
 # renovate: datasource=github-tags depName=flutter/flutter versioning=regex:^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)$
-FLUTTER_VERSION=3.50.0
-FLUTTER_SHA256=6ea2d806fd57269ae783e6788e2a81fc26eaad782f1e0d0ff38623bb765ff9f5
+FLUTTER_VERSION=3.50.1
+FLUTTER_SHA256=4ad17fc8462fbcef2ba19ff4a78c0a16b7147fde1add8578e267ea62cdb92678
 
 FLUTTER_SDK_DIR=${FLUTTER_SDK_DIR:-${TMPDIR:-/tmp}/flutter-$FLUTTER_VERSION}
 

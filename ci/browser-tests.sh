@@ -9,7 +9,8 @@
 # workflow used Node 24).
 #
 # Every browser runs even when one fails, as the workflow's fail-fast: false matrix did; the check fails if
-# any of them did.
+# any of them did. One Playwright run holds the three projects: its workers take tests of every browser, so
+# one browser's last slow tests no longer leave the others' workers idle, and the web server starts once.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
@@ -23,12 +24,4 @@ cd tests/web
 npm ci
 browsers=(chromium firefox webkit)
 npx playwright install "${browsers[@]}"
-failed=()
-for browser in "${browsers[@]}"; do
-  echo "ci/browser-tests.sh: $browser"
-  npx playwright test --project="$browser" || failed+=("$browser")
-done
-if [ "${#failed[@]}" -gt 0 ]; then
-  echo "ci/browser-tests.sh: failed in ${failed[*]}" >&2
-  exit 1
-fi
+npx playwright test "${browsers[@]/#/--project=}"

@@ -1,12 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:isolate';
 
 import 'package:chimera_cli/chimera_cli.dart';
 import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_l10n/chimera_l10n.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
+
+import '../support/compiled_program.dart';
 
 void main() {
   for (final locale in ['en', 'pt-BR']) {
@@ -306,20 +307,7 @@ void main() {
         'chimera-uuid-executable-',
       );
       addTearDown(() => directory.delete(recursive: true));
-      final library = (await Isolate.resolvePackageUri(
-        Uri.parse('package:chimera_cli/chimera_cli.dart'),
-      ))!;
-      final entrypoint = File.fromUri(library.resolve('../bin/chimera.dart'));
-      final executable =
-          '${directory.path}/chimera-uuid${Platform.isWindows ? '.exe' : ''}';
-      final compilation = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'exe',
-        entrypoint.path,
-        '-o',
-        executable,
-      ]);
-      expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+      final executable = await compiledChimera();
 
       final defaults = await Process.run(executable, ['uuid', 'generate']);
       expect(defaults.exitCode, 0, reason: defaults.stderr.toString());
@@ -362,10 +350,7 @@ void main() {
           .listSync()
           .map((entry) => entry.uri.pathSegments.last)
           .toList();
-      expect(
-        remainingNames,
-        unorderedEquals([File(executable).uri.pathSegments.last, 'result.txt']),
-      );
+      expect(remainingNames, ['result.txt']);
       expect(
         remainingNames.where(
           (name) =>
@@ -375,7 +360,7 @@ void main() {
         isEmpty,
       );
     },
-    timeout: const Timeout(Duration(minutes: 2)),
+    timeout: compilationTimeout,
   );
 }
 

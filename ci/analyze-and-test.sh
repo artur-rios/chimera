@@ -27,7 +27,9 @@ dart analyze --fatal-infos
 dart run tool/check_boundaries.dart
 
 mkdir -p evidence
-dart run melos run test:unit 2>&1 | tee evidence/unit-tests.txt
+# The unit evidence is the repository's own tests, then the package and CLI suites, which run once, with coverage:
+# melos's test:unit ran them here a second time, without it. (chimera_gui is Flutter's: accessibility-performance.)
+dart test test 2>&1 | tee evidence/unit-tests.txt
 dart run melos run test:deployment 2>&1 | tee evidence/deployment-tests.txt
 
 # --concurrency=2 is what dart test chose on the GitHub runner (half of its 4 vCPUs). On a larger agent the default
@@ -37,7 +39,8 @@ dart test --concurrency=2 --coverage=coverage/dart \
   packages/chimera_core/test \
   packages/chimera_l10n/test \
   packages/chimera_platform/test \
-  apps/chimera_cli/test
+  packages/chimera_utilities/test \
+  apps/chimera_cli/test 2>&1 | tee -a evidence/unit-tests.txt
 dart run coverage:format_coverage \
   --packages=.dart_tool/package_config.json \
   --report-on=packages \

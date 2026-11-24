@@ -7,6 +7,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
+import '../support/compiled_program.dart';
+
 void main() {
   test('GivenAbc_WhenHashCommandRuns_ThenHumanDigest', () async {
     final out = StringBuffer();
@@ -156,18 +158,7 @@ void main() {
       final library = (await Isolate.resolvePackageUri(
         Uri.parse('package:chimera_cli/chimera_cli.dart'),
       ))!;
-      final entrypoint = File.fromUri(library.resolve('../bin/chimera.dart'))
-          .path;
-      final executable =
-          '${directory.path}/chimera-hash${Platform.isWindows ? '.exe' : ''}';
-      final compilation = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'exe',
-        entrypoint,
-        '-o',
-        executable,
-      ]);
-      expect(compilation.exitCode, 0, reason: compilation.stderr.toString());
+      final executable = await compiledChimera();
       final fixture =
           (jsonDecode(
                 File.fromUri(
@@ -215,7 +206,7 @@ void main() {
         );
       }
     },
-    timeout: const Timeout(Duration(minutes: 2)),
+    timeout: compilationTimeout,
   );
   for (final failure in ['writer', 'json', 'resource']) {
     test(

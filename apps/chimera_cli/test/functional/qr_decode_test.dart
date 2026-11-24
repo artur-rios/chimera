@@ -7,6 +7,8 @@ import 'package:chimera_core/chimera_core.dart';
 import 'package:chimera_utilities/chimera_utilities.dart';
 import 'package:test/test.dart';
 
+import '../support/compiled_program.dart';
+
 List<int> _image([String text = 'Olá 😀\nsecond line']) =>
     List<int>.of(const QrEncoder().encode(text, size: 256).pngBytes);
 
@@ -434,22 +436,10 @@ void main() {
   );
 
   group('Native stdin', () {
-    late Directory buildDirectory;
     late String executable;
     setUpAll(() async {
-      buildDirectory = await Directory.systemTemp.createTemp('chimera-qr-cli-');
-      addTearDown(() => buildDirectory.delete(recursive: true));
-      executable =
-          '${buildDirectory.path}/chimera${Platform.isWindows ? '.exe' : ''}';
-      // Keep cold source compilation outside each test's deadline.
-      final build = await Process.run(Platform.resolvedExecutable, [
-        'compile',
-        'exe',
-        _cliEntrypoint(),
-        '-o',
-        executable,
-      ]);
-      expect(build.exitCode, 0, reason: '${build.stdout}\n${build.stderr}');
+      // Compiled once per run, outside each test's deadline.
+      executable = await compiledChimera();
     });
     test('GivenBinaryStdinStream_WhenInvoked_ThenPngBytesDecodeWithoutTextConversion', () async {
       final process = await Process.start(executable, [
@@ -510,7 +500,7 @@ void main() {
         ]).timeout(const Duration(seconds: 5));
       }
     }, timeout: const Timeout(Duration(seconds: 30)));
-  }, timeout: const Timeout(Duration(minutes: 2)));
+  }, timeout: compilationTimeout);
 
   test(
     'GivenHelp_WhenRunInBothLocales_ThenFormatsAndSourcesAreDocumented',
@@ -554,18 +544,4 @@ final class _DeniedSink implements StringSink {
   void writeCharCode(int charCode) => throw error;
   @override
   void writeln([Object? object = '']) => throw error;
-}
-
-String _cliEntrypoint() {
-  var directory = Directory.current.absolute;
-  while (true) {
-    final entrypoint = File.fromUri(
-      directory.uri.resolve('apps/chimera_cli/bin/chimera.dart'),
-    );
-    if (entrypoint.existsSync()) return entrypoint.path;
-    if (directory.parent.path == directory.path) {
-      throw StateError('CLI entrypoint not found');
-    }
-    directory = directory.parent;
-  }
 }

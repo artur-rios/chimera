@@ -50,7 +50,28 @@ class Pending implements DotnetTagOperationService {
             if (line == 'READY' && !ready.isCompleted) ready.complete();
           });
       addTearDown(lines.cancel);
-      await ready.future.timeout(const Duration(seconds: 30));
+      // The probe compiles chimera_cli and chimera_core from source before it
+      // prints READY, which takes well over 30 seconds on a busy CI agent. A
+      // probe that exits first (a compile error, say) fails at once with its
+      // stderr instead of waiting out the timeout.
+      const readySignal = Object();
+      final started =
+          await Future.any<Object?>([
+            ready.future.then((_) => readySignal),
+            process.exitCode,
+          ]).timeout(
+            const Duration(minutes: 3),
+            onTimeout: () async {
+              process.kill(ProcessSignal.sigkill);
+              fail(
+                'The probe printed no READY within 3 minutes:\n'
+                '${await stderr}',
+              );
+            },
+          );
+      if (!identical(started, readySignal)) {
+        fail('The probe exited with $started before READY:\n${await stderr}');
+      }
       process.kill(ProcessSignal.sigterm);
       expect(
         await process.exitCode.timeout(const Duration(seconds: 10)),
@@ -59,6 +80,6 @@ class Pending implements DotnetTagOperationService {
       );
     },
     skip: Platform.isWindows,
-    timeout: const Timeout(Duration(minutes: 1)),
+    timeout: const Timeout(Duration(minutes: 4)),
   );
 }
